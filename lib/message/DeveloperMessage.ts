@@ -1,13 +1,14 @@
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import { TextPart } from "../types.js";
 
-export class UserMessage extends BaseMessage implements MessageClass {
-  public _role = "user";
-  public _content: string;
+export class DeveloperMessage extends BaseMessage implements MessageClass {
+  public _role = "developer";
+  public _content: string | Array<TextPart>;
   public _name?: string;
   public _rawData?: any;
 
   constructor(
-    content: string,
+    content: string | Array<TextPart>,
     options: { name?: string; rawData?: any } = {}
   ) {
     super();
@@ -17,7 +18,9 @@ export class UserMessage extends BaseMessage implements MessageClass {
   }
 
   get content(): string {
-    return this._content;
+    return typeof this._content === "string"
+      ? this._content
+      : JSON.stringify(this._content);
   }
 
   get role(): string {

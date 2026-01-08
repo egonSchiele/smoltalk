@@ -35,3 +35,8 @@ export type PromptResult = { output: string | null; toolCalls: ToolCall[] };
 export interface SmolClient {
   text(content: string, config?: PromptConfig): Promise<Result<PromptResult>>;
 }
+
+export type TextPart = {
+  type: "text";
+  text: string;
+};
