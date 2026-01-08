@@ -1,15 +1,15 @@
+import { ContentListUnion } from "@google/genai";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import { ChatCompletionMessageParam } from "openai/resources";
+import { Content } from "@google/genai";
 
 export class UserMessage extends BaseMessage implements MessageClass {
-  public _role = "user";
+  public _role = "user" as const;
   public _content: string;
   public _name?: string;
   public _rawData?: any;
 
-  constructor(
-    content: string,
-    options: { name?: string; rawData?: any } = {}
-  ) {
+  constructor(content: string, options: { name?: string; rawData?: any } = {}) {
     super();
     this._content = content;
     this._name = options.name;
@@ -20,7 +20,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     return this._content;
   }
 
-  get role(): string {
+  get role() {
     return this._role;
   }
 
@@ -32,11 +32,11 @@ export class UserMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toOpenAIMessage(): { role: string; content: string; name?: string } {
+  toOpenAIMessage(): ChatCompletionMessageParam {
     return { role: this.role, content: this.content, name: this.name };
   }
 
-  toGoogleMessage(): { author: string; content: string } {
-    return { author: this.role, content: this.content };
+  toGoogleMessage(): Content {
+    return { role: this.role, parts: [{ text: this.content }] };
   }
 }

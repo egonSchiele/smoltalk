@@ -6,7 +6,6 @@ import {
   Result,
   SmolClient,
   success,
-  ToolCall,
 } from "../types.js";
 import { EgonLog } from "egonlog";
 import {
@@ -15,17 +14,21 @@ import {
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
 } from "openai/resources";
-import { isFunctionToolCall, openAIToToolCall } from "../util.js";
+import { ToolCall } from "../classes/ToolCall.js";
+import { isFunctionToolCall } from "../util.js";
+import { getLogger } from "../logger.js";
+import { BaseClient } from "./baseClient.js";
 
 export type SmolOpenAiConfig = BaseClientConfig;
 
-export class SmolOpenAi implements SmolClient {
+export class SmolOpenAi extends BaseClient implements SmolClient {
   private client: OpenAI;
   private logger: EgonLog;
   private model: string;
   constructor(config: SmolOpenAiConfig) {
+    super();
     this.client = new OpenAI({ apiKey: config.apiKey });
-    this.logger = config.logger;
+    this.logger = getLogger();
     this.model = config.model;
   }
 
@@ -33,21 +36,15 @@ export class SmolOpenAi implements SmolClient {
     return this.client;
   }
 
-  async text(
-    content: string,
-    config?: PromptConfig
-  ): Promise<Result<PromptResult>> {
-    const messages =
-      structuredClone(config?.messages as ChatCompletionMessageParam[]) || [];
-
-    messages.push({ role: "user", content });
+  async text(config: PromptConfig): Promise<Result<PromptResult>> {
+    const messages = config.messages.map((msg) => msg.toOpenAIMessage());
 
     const completion: ChatCompletion =
       await this.client.chat.completions.create({
         model: this.model,
         messages,
-        tools: config?.tools,
-        response_format: config?.responseFormat,
+        tools: config.tools,
+        response_format: config.responseFormat,
       });
     this.logger.debug(
       "Response from OpenAI:",
@@ -63,7 +60,9 @@ export class SmolOpenAi implements SmolClient {
     if (_toolCalls) {
       for (const tc of _toolCalls) {
         if (isFunctionToolCall(tc)) {
-          toolCalls.push(openAIToToolCall(tc));
+          toolCalls.push(
+            new ToolCall(tc.id, tc.function.name, tc.function.arguments)
+          );
         } else {
           this.logger.warn(
             `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`
@@ -73,7 +72,7 @@ export class SmolOpenAi implements SmolClient {
     }
 
     if (toolCalls.length > 0) {
-      this.logger.info("Tool calls detected:", toolCalls);
+      this.logger.debug("Tool calls detected:", toolCalls);
     }
 
     return success({ output, toolCalls });

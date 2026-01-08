@@ -9,7 +9,6 @@ import { SmolConfig } from "./types.js";
 
 export function getClient(config: SmolConfig) {
   const apiKey = config.apiKey;
-  const logger = new EgonLog({ level: config.logLevel || "info" });
 
   const model = getModel(config.model);
   if (model === undefined || !isTextModel(model)) {
@@ -17,7 +16,7 @@ export function getClient(config: SmolConfig) {
       `Only text models are supported currently. ${config.model} is a ${model?.type} model.`
     );
   }
-  const clientConfig = { ...config, logger };
+  const clientConfig = { ...config };
   switch (model.source) {
     case "openai":
       return new SmolOpenAi(clientConfig);

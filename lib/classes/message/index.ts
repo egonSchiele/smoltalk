@@ -3,7 +3,7 @@ import { AssistantMessage } from "./AssistantMessage.js";
 import { DeveloperMessage } from "./DeveloperMessage.js";
 import { SystemMessage } from "./SystemMessage.js";
 import { ToolMessage } from "./ToolMessage.js";
-import { TextPart } from "../types.js";
+import { TextPart } from "../../types.js";
 
 export * from "./AssistantMessage.js";
 export * from "./BaseMessage.js";
@@ -53,3 +53,10 @@ export function toolMessage(
 ) {
   return new ToolMessage(content, options);
 }
+
+export type Message =
+  | ToolMessage
+  | UserMessage
+  | AssistantMessage
+  | DeveloperMessage
+  | SystemMessage;

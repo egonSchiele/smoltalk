@@ -1,8 +1,10 @@
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart } from "../types.js";
+import { TextPart } from "../../types.js";
+import { ChatCompletionMessageParam } from "openai/resources";
+import { Content } from "@google/genai";
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
-  public _role = "assistant";
+  public _role = "assistant" as const;
   public _content: string | Array<TextPart> | null;
   public _name?: string;
   public _audio?: any | null;
@@ -41,7 +43,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       : JSON.stringify(this._content);
   }
 
-  get role(): string {
+  get role() {
     return this._role;
   }
 
@@ -69,11 +71,11 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toOpenAIMessage(): { role: string; content: string; name?: string } {
+  toOpenAIMessage(): ChatCompletionMessageParam {
     return { role: this.role, content: this.content, name: this.name };
   }
 
-  toGoogleMessage(): { author: string; content: string } {
-    return { author: this.role, content: this.content };
+  toGoogleMessage(): Content {
+    return { role: this.role, parts: [{ text: this.content }] };
   }
 }

@@ -1,8 +1,10 @@
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart } from "../types.js";
+import { TextPart } from "../../types.js";
+import { ChatCompletionMessageParam } from "openai/resources";
+import { Content } from "@google/genai";
 
 export class ToolMessage extends BaseMessage implements MessageClass {
-  public _role = "tool";
+  public _role = "tool" as const;
   public _content: string | Array<TextPart>;
   public _tool_call_id: string;
   public _rawData?: any;
@@ -23,7 +25,7 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       : JSON.stringify(this._content);
   }
 
-  get role(): string {
+  get role() {
     return this._role;
   }
 
@@ -39,11 +41,15 @@ export class ToolMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toOpenAIMessage(): { role: string; content: string; name?: string } {
-    return { role: this.role, content: this.content };
+  toOpenAIMessage(): ChatCompletionMessageParam {
+    return {
+      role: this.role,
+      content: this.content,
+      tool_call_id: this.tool_call_id,
+    };
   }
 
-  toGoogleMessage(): { author: string; content: string } {
-    return { author: this.role, content: this.content };
+  toGoogleMessage(): Content {
+    return { role: this.role, parts: [{ text: this.content }] };
   }
 }

@@ -1,3 +1,4 @@
+import { userMessage } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
 
 function add({ a, b }: { a: number; b: number }): number {
@@ -34,7 +35,10 @@ const client = getClient({
 });
 
 async function main() {
-  const resp = await client.text("add 2 + 2", { tools: [addTool] });
+  const resp = await client.text({
+    messages: [userMessage("3 + 5")],
+    tools: [addTool],
+  });
   console.log(resp);
 }
 
