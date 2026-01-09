@@ -101,6 +101,18 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "o3",
+    description:
+      "o3 is a reasoning model that sets a new standard for math, science, and coding, visual reasoning tasks, and technical writing. Part of the o-series of reasoning models. The knowledge cutoff for o3 models is October, 2023.",
+    maxInputTokens: 200000,
+    maxOutputTokens: 100000,
+    inputTokenCost: 2,
+    cachedInputTokenCost: 1,
+    outputTokenCost: 8,
+    source: "openai",
+  },
+  {
+    type: "text",
     modelName: "o3-mini",
     description:
       "o3-mini is our most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini. o3-mini also supports key developer features, like Structured Outputs, function calling, Batch API, and more. Like other models in the o-series, it is designed to excel at science, math, and coding tasks.The knowledge cutoff for o3-mini models is October, 2023.",
@@ -109,6 +121,30 @@ export const textModels = [
     inputTokenCost: 1.1,
     cachedInputTokenCost: 0.55,
     outputTokenCost: 4.4,
+    source: "openai",
+  },
+  {
+    type: "text",
+    modelName: "o4-mini",
+    description:
+      "o4-mini is a new o-series reasoning model that replaced o3-mini, providing excellent performance for math, science, and coding tasks. Available in ChatGPT Plus, Pro, and Team.",
+    maxInputTokens: 200000,
+    maxOutputTokens: 100000,
+    inputTokenCost: 1.1,
+    cachedInputTokenCost: 0.55,
+    outputTokenCost: 4.4,
+    source: "openai",
+  },
+  {
+    type: "text",
+    modelName: "o1",
+    description:
+      "o1 is a reasoning model designed to excel at complex reasoning tasks including science, math, and coding. The knowledge cutoff for o1 models is October, 2023.",
+    maxInputTokens: 200000,
+    maxOutputTokens: 100000,
+    inputTokenCost: 15,
+    cachedInputTokenCost: 7.5,
+    outputTokenCost: 60,
     source: "openai",
   },
   {
@@ -149,13 +185,80 @@ export const textModels = [
   },
   {
     type: "text",
-    modelName: "gemini-2.0-flash",
+    modelName: "gpt-4.1",
     description:
-      "Workhorse model for all daily tasks. Strong overall performance and supports real-time streaming Live API",
+      "GPT-4.1 supports up to 1 million tokens of context, representing a significant increase in context window capacity. Ideal for processing large documents and extended conversations.",
+    maxInputTokens: 1047576,
+    maxOutputTokens: 32768,
+    inputTokenCost: 2.5,
+    cachedInputTokenCost: 1.25,
+    outputTokenCost: 10,
+    source: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gemini-3-pro-preview",
+    description:
+      "Strongest Gemini 3 model quality with 2M context window. Standard pricing for ≤200k tokens, higher rates for >200k tokens.",
+    maxInputTokens: 2_097_152,
+    maxOutputTokens: 8192,
+    inputTokenCost: 2.0,
+    outputTokenCost: 12.0,
+    source: "google",
+  },
+  {
+    type: "text",
+    modelName: "gemini-3-flash-preview",
+    description:
+      "Latest Gemini 3 flash model with 1M context window. Excellent performance for high-volume tasks.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
-    inputTokenCost: 0.15,
-    outputTokenCost: 0.6,
+    inputTokenCost: 0.5,
+    outputTokenCost: 3.0,
+    source: "google",
+  },
+  {
+    type: "text",
+    modelName: "gemini-2.5-pro",
+    description:
+      "High-performance Gemini 2.5 model with 2M context window. Standard pricing for ≤200k tokens, higher rates for >200k tokens.",
+    maxInputTokens: 2_097_152,
+    maxOutputTokens: 8192,
+    inputTokenCost: 1.25,
+    outputTokenCost: 10.0,
+    source: "google",
+  },
+  {
+    type: "text",
+    modelName: "gemini-2.5-flash",
+    description:
+      "Balanced Gemini 2.5 model with excellent performance-to-cost ratio. 1M context window with free tier available.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 8192,
+    inputTokenCost: 0.3,
+    outputTokenCost: 2.5,
+    source: "google",
+  },
+  {
+    type: "text",
+    modelName: "gemini-2.5-flash-lite",
+    description:
+      "Most cost-effective Gemini 2.5 option for high-throughput applications. 1M context window.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 8192,
+    inputTokenCost: 0.1,
+    outputTokenCost: 0.4,
+    source: "google",
+  },
+  {
+    type: "text",
+    modelName: "gemini-2.0-flash",
+    description:
+      "Workhorse model for all daily tasks. Strong overall performance and supports real-time streaming Live API. 1M context window.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 8192,
+    inputTokenCost: 0.1,
+    outputTokenCost: 0.4,
     source: "google",
   },
   {
@@ -173,7 +276,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-2.0-flash-lite",
-    description: "Our cost effective offering to support high throughput.",
+    description: "Cost effective offering to support high throughput. Note: May be deprecated in favor of 2.5-flash-lite.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
     inputTokenCost: 0.075,
