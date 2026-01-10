@@ -76,6 +76,6 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   }
 
   toGoogleMessage(): Content {
-    return { role: this.role, parts: [{ text: this.content }] };
+    return { role: "model", parts: [{ text: this.content }] };
   }
 }

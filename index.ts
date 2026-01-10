@@ -1,5 +1,5 @@
 import { FunctionCallingConfigMode, FunctionDeclaration } from "@google/genai";
-import { userMessage } from "./lib/classes/message/index.js";
+import { Message, toolMessage, userMessage } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
 
 const aditify = ({ text }: { text: string }) => {
@@ -30,10 +30,10 @@ const client = getClient({
 });
 
 async function main() {
+  let messages: Message[] = [];
+  messages.push(userMessage("Please aditify the following text: Hello World"));
   const resp = await client.text({
-    messages: [
-      userMessage("Call the aditify function with the text 'Hello world!'"),
-    ],
+    messages,
     tools: [{ functionDeclarations: [aditifyDeclaration] }],
     // Try without toolConfig to test basic function calling
   });
@@ -44,6 +44,9 @@ async function main() {
     if (toolCall.name === "aditify") {
       const result = aditify(toolCall.arguments as any);
       console.log("Function call result:", result);
+      messages.push(toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name }));
+      const followupResp = await client.text({ messages });
+      console.log("Follow-up response:", followupResp);
     }
   }
 }

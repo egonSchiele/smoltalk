@@ -49,7 +49,7 @@ export function systemMessage(
 
 export function toolMessage(
   content: string | Array<TextPart>,
-  options: { tool_call_id: string; rawData?: any }
+  options: { tool_call_id: string; rawData?: any; name: string }
 ) {
   return new ToolMessage(content, options);
 }
