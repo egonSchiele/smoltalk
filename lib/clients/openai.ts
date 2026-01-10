@@ -45,8 +45,17 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       model: this.model,
       messages,
       tools: config.tools,
-      response_format: config.responseFormat,
     };
+    if (config.responseFormat) {
+      (request as any).response_format = {
+        type: "json_schema",
+
+        json_schema: {
+          name: config.responseFormatName || "response",
+          schema: config.responseFormat.toJSONSchema(),
+        },
+      };
+    }
 
     this.logger.debug(
       "Sending request to OpenAI:",

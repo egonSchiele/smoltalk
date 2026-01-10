@@ -1,5 +1,4 @@
 import { color } from "termcolors";
-import { FunctionCallingConfigMode, FunctionDeclaration } from "@google/genai";
 import { z } from "zod";
 import {
   assistantMessage,
@@ -8,7 +7,6 @@ import {
   userMessage,
 } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
-import { responseFormatJSONSchema } from "./lib/types.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -42,7 +40,7 @@ const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "debug",
-  model: "gemini-2.5-flash-lite",
+  model: "gpt-4o-mini",
 });
 
 const responseFormat = z.object({
@@ -59,11 +57,8 @@ async function main() {
   const resp = await client.text({
     messages,
     tools: [addTool],
-    /*     responseFormat: responseFormatJSONSchema({
-      name: "addResult",
-      schema: responseFormat.toJSONSchema(),
-    }),
- */ // Try without toolConfig to test basic function calling
+    /*     responseFormat
+     */ // Try without toolConfig to test basic function calling
   });
   console.log(color.green("--------------- Response ---------------"));
   console.log(JSON.stringify(resp, null, 2));
@@ -80,10 +75,7 @@ async function main() {
       const followupResp = await client.text({
         messages,
         //tools: [addTool],
-        responseFormat: responseFormatJSONSchema({
-          name: "addResult",
-          schema: responseFormat.toJSONSchema(),
-        }),
+        responseFormat,
       });
       console.log(
         color.green("Follow-up response:"),
