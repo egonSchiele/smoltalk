@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import { EgonLog } from "egonlog";
 import { getLogger } from "../logger.js";
 import {
@@ -11,6 +11,7 @@ import {
 } from "../types.js";
 import { BaseClient } from "./baseClient.js";
 import { ToolCall } from "../classes/ToolCall.js";
+import { convertOpenAIToolToGoogle } from "../util/common.js";
 
 export type SmolGoogleConfig = BaseClientConfig;
 
@@ -35,12 +36,19 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   async text(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toGoogleMessage());
 
+    const tools = (config.tools || []).map((tool) =>
+      convertOpenAIToolToGoogle(tool)
+    );
+    const genConfig: GenerateContentConfig = {};
+
+    if (tools.length > 0) {
+      genConfig.tools = [{ functionDeclarations: tools }];
+    }
+
     const request = {
       contents: messages,
       model: this.model,
-      config: {
-        tools: config.tools,
-      },
+      config: genConfig,
     };
     if (config.rawAttributes) {
       Object.assign(request, config.rawAttributes);
