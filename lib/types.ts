@@ -5,6 +5,7 @@ import { Message } from "./classes/message/index.js";
 import { Result } from "./types/result.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { OpenAIToolDefinition } from "./util/common.js";
+import { ResponseFormatJSONSchema, ResponseFormatText } from "openai/resources";
 
 export type PromptConfig = {
   messages: Message[];
@@ -14,9 +15,19 @@ export type PromptConfig = {
   temperature?: number;
   numSuggestions?: number;
   parallelToolCalls?: boolean;
-  responseFormat?: any;
+  responseFormat?: ResponseFormatText | ResponseFormatJSONSchema;
   rawAttributes?: Record<string, any>;
 };
+
+export function responseFormatText(): ResponseFormatText {
+  return { type: "text" };
+}
+
+export function responseFormatJSONSchema(
+  schema: ResponseFormatJSONSchema.JSONSchema
+): ResponseFormatJSONSchema {
+  return { type: "json_schema", json_schema: schema };
+}
 
 export type SmolConfig = {
   openAiApiKey?: string;

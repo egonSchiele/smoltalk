@@ -1,5 +1,6 @@
 import { EgonLog } from "egonlog";
 import { getLogger } from "../logger.js";
+import { FunctionCall } from "@google/genai";
 
 export type ToolCallOptions = {};
 
@@ -44,5 +45,25 @@ export class ToolCall {
 
   get arguments(): Record<string, any> {
     return this._arguments;
+  }
+
+  toOpenAI(): any {
+    return {
+      id: this._id,
+      type: "function" as const,
+      function: {
+        name: this.name,
+        arguments: JSON.stringify(this.arguments),
+      },
+    };
+  }
+
+  toGoogle(): { functionCall: FunctionCall } {
+    return {
+      functionCall: {
+        name: this.name,
+        args: this.arguments,
+      },
+    };
   }
 }

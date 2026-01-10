@@ -41,14 +41,20 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   async text(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
+    const request = {
+      model: this.model,
+      messages,
+      tools: config.tools,
+      response_format: config.responseFormat,
+    };
+
+    this.logger.debug(
+      "Sending request to OpenAI:",
+      JSON.stringify(request, null, 2)
+    );
 
     const completion: ChatCompletion =
-      await this.client.chat.completions.create({
-        model: this.model,
-        messages,
-        tools: config.tools,
-        response_format: config.responseFormat,
-      });
+      await this.client.chat.completions.create(request);
     this.logger.debug(
       "Response from OpenAI:",
       JSON.stringify(completion, null, 2)
@@ -72,10 +78,6 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
           );
         }
       }
-    }
-
-    if (toolCalls.length > 0) {
-      this.logger.debug("Tool calls detected:", toolCalls);
     }
 
     return success({ output, toolCalls });

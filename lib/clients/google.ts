@@ -44,6 +44,10 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     if (tools.length > 0) {
       genConfig.tools = [{ functionDeclarations: tools }];
     }
+    if (config.responseFormat && config.responseFormat.type === "json_schema") {
+      genConfig.responseMimeType = "application/json";
+      genConfig.responseJsonSchema = config.responseFormat.json_schema.schema;
+    }
 
     const request = {
       contents: messages,

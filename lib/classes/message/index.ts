@@ -24,9 +24,8 @@ export function assistantMessage(
   options: {
     name?: string;
     audio?: any | null;
-    function_call?: any | null;
     refusal?: string | null;
-    tool_calls?: Array<any>;
+    toolCalls?: Array<any>;
     rawData?: any;
   } = {}
 ) {

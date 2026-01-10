@@ -31,8 +31,10 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "termcolors": "github:egonSchiele/termcolors",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "zod": "^4.3.5"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",

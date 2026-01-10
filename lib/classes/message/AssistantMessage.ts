@@ -1,16 +1,16 @@
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
 import { TextPart } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
-import { Content } from "@google/genai";
+import { Content, Part } from "@google/genai";
+import { ToolCall } from "../ToolCall.js";
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
   public _role = "assistant" as const;
   public _content: string | Array<TextPart> | null;
   public _name?: string;
   public _audio?: any | null;
-  public _function_call?: any | null;
   public _refusal?: string | null;
-  public _tool_calls?: Array<any>;
+  public _toolCalls?: ToolCall[];
   public _rawData?: any;
 
   constructor(
@@ -18,9 +18,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     options: {
       name?: string;
       audio?: any | null;
-      function_call?: any | null;
       refusal?: string | null;
-      tool_calls?: Array<any>;
+      toolCalls?: ToolCall[];
       rawData?: any;
     } = {}
   ) {
@@ -28,9 +27,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     this._content = content;
     this._name = options.name;
     this._audio = options.audio;
-    this._function_call = options.function_call;
     this._refusal = options.refusal;
-    this._tool_calls = options.tool_calls;
+    this._toolCalls = options.toolCalls;
     this._rawData = options.rawData;
   }
 
@@ -55,16 +53,12 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._audio;
   }
 
-  get function_call(): any | null | undefined {
-    return this._function_call;
-  }
-
   get refusal(): string | null | undefined {
     return this._refusal;
   }
 
-  get tool_calls(): Array<any> | undefined {
-    return this._tool_calls;
+  get toolCalls(): ToolCall[] | undefined {
+    return this._toolCalls;
   }
 
   get rawData(): any {
@@ -72,10 +66,24 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   }
 
   toOpenAIMessage(): ChatCompletionMessageParam {
-    return { role: this.role, content: this.content, name: this.name };
+    return {
+      role: this.role,
+      content: this.content,
+      name: this.name,
+      tool_calls: this.toolCalls?.map((tc) => tc.toOpenAI()),
+    };
   }
 
   toGoogleMessage(): Content {
-    return { role: "model", parts: [{ text: this.content }] };
+    const parts: Part[] = [];
+    if (this.content) {
+      parts.push({ text: this.content });
+    }
+    if (this.toolCalls) {
+      for (const tc of this.toolCalls) {
+        parts.push(tc.toGoogle());
+      }
+    }
+    return { role: "model", parts };
   }
 }

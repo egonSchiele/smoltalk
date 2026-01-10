@@ -16,17 +16,23 @@ importers:
         version: 0.0.2
       openai:
         specifier: ^6.15.0
-        version: 6.15.0(ws@8.19.0)
+        version: 6.15.0(ws@8.19.0)(zod@4.3.5)
     devDependencies:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      termcolors:
+        specifier: github:egonSchiele/termcolors
+        version: https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
       vitest:
         specifier: ^4.0.16
         version: 4.0.16(@types/node@25.0.3)
+      zod:
+        specifier: ^4.3.5
+        version: 4.3.5
 
 packages:
 
@@ -807,6 +813,9 @@ packages:
       utf-8-validate:
         optional: true
 
+  zod@4.3.5:
+    resolution: {integrity: sha512-k7Nwx6vuWx1IJ9Bjuf4Zt1PEllcwe7cls3VNzm4CQ1/hgtFUK2bRNG3rvnpPUhFjmqJKAKtjV576KnUkHocg/g==}
+
 snapshots:
 
   '@esbuild/aix-ppc64@0.27.2':
@@ -1264,9 +1273,10 @@ snapshots:
 
   obug@2.1.1: {}
 
-  openai@6.15.0(ws@8.19.0):
+  openai@6.15.0(ws@8.19.0)(zod@4.3.5):
     optionalDependencies:
       ws: 8.19.0
+      zod: 4.3.5
 
   package-json-from-dist@1.0.1: {}
 
@@ -1452,3 +1462,5 @@ snapshots:
       strip-ansi: 7.1.2
 
   ws@8.19.0: {}
+
+  zod@4.3.5: {}

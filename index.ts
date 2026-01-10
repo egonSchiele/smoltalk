@@ -1,10 +1,14 @@
+import { color } from "termcolors";
 import { FunctionCallingConfigMode, FunctionDeclaration } from "@google/genai";
+import { z } from "zod";
 import {
+  assistantMessage,
   Message,
   toolMessage,
   userMessage,
 } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
+import { responseFormatJSONSchema } from "./lib/types.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -38,7 +42,11 @@ const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "debug",
-  model: "gemini-2.5-flash",
+  model: "gemini-2.5-flash-lite",
+});
+
+const responseFormat = z.object({
+  result: z.number(),
 });
 
 async function main() {
@@ -51,20 +59,36 @@ async function main() {
   const resp = await client.text({
     messages,
     tools: [addTool],
-    // Try without toolConfig to test basic function calling
+    /*     responseFormat: responseFormatJSONSchema({
+      name: "addResult",
+      schema: responseFormat.toJSONSchema(),
+    }),
+ */ // Try without toolConfig to test basic function calling
   });
-  console.log(resp);
+  console.log(color.green("--------------- Response ---------------"));
+  console.log(JSON.stringify(resp, null, 2));
 
   if (resp.success && resp.value.toolCalls.length > 0) {
     const toolCall = resp.value.toolCalls[0];
+    messages.push(assistantMessage(null, { toolCalls: [toolCall] }));
     if (toolCall.name === "add") {
       const result = JSON.stringify(add(toolCall.arguments as any));
-      console.log("Function call result:", result);
+      console.log(color.green("Function call result:"), result);
       messages.push(
         toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name })
       );
-      const followupResp = await client.text({ messages });
-      console.log("Follow-up response:", followupResp);
+      const followupResp = await client.text({
+        messages,
+        //tools: [addTool],
+        responseFormat: responseFormatJSONSchema({
+          name: "addResult",
+          schema: responseFormat.toJSONSchema(),
+        }),
+      });
+      console.log(
+        color.green("Follow-up response:"),
+        JSON.stringify(followupResp, null, 2)
+      );
     }
   }
 }

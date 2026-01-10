@@ -2,6 +2,7 @@ import { ContentListUnion } from "@google/genai";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
+import { ToolCall } from "../ToolCall.js";
 
 export class UserMessage extends BaseMessage implements MessageClass {
   public _role = "user" as const;
@@ -33,7 +34,11 @@ export class UserMessage extends BaseMessage implements MessageClass {
   }
 
   toOpenAIMessage(): ChatCompletionMessageParam {
-    return { role: this.role, content: this.content, name: this.name };
+    return {
+      role: this.role,
+      content: this.content,
+      name: this.name,
+    };
   }
 
   toGoogleMessage(): Content {
