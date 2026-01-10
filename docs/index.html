@@ -89,6 +89,13 @@
                 <use href="assets/icons.svg#icon-anchor"></use></svg
             ></a>
           </h1>
+          <p>
+            Smoltalk is a package that exposes a common interface across
+            different LLM providers. It exists because I think it's important to
+            have an npm package that allows users to try out different kinds of
+            LLMs, and prevents vendor lock-in. Using a different LLM should be
+            as simple as switching out a model name.
+          </p>
           <h2 id="install" class="tsd-anchor-link">
             Install<a
               href="#install"
@@ -101,14 +108,132 @@
           <pre><code class="bash"><span class="hl-0">pnpm</span><span class="hl-1"> </span><span class="hl-2">install</span><span class="hl-1"> </span><span class="hl-2">smoltalk</span>
 </code><button type="button">Copy</button></pre>
 
-          <h2 id="usage" class="tsd-anchor-link">
-            Usage<a href="#usage" aria-label="Permalink" class="tsd-anchor-icon"
+          <h2 id="quickstart" class="tsd-anchor-link">
+            Quickstart<a
+              href="#quickstart"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
               ><svg viewBox="0 0 24 24" aria-hidden="true">
                 <use href="assets/icons.svg#icon-anchor"></use></svg
             ></a>
           </h2>
-          <pre><code class="typescript"><span class="hl-3">import</span><span class="hl-1"> { </span><span class="hl-4">getClient</span><span class="hl-1"> } </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&quot;smoltalk&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">client</span><span class="hl-1"> = </span><span class="hl-0">getClient</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">apiKey:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">GEMINI_API_KEY</span><span class="hl-1"> || </span><span class="hl-2">&quot;&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">logLevel:</span><span class="hl-1"> </span><span class="hl-2">&quot;debug&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">model:</span><span class="hl-1"> </span><span class="hl-2">&quot;gemini-2.0-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-5">async</span><span class="hl-1"> </span><span class="hl-5">function</span><span class="hl-1"> </span><span class="hl-0">main</span><span class="hl-1">() {</span><br/><span class="hl-1">  </span><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">resp</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">client</span><span class="hl-1">.</span><span class="hl-0">text</span><span class="hl-1">(</span><span class="hl-2">&quot;Hello, how are you?&quot;</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-4">console</span><span class="hl-1">.</span><span class="hl-0">log</span><span class="hl-1">(</span><span class="hl-4">resp</span><span class="hl-1">);</span><br/><span class="hl-1">}</span><br/><br/><span class="hl-0">main</span><span class="hl-1">();</span>
+          <pre><code class="typescript"><span class="hl-3">import</span><span class="hl-1"> { </span><span class="hl-4">getClient</span><span class="hl-1"> } </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&quot;smoltalk&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">client</span><span class="hl-1"> = </span><span class="hl-0">getClient</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">openAiApiKey:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">OPENAI_API_KEY</span><span class="hl-1"> || </span><span class="hl-2">&quot;&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">googleApiKey:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">GEMINI_API_KEY</span><span class="hl-1"> || </span><span class="hl-2">&quot;&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">logLevel:</span><span class="hl-1"> </span><span class="hl-2">&quot;debug&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">model:</span><span class="hl-1"> </span><span class="hl-2">&quot;gemini-2.0-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span><br/><br/><span class="hl-5">async</span><span class="hl-1"> </span><span class="hl-5">function</span><span class="hl-1"> </span><span class="hl-0">main</span><span class="hl-1">() {</span><br/><span class="hl-1">  </span><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">resp</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">client</span><span class="hl-1">.</span><span class="hl-0">prompt</span><span class="hl-1">(</span><span class="hl-2">&quot;Hello, how are you?&quot;</span><span class="hl-1">);</span><br/><span class="hl-1">  </span><span class="hl-4">console</span><span class="hl-1">.</span><span class="hl-0">log</span><span class="hl-1">(</span><span class="hl-4">resp</span><span class="hl-1">);</span><br/><span class="hl-1">}</span><br/><br/><span class="hl-0">main</span><span class="hl-1">();</span>
 </code><button type="button">Copy</button></pre>
+
+          <h2 id="longer-tutorial" class="tsd-anchor-link">
+            Longer tutorial<a
+              href="#longer-tutorial"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h2>
+          <p>To use Smoltak, you first create a client:</p>
+          <pre><code class="ts"><span class="hl-3">import</span><span class="hl-1"> { </span><span class="hl-4">getClient</span><span class="hl-1"> } </span><span class="hl-3">from</span><span class="hl-1"> </span><span class="hl-2">&quot;smoltalk&quot;</span><span class="hl-1">;</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">client</span><span class="hl-1"> = </span><span class="hl-0">getClient</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">openAiApiKey:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">OPENAI_API_KEY</span><span class="hl-1"> || </span><span class="hl-2">&quot;&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">googleApiKey:</span><span class="hl-1"> </span><span class="hl-4">process</span><span class="hl-1">.</span><span class="hl-4">env</span><span class="hl-1">.</span><span class="hl-6">GEMINI_API_KEY</span><span class="hl-1"> || </span><span class="hl-2">&quot;&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">logLevel:</span><span class="hl-1"> </span><span class="hl-2">&quot;debug&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">model:</span><span class="hl-1"> </span><span class="hl-2">&quot;gemini-2.0-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">});</span>
+</code><button type="button">Copy</button></pre>
+
+          <p>
+            Then you can call different methods on the client. The simplest is
+            <code>prompt</code>:
+          </p>
+          <pre><code class="ts"><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">resp</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">client</span><span class="hl-1">.</span><span class="hl-0">prompt</span><span class="hl-1">(</span><span class="hl-2">&quot;Hello, how are you?&quot;</span><span class="hl-1">);</span>
+</code><button type="button">Copy</button></pre>
+
+          <p>
+            If you want tool calling, structured output, etc.,
+            <code>text</code> may be a cleaner option:
+          </p>
+          <pre><code class="ts"><span class="hl-5">let</span><span class="hl-1"> </span><span class="hl-4">messages</span><span class="hl-1">: </span><span class="hl-7">Message</span><span class="hl-1">[] = [];</span><br/><span class="hl-1">  </span><span class="hl-4">messages</span><span class="hl-1">.</span><span class="hl-0">push</span><span class="hl-1">(</span><br/><span class="hl-1">    </span><span class="hl-0">userMessage</span><span class="hl-1">(</span><br/><span class="hl-1">      </span><span class="hl-2">&quot;Please use the add function to add the following numbers: 3 and 5&quot;</span><br/><span class="hl-1">    )</span><br/><span class="hl-1">  );</span><br/><span class="hl-1">  </span><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">resp</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">client</span><span class="hl-1">.</span><span class="hl-0">text</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-4">messages</span><span class="hl-1">,</span><br/><span class="hl-1">  });</span>
+</code><button type="button">Copy</button></pre>
+
+          <p>Here is an example with tool calling:</p>
+          <pre><code class="ts"><span class="hl-5">function</span><span class="hl-1"> </span><span class="hl-0">add</span><span class="hl-1">({ </span><span class="hl-4">a</span><span class="hl-1">, </span><span class="hl-4">b</span><span class="hl-1"> }: { </span><span class="hl-4">a</span><span class="hl-1">: </span><span class="hl-7">number</span><span class="hl-1">; </span><span class="hl-4">b</span><span class="hl-1">: </span><span class="hl-7">number</span><span class="hl-1"> }): </span><span class="hl-7">number</span><span class="hl-1"> {</span><br/><span class="hl-1">  </span><span class="hl-3">return</span><span class="hl-1"> </span><span class="hl-4">a</span><span class="hl-1"> + </span><span class="hl-4">b</span><span class="hl-1">;</span><br/><span class="hl-1">}</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">addTool</span><span class="hl-1"> = {</span><br/><span class="hl-1">  </span><span class="hl-4">name:</span><span class="hl-1"> </span><span class="hl-2">&quot;add&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">description:</span><span class="hl-1"> </span><span class="hl-2">&quot;Adds two numbers together and returns the result.&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">schema:</span><span class="hl-1"> </span><span class="hl-4">z</span><span class="hl-1">.</span><span class="hl-0">object</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-4">a:</span><span class="hl-1"> </span><span class="hl-4">z</span><span class="hl-1">.</span><span class="hl-0">number</span><span class="hl-1">().</span><span class="hl-0">describe</span><span class="hl-1">(</span><span class="hl-2">&quot;The first number to add&quot;</span><span class="hl-1">),</span><br/><span class="hl-1">    </span><span class="hl-4">b:</span><span class="hl-1"> </span><span class="hl-4">z</span><span class="hl-1">.</span><span class="hl-0">number</span><span class="hl-1">().</span><span class="hl-0">describe</span><span class="hl-1">(</span><span class="hl-2">&quot;The second number to add&quot;</span><span class="hl-1">),</span><br/><span class="hl-1">  }),</span><br/><span class="hl-1">};</span><br/><br/><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">resp</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">client</span><span class="hl-1">.</span><span class="hl-0">text</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">messages</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">tools:</span><span class="hl-1"> [</span><span class="hl-4">addTool</span><span class="hl-1">]</span><br/><span class="hl-1">});</span><br/>
+</code><button type="button">Copy</button></pre>
+
+          <p>Here is an example with structured output:</p>
+          <pre><code class="ts"><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">resp</span><span class="hl-1"> = </span><span class="hl-3">await</span><span class="hl-1"> </span><span class="hl-4">client</span><span class="hl-1">.</span><span class="hl-0">text</span><span class="hl-1">({</span><br/><span class="hl-1">  </span><span class="hl-4">messages</span><span class="hl-1">,</span><br/><span class="hl-1">  </span><span class="hl-4">responseFormat:</span><span class="hl-1"> </span><span class="hl-4">z</span><span class="hl-1">.</span><span class="hl-0">object</span><span class="hl-1">({</span><br/><span class="hl-1">    </span><span class="hl-4">result:</span><span class="hl-1"> </span><span class="hl-4">z</span><span class="hl-1">.</span><span class="hl-0">number</span><span class="hl-1">(),</span><br/><span class="hl-1">  });</span><br/><span class="hl-1">});</span>
+</code><button type="button">Copy</button></pre>
+
+          <p>A couple of design decisions to note:</p>
+          <ul>
+            <li>
+              You specify different API keys using different parameter names.
+              This means you could set a couple of different API keys and then
+              be able to change the model name without worrying about the keys,
+              which makes things easier for code generation.
+            </li>
+            <li>
+              The schema for tools and structured outputs is defined using Zod.
+            </li>
+            <li>
+              Parameter names are camel case, as that is the naming convention
+              in TypeScript. They are converted to snake case for you if
+              required by the APIs.
+            </li>
+          </ul>
+          <h2 id="prior-art" class="tsd-anchor-link">
+            Prior art<a
+              href="#prior-art"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h2>
+          <ul>
+            <li>Langchain OpenRouter</li>
+            <li>Vercel AI</li>
+          </ul>
+          <p>
+            These are all good options, but they are quite heavy, and I wanted a
+            lighter option. That said, you may be better off with one of the
+            above alternatives:
+          </p>
+          <ul>
+            <li>
+              They are backed by a business and are more likely to be
+              responsive.
+            </li>
+            <li>
+              They support way more functionality and providers. Smoltalk
+              currently supports just a subset of functionality for OpenAI and
+              Google.
+            </li>
+          </ul>
+          <h2 id="functionality" class="tsd-anchor-link">
+            Functionality<a
+              href="#functionality"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h2>
+          <p>
+            Smoltalk pretty much lets you generate text using an OpenAI or
+            Google model, with support for function calling and structured
+            output, and that's it. I will add functionality and providers
+            sporadically when I have time and need.
+          </p>
+          <h2 id="contributing" class="tsd-anchor-link">
+            Contributing<a
+              href="#contributing"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h2>
+          <p>
+            This repo could use some help! Any of the following contributions
+            would be helpful:
+          </p>
+          <ul>
+            <li>Adding support for API parameters or endpoints</li>
+            <li>Adding support for different providers</li>
+            <li>Updating the list of models</li>
+          </ul>
         </div>
       </div>
       <div class="col-sidebar">
@@ -261,7 +386,19 @@
                   <a href="#install"><span>Install</span></a>
                 </li>
                 <li>
-                  <a href="#usage"><span>Usage</span></a>
+                  <a href="#quickstart"><span>Quickstart</span></a>
+                </li>
+                <li>
+                  <a href="#longer-tutorial"><span>Longer tutorial</span></a>
+                </li>
+                <li>
+                  <a href="#prior-art"><span>Prior art</span></a>
+                </li>
+                <li>
+                  <a href="#functionality"><span>Functionality</span></a>
+                </li>
+                <li>
+                  <a href="#contributing"><span>Contributing</span></a>
                 </li>
               </ul>
             </div>
