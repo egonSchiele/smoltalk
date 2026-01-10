@@ -43,6 +43,15 @@ export class ToolMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  toJSON() {
+    return {
+      role: this.role,
+      content: this._content,
+      name: this.name,
+      tool_call_id: this.tool_call_id,
+    };
+  }
+
   toOpenAIMessage(): ChatCompletionMessageParam {
     return {
       role: this.role,

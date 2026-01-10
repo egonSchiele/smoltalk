@@ -11,4 +11,5 @@ export interface MessageClass {
 
   toOpenAIMessage(): ChatCompletionMessageParam;
   toGoogleMessage(): Content;
+  toJSON(): Record<string, any>;
 }

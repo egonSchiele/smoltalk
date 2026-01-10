@@ -65,6 +65,17 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  toJSON() {
+    return {
+      role: this.role,
+      content: this._content,
+      name: this.name,
+      audio: this.audio,
+      refusal: this.refusal,
+      toolCalls: this.toolCalls?.map((tc) => tc.toJSON()),
+    };
+  }
+
   toOpenAIMessage(): ChatCompletionMessageParam {
     return {
       role: this.role,

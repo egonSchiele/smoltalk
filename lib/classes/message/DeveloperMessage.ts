@@ -37,6 +37,14 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  toJSON() {
+    return {
+      role: this.role,
+      content: this._content,
+      name: this.name,
+    };
+  }
+
   toOpenAIMessage(): ChatCompletionMessageParam {
     return { role: this.role, content: this.content, name: this.name };
   }

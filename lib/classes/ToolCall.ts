@@ -47,6 +47,14 @@ export class ToolCall {
     return this._arguments;
   }
 
+  toJSON(): Record<string, any> {
+    return {
+      id: this._id,
+      name: this._name,
+      arguments: this._arguments,
+    };
+  }
+
   toOpenAI(): any {
     return {
       id: this._id,
