@@ -9,7 +9,7 @@
     "coverage": "vitest --coverage",
     "build": "rm -rf dist && tsc",
     "start": "cd dist && node index.js",
-    "doc": "typedoc --disableSources --out docs lib"
+    "doc": "typedoc --disableSources --out docs lib && prettier docs/ --write"
   },
   "files": [
     "./dist"
@@ -32,6 +32,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/node": "^25.0.3",
+    "prettier": "^3.7.4",
     "termcolors": "github:egonSchiele/termcolors",
     "typedoc": "^0.28.15",
     "typescript": "^5.9.3",

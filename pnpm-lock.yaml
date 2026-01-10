@@ -21,6 +21,9 @@ importers:
       '@types/node':
         specifier: ^25.0.3
         version: 25.0.3
+      prettier:
+        specifier: ^3.7.4
+        version: 3.7.4
       termcolors:
         specifier: github:egonSchiele/termcolors
         version: https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f
@@ -671,6 +674,11 @@ packages:
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
     engines: {node: ^10 || ^12 || >=14}
+
+  prettier@3.7.4:
+    resolution: {integrity: sha512-v6UNi1+3hSlVvv8fSaoUbggEM5VErKmmpGA7Pl3HF8V6uKY7rvClBOJlH6yNwQtfTueNkGVpOv/mtWL9L4bgRA==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   punycode.js@2.3.1:
     resolution: {integrity: sha512-uxFIHU0YlHYhDQtV4R9J6a52SLx28BCjT+4ieh7IGbgwVJWO+km431c4yRlREUAsAmt/uMjQUyQHNEPf0M39CA==}
@@ -1419,6 +1427,8 @@ snapshots:
       nanoid: 3.3.11
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  prettier@3.7.4: {}
 
   punycode.js@2.3.1: {}
 
