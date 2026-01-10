@@ -8,3 +8,6 @@ test:
 
 publish:
 	npm run build && npm publish
+
+doc:
+	npm run doc
