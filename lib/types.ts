@@ -1,22 +1,24 @@
 export * from "./types/result.js";
-import { EgonLog, LogLevel } from "egonlog";
-import { ModelName } from "./models.js";
+import { LogLevel } from "egonlog";
+import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
-import { Result } from "./types/result.js";
 import { ToolCall } from "./classes/ToolCall.js";
-import { OpenAIToolDefinition } from "./util/common.js";
-import { ResponseFormatJSONSchema, ResponseFormatText } from "openai/resources";
-import { z } from "zod";
+import { ModelName } from "./models.js";
+import { Result } from "./types/result.js";
 
 export type PromptConfig = {
   messages: Message[];
-  tools?: OpenAIToolDefinition[];
+  tools?: {
+    name: string;
+    description?: string;
+    schema: ZodType;
+  }[];
   instructions?: string;
   maxTokens?: number;
   temperature?: number;
   numSuggestions?: number;
   parallelToolCalls?: boolean;
-  responseFormat?: z.ZodType;
+  responseFormat?: ZodType;
   responseFormatName?: string;
   rawAttributes?: Record<string, any>;
 };

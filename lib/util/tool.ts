@@ -1,14 +1,68 @@
 import { FunctionDeclaration } from "@google/genai";
+import { z } from "zod";
 
-/**
- * OpenAI tool definition format
- */
-export interface OpenAIToolDefinition {
+type OpenAIToolParameters = {
+  type: "object";
+  properties: Record<string, any>;
+  required?: string[];
+  additionalProperties?: boolean;
+};
+
+type OpenAITool = {
   type: "function";
   function: {
     name: string;
+    description: string;
+    parameters: OpenAIToolParameters;
+  };
+};
+
+export function zodToOpenAITool(
+  name: string,
+  schema: z.ZodType,
+  options: Partial<{
     description?: string;
-    parameters: Record<string, unknown>;
+    strict?: boolean;
+  }> = {}
+): OpenAITool {
+  // Convert Zod schema to JSON Schema
+  const jsonSchema = schema.toJSONSchema();
+
+  let description: string = "";
+  if (options?.description) {
+    description = options.description;
+  } else if (
+    typeof jsonSchema === "object" &&
+    "description" in jsonSchema &&
+    typeof jsonSchema.description === "string"
+  ) {
+    description = jsonSchema.description;
+  }
+
+  // Build the parameters object
+  const parameters: OpenAIToolParameters = {
+    type: "object",
+    properties: jsonSchema.properties || {},
+    required: jsonSchema.required || [],
+  };
+
+  const strict = options?.strict || false;
+
+  /* The additionalProperties field in an OpenAI schema,
+  which is based on JSON Schema, controls how the API handles
+  properties not explicitly listed in the properties section of an object. 
+  By default, additionalProperties is set to true, which allows
+  the JSON object to contain any extra properties not defined in the schema.
+  */
+  parameters.additionalProperties = !strict;
+
+  return {
+    type: "function",
+    function: {
+      name,
+      description,
+      parameters,
+    },
   };
 }
 
@@ -90,8 +144,8 @@ function removeUnsupportedProperties(
  * // }
  * ```
  */
-export function convertOpenAIToolToGoogle(
-  openAITool: OpenAIToolDefinition
+export function openAIToGoogleTool(
+  openAITool: OpenAITool
 ): FunctionDeclaration {
   return {
     name: openAITool.function.name,
@@ -100,4 +154,16 @@ export function convertOpenAIToolToGoogle(
       openAITool.function.parameters
     ),
   };
+}
+
+export function zodToGoogleTool(
+  name: string,
+  schema: z.ZodType,
+  options: Partial<{
+    description?: string;
+    strict?: boolean;
+  }> = {}
+): FunctionDeclaration {
+  const openAITool = zodToOpenAITool(name, schema, options);
+  return openAIToGoogleTool(openAITool);
 }

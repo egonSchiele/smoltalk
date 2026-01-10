@@ -18,6 +18,7 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { isFunctionToolCall } from "../util.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
+import { zodToOpenAITool } from "../util/tool.js";
 
 export type SmolOpenAiConfig = BaseClientConfig;
 
@@ -44,7 +45,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     const request = {
       model: this.model,
       messages,
-      tools: config.tools,
+      tools: config.tools?.map((tool) => {
+        return zodToOpenAITool(tool.name, tool.schema, {
+          description: tool.description,
+        });
+      }),
     };
     if (config.responseFormat) {
       (request as any).response_format = {

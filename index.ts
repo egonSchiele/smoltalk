@@ -12,35 +12,20 @@ function add({ a, b }: { a: number; b: number }): number {
   return a + b;
 }
 
-// Define the function tool for OpenAI
 const addTool = {
-  type: "function" as const,
-  function: {
-    name: "add",
-    description: "Adds two numbers together and returns the result.",
-    parameters: {
-      type: "object",
-      properties: {
-        a: {
-          type: "number",
-          description: "The first number to add",
-        },
-        b: {
-          type: "number",
-          description: "The second number to add",
-        },
-      },
-      required: ["a", "b"],
-      additionalProperties: false,
-    },
-  },
+  name: "add",
+  description: "Adds two numbers together and returns the result.",
+  schema: z.object({
+    a: z.number().describe("The first number to add"),
+    b: z.number().describe("The second number to add"),
+  }),
 };
 
 const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "debug",
-  model: "gpt-4o-mini",
+  model: "gemini-2.5-flash-lite",
 });
 
 const responseFormat = z.object({
@@ -57,8 +42,7 @@ async function main() {
   const resp = await client.text({
     messages,
     tools: [addTool],
-    /*     responseFormat
-     */ // Try without toolConfig to test basic function calling
+    //     responseFormat
   });
   console.log(color.green("--------------- Response ---------------"));
   console.log(JSON.stringify(resp, null, 2));

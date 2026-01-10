@@ -1,5 +1,6 @@
 import { GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import { EgonLog } from "egonlog";
+import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../logger.js";
 import {
   BaseClientConfig,
@@ -9,9 +10,8 @@ import {
   SmolClient,
   success,
 } from "../types.js";
+import { zodToGoogleTool } from "../util/tool.js";
 import { BaseClient } from "./baseClient.js";
-import { ToolCall } from "../classes/ToolCall.js";
-import { convertOpenAIToolToGoogle } from "../util/common.js";
 
 export type SmolGoogleConfig = BaseClientConfig;
 
@@ -36,9 +36,12 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   async text(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toGoogleMessage());
 
-    const tools = (config.tools || []).map((tool) =>
-      convertOpenAIToolToGoogle(tool)
-    );
+    const tools = (config.tools || []).map((tool) => {
+      return zodToGoogleTool(tool.name, tool.schema, {
+        description: tool.description,
+      });
+    });
+
     const genConfig: GenerateContentConfig = {};
 
     if (tools.length > 0) {
