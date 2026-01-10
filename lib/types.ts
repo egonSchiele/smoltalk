@@ -4,20 +4,23 @@ import { ModelName } from "./models.js";
 import { Message } from "./classes/message/index.js";
 import { Result } from "./types/result.js";
 import { ToolCall } from "./classes/ToolCall.js";
+import { OpenAIToolDefinition } from "./util/common.js";
 
-export type PromptConfig<Tool = any> = {
+export type PromptConfig = {
   messages: Message[];
-  tools?: Tool[];
+  tools?: OpenAIToolDefinition[];
   instructions?: string;
   maxTokens?: number;
   temperature?: number;
   numSuggestions?: number;
   parallelToolCalls?: boolean;
   responseFormat?: any;
+  rawAttributes?: Record<string, any>;
 };
 
 export type SmolConfig = {
-  apiKey: string;
+  openAiApiKey?: string;
+  googleApiKey?: string;
   model: ModelName;
   logLevel?: LogLevel;
 };

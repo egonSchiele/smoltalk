@@ -6,9 +6,17 @@ import { SmolOpenAi } from "./clients/openai.js";
 import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolConfig } from "./types.js";
+import { getLogger } from "./logger.js";
 
 export function getClient(config: SmolConfig) {
-  const apiKey = config.apiKey;
+  if (!config.openAiApiKey && !config.googleApiKey) {
+    throw new SmolError(
+      "No API key provided. Please provide an OpenAI or Google API key in the config using openAiApiKey or googleApiKey."
+    );
+  }
+
+  // Initialize logger singleton with desired log level
+  const logger = getLogger(config.logLevel);
 
   const model = getModel(config.model);
   if (model === undefined || !isTextModel(model)) {

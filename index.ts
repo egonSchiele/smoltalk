@@ -1,4 +1,9 @@
-import { userMessage } from "./lib/classes/message/index.js";
+import { FunctionCallingConfigMode, FunctionDeclaration } from "@google/genai";
+import {
+  Message,
+  toolMessage,
+  userMessage,
+} from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
 
 function add({ a, b }: { a: number; b: number }): number {
@@ -28,18 +33,40 @@ const addTool = {
     },
   },
 };
+
 const client = getClient({
-  apiKey: process.env.OPENAI_API_KEY || "",
+  openAiApiKey: process.env.OPENAI_API_KEY || "",
+  googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "debug",
-  model: "gpt-4o-mini",
+  model: "gemini-2.5-flash",
 });
 
 async function main() {
+  let messages: Message[] = [];
+  messages.push(
+    userMessage(
+      "Please use the add function to add the following numbers: 3 and 5"
+    )
+  );
   const resp = await client.text({
-    messages: [userMessage("3 + 5")],
+    messages,
     tools: [addTool],
+    // Try without toolConfig to test basic function calling
   });
   console.log(resp);
+
+  if (resp.success && resp.value.toolCalls.length > 0) {
+    const toolCall = resp.value.toolCalls[0];
+    if (toolCall.name === "add") {
+      const result = JSON.stringify(add(toolCall.arguments as any));
+      console.log("Function call result:", result);
+      messages.push(
+        toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name })
+      );
+      const followupResp = await client.text({ messages });
+      console.log("Follow-up response:", followupResp);
+    }
+  }
 }
 
 main();
