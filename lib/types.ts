@@ -14,10 +14,12 @@ export type PromptConfig<Tool = any> = {
   numSuggestions?: number;
   parallelToolCalls?: boolean;
   responseFormat?: any;
+  rawAttributes?: Record<string, any>;
 };
 
 export type SmolConfig = {
-  apiKey: string;
+  openAiApiKey?: string;
+  googleApiKey?: string;
   model: ModelName;
   logLevel?: LogLevel;
 };

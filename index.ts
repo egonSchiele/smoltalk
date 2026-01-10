@@ -1,45 +1,51 @@
+import { FunctionCallingConfigMode, FunctionDeclaration } from "@google/genai";
 import { userMessage } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
 
-function add({ a, b }: { a: number; b: number }): number {
-  return a + b;
-}
+const aditify = ({ text }: { text: string }) => {
+  return `Adit says: ${text}`;
+};
 
-// Define the function tool for OpenAI
-const addTool = {
-  type: "function" as const,
-  function: {
-    name: "add",
-    description: "Adds two numbers together and returns the result.",
-    parameters: {
-      type: "object",
-      properties: {
-        a: {
-          type: "number",
-          description: "The first number to add",
-        },
-        b: {
-          type: "number",
-          description: "The second number to add",
-        },
+const aditifyDeclaration: FunctionDeclaration = {
+  name: "aditify",
+  description: "Aditify the given text",
+  parametersJsonSchema: {
+    type: "object",
+    properties: {
+      text: {
+        type: "string",
+        description: "The text to aditify",
       },
-      required: ["a", "b"],
-      additionalProperties: false,
     },
+    required: ["text"],
+    additionalProperties: false,
   },
 };
+
 const client = getClient({
-  apiKey: process.env.OPENAI_API_KEY || "",
+  openAiApiKey: process.env.OPENAI_API_KEY || "",
+  googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "debug",
-  model: "gpt-4o-mini",
+  model: "gemini-2.5-flash",
 });
 
 async function main() {
   const resp = await client.text({
-    messages: [userMessage("3 + 5")],
-    tools: [addTool],
+    messages: [
+      userMessage("Call the aditify function with the text 'Hello world!'"),
+    ],
+    tools: [{ functionDeclarations: [aditifyDeclaration] }],
+    // Try without toolConfig to test basic function calling
   });
   console.log(resp);
+
+  if (resp.success && resp.value.toolCalls.length > 0) {
+    const toolCall = resp.value.toolCalls[0];
+    if (toolCall.name === "aditify") {
+      const result = aditify(toolCall.arguments as any);
+      console.log("Function call result:", result);
+    }
+  }
 }
 
 main();
