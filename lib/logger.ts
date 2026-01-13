@@ -5,7 +5,6 @@ export function getLogger(level: LogLevel = "error"): EgonLog {
   if (loggerInstance) {
     return loggerInstance;
   }
-  console.log("Initializing new logger with level", level);
   loggerInstance = new EgonLog({ level });
   return loggerInstance;
 }

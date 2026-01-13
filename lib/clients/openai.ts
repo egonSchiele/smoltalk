@@ -40,6 +40,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return this.client;
   }
 
+  getModel() {
+    return this.model;
+  }
+
   async text(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
     const request = {
