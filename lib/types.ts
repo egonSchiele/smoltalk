@@ -3,7 +3,7 @@ import { LogLevel } from "egonlog";
 import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
-import { ModelName } from "./models.js";
+import { ModelName, ModelSource } from "./models.js";
 import { Result } from "./types/result.js";
 
 export type PromptConfig = {
@@ -27,6 +27,7 @@ export type SmolConfig = {
   openAiApiKey?: string;
   googleApiKey?: string;
   model: ModelName;
+  provider?: ModelSource;
   logLevel?: LogLevel;
 };
 

@@ -18,14 +18,24 @@ export function getClient(config: SmolConfig) {
   // Initialize logger singleton with desired log level
   const logger = getLogger(config.logLevel);
 
-  const model = getModel(config.model);
-  if (model === undefined || !isTextModel(model)) {
-    throw new SmolError(
-      `Only text models are supported currently. ${config.model} is a ${model?.type} model.`
-    );
+  let provider = config.provider;
+  if (!provider) {
+    const model = getModel(config.model);
+    if (model === undefined) {
+      throw new SmolError(
+        `Model ${config.model} is not recognized. Please specify a known model, or explicitly set the provider option in the config.`
+      );
+    }
+    if (!isTextModel(model)) {
+      throw new SmolError(
+        `Only text models are supported currently. ${config.model} is a ${model?.type} model.`
+      );
+    }
+    provider = model.provider;
   }
+
   const clientConfig = { ...config };
-  switch (model.source) {
+  switch (provider) {
     case "openai":
       return new SmolOpenAi(clientConfig);
       break;
@@ -33,6 +43,6 @@ export function getClient(config: SmolConfig) {
       return new SmolGoogle(clientConfig);
       break;
     default:
-      throw new SmolError(`Model source ${model.source} is not supported.`);
+      throw new SmolError(`Model provider ${provider} is not supported.`);
   }
 }

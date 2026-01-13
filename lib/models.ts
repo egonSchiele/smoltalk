@@ -2,7 +2,6 @@ import { SmolError } from "./smolError.js";
 
 export type ModelSource =
   | "local"
-  | "debug"
   | "local-ollama"
   | "openai"
   | "anthropic"
@@ -12,7 +11,7 @@ export type ModelSource =
 
 export type BaseModel = {
   modelName: string;
-  source: ModelSource;
+  provider: ModelSource;
   description?: string;
   // costs per 1M tokens, in dollars
   inputTokenCost?: number;
@@ -55,12 +54,12 @@ export type Model =
   | ImageModel;
 
 export const speechToTextModels = [
-  { type: "speech-to-text", modelName: "whisper-local", source: "local" },
+  { type: "speech-to-text", modelName: "whisper-local", provider: "local" },
   {
     type: "speech-to-text",
     modelName: "whisper-web",
     perMinuteCost: 0.006,
-    source: "openai",
+    provider: "openai",
   },
   // not a speech to text model?
   /* {
@@ -70,7 +69,7 @@ export const speechToTextModels = [
       "This is a preview release of the GPT-4o Audio models. These models accept audio inputs and outputs, and can be used in the Chat Completions REST API. Learn more. The knowledge cutoff for GPT-4o Audio models is October, 2023.",
     inputTokenCost: 2.5,
     outputTokenCost: 10,
-    source: "openai",
+    provider: "openai",
   }, */
 ] as const;
 
@@ -85,7 +84,7 @@ export const textModels = [
     inputTokenCost: 0.15,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 0.6,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -97,7 +96,7 @@ export const textModels = [
     inputTokenCost: 2.5,
     cachedInputTokenCost: 1.25,
     outputTokenCost: 10,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -109,7 +108,7 @@ export const textModels = [
     inputTokenCost: 2,
     cachedInputTokenCost: 1,
     outputTokenCost: 8,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -121,7 +120,7 @@ export const textModels = [
     inputTokenCost: 1.1,
     cachedInputTokenCost: 0.55,
     outputTokenCost: 4.4,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -133,7 +132,7 @@ export const textModels = [
     inputTokenCost: 1.1,
     cachedInputTokenCost: 0.55,
     outputTokenCost: 4.4,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -145,7 +144,7 @@ export const textModels = [
     inputTokenCost: 15,
     cachedInputTokenCost: 7.5,
     outputTokenCost: 60,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -157,7 +156,7 @@ export const textModels = [
     inputTokenCost: 10,
     outputTokenCost: 30,
     disabled: true,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -169,7 +168,7 @@ export const textModels = [
     inputTokenCost: 30,
     outputTokenCost: 60,
     disabled: true,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -181,7 +180,7 @@ export const textModels = [
     inputTokenCost: 0.5,
     outputTokenCost: 1.5,
     disabled: true,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -193,7 +192,7 @@ export const textModels = [
     inputTokenCost: 2.5,
     cachedInputTokenCost: 1.25,
     outputTokenCost: 10,
-    source: "openai",
+    provider: "openai",
   },
   {
     type: "text",
@@ -204,7 +203,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 2.0,
     outputTokenCost: 12.0,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -215,7 +214,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.5,
     outputTokenCost: 3.0,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -226,7 +225,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 1.25,
     outputTokenCost: 10.0,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -237,7 +236,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.3,
     outputTokenCost: 2.5,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -248,7 +247,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -259,7 +258,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -271,17 +270,18 @@ export const textModels = [
     inputTokenCost: 0.5,
     outputTokenCost: 1.5,
     disabled: true,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
     modelName: "gemini-2.0-flash-lite",
-    description: "Cost effective offering to support high throughput. Note: May be deprecated in favor of 2.5-flash-lite.",
+    description:
+      "Cost effective offering to support high throughput. Note: May be deprecated in favor of 2.5-flash-lite.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
     inputTokenCost: 0.075,
     outputTokenCost: 0.3,
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -293,7 +293,7 @@ export const textModels = [
     inputTokenCost: 0.01875,
     outputTokenCost: 0.075,
     costUnit: "characters",
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -305,7 +305,7 @@ export const textModels = [
     inputTokenCost: 0.3125,
     outputTokenCost: 1.25,
     costUnit: "characters",
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -317,7 +317,7 @@ export const textModels = [
     inputTokenCost: 0.125,
     outputTokenCost: 0.375,
     costUnit: "characters",
-    source: "google",
+    provider: "google",
   },
   {
     type: "text",
@@ -328,7 +328,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 3,
     outputTokenCost: 15,
-    source: "anthropic",
+    provider: "anthropic",
   },
   {
     type: "text",
@@ -338,7 +338,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.8,
     outputTokenCost: 4,
-    source: "anthropic",
+    provider: "anthropic",
   },
   /*  {
     type: "text",
@@ -374,7 +374,7 @@ export const textModels = [
     type: "text",
     modelName: "deepseek-r1:8b",
     description: "Runs via ollama",
-    source: "local-ollama",
+    provider: "local-ollama",
     maxInputTokens: 128000,
     maxOutputTokens: 128000,
   },
@@ -383,7 +383,7 @@ export const textModels = [
     modelName: "mistral-adapters-chunk50-iters100",
     description:
       "Fine tuned Mistral 7B model fed on my stories, chunked into parts of 50 chars each, 100 iterations.",
-    source: "local",
+    provider: "local",
     // https://huggingface.co/mistralai/Mistral-7B-v0.1/discussions/104
     maxInputTokens: 8192,
     maxOutputTokens: 8192,
@@ -391,18 +391,9 @@ export const textModels = [
   {
     type: "text",
     modelName: "llama-7b",
-    source: "replicate",
+    provider: "replicate",
     maxInputTokens: 256,
     maxOutputTokens: 256,
-  },
-  {
-    type: "text",
-    modelName: "console.log text",
-    source: "debug",
-    description:
-      "Fake model that just echoes the prompt to the console for debugging",
-    maxInputTokens: 8192,
-    maxOutputTokens: 8192,
   },
 ] as const;
 
@@ -410,43 +401,35 @@ export const imageModels = [
   {
     type: "image",
     modelName: "google/imagen-3",
-    source: "replicate",
+    provider: "replicate",
     costPerImage: 0.05,
   },
   {
     type: "image",
     modelName: "minimax/image-01",
-    source: "replicate",
+    provider: "replicate",
     costPerImage: 0.01,
     outputType: "Array",
   },
   {
     type: "image",
     modelName: "flux-modal",
-    source: "modal",
+    provider: "modal",
     costPerImage: 0.03,
   },
   {
     type: "image",
     modelName: "gpt-image-1",
-    source: "openai",
+    provider: "openai",
     // varies: https://platform.openai.com/docs/models/gpt-image-1
     costPerImage: 0.25,
   },
   {
     type: "image",
     modelName: "gemini-2.5-flash-image-preview",
-    source: "google",
+    provider: "google",
     description: "aka nano-banana",
     costPerImage: 0.04,
-  },
-  {
-    type: "image",
-    modelName: "console.log image",
-    source: "debug",
-    description:
-      "Fake model that just echoes the prompt to the console for debugging",
-    costPerImage: 0,
   },
 ] as const;
 
