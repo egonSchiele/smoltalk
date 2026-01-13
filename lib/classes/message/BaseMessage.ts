@@ -1,4 +1,5 @@
 import { Content, ContentListUnion } from "@google/genai";
+import { Message } from "ollama";
 import { ChatCompletionMessageParam } from "openai/resources";
 
 export class BaseMessage {}
@@ -11,5 +12,6 @@ export interface MessageClass {
 
   toOpenAIMessage(): ChatCompletionMessageParam;
   toGoogleMessage(): Content;
+  toOllamaMessage(): Message;
   toJSON(): Record<string, any>;
 }

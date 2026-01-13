@@ -26,6 +26,9 @@ export type PromptConfig = {
 export type SmolConfig = {
   openAiApiKey?: string;
   googleApiKey?: string;
+  // only needed for cloud ollama
+  ollamaApiKey?: string;
+  ollamaHost?: string;
   model: ModelName;
   provider?: ModelSource;
   logLevel?: LogLevel;

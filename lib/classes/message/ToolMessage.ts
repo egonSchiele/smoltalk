@@ -2,6 +2,7 @@ import { BaseMessage, MessageClass } from "./BaseMessage.js";
 import { TextPart } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
+import { Message } from "ollama";
 
 export class ToolMessage extends BaseMessage implements MessageClass {
   public _role = "tool" as const;
@@ -62,14 +63,25 @@ export class ToolMessage extends BaseMessage implements MessageClass {
 
   toGoogleMessage(): Content {
     return {
-      role: "user", parts: [{
-        functionResponse: {
-          name: this.name,
-          response: {
-            result: this.content
-          }
-        }
-      }]
+      role: "user",
+      parts: [
+        {
+          functionResponse: {
+            name: this.name,
+            response: {
+              result: this.content,
+            },
+          },
+        },
+      ],
+    };
+  }
+
+  toOllamaMessage(): Message {
+    return {
+      role: this.role,
+      tool_name: this.name,
+      content: this.content,
     };
   }
 }

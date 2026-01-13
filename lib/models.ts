@@ -2,7 +2,7 @@ import { SmolError } from "./smolError.js";
 
 export type ModelSource =
   | "local"
-  | "local-ollama"
+  | "ollama"
   | "openai"
   | "anthropic"
   | "google"
@@ -374,7 +374,15 @@ export const textModels = [
     type: "text",
     modelName: "deepseek-r1:8b",
     description: "Runs via ollama",
-    provider: "local-ollama",
+    provider: "ollama",
+    maxInputTokens: 128000,
+    maxOutputTokens: 128000,
+  },
+  {
+    type: "text",
+    modelName: "mistral:latest",
+    description: "Runs via ollama",
+    provider: "ollama",
     maxInputTokens: 128000,
     maxOutputTokens: 128000,
   },
@@ -382,7 +390,7 @@ export const textModels = [
     type: "text",
     modelName: "mistral-adapters-chunk50-iters100",
     description:
-      "Fine tuned Mistral 7B model fed on my stories, chunked into parts of 50 chars each, 100 iterations.",
+      "Fine tuned Mistral 7B model, chunked into parts of 50 chars each, 100 iterations.",
     provider: "local",
     // https://huggingface.co/mistralai/Mistral-7B-v0.1/discussions/104
     maxInputTokens: 8192,

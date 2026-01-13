@@ -7,6 +7,7 @@ import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolConfig } from "./types.js";
 import { getLogger } from "./logger.js";
+import { SmolOllama } from "./clients/ollama.js";
 
 export function getClient(config: SmolConfig) {
   if (!config.openAiApiKey && !config.googleApiKey) {
@@ -41,6 +42,9 @@ export function getClient(config: SmolConfig) {
       break;
     case "google":
       return new SmolGoogle(clientConfig);
+      break;
+    case "ollama":
+      return new SmolOllama(clientConfig);
       break;
     default:
       throw new SmolError(`Model provider ${provider} is not supported.`);

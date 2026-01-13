@@ -3,6 +3,7 @@ import { TextPart } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, Part } from "@google/genai";
 import { ToolCall } from "../ToolCall.js";
+import { Message } from "ollama";
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
   public _role = "assistant" as const;
@@ -96,5 +97,13 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       }
     }
     return { role: "model", parts };
+  }
+
+  toOllamaMessage(): Message {
+    return {
+      role: this.role,
+      content: this.content,
+      tool_calls: this.toolCalls?.map((tc) => tc.toOpenAI()),
+    };
   }
 }
