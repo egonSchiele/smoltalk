@@ -44,7 +44,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async text(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _text(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
     const request = {
       model: this.model,
@@ -60,7 +60,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         type: "json_schema",
 
         json_schema: {
-          name: config.responseFormatName || "response",
+          name: config.responseFormatOptions?.name || "response",
           schema: config.responseFormat.toJSONSchema(),
         },
       };

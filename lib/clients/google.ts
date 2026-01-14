@@ -37,7 +37,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async text(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _text(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toGoogleMessage());
 
     const tools = (config.tools || []).map((tool) => {
@@ -77,7 +77,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       JSON.stringify(result, null, 2)
     );
 
-    const text = result.text || null;
+    const output = result.text || null;
     const toolCalls: ToolCall[] = [];
 
     result.candidates?.forEach((candidate) => {
@@ -94,6 +94,6 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     });
 
     // Return the response, updating the chat history
-    return success({ output: text, toolCalls });
+    return success({ output, toolCalls });
   }
 }

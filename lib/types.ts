@@ -19,7 +19,16 @@ export type PromptConfig = {
   numSuggestions?: number;
   parallelToolCalls?: boolean;
   responseFormat?: ZodType;
-  responseFormatName?: string;
+
+  // used by openai
+  responseFormatOptions?: Partial<{
+    name: string;
+    strict: boolean;
+
+    // 2 by default, if strict is true
+    numRetries: number;
+  }>;
+
   rawAttributes?: Record<string, any>;
 };
 
@@ -43,6 +52,7 @@ export type PromptResult = { output: string | null; toolCalls: ToolCall[] };
 export interface SmolClient {
   text(config: PromptConfig): Promise<Result<PromptResult>>;
   prompt(text: string, config?: PromptConfig): Promise<Result<PromptResult>>;
+  _text(config: PromptConfig): Promise<Result<PromptResult>>;
 }
 
 export type TextPart = {
