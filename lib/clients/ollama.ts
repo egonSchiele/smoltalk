@@ -22,7 +22,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
   private model: string;
   private client: Ollama;
   constructor(config: SmolOllamaConfig) {
-    super();
+    super(config);
     this.logger = getLogger();
     this.model = config.model;
     if (config.ollamaApiKey) {
@@ -69,7 +69,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending request to Ollama:",
-      JSON.stringify(request, null, 2)
+      JSON.stringify(request, null, 2),
     );
     // @ts-ignore
     const result = await this.client.chat(request);
@@ -85,8 +85,8 @@ export class SmolOllama extends BaseClient implements SmolClient {
           new ToolCall(
             tool_call.id,
             tool_call.function.name,
-            tool_call.function.arguments || {}
-          )
+            tool_call.function.arguments || {},
+          ),
         );
       }
     }

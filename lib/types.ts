@@ -41,6 +41,18 @@ export type SmolConfig = {
   model: ModelName;
   provider?: ModelSource;
   logLevel?: LogLevel;
+  toolLoopDetection?: ToolLoopDetection;
+};
+
+export type ToolLoopDetection = {
+  enabled: boolean;
+  maxConsecutive: number;
+  intervention?:
+    | "remove-tool"
+    | "remove-all-tools"
+    | "throw-error"
+    | "halt-execution";
+  excludeTools?: string[];
 };
 
 export type BaseClientConfig = SmolConfig & {

@@ -20,7 +20,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   private logger: EgonLog;
   private model: string;
   constructor(config: SmolGoogleConfig) {
-    super();
+    super(config);
     if (!config.googleApiKey) {
       throw new Error("Google API key is required for SmolGoogle client.");
     }
@@ -67,14 +67,14 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending request to Google Gemini:",
-      JSON.stringify(request, null, 2)
+      JSON.stringify(request, null, 2),
     );
     // Send the prompt as the latest message
     const result = await this.client.models.generateContent(request);
 
     this.logger.debug(
       "Response from Google Gemini:",
-      JSON.stringify(result, null, 2)
+      JSON.stringify(result, null, 2),
     );
 
     const output = result.text || null;
@@ -86,7 +86,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
           if (part.functionCall) {
             const functionCall = part.functionCall;
             toolCalls.push(
-              new ToolCall("", functionCall.name, functionCall.args)
+              new ToolCall("", functionCall.name, functionCall.args),
             );
           }
         });

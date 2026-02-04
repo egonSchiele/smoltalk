@@ -27,7 +27,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   private logger: EgonLog;
   private model: string;
   constructor(config: SmolOpenAiConfig) {
-    super();
+    super(config);
     if (!config.openAiApiKey) {
       throw new Error("OpenAI API key is required for SmolOpenAi client.");
     }
@@ -68,14 +68,14 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending request to OpenAI:",
-      JSON.stringify(request, null, 2)
+      JSON.stringify(request, null, 2),
     );
 
     const completion: ChatCompletion =
       await this.client.chat.completions.create(request);
     this.logger.debug(
       "Response from OpenAI:",
-      JSON.stringify(completion, null, 2)
+      JSON.stringify(completion, null, 2),
     );
     const message: ChatCompletionMessage = completion.choices[0].message;
     const output = message.content;
@@ -88,11 +88,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       for (const tc of _toolCalls) {
         if (isFunctionToolCall(tc)) {
           toolCalls.push(
-            new ToolCall(tc.id, tc.function.name, tc.function.arguments)
+            new ToolCall(tc.id, tc.function.name, tc.function.arguments),
           );
         } else {
           this.logger.warn(
-            `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`
+            `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`,
           );
         }
       }
