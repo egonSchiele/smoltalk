@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   assistantMessage,
   Message,
+  messageFromJSON,
   toolMessage,
   userMessage,
 } from "./lib/classes/message/index.js";
@@ -36,8 +37,8 @@ async function main() {
   let messages: Message[] = [];
   messages.push(
     userMessage(
-      "Please use the add function to add the following numbers: 3 and 5"
-    )
+      "Please use the add function to add the following numbers: 3 and 5",
+    ),
   );
   const resp = await client.text({
     messages,
@@ -54,7 +55,7 @@ async function main() {
       const result = JSON.stringify(add(toolCall.arguments as any));
       console.log(color.green("Function call result:"), result);
       messages.push(
-        toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name })
+        toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name }),
       );
       const followupResp = await client.text({
         messages,
@@ -63,7 +64,7 @@ async function main() {
       });
       console.log(
         color.green("Follow-up response:"),
-        JSON.stringify(followupResp, null, 2)
+        JSON.stringify(followupResp, null, 2),
       );
     }
   }

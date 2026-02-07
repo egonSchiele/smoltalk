@@ -42,6 +42,13 @@ export class UserMessage extends BaseMessage implements MessageClass {
     };
   }
 
+  static fromJSON(json: any): UserMessage {
+    return new UserMessage(json.content, {
+      name: json.name,
+      rawData: json.rawData,
+    });
+  }
+
   toOpenAIMessage(): ChatCompletionMessageParam {
     return {
       role: this.role,

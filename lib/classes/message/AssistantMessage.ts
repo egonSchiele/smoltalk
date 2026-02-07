@@ -22,7 +22,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal?: string | null;
       toolCalls?: ToolCall[];
       rawData?: any;
-    } = {}
+    } = {},
   ) {
     super();
     this._content = content;
@@ -75,6 +75,18 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal: this.refusal,
       toolCalls: this.toolCalls?.map((tc) => tc.toJSON()),
     };
+  }
+
+  static fromJSON(json: any): AssistantMessage {
+    return new AssistantMessage(json.content, {
+      name: json.name,
+      audio: json.audio,
+      refusal: json.refusal,
+      toolCalls: json.toolCalls
+        ? json.toolCalls.map((tcJson: any) => ToolCall.fromJSON(tcJson))
+        : undefined,
+      rawData: json.rawData,
+    });
   }
 
   toOpenAIMessage(): ChatCompletionMessageParam {

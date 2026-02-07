@@ -12,9 +12,26 @@ export * from "./SystemMessage.js";
 export * from "./ToolMessage.js";
 export * from "./UserMessage.js";
 
+export function messageFromJSON(json: any) {
+  switch (json.role) {
+    case "user":
+      return UserMessage.fromJSON(json);
+    case "assistant":
+      return AssistantMessage.fromJSON(json);
+    case "developer":
+      return DeveloperMessage.fromJSON(json);
+    case "system":
+      return SystemMessage.fromJSON(json);
+    case "tool":
+      return ToolMessage.fromJSON(json);
+    default:
+      throw new Error(`Unknown message role: ${json.role}`);
+  }
+}
+
 export function userMessage(
   content: string,
-  options: { name?: string; rawData?: any } = {}
+  options: { name?: string; rawData?: any } = {},
 ) {
   return new UserMessage(content, options);
 }
@@ -27,28 +44,28 @@ export function assistantMessage(
     refusal?: string | null;
     toolCalls?: Array<any>;
     rawData?: any;
-  } = {}
+  } = {},
 ) {
   return new AssistantMessage(content, options);
 }
 
 export function developerMessage(
   content: string | Array<TextPart>,
-  options: { name?: string; rawData?: any } = {}
+  options: { name?: string; rawData?: any } = {},
 ) {
   return new DeveloperMessage(content, options);
 }
 
 export function systemMessage(
   content: string | Array<TextPart>,
-  options: { name?: string; rawData?: any } = {}
+  options: { name?: string; rawData?: any } = {},
 ) {
   return new SystemMessage(content, options);
 }
 
 export function toolMessage(
   content: string | Array<TextPart>,
-  options: { tool_call_id: string; rawData?: any; name: string }
+  options: { tool_call_id: string; rawData?: any; name: string },
 ) {
   return new ToolMessage(content, options);
 }

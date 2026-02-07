@@ -14,7 +14,7 @@ export class ToolCall {
     id: string,
     name: string,
     args: Record<string, any> | string,
-    options: ToolCallOptions = {}
+    options: ToolCallOptions = {},
   ) {
     this._id = id;
     this._name = name;
@@ -26,7 +26,7 @@ export class ToolCall {
         this.logger.error(
           `Failed to parse arguments for ToolCall ${name} with id ${id}:`,
           e,
-          args
+          args,
         );
         this._arguments = {};
       }
@@ -53,6 +53,10 @@ export class ToolCall {
       name: this._name,
       arguments: this._arguments,
     };
+  }
+
+  static fromJSON(json: any): ToolCall {
+    return new ToolCall(json.id, json.name, json.arguments);
   }
 
   toOpenAI(): any {

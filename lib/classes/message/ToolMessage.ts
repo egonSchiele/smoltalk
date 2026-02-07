@@ -13,7 +13,7 @@ export class ToolMessage extends BaseMessage implements MessageClass {
 
   constructor(
     content: string | Array<TextPart>,
-    options: { tool_call_id: string; rawData?: any; name: string }
+    options: { tool_call_id: string; rawData?: any; name: string },
   ) {
     super();
     this._content = content;
@@ -51,6 +51,14 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       name: this.name,
       tool_call_id: this.tool_call_id,
     };
+  }
+
+  static fromJSON(json: any): ToolMessage {
+    return new ToolMessage(json.content, {
+      tool_call_id: json.tool_call_id,
+      name: json.name,
+      rawData: json.rawData,
+    });
   }
 
   toOpenAIMessage(): ChatCompletionMessageParam {

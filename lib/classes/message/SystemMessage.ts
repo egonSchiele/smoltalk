@@ -12,7 +12,7 @@ export class SystemMessage extends BaseMessage implements MessageClass {
 
   constructor(
     content: string | Array<TextPart>,
-    options: { name?: string; rawData?: any } = {}
+    options: { name?: string; rawData?: any } = {},
   ) {
     super();
     this._content = content;
@@ -44,6 +44,13 @@ export class SystemMessage extends BaseMessage implements MessageClass {
       content: this._content,
       name: this.name,
     };
+  }
+
+  static fromJSON(json: any): SystemMessage {
+    return new SystemMessage(json.content, {
+      name: json.name,
+      rawData: json.rawData,
+    });
   }
 
   toOpenAIMessage(): ChatCompletionMessageParam {
