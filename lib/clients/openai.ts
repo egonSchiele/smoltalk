@@ -9,7 +9,6 @@ import {
 } from "../types.js";
 import { EgonLog } from "egonlog";
 import {
-  ChatCompletion,
   ChatCompletionMessage,
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
@@ -19,6 +18,7 @@ import { isFunctionToolCall } from "../util.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAITool } from "../util/tool.js";
+import { color } from "termcolors";
 
 export type SmolOpenAiConfig = BaseClientConfig;
 
@@ -54,6 +54,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
           description: tool.description,
         });
       }),
+      ...(config.rawAttributes || {}),
     };
     if (config.responseFormat) {
       (request as any).response_format = {
@@ -71,33 +72,89 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
 
-    const completion: ChatCompletion =
-      await this.client.chat.completions.create(request);
-    this.logger.debug(
-      "Response from OpenAI:",
-      JSON.stringify(completion, null, 2),
-    );
-    const message: ChatCompletionMessage = completion.choices[0].message;
-    const output = message.content;
-    const _toolCalls: ChatCompletionMessageToolCall[] | undefined =
-      message.tool_calls;
+    if (config.stream) {
+      console.log(color.yellow("Streaming response from OpenAI..."));
+      const completion = await this.client.chat.completions.create({
+        ...request,
+        stream: true as const,
+      });
 
-    const toolCalls: ToolCall[] = [];
+      let content = "";
+      const toolCallsMap = new Map<
+        number,
+        { id: string; name: string; arguments: string }
+      >();
 
-    if (_toolCalls) {
-      for (const tc of _toolCalls) {
-        if (isFunctionToolCall(tc)) {
-          toolCalls.push(
-            new ToolCall(tc.id, tc.function.name, tc.function.arguments),
-          );
-        } else {
-          this.logger.warn(
-            `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`,
-          );
+      for await (const chunk of completion) {
+        const delta = chunk.choices[0]?.delta;
+        if (!delta) continue;
+
+        if (delta.content) {
+          process.stdout.write(color.blue(delta.content));
+          content += delta.content;
+        }
+
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const index = tc.index;
+            if (!toolCallsMap.has(index)) {
+              toolCallsMap.set(index, {
+                id: tc.id || "",
+                name: tc.function?.name || "",
+                arguments: tc.function?.arguments || "",
+              });
+            } else {
+              const existing = toolCallsMap.get(index)!;
+              if (tc.id) existing.id = tc.id;
+              if (tc.function?.name) existing.name = tc.function.name;
+              if (tc.function?.arguments)
+                existing.arguments += tc.function.arguments;
+            }
+          }
         }
       }
-    }
 
-    return success({ output, toolCalls });
+      this.logger.debug("Streaming response completed from OpenAI");
+
+      const toolCalls: ToolCall[] = [];
+      for (const tc of toolCallsMap.values()) {
+        toolCalls.push(new ToolCall(tc.id, tc.name, tc.arguments));
+      }
+
+      return success({ output: content || null, toolCalls });
+    } else {
+      console.log(color.yellow("NOT Streaming response from OpenAI..."));
+      const completion = await this.client.chat.completions.create({
+        ...request,
+        stream: false as const,
+      });
+
+      this.logger.debug(
+        "Response from OpenAI:",
+        JSON.stringify(completion, null, 2),
+      );
+      const message: ChatCompletionMessage = completion.choices[0].message;
+      const output = message.content;
+      const _toolCalls: ChatCompletionMessageToolCall[] | undefined =
+        message.tool_calls;
+
+      const toolCalls: ToolCall[] = [];
+
+      if (_toolCalls) {
+        for (const tc of _toolCalls) {
+          if (isFunctionToolCall(tc)) {
+            toolCalls.push(
+              new ToolCall(tc.id, tc.function.name, tc.function.arguments),
+            );
+          } else {
+            this.logger.warn(
+              `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`,
+            );
+          }
+        }
+      }
+
+      return success({ output, toolCalls });
+    }
   }
 }

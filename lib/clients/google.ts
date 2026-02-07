@@ -60,10 +60,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       contents: messages,
       model: this.model,
       config: genConfig,
+      stream: config.stream || false,
+      ...(config.rawAttributes || {}),
     };
-    if (config.rawAttributes) {
-      Object.assign(request, config.rawAttributes);
-    }
 
     this.logger.debug(
       "Sending request to Google Gemini:",

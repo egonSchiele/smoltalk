@@ -19,6 +19,7 @@ export type PromptConfig = {
   numSuggestions?: number;
   parallelToolCalls?: boolean;
   responseFormat?: ZodType;
+  stream?: boolean;
 
   // used by openai
   responseFormatOptions?: Partial<{
