@@ -70,7 +70,7 @@ export type StreamChunk =
 
 export interface SmolClient {
   text(
-    config: PromptConfig,
+    promptConfig: PromptConfig,
   ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
   textSync(config: PromptConfig): Promise<Result<PromptResult>>;
   _textSync(config: PromptConfig): Promise<Result<PromptResult>>;

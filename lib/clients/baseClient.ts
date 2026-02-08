@@ -17,6 +17,21 @@ export class BaseClient implements SmolClient {
   constructor(config: SmolConfig) {
     this.config = config || {};
   }
+  text(
+    promptConfig: Omit<PromptConfig, "stream">,
+  ): Promise<Result<PromptResult>>;
+
+  text(
+    promptConfig: Omit<PromptConfig, "stream"> & { stream: false },
+  ): Promise<Result<PromptResult>>;
+
+  text(
+    promptConfig: Omit<PromptConfig, "stream"> & { stream: true },
+  ): AsyncGenerator<StreamChunk>;
+
+  text(
+    promptConfig: PromptConfig,
+  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
 
   text(
     promptConfig: PromptConfig,

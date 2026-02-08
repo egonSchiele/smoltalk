@@ -9,6 +9,7 @@ import {
   PromptResult,
   Result,
   SmolClient,
+  StreamChunk,
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
@@ -44,7 +45,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async text(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
 
     const tools = (config.tools || []).map((tool) => {

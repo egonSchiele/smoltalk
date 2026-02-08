@@ -9,6 +9,19 @@ import {
 } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
 
+function add({ a, b }: { a: number; b: number }): number {
+  return a + b;
+}
+
+const addTool = {
+  name: "add",
+  description: "Adds two numbers together and returns the result.",
+  schema: z.object({
+    a: z.number().describe("The first number to add"),
+    b: z.number().describe("The second number to add"),
+  }),
+};
+
 const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
@@ -16,21 +29,26 @@ const client = getClient({
   model: "gpt-4o-mini",
 });
 
+const responseFormat = z.object({
+  result: z.number(),
+});
+
 async function main() {
   let messages: Message[] = [];
   messages.push(
     userMessage(
-      "Please write me a children's fairy tale that is 300 words or less.",
+      "Please use the add function to add the following numbers: 3 and 5",
     ),
   );
-  const resp = client.textStream({
+  const resp = await client.text({
     messages,
-    //     responseFormat
+    tools: [addTool],
+    stream: true,
   });
+  console.log(color.green("--------------- Response ---------------"));
+  console.log(resp);
 
-  const stream = resp;
-
-  for await (const chunk of stream) {
+  for await (const chunk of resp) {
     switch (chunk.type) {
       case "text":
         process.stdout.write(chunk.text); // print tokens as they arrive
@@ -47,9 +65,6 @@ async function main() {
         break;
     }
   }
-
-  // console.log(color.green("--------------- Response ---------------"));
-  // console.log(JSON.stringify(resp, null, 2));
 }
 
 main();
