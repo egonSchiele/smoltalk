@@ -6,6 +6,7 @@ import {
   Result,
   SmolClient,
   SmolConfig,
+  StreamChunk,
 } from "../types.js";
 
 const DEFAULT_NUM_RETRIES = 2;
@@ -17,7 +18,17 @@ export class BaseClient implements SmolClient {
     this.config = config || {};
   }
 
-  async text(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
+  text(
+    promptConfig: PromptConfig,
+  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
+    if (promptConfig.stream) {
+      return this.textStream(promptConfig);
+    } else {
+      return this.textSync(promptConfig);
+    }
+  }
+
+  async textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
     const { continue: shouldContinue, newPromptConfig } =
       this.checkForToolLoops(promptConfig);
     if (!shouldContinue) {
@@ -88,7 +99,7 @@ export class BaseClient implements SmolClient {
     promptConfig: PromptConfig,
     retries: number,
   ): Promise<Result<PromptResult>> {
-    const result = await this._text(promptConfig);
+    const result = await this._textSync(promptConfig);
     if (result.success) {
       const { output } = result.value;
       if (
@@ -113,13 +124,13 @@ export class BaseClient implements SmolClient {
     return result;
   }
 
-  async _text(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
     throw new Error("Method not implemented.");
   }
-  async prompt(
+  prompt(
     text: string,
     promptConfig?: PromptConfig,
-  ): Promise<Result<PromptResult>> {
+  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
     const msg = userMessage(text);
     const newPromptConfig: PromptConfig = {
       ...promptConfig,
@@ -127,6 +138,33 @@ export class BaseClient implements SmolClient {
         ? [...promptConfig.messages, msg]
         : [msg],
     };
-    return await this.text(newPromptConfig);
+    return this.text(newPromptConfig);
+  }
+
+  async *textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const { continue: shouldContinue, newPromptConfig } =
+      this.checkForToolLoops(config);
+    if (!shouldContinue) {
+      yield { type: "done", result: { output: null, toolCalls: [] } };
+      return;
+    }
+    yield* this._textStream(newPromptConfig);
+  }
+
+  // default implementation of text stream just calls the non-streaming version and yields the result
+  // clients that support streaming can override this to provide a streaming implementation
+  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const result = await this._textSync(config);
+    if (result.success) {
+      if (result.value.output) {
+        yield { type: "text", text: result.value.output };
+      }
+      for (const tc of result.value.toolCalls) {
+        yield { type: "tool_call", toolCall: tc };
+      }
+      yield { type: "done", result: result.value };
+    } else {
+      yield { type: "error", error: result.error };
+    }
   }
 }

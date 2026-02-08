@@ -9,65 +9,47 @@ import {
 } from "./lib/classes/message/index.js";
 import { getClient } from "./lib/client.js";
 
-function add({ a, b }: { a: number; b: number }): number {
-  return a + b;
-}
-
-const addTool = {
-  name: "add",
-  description: "Adds two numbers together and returns the result.",
-  schema: z.object({
-    a: z.number().describe("The first number to add"),
-    b: z.number().describe("The second number to add"),
-  }),
-};
-
 const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
-  logLevel: "debug",
-  model: "gemini-2.5-flash-lite",
-});
-
-const responseFormat = z.object({
-  result: z.number(),
+  logLevel: "warn",
+  model: "gpt-4o-mini",
 });
 
 async function main() {
   let messages: Message[] = [];
   messages.push(
     userMessage(
-      "Please use the add function to add the following numbers: 3 and 5",
+      "Please write me a children's fairy tale that is 300 words or less.",
     ),
   );
-  const resp = await client.text({
+  const resp = client.textStream({
     messages,
-    tools: [addTool],
     //     responseFormat
   });
-  console.log(color.green("--------------- Response ---------------"));
-  console.log(JSON.stringify(resp, null, 2));
 
-  if (resp.success && resp.value.toolCalls.length > 0) {
-    const toolCall = resp.value.toolCalls[0];
-    messages.push(assistantMessage(null, { toolCalls: [toolCall] }));
-    if (toolCall.name === "add") {
-      const result = JSON.stringify(add(toolCall.arguments as any));
-      console.log(color.green("Function call result:"), result);
-      messages.push(
-        toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name }),
-      );
-      const followupResp = await client.text({
-        messages,
-        //tools: [addTool],
-        responseFormat,
-      });
-      console.log(
-        color.green("Follow-up response:"),
-        JSON.stringify(followupResp, null, 2),
-      );
+  const stream = resp;
+
+  for await (const chunk of stream) {
+    switch (chunk.type) {
+      case "text":
+        process.stdout.write(chunk.text); // print tokens as they arrive
+        break;
+      case "tool_call":
+        console.log(
+          "\nTool call:",
+          chunk.toolCall.name,
+          chunk.toolCall.arguments,
+        );
+        break;
+      case "done":
+        console.log("\n\nFinal result:", chunk.result);
+        break;
     }
   }
+
+  // console.log(color.green("--------------- Response ---------------"));
+  // console.log(JSON.stringify(resp, null, 2));
 }
 
 main();

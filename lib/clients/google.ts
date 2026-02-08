@@ -37,7 +37,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async _text(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toGoogleMessage());
 
     const tools = (config.tools || []).map((tool) => {
@@ -60,10 +60,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       contents: messages,
       model: this.model,
       config: genConfig,
+      stream: config.stream || false,
+      ...(config.rawAttributes || {}),
     };
-    if (config.rawAttributes) {
-      Object.assign(request, config.rawAttributes);
-    }
 
     this.logger.debug(
       "Sending request to Google Gemini:",
