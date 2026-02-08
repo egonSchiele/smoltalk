@@ -62,10 +62,17 @@ export type BaseClientConfig = SmolConfig & {
 
 export type PromptResult = { output: string | null; toolCalls: ToolCall[] };
 
+export type StreamChunk =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; toolCall: ToolCall }
+  | { type: "done"; result: PromptResult };
+
 export interface SmolClient {
   text(config: PromptConfig): Promise<Result<PromptResult>>;
   prompt(text: string, config?: PromptConfig): Promise<Result<PromptResult>>;
   _text(config: PromptConfig): Promise<Result<PromptResult>>;
+  textStream(config: PromptConfig): AsyncGenerator<StreamChunk>;
+  _textStream(config: PromptConfig): AsyncGenerator<StreamChunk>;
 }
 
 export type TextPart = {

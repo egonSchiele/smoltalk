@@ -23,13 +23,33 @@ async function main() {
       "Please write me a children's fairy tale that is 300 words or less.",
     ),
   );
-  const resp = await client.text({
+  const resp = client.textStream({
     messages,
-    stream: true,
     //     responseFormat
   });
-  console.log(color.green("--------------- Response ---------------"));
-  console.log(JSON.stringify(resp, null, 2));
+
+  const stream = resp;
+
+  for await (const chunk of stream) {
+    switch (chunk.type) {
+      case "text":
+        process.stdout.write(chunk.text); // print tokens as they arrive
+        break;
+      case "tool_call":
+        console.log(
+          "\nTool call:",
+          chunk.toolCall.name,
+          chunk.toolCall.arguments,
+        );
+        break;
+      case "done":
+        console.log("\n\nFinal result:", chunk.result);
+        break;
+    }
+  }
+
+  // console.log(color.green("--------------- Response ---------------"));
+  // console.log(JSON.stringify(resp, null, 2));
 }
 
 main();

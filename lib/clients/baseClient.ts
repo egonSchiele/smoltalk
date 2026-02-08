@@ -6,6 +6,7 @@ import {
   Result,
   SmolClient,
   SmolConfig,
+  StreamChunk,
 } from "../types.js";
 
 const DEFAULT_NUM_RETRIES = 2;
@@ -128,5 +129,30 @@ export class BaseClient implements SmolClient {
         : [msg],
     };
     return await this.text(newPromptConfig);
+  }
+
+  async *textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const { continue: shouldContinue, newPromptConfig } =
+      this.checkForToolLoops(config);
+    if (!shouldContinue) {
+      yield { type: "done", result: { output: null, toolCalls: [] } };
+      return;
+    }
+    yield* this._textStream(newPromptConfig);
+  }
+
+  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const result = await this._text(config);
+    if (result.success) {
+      if (result.value.output) {
+        yield { type: "text", text: result.value.output };
+      }
+      for (const tc of result.value.toolCalls) {
+        yield { type: "tool_call", toolCall: tc };
+      }
+      yield { type: "done", result: result.value };
+    } else {
+      throw new Error(result.error);
+    }
   }
 }
