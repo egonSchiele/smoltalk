@@ -5,11 +5,11 @@ import {
   PromptResult,
   Result,
   SmolClient,
+  StreamChunk,
   success,
 } from "../types.js";
 import { EgonLog } from "egonlog";
 import {
-  ChatCompletion,
   ChatCompletionMessage,
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
@@ -44,7 +44,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async _text(config: PromptConfig): Promise<Result<PromptResult>> {
+  private buildRequest(config: PromptConfig) {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
     const request = {
       model: this.model,
@@ -54,6 +54,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
           description: tool.description,
         });
       }),
+      ...(config.rawAttributes || {}),
     };
     if (config.responseFormat) {
       (request as any).response_format = {
@@ -65,14 +66,22 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         },
       };
     }
+    return request;
+  }
+
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+    const request = this.buildRequest(config);
 
     this.logger.debug(
       "Sending request to OpenAI:",
       JSON.stringify(request, null, 2),
     );
 
-    const completion: ChatCompletion =
-      await this.client.chat.completions.create(request);
+    const completion = await this.client.chat.completions.create({
+      ...request,
+      stream: false as const,
+    });
+
     this.logger.debug(
       "Response from OpenAI:",
       JSON.stringify(completion, null, 2),
@@ -99,5 +108,65 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
 
     return success({ output, toolCalls });
+  }
+
+  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const request = this.buildRequest(config);
+
+    this.logger.debug(
+      "Sending streaming request to OpenAI:",
+      JSON.stringify(request, null, 2),
+    );
+
+    const completion = await this.client.chat.completions.create({
+      ...request,
+      stream: true as const,
+    });
+
+    let content = "";
+    const toolCallsMap = new Map<
+      number,
+      { id: string; name: string; arguments: string }
+    >();
+
+    for await (const chunk of completion) {
+      const delta = chunk.choices[0]?.delta;
+      if (!delta) continue;
+
+      if (delta.content) {
+        content += delta.content;
+        yield { type: "text", text: delta.content };
+      }
+
+      if (delta.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const index = tc.index;
+          if (!toolCallsMap.has(index)) {
+            toolCallsMap.set(index, {
+              id: tc.id || "",
+              name: tc.function?.name || "",
+              arguments: tc.function?.arguments || "",
+            });
+          } else {
+            const existing = toolCallsMap.get(index)!;
+            if (tc.id) existing.id = tc.id;
+            if (tc.function?.name) existing.name = tc.function.name;
+            if (tc.function?.arguments)
+              existing.arguments += tc.function.arguments;
+          }
+        }
+      }
+    }
+
+    this.logger.debug("Streaming response completed from OpenAI");
+
+    const toolCalls: ToolCall[] = [];
+    for (const tc of toolCallsMap.values()) {
+      const toolCall = new ToolCall(tc.id, tc.name, tc.arguments);
+      toolCalls.push(toolCall);
+      yield { type: "tool_call", toolCall };
+    }
+
+    yield { type: "done", result: { output: content || null, toolCalls } };
   }
 }

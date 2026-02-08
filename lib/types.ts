@@ -19,6 +19,7 @@ export type PromptConfig = {
   numSuggestions?: number;
   parallelToolCalls?: boolean;
   responseFormat?: ZodType;
+  stream?: boolean;
 
   // used by openai
   responseFormatOptions?: Partial<{
@@ -61,10 +62,28 @@ export type BaseClientConfig = SmolConfig & {
 
 export type PromptResult = { output: string | null; toolCalls: ToolCall[] };
 
+export type StreamChunk =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; toolCall: ToolCall }
+  | { type: "done"; result: PromptResult }
+  | { type: "error"; error: string };
+
 export interface SmolClient {
-  text(config: PromptConfig): Promise<Result<PromptResult>>;
-  prompt(text: string, config?: PromptConfig): Promise<Result<PromptResult>>;
-  _text(config: PromptConfig): Promise<Result<PromptResult>>;
+  text(
+    promptConfig: PromptConfig,
+  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
+  textSync(config: PromptConfig): Promise<Result<PromptResult>>;
+
+  // Override this function to provide synchronous text generation implementation
+  _textSync(config: PromptConfig): Promise<Result<PromptResult>>;
+  textStream(config: PromptConfig): AsyncGenerator<StreamChunk>;
+
+  // Override this function to provide streaming text generation implementation
+  _textStream(config: PromptConfig): AsyncGenerator<StreamChunk>;
+  prompt(
+    text: string,
+    config?: PromptConfig,
+  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
 }
 
 export type TextPart = {

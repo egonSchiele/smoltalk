@@ -25,8 +25,8 @@ const addTool = {
 const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
-  logLevel: "debug",
-  model: "gemini-2.5-flash-lite",
+  logLevel: "warn",
+  model: "gpt-4o-mini",
 });
 
 const responseFormat = z.object({
@@ -43,29 +43,26 @@ async function main() {
   const resp = await client.text({
     messages,
     tools: [addTool],
-    //     responseFormat
+    stream: true,
   });
   console.log(color.green("--------------- Response ---------------"));
-  console.log(JSON.stringify(resp, null, 2));
+  console.log(resp);
 
-  if (resp.success && resp.value.toolCalls.length > 0) {
-    const toolCall = resp.value.toolCalls[0];
-    messages.push(assistantMessage(null, { toolCalls: [toolCall] }));
-    if (toolCall.name === "add") {
-      const result = JSON.stringify(add(toolCall.arguments as any));
-      console.log(color.green("Function call result:"), result);
-      messages.push(
-        toolMessage(result, { tool_call_id: toolCall.id, name: toolCall.name }),
-      );
-      const followupResp = await client.text({
-        messages,
-        //tools: [addTool],
-        responseFormat,
-      });
-      console.log(
-        color.green("Follow-up response:"),
-        JSON.stringify(followupResp, null, 2),
-      );
+  for await (const chunk of resp) {
+    switch (chunk.type) {
+      case "text":
+        process.stdout.write(chunk.text); // print tokens as they arrive
+        break;
+      case "tool_call":
+        console.log(
+          "\nTool call:",
+          chunk.toolCall.name,
+          chunk.toolCall.arguments,
+        );
+        break;
+      case "done":
+        console.log("\n\nFinal result:", chunk.result);
+        break;
     }
   }
 }
