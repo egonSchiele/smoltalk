@@ -69,7 +69,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return request;
   }
 
-  async _text(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const request = this.buildRequest(config);
 
     this.logger.debug(

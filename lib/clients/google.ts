@@ -37,7 +37,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async _text(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toGoogleMessage());
 
     const tools = (config.tools || []).map((tool) => {
