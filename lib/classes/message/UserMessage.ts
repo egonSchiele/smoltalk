@@ -22,6 +22,10 @@ export class UserMessage extends BaseMessage implements MessageClass {
     return this._content;
   }
 
+  set content(value: string) {
+    this._content = value;
+  }
+
   get role() {
     return this._role;
   }

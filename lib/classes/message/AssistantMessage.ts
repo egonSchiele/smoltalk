@@ -42,6 +42,10 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       : JSON.stringify(this._content);
   }
 
+  set content(value: string) {
+    this._content = value;
+  }
+
   get role() {
     return this._role;
   }
