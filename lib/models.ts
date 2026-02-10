@@ -102,11 +102,11 @@ export const textModels = [
     type: "text",
     modelName: "o3",
     description:
-      "o3 is a reasoning model that sets a new standard for math, science, and coding, visual reasoning tasks, and technical writing. Part of the o-series of reasoning models. The knowledge cutoff for o3 models is October, 2023.",
+      "o3 is a reasoning model that sets a new standard for math, science, coding, visual reasoning tasks, and technical writing. Part of the o-series of reasoning models. The knowledge cutoff for o3 models is October, 2023.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 2,
-    cachedInputTokenCost: 1,
+    cachedInputTokenCost: 0.5,
     outputTokenCost: 8,
     provider: "openai",
   },
@@ -126,7 +126,7 @@ export const textModels = [
     type: "text",
     modelName: "o4-mini",
     description:
-      "o4-mini is a new o-series reasoning model that replaced o3-mini, providing excellent performance for math, science, and coding tasks. Available in ChatGPT Plus, Pro, and Team.",
+      "Latest small o-series model optimized for fast, effective reasoning with exceptional performance in coding and visual tasks. Knowledge cutoff: June 2024.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 1.1,
@@ -198,9 +198,9 @@ export const textModels = [
     type: "text",
     modelName: "gemini-3-pro-preview",
     description:
-      "Strongest Gemini 3 model quality with 2M context window. Standard pricing for ≤200k tokens, higher rates for >200k tokens.",
-    maxInputTokens: 2_097_152,
-    maxOutputTokens: 8192,
+      "Strongest Gemini 3 model quality with 1M context window and 64K output. Standard pricing for ≤200k tokens ($2.00 input/$12.00 output), higher rates for >200k tokens ($4.00 input/$18.00 output). Released Nov 2025, currently in preview.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 65536,
     inputTokenCost: 2.0,
     outputTokenCost: 12.0,
     provider: "google",
@@ -209,9 +209,9 @@ export const textModels = [
     type: "text",
     modelName: "gemini-3-flash-preview",
     description:
-      "Latest Gemini 3 flash model with 1M context window. Excellent performance for high-volume tasks.",
+      "Latest Gemini 3 flash model with 1M context window and 64K output. Outperforms 2.5 Pro while being 3x faster. Optimized for agentic workflows and coding. Includes context caching for 90% cost reductions.",
     maxInputTokens: 1_048_576,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65536,
     inputTokenCost: 0.5,
     outputTokenCost: 3.0,
     provider: "google",
@@ -220,7 +220,7 @@ export const textModels = [
     type: "text",
     modelName: "gemini-2.5-pro",
     description:
-      "High-performance Gemini 2.5 model with 2M context window. Standard pricing for ≤200k tokens, higher rates for >200k tokens.",
+      "High-performance Gemini 2.5 model with 2M context window. Adaptive thinking for complex reasoning and coding. Standard pricing for ≤200k tokens ($1.25 input/$10.00 output), higher rates for >200k tokens ($2.50 input/higher output). Batch API: 50% discount.",
     maxInputTokens: 2_097_152,
     maxOutputTokens: 8192,
     inputTokenCost: 1.25,
@@ -231,7 +231,7 @@ export const textModels = [
     type: "text",
     modelName: "gemini-2.5-flash",
     description:
-      "Balanced Gemini 2.5 model with excellent performance-to-cost ratio. 1M context window with free tier available.",
+      "Balanced Gemini 2.5 model with excellent performance-to-cost ratio. Lightning-fast with controllable thinking budgets. 1M context window. Context caching available for up to 75% cost reduction.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
     inputTokenCost: 0.3,
@@ -253,11 +253,12 @@ export const textModels = [
     type: "text",
     modelName: "gemini-2.0-flash",
     description:
-      "Workhorse model for all daily tasks. Strong overall performance and supports real-time streaming Live API. 1M context window.",
+      "Workhorse model for all daily tasks. Strong overall performance and supports real-time streaming Live API. 1M context window. DEPRECATED: Will be shut down on March 31, 2026.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
+    disabled: true,
     provider: "google",
   },
   {
@@ -438,6 +439,14 @@ export const imageModels = [
     provider: "google",
     description: "aka nano-banana",
     costPerImage: 0.04,
+  },
+  {
+    type: "image",
+    modelName: "gemini-3-pro-image-preview",
+    provider: "google",
+    description:
+      "High-fidelity image generation with reasoning-enhanced composition. Supports legible text rendering, complex multi-turn editing, and character consistency using up to 14 reference inputs.",
+    costPerImage: 0.05,
   },
 ] as const;
 
