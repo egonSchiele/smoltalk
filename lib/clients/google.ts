@@ -8,6 +8,7 @@ import {
   PromptResult,
   Result,
   SmolClient,
+  StreamChunk,
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
@@ -37,7 +38,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return this.model;
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  private buildRequest(config: PromptConfig) {
     const messages = config.messages.map((msg) => msg.toGoogleMessage());
 
     const tools = (config.tools || []).map((tool) => {
@@ -56,12 +57,18 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       genConfig.responseJsonSchema = config.responseFormat.toJSONSchema();
     }
 
-    const request = {
+    return {
       contents: messages,
       model: this.model,
       config: genConfig,
-      stream: config.stream || false,
       ...(config.rawAttributes || {}),
+    };
+  }
+
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+    const request = {
+      ...this.buildRequest(config),
+      stream: config.stream || false,
     };
 
     this.logger.debug(
@@ -94,5 +101,57 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     // Return the response, updating the chat history
     return success({ output, toolCalls });
+  }
+
+  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const request = this.buildRequest(config);
+
+    this.logger.debug(
+      "Sending streaming request to Google Gemini:",
+      JSON.stringify(request, null, 2),
+    );
+
+    const stream = await this.client.models.generateContentStream(request);
+
+    let content = "";
+    const toolCallsMap = new Map<
+      string,
+      { id: string; name: string; arguments: any }
+    >();
+
+    for await (const chunk of stream) {
+      // Handle text content
+      if (chunk.text) {
+        content += chunk.text;
+        yield { type: "text", text: chunk.text };
+      }
+
+      // Handle function calls
+      if (chunk.functionCalls) {
+        for (const functionCall of chunk.functionCalls) {
+          const id = functionCall.id || functionCall.name || "";
+          const name = functionCall.name || "";
+          if (!toolCallsMap.has(id)) {
+            toolCallsMap.set(id, {
+              id: id,
+              name: name,
+              arguments: functionCall.args,
+            });
+          }
+        }
+      }
+    }
+
+    this.logger.debug("Streaming response completed from Google Gemini");
+
+    // Yield tool calls
+    const toolCalls: ToolCall[] = [];
+    for (const tc of toolCallsMap.values()) {
+      const toolCall = new ToolCall(tc.id, tc.name, tc.arguments);
+      toolCalls.push(toolCall);
+      yield { type: "tool_call", toolCall };
+    }
+
+    yield { type: "done", result: { output: content || null, toolCalls } };
   }
 }

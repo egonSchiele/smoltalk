@@ -26,7 +26,7 @@ const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "warn",
-  model: "gpt-4o-mini",
+  model: "gemini-2.5-flash-lite",
 });
 
 const responseFormat = z.object({
@@ -35,14 +35,10 @@ const responseFormat = z.object({
 
 async function main() {
   let messages: Message[] = [];
-  messages.push(
-    userMessage(
-      "Please use the add function to add the following numbers: 3 and 5",
-    ),
-  );
-  const resp = await client.text({
+  messages.push(userMessage("Write me a 500 word fairy tale."));
+  const resp = client.text({
     messages,
-    tools: [addTool],
+    //tools: [addTool],
     stream: true,
   });
   console.log(color.green("--------------- Response ---------------"));
