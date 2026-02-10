@@ -60,7 +60,27 @@ export type BaseClientConfig = SmolConfig & {
   //logger: EgonLog;
 };
 
-export type PromptResult = { output: string | null; toolCalls: ToolCall[] };
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens?: number;
+  totalTokens?: number;
+};
+
+export type CostEstimate = {
+  inputCost: number;
+  outputCost: number;
+  cachedInputCost?: number;
+  totalCost: number;
+  currency: string;
+};
+
+export type PromptResult = {
+  output: string | null;
+  toolCalls: ToolCall[];
+  usage?: TokenUsage;
+  cost?: CostEstimate;
+};
 
 export type StreamChunk =
   | { type: "text"; text: string }

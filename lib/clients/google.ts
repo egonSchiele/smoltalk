@@ -13,6 +13,8 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import { BaseClient } from "./baseClient.js";
+import { calculateCost, ModelName } from "../models.js";
+import { CostEstimate, TokenUsage } from "../types.js";
 
 export type SmolGoogleConfig = BaseClientConfig;
 
@@ -36,6 +38,30 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
   getModel() {
     return this.model;
+  }
+
+  private calculateUsageAndCost(usageMetadata: any): {
+    usage?: TokenUsage;
+    cost?: CostEstimate;
+  } {
+    let usage: TokenUsage | undefined;
+    let cost: CostEstimate | undefined;
+
+    if (usageMetadata) {
+      usage = {
+        inputTokens: usageMetadata.promptTokenCount || 0,
+        outputTokens: usageMetadata.candidatesTokenCount || 0,
+        cachedInputTokens: usageMetadata.cachedContentTokenCount,
+        totalTokens: usageMetadata.totalTokenCount,
+      };
+
+      const calculatedCost = calculateCost(this.model as ModelName, usage);
+      if (calculatedCost) {
+        cost = calculatedCost;
+      }
+    }
+
+    return { usage, cost };
   }
 
   private buildRequest(config: PromptConfig) {
@@ -99,8 +125,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       }
     });
 
+    // Extract usage and calculate cost
+    const { usage, cost } = this.calculateUsageAndCost(result.usageMetadata);
+
     // Return the response, updating the chat history
-    return success({ output, toolCalls });
+    return success({ output, toolCalls, usage, cost });
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
@@ -118,8 +147,17 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       string,
       { id: string; name: string; arguments: any }
     >();
+    let usage: TokenUsage | undefined;
+    let cost: CostEstimate | undefined;
 
     for await (const chunk of stream) {
+      // Extract usage metadata from chunks
+      if (chunk.usageMetadata) {
+        const usageAndCost = this.calculateUsageAndCost(chunk.usageMetadata);
+        usage = usageAndCost.usage;
+        cost = usageAndCost.cost;
+      }
+
       // Handle text content
       if (chunk.text) {
         content += chunk.text;
@@ -152,6 +190,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    yield { type: "done", result: { output: content || null, toolCalls } };
+    yield {
+      type: "done",
+      result: { output: content || null, toolCalls, usage, cost },
+    };
   }
 }

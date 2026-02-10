@@ -1,4 +1,5 @@
 import { SmolError } from "./smolError.js";
+import { round } from "./util.js";
 
 export type ModelSource =
   | "local"
@@ -480,4 +481,53 @@ export function isSpeechToTextModel(model: Model): model is SpeechToTextModel {
 }
 export function isEmbeddingsModel(model: Model): model is EmbeddingsModel {
   return model.type === "embeddings";
+}
+
+export function calculateCost(
+  modelName: ModelName,
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cachedInputTokens?: number;
+  },
+): {
+  inputCost: number;
+  outputCost: number;
+  cachedInputCost?: number;
+  totalCost: number;
+  currency: string;
+} | null {
+  const model = getModel(modelName);
+  if (!model || !isTextModel(model)) {
+    return null;
+  }
+
+  const inputCost = round(
+    (usage.inputTokens * (model.inputTokenCost || 0)) / 1_000_000,
+    2,
+  );
+  const outputCost = round(
+    (usage.outputTokens * (model.outputTokenCost || 0)) / 1_000_000,
+    2,
+  );
+  const cachedInputCost =
+    usage.cachedInputTokens && model.cachedInputTokenCost
+      ? round(
+          (usage.cachedInputTokens * model.cachedInputTokenCost) / 1_000_000,
+          2,
+        )
+      : undefined;
+
+  const totalCost = round(
+    inputCost + outputCost + (cachedInputCost || 0),
+    2,
+  );
+
+  return {
+    inputCost,
+    outputCost,
+    cachedInputCost,
+    totalCost,
+    currency: "USD",
+  };
 }

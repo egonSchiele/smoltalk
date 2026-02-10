@@ -19,6 +19,8 @@ import { isFunctionToolCall } from "../util.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAITool } from "../util/tool.js";
+import { calculateCost, ModelName } from "../models.js";
+import { CostEstimate, TokenUsage } from "../types.js";
 
 export type SmolOpenAiConfig = BaseClientConfig;
 
@@ -42,6 +44,30 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   getModel() {
     return this.model;
+  }
+
+  private calculateUsageAndCost(usageData: any): {
+    usage?: TokenUsage;
+    cost?: CostEstimate;
+  } {
+    let usage: TokenUsage | undefined;
+    let cost: CostEstimate | undefined;
+
+    if (usageData) {
+      usage = {
+        inputTokens: usageData.prompt_tokens || 0,
+        outputTokens: usageData.completion_tokens || 0,
+        cachedInputTokens: usageData.prompt_tokens_details?.cached_tokens,
+        totalTokens: usageData.total_tokens,
+      };
+
+      const calculatedCost = calculateCost(this.model as ModelName, usage);
+      if (calculatedCost) {
+        cost = calculatedCost;
+      }
+    }
+
+    return { usage, cost };
   }
 
   private buildRequest(config: PromptConfig) {
@@ -107,7 +133,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
     }
 
-    return success({ output, toolCalls });
+    // Extract usage and calculate cost
+    const { usage, cost } = this.calculateUsageAndCost(completion.usage);
+
+    return success({ output, toolCalls, usage, cost });
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
@@ -121,6 +150,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     const completion = await this.client.chat.completions.create({
       ...request,
       stream: true as const,
+      stream_options: { include_usage: true },
     });
 
     let content = "";
@@ -128,9 +158,19 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       number,
       { id: string; name: string; arguments: string }
     >();
+    let usage: TokenUsage | undefined;
+    let cost: CostEstimate | undefined;
 
     for await (const chunk of completion) {
       const delta = chunk.choices[0]?.delta;
+
+      // Extract usage from the final chunk
+      if (chunk.usage) {
+        const usageAndCost = this.calculateUsageAndCost(chunk.usage);
+        usage = usageAndCost.usage;
+        cost = usageAndCost.cost;
+      }
+
       if (!delta) continue;
 
       if (delta.content) {
@@ -167,6 +207,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    yield { type: "done", result: { output: content || null, toolCalls } };
+    yield {
+      type: "done",
+      result: { output: content || null, toolCalls, usage, cost },
+    };
   }
 }
