@@ -1,6 +1,7 @@
 import { EgonLog } from "egonlog";
 import { getLogger } from "../logger.js";
 import { FunctionCall } from "@google/genai";
+import { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 export type ToolCallOptions = {};
 
@@ -77,5 +78,14 @@ export class ToolCall {
         args: this.arguments,
       },
     };
+  }
+
+  toOpenAIResponseInputItem(): ResponseInputItem {
+    return {
+      type: "function_call",
+      call_id: this.id,
+      name: this.name,
+      arguments: JSON.stringify(this.arguments),
+    } as ResponseInputItem;
   }
 }

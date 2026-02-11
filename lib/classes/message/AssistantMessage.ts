@@ -4,6 +4,7 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, Part } from "@google/genai";
 import { ToolCall } from "../ToolCall.js";
 import { Message } from "ollama";
+import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
   public _role = "assistant" as const;
@@ -100,6 +101,28 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       name: this.name,
       tool_calls: this.toolCalls?.map((tc) => tc.toOpenAI()),
     };
+  }
+
+  toOpenAIResponseInputItem(): ResponseInputItem | ResponseInputItem[] {
+    const items: ResponseInputItem[] = [];
+
+    // If there's text content, add it as a message
+    if (this.content) {
+      items.push({
+        type: "message",
+        role: "assistant",
+        content: this.content,
+      } as ResponseInputItem);
+    }
+
+    if (this.toolCalls) {
+      // Add each tool call as a function_call item
+      for (const tc of this.toolCalls) {
+        items.push(tc.toOpenAIResponseInputItem());
+      }
+    }
+
+    return items;
   }
 
   toGoogleMessage(): Content {

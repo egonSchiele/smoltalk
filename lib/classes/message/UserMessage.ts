@@ -4,6 +4,7 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { ToolCall } from "../ToolCall.js";
 import { Message } from "ollama";
+import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 export class UserMessage extends BaseMessage implements MessageClass {
   public _role = "user" as const;
@@ -59,6 +60,14 @@ export class UserMessage extends BaseMessage implements MessageClass {
       content: this.content,
       name: this.name,
     };
+  }
+
+  toOpenAIResponseInputItem(): ResponseInputItem {
+    return {
+      type: "message",
+      role: "user",
+      content: this.content,
+    } as ResponseInputItem;
   }
 
   toGoogleMessage(): Content {

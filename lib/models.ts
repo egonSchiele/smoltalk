@@ -5,6 +5,7 @@ export type ModelSource =
   | "local"
   | "ollama"
   | "openai"
+  | "openai-responses"
   | "anthropic"
   | "google"
   | "replicate"

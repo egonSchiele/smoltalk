@@ -66,6 +66,58 @@ export function zodToOpenAITool(
   };
 }
 
+export type OpenAIResponsesFunctionTool = {
+  type: "function";
+  name: string;
+  parameters: OpenAIToolParameters;
+  strict: boolean;
+  description?: string;
+};
+
+export function zodToOpenAIResponsesTool(
+  name: string,
+  schema: z.ZodType,
+  options: Partial<{
+    description?: string;
+    strict?: boolean;
+  }> = {}
+): OpenAIResponsesFunctionTool {
+  const jsonSchema = schema.toJSONSchema();
+
+  const strict = options?.strict ?? false;
+
+  const parameters: OpenAIToolParameters = {
+    type: "object",
+    properties: jsonSchema.properties || {},
+    required: jsonSchema.required || [],
+    additionalProperties: !strict,
+  };
+
+  const tool: OpenAIResponsesFunctionTool = {
+    type: "function",
+    name,
+    parameters,
+    strict,
+  };
+
+  let description: string | undefined;
+  if (options?.description) {
+    description = options.description;
+  } else if (
+    typeof jsonSchema === "object" &&
+    "description" in jsonSchema &&
+    typeof jsonSchema.description === "string"
+  ) {
+    description = jsonSchema.description;
+  }
+
+  if (description) {
+    tool.description = description;
+  }
+
+  return tool;
+}
+
 /**
  * Removes properties that Google's API doesn't support from JSON schemas
  */

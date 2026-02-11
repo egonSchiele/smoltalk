@@ -3,6 +3,7 @@ import { TextPart } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
+import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 export class ToolMessage extends BaseMessage implements MessageClass {
   public _role = "tool" as const;
@@ -71,6 +72,14 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       content: this.content,
       tool_call_id: this.tool_call_id,
     };
+  }
+
+  toOpenAIResponseInputItem(): ResponseInputItem {
+    return {
+      type: "function_call_output",
+      call_id: this.tool_call_id,
+      output: this.content,
+    } as ResponseInputItem;
   }
 
   toGoogleMessage(): Content {

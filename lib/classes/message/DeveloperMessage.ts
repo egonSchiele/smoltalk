@@ -3,6 +3,7 @@ import { TextPart } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
+import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 export class DeveloperMessage extends BaseMessage implements MessageClass {
   public _role = "developer" as const;
@@ -59,6 +60,14 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
 
   toOpenAIMessage(): ChatCompletionMessageParam {
     return { role: this.role, content: this.content, name: this.name };
+  }
+
+  toOpenAIResponseInputItem(): ResponseInputItem {
+    return {
+      type: "message",
+      role: "developer",
+      content: this.content,
+    } as ResponseInputItem;
   }
 
   toGoogleMessage(): Content {

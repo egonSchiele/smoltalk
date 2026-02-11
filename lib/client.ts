@@ -1,8 +1,10 @@
 export * from "./clients/google.js";
 export * from "./clients/openai.js";
+export * from "./clients/openaiResponses.js";
 import { EgonLog } from "egonlog";
 import { SmolGoogle } from "./clients/google.js";
 import { SmolOpenAi } from "./clients/openai.js";
+import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
 import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolConfig } from "./types.js";
@@ -39,6 +41,9 @@ export function getClient(config: SmolConfig) {
   switch (provider) {
     case "openai":
       return new SmolOpenAi(clientConfig);
+      break;
+    case "openai-responses":
+      return new SmolOpenAiResponses(clientConfig);
       break;
     case "google":
       return new SmolGoogle(clientConfig);

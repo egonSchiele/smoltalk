@@ -26,7 +26,8 @@ const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
   logLevel: "warn",
-  model: "gemini-2.5-flash-lite",
+  model: "gpt-4o-mini",
+  provider: "openai-responses",
 });
 
 const responseFormat = z.object({
