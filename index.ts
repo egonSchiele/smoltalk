@@ -7,7 +7,7 @@ import {
   toolMessage,
   userMessage,
 } from "./lib/classes/message/index.js";
-import { getClient } from "./lib/client.js";
+import { text } from "./lib/functions.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -22,14 +22,6 @@ const addTool = {
   }),
 };
 
-const client = getClient({
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
-  googleApiKey: process.env.GEMINI_API_KEY || "",
-  logLevel: "warn",
-  model: "gpt-4o-mini",
-  provider: "openai-responses",
-});
-
 const responseFormat = z.object({
   result: z.number(),
 });
@@ -37,10 +29,14 @@ const responseFormat = z.object({
 async function main() {
   let messages: Message[] = [];
   messages.push(userMessage("Write me a 500 word fairy tale."));
-  const resp = client.text({
+  const resp = text({
     messages,
-    //tools: [addTool],
     stream: true,
+    openAiApiKey: process.env.OPENAI_API_KEY || "",
+    googleApiKey: process.env.GEMINI_API_KEY || "",
+    logLevel: "warn",
+    model: "gpt-4o-mini",
+    provider: "openai-responses",
   });
   console.log(color.green("--------------- Response ---------------"));
   console.log(resp);

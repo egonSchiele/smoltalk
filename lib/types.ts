@@ -106,6 +106,8 @@ export interface SmolClient {
   ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
 }
 
+export type SmolPromptConfig = SmolConfig & PromptConfig;
+
 export type TextPart = {
   type: "text";
   text: string;
