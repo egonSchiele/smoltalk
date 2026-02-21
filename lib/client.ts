@@ -5,9 +5,9 @@ import { EgonLog } from "egonlog";
 import { SmolGoogle } from "./clients/google.js";
 import { SmolOpenAi } from "./clients/openai.js";
 import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
-import { getModel, isTextModel } from "./models.js";
+import { getModel, isModelConfig, isTextModel, pickModel, ModelName } from "./models.js";
 import { SmolError } from "./smolError.js";
-import { SmolConfig } from "./types.js";
+import { SmolConfig, ResolvedSmolConfig } from "./types.js";
 import { getLogger } from "./logger.js";
 import { SmolOllama } from "./clients/ollama.js";
 
@@ -15,23 +15,28 @@ export function getClient(config: SmolConfig) {
   // Initialize logger singleton with desired log level
   const logger = getLogger(config.logLevel);
 
+  // Resolve ModelConfig to a concrete model name
+  const modelName: ModelName = isModelConfig(config.model)
+    ? pickModel(config.model)
+    : config.model;
+
   let provider = config.provider;
   if (!provider) {
-    const model = getModel(config.model);
+    const model = getModel(modelName);
     if (model === undefined) {
       throw new SmolError(
-        `Model ${config.model} is not recognized. Please specify a known model, or explicitly set the provider option in the config.`
+        `Model ${modelName} is not recognized. Please specify a known model, or explicitly set the provider option in the config.`
       );
     }
     if (!isTextModel(model)) {
       throw new SmolError(
-        `Only text models are supported currently. ${config.model} is a ${model?.type} model.`
+        `Only text models are supported currently. ${modelName} is a ${model?.type} model.`
       );
     }
     provider = model.provider;
   }
 
-  const clientConfig = { ...config };
+  const clientConfig: ResolvedSmolConfig = { ...config, model: modelName };
   switch (provider) {
     case "openai":
       if (!config.openAiApiKey) {

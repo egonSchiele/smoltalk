@@ -1,7 +1,7 @@
 import { SmolError } from "./smolError.js";
 import { round } from "./util.js";
 
-export type ModelSource =
+export type Provider =
   | "local"
   | "ollama"
   | "openai"
@@ -13,7 +13,7 @@ export type ModelSource =
 
 export type BaseModel = {
   modelName: string;
-  provider: ModelSource;
+  provider: Provider;
   description?: string;
   // costs per 1M tokens, in dollars
   inputTokenCost?: number;
@@ -39,6 +39,7 @@ export type TextModel = BaseModel & {
   modelName: string;
   maxInputTokens: number;
   maxOutputTokens: number;
+  outputTokensPerSecond?: number;
 };
 
 export type EmbeddingsModel = {
@@ -86,6 +87,7 @@ export const textModels = [
     inputTokenCost: 0.15,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 0.6,
+    outputTokensPerSecond: 65,
     provider: "openai",
   },
   {
@@ -98,6 +100,7 @@ export const textModels = [
     inputTokenCost: 2.5,
     cachedInputTokenCost: 1.25,
     outputTokenCost: 10,
+    outputTokensPerSecond: 143,
     provider: "openai",
   },
   {
@@ -110,6 +113,7 @@ export const textModels = [
     inputTokenCost: 2,
     cachedInputTokenCost: 0.5,
     outputTokenCost: 8,
+    outputTokensPerSecond: 94,
     provider: "openai",
   },
   {
@@ -122,6 +126,7 @@ export const textModels = [
     inputTokenCost: 1.1,
     cachedInputTokenCost: 0.55,
     outputTokenCost: 4.4,
+    outputTokensPerSecond: 214,
     provider: "openai",
   },
   {
@@ -134,6 +139,7 @@ export const textModels = [
     inputTokenCost: 1.1,
     cachedInputTokenCost: 0.55,
     outputTokenCost: 4.4,
+    outputTokensPerSecond: 135,
     provider: "openai",
   },
   {
@@ -146,6 +152,7 @@ export const textModels = [
     inputTokenCost: 15,
     cachedInputTokenCost: 7.5,
     outputTokenCost: 60,
+    outputTokensPerSecond: 100,
     provider: "openai",
   },
   {
@@ -227,6 +234,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 1.25,
     outputTokenCost: 10.0,
+    outputTokensPerSecond: 175,
     provider: "google",
   },
   {
@@ -238,6 +246,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.3,
     outputTokenCost: 2.5,
+    outputTokensPerSecond: 225,
     provider: "google",
   },
   {
@@ -249,6 +258,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
+    outputTokensPerSecond: 400,
     provider: "google",
   },
   {
@@ -260,6 +270,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
+    outputTokensPerSecond: 213,
     disabled: true,
     provider: "google",
   },
@@ -295,6 +306,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.01875,
     outputTokenCost: 0.075,
+    outputTokensPerSecond: 178,
     costUnit: "characters",
     provider: "google",
   },
@@ -307,6 +319,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.3125,
     outputTokenCost: 1.25,
+    outputTokensPerSecond: 59,
     costUnit: "characters",
     provider: "google",
   },
@@ -331,6 +344,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 3,
     outputTokenCost: 15,
+    outputTokensPerSecond: 78,
     provider: "anthropic",
   },
   {
@@ -341,6 +355,7 @@ export const textModels = [
     maxOutputTokens: 8192,
     inputTokenCost: 0.8,
     outputTokenCost: 4,
+    outputTokensPerSecond: 66,
     provider: "anthropic",
   },
   /*  {
@@ -482,6 +497,115 @@ export function isSpeechToTextModel(model: Model): model is SpeechToTextModel {
 }
 export function isEmbeddingsModel(model: Model): model is EmbeddingsModel {
   return model.type === "embeddings";
+}
+
+export type Optimization = "speed" | "accuracy" | "cost" | "large-context";
+
+export type ModelConfig = {
+  optimizeFor: Optimization[];
+  providers: Provider[];
+};
+
+export function isModelConfig(
+  model: ModelName | ModelConfig,
+): model is ModelConfig {
+  return typeof model === "object" && "optimizeFor" in model;
+}
+
+const WEIGHTS: Record<number, number[]> = {
+  1: [1],
+  2: [0.6, 0.4],
+  3: [0.5, 0.3, 0.2],
+  4: [0.4, 0.3, 0.2, 0.1],
+};
+
+function getRawMetric(
+  model: (typeof textModels)[number],
+  optimization: Optimization,
+): number {
+  const m = model as TextModel;
+  switch (optimization) {
+    case "cost":
+      return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
+    case "speed":
+      return m.outputTokensPerSecond ?? 0;
+    case "accuracy":
+      return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
+    case "large-context":
+      return m.maxInputTokens;
+  }
+}
+
+function isLowerBetter(optimization: Optimization): boolean {
+  return optimization === "cost";
+}
+
+export function pickModel(
+  config: ModelConfig,
+  models: readonly (typeof textModels)[number][] = textModels,
+): TextModelName {
+  const candidates = models.filter(
+    (m) =>
+      config.providers.includes(m.provider as Provider) &&
+      !("disabled" in m && m.disabled),
+  );
+
+  if (candidates.length === 0) {
+    throw new SmolError(
+      "No models available for providers: " +
+        config.providers.join(", ") +
+        ". Check that the providers have non-disabled models.",
+    );
+  }
+
+  if (candidates.length === 1) {
+    return candidates[0].modelName as TextModelName;
+  }
+
+  const optimizations = config.optimizeFor;
+  const weights = WEIGHTS[optimizations.length] ?? WEIGHTS[4]!;
+
+  const scores = new Map<string, number>();
+  for (const c of candidates) {
+    scores.set(c.modelName, 0);
+  }
+
+  for (let i = 0; i < optimizations.length; i++) {
+    const opt = optimizations[i];
+    const weight = weights[i];
+    const rawValues = candidates.map((c) => getRawMetric(c, opt));
+    const min = Math.min(...rawValues);
+    const max = Math.max(...rawValues);
+    const range = max - min;
+
+    for (let j = 0; j < candidates.length; j++) {
+      const raw = rawValues[j];
+      let normalized: number;
+      if (range === 0) {
+        normalized = 0;
+      } else if (isLowerBetter(opt)) {
+        normalized = (raw - min) / range;
+      } else {
+        normalized = (max - raw) / range;
+      }
+      scores.set(
+        candidates[j].modelName,
+        scores.get(candidates[j].modelName)! + weight * normalized,
+      );
+    }
+  }
+
+  let bestModel = candidates[0];
+  let bestScore = scores.get(candidates[0].modelName)!;
+  for (let i = 1; i < candidates.length; i++) {
+    const score = scores.get(candidates[i].modelName)!;
+    if (score < bestScore) {
+      bestScore = score;
+      bestModel = candidates[i];
+    }
+  }
+
+  return bestModel.modelName as TextModelName;
 }
 
 export function calculateCost(

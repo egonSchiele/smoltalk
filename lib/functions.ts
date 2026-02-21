@@ -1,4 +1,5 @@
 import { getClient } from "./client.js";
+import { isModelConfig, pickModel } from "./models.js";
 import {
   SmolPromptConfig,
   PromptResult,
@@ -16,12 +17,15 @@ function splitConfig(config: SmolPromptConfig): {
     googleApiKey,
     ollamaApiKey,
     ollamaHost,
-    model,
+    model: rawModel,
     provider,
     logLevel,
     toolLoopDetection,
     ...promptConfig
   } = config;
+
+  const model = isModelConfig(rawModel) ? pickModel(rawModel) : rawModel;
+
   return {
     smolConfig: {
       openAiApiKey,

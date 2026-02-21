@@ -3,7 +3,7 @@ import { LogLevel } from "egonlog";
 import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
-import { ModelName, ModelSource } from "./models.js";
+import { ModelConfig, ModelName, Provider } from "./models.js";
 import { Result } from "./types/result.js";
 
 export type PromptConfig = {
@@ -39,8 +39,8 @@ export type SmolConfig = {
   // only needed for cloud ollama
   ollamaApiKey?: string;
   ollamaHost?: string;
-  model: ModelName;
-  provider?: ModelSource;
+  model: ModelName | ModelConfig;
+  provider?: Provider;
   logLevel?: LogLevel;
   toolLoopDetection?: ToolLoopDetection;
 };
@@ -56,7 +56,11 @@ export type ToolLoopDetection = {
   excludeTools?: string[];
 };
 
-export type BaseClientConfig = SmolConfig & {
+export type ResolvedSmolConfig = Omit<SmolConfig, "model"> & {
+  model: ModelName;
+};
+
+export type BaseClientConfig = ResolvedSmolConfig & {
   //logger: EgonLog;
 };
 
