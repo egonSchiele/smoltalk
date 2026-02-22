@@ -84,6 +84,7 @@ export type PromptResult = {
   toolCalls: ToolCall[];
   usage?: TokenUsage;
   cost?: CostEstimate;
+  model?: ModelName | ModelConfig;
 };
 
 export type StreamChunk =

@@ -129,7 +129,13 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     const { usage, cost } = this.calculateUsageAndCost(result.usageMetadata);
 
     // Return the response, updating the chat history
-    return success({ output, toolCalls, usage, cost });
+    return success({
+      output,
+      toolCalls,
+      usage,
+      cost,
+      model: request.model as ModelName,
+    });
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
@@ -192,7 +198,13 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     yield {
       type: "done",
-      result: { output: content || null, toolCalls, usage, cost },
+      result: {
+        output: content || null,
+        toolCalls,
+        usage,
+        cost,
+        model: request.model as ModelName,
+      },
     };
   }
 }

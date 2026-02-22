@@ -136,7 +136,13 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     // Extract usage and calculate cost
     const { usage, cost } = this.calculateUsageAndCost(completion.usage);
 
-    return success({ output, toolCalls, usage, cost });
+    return success({
+      output,
+      toolCalls,
+      usage,
+      cost,
+      model: request.model as ModelName,
+    });
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
@@ -209,7 +215,13 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     yield {
       type: "done",
-      result: { output: content || null, toolCalls, usage, cost },
+      result: {
+        output: content || null,
+        toolCalls,
+        usage,
+        cost,
+        model: request.model as ModelName,
+      },
     };
   }
 }

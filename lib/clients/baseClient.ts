@@ -1,5 +1,6 @@
 import { userMessage } from "../classes/message/index.js";
 import { getLogger } from "../logger.js";
+import { ModelName } from "../models.js";
 import {
   PromptConfig,
   PromptResult,
@@ -47,7 +48,10 @@ export class BaseClient implements SmolClient {
     const { continue: shouldContinue, newPromptConfig } =
       this.checkForToolLoops(promptConfig);
     if (!shouldContinue) {
-      return { success: true, value: { output: null, toolCalls: [] } };
+      return {
+        success: true,
+        value: { output: null, toolCalls: [], model: this.config.model },
+      };
     }
     return this.textWithRetry(
       newPromptConfig,
@@ -160,7 +164,14 @@ export class BaseClient implements SmolClient {
     const { continue: shouldContinue, newPromptConfig } =
       this.checkForToolLoops(config);
     if (!shouldContinue) {
-      yield { type: "done", result: { output: null, toolCalls: [] } };
+      yield {
+        type: "done",
+        result: {
+          output: null,
+          toolCalls: [],
+          model: this.config.model,
+        },
+      };
       return;
     }
     yield* this._textStream(newPromptConfig);

@@ -79,7 +79,17 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   private buildRequest(config: PromptConfig) {
     const { instructions, input } = this.convertMessages(config);
 
-    const request: Record<string, any> = {
+    const request: {
+      model: string;
+      input: ResponseInputItem[];
+      instructions?: string;
+      tools?: any[];
+      temperature?: number;
+      max_output_tokens?: number;
+      parallel_tool_calls?: boolean;
+      text?: any;
+      [key: string]: any;
+    } = {
       model: this.model,
       input,
     };
@@ -178,7 +188,13 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
     const { usage, cost } = this.calculateUsageAndCost(response.usage);
 
-    return success({ output, toolCalls, usage, cost });
+    return success({
+      output,
+      toolCalls,
+      usage,
+      cost,
+      model: request.model as ModelName,
+    });
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
@@ -273,7 +289,13 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
     yield {
       type: "done",
-      result: { output: content || null, toolCalls, usage, cost },
+      result: {
+        output: content || null,
+        toolCalls,
+        usage,
+        cost,
+        model: request.model as ModelName,
+      },
     };
   }
 }
