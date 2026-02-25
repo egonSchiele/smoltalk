@@ -1,6 +1,6 @@
 {
   "name": "smoltalk",
-  "version": "0.0.22",
+  "version": "0.0.23",
   "description": "A common interface for LLM APIs",
   "homepage": "https://github.com/egonSchiele/smoltalk",
   "scripts": {
