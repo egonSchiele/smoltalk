@@ -31,6 +31,9 @@ export type PromptConfig = {
   }>;
 
   rawAttributes?: Record<string, any>;
+
+  // If set, returns a failure when the number of messages exceeds this limit
+  maxMessages?: number;
 };
 
 export type SmolConfig = {

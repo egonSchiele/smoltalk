@@ -44,7 +44,27 @@ export class BaseClient implements SmolClient {
     }
   }
 
+  checkMessageLimit(promptConfig: PromptConfig): Result<PromptResult> | null {
+    if (
+      promptConfig.maxMessages !== undefined &&
+      promptConfig.messages.length > promptConfig.maxMessages
+    ) {
+      const logger = getLogger();
+      logger.warn(
+        `Message limit exceeded: ${promptConfig.messages.length} messages sent, but maxMessages is set to ${promptConfig.maxMessages}. Aborting request.`,
+      );
+      return {
+        success: false,
+        error: `Message limit exceeded: ${promptConfig.messages.length} messages exceeds the maxMessages limit of ${promptConfig.maxMessages}`,
+      };
+    }
+    return null;
+  }
+
   async textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
+    const messageLimitResult = this.checkMessageLimit(promptConfig);
+    if (messageLimitResult) return messageLimitResult;
+
     const { continue: shouldContinue, newPromptConfig } =
       this.checkForToolLoops(promptConfig);
     if (!shouldContinue) {
@@ -161,6 +181,15 @@ export class BaseClient implements SmolClient {
   }
 
   async *textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const messageLimitResult = this.checkMessageLimit(config);
+    if (messageLimitResult) {
+      yield {
+        type: "error",
+        error: messageLimitResult.success === false ? messageLimitResult.error : "Message limit exceeded",
+      };
+      return;
+    }
+
     const { continue: shouldContinue, newPromptConfig } =
       this.checkForToolLoops(config);
     if (!shouldContinue) {
