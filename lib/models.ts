@@ -137,9 +137,20 @@ export const textModels = [
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 1.1,
-    cachedInputTokenCost: 0.55,
+    cachedInputTokenCost: 0.275,
     outputTokenCost: 4.4,
     outputTokensPerSecond: 135,
+    provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "o3-pro",
+    description:
+      "o3-pro uses more compute for complex reasoning tasks. Available via Responses API only. Requests may take several minutes. Knowledge cutoff: June 2024.",
+    maxInputTokens: 200000,
+    maxOutputTokens: 100000,
+    inputTokenCost: 20,
+    outputTokenCost: 80,
     provider: "openai",
   },
   {
@@ -195,19 +206,58 @@ export const textModels = [
     type: "text",
     modelName: "gpt-4.1",
     description:
-      "GPT-4.1 supports up to 1 million tokens of context, representing a significant increase in context window capacity. Ideal for processing large documents and extended conversations.",
+      "GPT-4.1 excels at instruction following and tool calling with 1M token context window. Knowledge cutoff: June 2024.",
     maxInputTokens: 1047576,
     maxOutputTokens: 32768,
-    inputTokenCost: 2.5,
-    cachedInputTokenCost: 1.25,
-    outputTokenCost: 10,
+    inputTokenCost: 2.0,
+    cachedInputTokenCost: 0.5,
+    outputTokenCost: 8,
+    outputTokensPerSecond: 105,
     provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gpt-4.1-mini",
+    description:
+      "GPT-4.1 mini excels at instruction following and tool calling with 1M token context window and low latency. Knowledge cutoff: June 2024.",
+    maxInputTokens: 1047576,
+    maxOutputTokens: 32768,
+    inputTokenCost: 0.4,
+    cachedInputTokenCost: 0.1,
+    outputTokenCost: 1.6,
+    outputTokensPerSecond: 78,
+    provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gpt-4.1-nano",
+    description:
+      "GPT-4.1 nano is the fastest and most affordable GPT-4.1 variant with 1M token context window. Knowledge cutoff: June 2024.",
+    maxInputTokens: 1047576,
+    maxOutputTokens: 32768,
+    inputTokenCost: 0.1,
+    cachedInputTokenCost: 0.025,
+    outputTokenCost: 0.4,
+    outputTokensPerSecond: 142,
+    provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gemini-3.1-pro-preview",
+    description:
+      "Latest Gemini 3.1 Pro with 1M context window and 64K output. Standard pricing for ≤200k tokens ($2.00 input/$12.00 output), higher rates for >200k tokens ($4.00 input/$18.00 output). Released Feb 2026.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 65536,
+    inputTokenCost: 2.0,
+    outputTokenCost: 12.0,
+    outputTokensPerSecond: 112,
+    provider: "google",
   },
   {
     type: "text",
     modelName: "gemini-3-pro-preview",
     description:
-      "Strongest Gemini 3 model quality with 1M context window and 64K output. Standard pricing for ≤200k tokens ($2.00 input/$12.00 output), higher rates for >200k tokens ($4.00 input/$18.00 output). Released Nov 2025, currently in preview.",
+      "Gemini 3 Pro with 1M context window and 64K output. Standard pricing for ≤200k tokens ($2.00 input/$12.00 output), higher rates for >200k tokens ($4.00 input/$18.00 output). Superseded by 3.1 Pro.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 65536,
     inputTokenCost: 2.0,
@@ -229,9 +279,9 @@ export const textModels = [
     type: "text",
     modelName: "gemini-2.5-pro",
     description:
-      "High-performance Gemini 2.5 model with 2M context window. Adaptive thinking for complex reasoning and coding. Standard pricing for ≤200k tokens ($1.25 input/$10.00 output), higher rates for >200k tokens ($2.50 input/higher output). Batch API: 50% discount.",
+      "High-performance Gemini 2.5 model with 2M context window. Adaptive thinking for complex reasoning and coding. Standard pricing for ≤200k tokens ($1.25 input/$10.00 output), higher rates for >200k tokens ($2.50 input/$15.00 output). Batch API: 50% discount.",
     maxInputTokens: 2_097_152,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65536,
     inputTokenCost: 1.25,
     outputTokenCost: 10.0,
     outputTokensPerSecond: 175,
@@ -243,7 +293,7 @@ export const textModels = [
     description:
       "Balanced Gemini 2.5 model with excellent performance-to-cost ratio. Lightning-fast with controllable thinking budgets. 1M context window. Context caching available for up to 75% cost reduction.",
     maxInputTokens: 1_048_576,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65536,
     inputTokenCost: 0.3,
     outputTokenCost: 2.5,
     outputTokensPerSecond: 225,
@@ -255,7 +305,7 @@ export const textModels = [
     description:
       "Most cost-effective Gemini 2.5 option for high-throughput applications. 1M context window.",
     maxInputTokens: 1_048_576,
-    maxOutputTokens: 8192,
+    maxOutputTokens: 65536,
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
     outputTokensPerSecond: 400,
@@ -290,49 +340,50 @@ export const textModels = [
     type: "text",
     modelName: "gemini-2.0-flash-lite",
     description:
-      "Cost effective offering to support high throughput. Note: May be deprecated in favor of 2.5-flash-lite.",
+      "Cost effective offering to support high throughput. DEPRECATED: Will be shut down on March 31, 2026. Use gemini-2.5-flash-lite instead.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
     inputTokenCost: 0.075,
     outputTokenCost: 0.3,
+    disabled: true,
     provider: "google",
   },
   {
     type: "text",
     modelName: "gemini-1.5-flash",
-    description:
-      "Provides speed and efficiency for high-volume, quality, cost-effective apps. Note: prices ~double after the first 128k tokens.",
+    description: "RETIRED: No longer available. Use gemini-2.5-flash instead.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 8192,
     inputTokenCost: 0.01875,
     outputTokenCost: 0.075,
     outputTokensPerSecond: 178,
     costUnit: "characters",
+    disabled: true,
     provider: "google",
   },
   {
     type: "text",
     modelName: "gemini-1.5-pro",
-    description:
-      "Supports text or chat prompts for a text or code response. Supports long-context understanding up to the maximum input token limit. Also does video?",
+    description: "RETIRED: No longer available. Use gemini-2.5-pro instead.",
     maxInputTokens: 2_097_152,
     maxOutputTokens: 8192,
     inputTokenCost: 0.3125,
     outputTokenCost: 1.25,
     outputTokensPerSecond: 59,
     costUnit: "characters",
+    disabled: true,
     provider: "google",
   },
   {
     type: "text",
     modelName: "gemini-1.0-pro",
-    description:
-      "The best performing model for a wide range of text-only tasks.",
+    description: "RETIRED: No longer available. Use gemini-2.5-flash instead.",
     maxInputTokens: 32_760,
     maxOutputTokens: 8192,
     inputTokenCost: 0.125,
     outputTokenCost: 0.375,
     costUnit: "characters",
+    disabled: true,
     provider: "google",
   },
   {
@@ -504,6 +555,9 @@ export type Optimization = "speed" | "accuracy" | "cost" | "large-context";
 export type ModelConfig = {
   optimizeFor: Optimization[];
   providers: Provider[];
+  limit?: {
+    cost?: number;
+  };
 };
 
 export function isModelConfig(
@@ -519,10 +573,7 @@ const WEIGHTS: Record<number, number[]> = {
   4: [0.4, 0.3, 0.2, 0.1],
 };
 
-function getRawMetric(
-  model: (typeof textModels)[number],
-  optimization: Optimization,
-): number {
+function getRawMetric(model: TextModel, optimization: Optimization): number {
   const m = model as TextModel;
   switch (optimization) {
     case "cost":
@@ -542,13 +593,20 @@ function isLowerBetter(optimization: Optimization): boolean {
 
 export function pickModel(
   config: ModelConfig,
-  models: readonly (typeof textModels)[number][] = textModels,
+  models: readonly TextModel[] = textModels,
 ): TextModelName {
-  const candidates = models.filter(
+  let candidates = models.filter(
     (m) =>
       config.providers.includes(m.provider as Provider) &&
       !("disabled" in m && m.disabled),
   );
+
+  if (config.limit?.cost !== undefined) {
+    candidates = candidates.filter((m) => {
+      const cost = (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
+      return cost <= config.limit!.cost!;
+    });
+  }
 
   if (candidates.length === 0) {
     throw new SmolError(
@@ -643,10 +701,7 @@ export function calculateCost(
         )
       : undefined;
 
-  const totalCost = round(
-    inputCost + outputCost + (cachedInputCost || 0),
-    2,
-  );
+  const totalCost = round(inputCost + outputCost + (cachedInputCost || 0), 2);
 
   return {
     inputCost,

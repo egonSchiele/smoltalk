@@ -12,10 +12,13 @@ This skill updates the model specifications in `lib/models.ts` with the latest d
 When invoked, follow these steps:
 
 ### 1. Read Current Model Data
+
 First, read the current `lib/models.ts` file to understand the existing structure and models.
 
 ### 2. Fetch Latest OpenAI Model Information
+
 Search for and fetch the latest OpenAI model specifications:
+
 - Model names and IDs
 - Context windows (max input and output tokens)
 - Pricing per million tokens (input, cached input, output)
@@ -24,13 +27,16 @@ Search for and fetch the latest OpenAI model specifications:
 - Any deprecation notices
 
 Focus on these model families:
+
 - GPT-4o and GPT-4o-mini
 - o-series (o1, o3, o4-mini, etc.)
 - GPT-4.1
 - Any new production-ready models
 
 ### 3. Fetch Latest Google Gemini Model Information
+
 Search for and fetch the latest Google Gemini model specifications:
+
 - Model names and IDs
 - Context windows (max input and output tokens)
 - Pricing per million tokens/characters (input and output)
@@ -40,13 +46,16 @@ Search for and fetch the latest Google Gemini model specifications:
 - Any deprecation notices
 
 Focus on these model families:
+
 - Gemini 3 Pro and Flash
 - Gemini 2.5 Pro, Flash, and Flash-Lite
 - Gemini 2.0 models
 - Image generation models (Gemini Pro Image, etc.)
 
 ### 4. Update the Models File
+
 For each model that needs updating:
+
 - Update pricing if it has changed
 - Update context windows if they've changed
 - Update descriptions with new capabilities
@@ -55,15 +64,24 @@ For each model that needs updating:
 - Ensure all pricing is in dollars per million tokens
 - Verify `maxInputTokens` and `maxOutputTokens` are accurate
 
+### 5. Fetch performance data
+
+If available, fetch any performance benchmarks or latency information for the models to set the `outputTokensPerSecond` field on models. Here's a site that provides this data:
+https://artificialanalysis.ai/leaderboards/models
+
 ### 5. Verify Changes
+
 After making updates:
+
 - Read the updated sections to verify correctness
 - Ensure TypeScript syntax is valid
 - Check that new models follow the existing type structure
 - Verify that pricing information is accurate
 
 ### 6. Provide Summary
+
 Create a clear summary for the user showing:
+
 - Which models were updated
 - What changes were made (pricing, context windows, descriptions)
 - Which models were added
@@ -84,6 +102,7 @@ Create a clear summary for the user showing:
 ## Example Usage
 
 User can invoke this skill by typing:
+
 ```
 /update-models
 ```
