@@ -101,6 +101,62 @@ A couple of design decisions to note:
 - The schema for tools and structured outputs is defined using Zod.
 - Parameter names are camel case, as that is the naming convention in TypeScript. They are converted to snake case for you if required by the APIs.
 
+## Configuration Options
+
+`SmolPromptConfig` is the union of client config (`SmolConfig`) and per-request config (`PromptConfig`). You can pass all options together to `text()`, or split them between `getClient()` and individual calls.
+
+### Client options (`SmolConfig`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `model` | `ModelName \| ModelConfig` | **Required.** The model to use (e.g. `"gpt-4o"`, `"gemini-2.0-flash-lite"`). |
+| `openAiApiKey` | `string` | OpenAI API key. |
+| `googleApiKey` | `string` | Google Gemini API key. |
+| `ollamaApiKey` | `string` | Ollama API key (only needed for cloud Ollama). |
+| `ollamaHost` | `string` | Ollama host URL (for self-hosted or cloud Ollama). |
+| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, `"replicate"`, `"modal"`, `"local"`. |
+| `logLevel` | `LogLevel` | Logging verbosity: `"debug"`, `"info"`, `"warn"`, `"error"`, etc. |
+| `toolLoopDetection` | `ToolLoopDetection` | Config to detect and break tool call loops. See below. |
+
+### Request options (`PromptConfig`)
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `messages` | `Message[]` | **Required.** The conversation messages to send. |
+| `instructions` | `string` | System-level instructions (system prompt). |
+| `tools` | `{ name, description?, schema }[]` | Tool definitions. `schema` is a Zod object schema. |
+| `responseFormat` | `ZodType` | Zod schema for structured output. The response will be parsed and validated against this schema. |
+| `responseFormatOptions` | `object` | Fine-grained control over structured output (see below). |
+| `maxTokens` | `number` | Maximum number of output tokens to generate. |
+| `temperature` | `number` | Sampling temperature (0–2 for most providers). |
+| `numSuggestions` | `number` | Number of completions to generate. |
+| `parallelToolCalls` | `boolean` | Whether to allow the model to call multiple tools in parallel. |
+| `stream` | `boolean` | If `true`, returns an `AsyncGenerator<StreamChunk>` instead of a `Promise`. |
+| `maxMessages` | `number` | If the message list exceeds this count, returns a failure instead of calling the API. |
+| `rawAttributes` | `Record<string, any>` | Pass provider-specific attributes directly to the API request. |
+
+### `responseFormatOptions`
+
+Used with `responseFormat` to control validation behavior (currently OpenAI only).
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `name` | `string` | | Name for the response format schema. |
+| `strict` | `boolean` | | Whether to use strict schema validation. |
+| `numRetries` | `number` | `2` | How many times to retry if the response fails schema validation. |
+| `allowExtraKeys` | `boolean` | | If `true`, strips unexpected keys instead of failing validation. |
+
+### `toolLoopDetection`
+
+Detects when the model is stuck in a repetitive tool-call loop.
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `enabled` | `boolean` | Whether loop detection is active. |
+| `maxConsecutive` | `number` | Number of consecutive identical tool calls before triggering intervention. |
+| `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
+| `excludeTools` | `string[]` | Tool names to ignore when counting consecutive calls. |
+
 ## Prior art
 - Langchain
 OpenRouter
