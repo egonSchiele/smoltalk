@@ -1,4 +1,4 @@
-import { userMessage } from "../classes/message/index.js";
+import { userMessage, assistantMessage } from "../classes/message/index.js";
 import { getLogger } from "../logger.js";
 import { ModelName } from "../models.js";
 import {
@@ -147,16 +147,46 @@ export class BaseClient implements SmolClient {
         promptConfig.responseFormatOptions?.strict &&
         retries > 0
       ) {
+        const allowExtraKeys =
+          promptConfig.responseFormatOptions?.allowExtraKeys ?? false;
+
         try {
-          const parsed = promptConfig.responseFormat.parse(JSON.parse(output));
+          const parsed = JSON.parse(output);
+          const parseResult =
+            promptConfig.responseFormat.safeParse(parsed);
+
+          if (!parseResult.success) {
+            if (allowExtraKeys) {
+              const nonExtraKeyErrors = parseResult.error.issues.filter(
+                (issue: any) => issue.code !== "unrecognized_keys",
+              );
+              if (nonExtraKeyErrors.length === 0) {
+                // Only extra key errors — allow it through
+                return result;
+              }
+            }
+            throw parseResult.error;
+          }
         } catch (err) {
-          // bummer, response wasn't in the right format
+          const errorMessage = (err as Error).message;
           const logger = getLogger();
           logger.error(
             `Response format validation failed (retries left: ${retries}): `,
-            (err as Error).message,
+            errorMessage,
           );
-          return this.textWithRetry(promptConfig, retries - 1);
+
+          const retryMessages = [
+            ...promptConfig.messages,
+            assistantMessage(output),
+            userMessage(
+              `Your previous response failed validation. Please fix the following errors and try again:\n${errorMessage}`,
+            ),
+          ];
+
+          return this.textWithRetry(
+            { ...promptConfig, messages: retryMessages },
+            retries - 1,
+          );
         }
       }
     }

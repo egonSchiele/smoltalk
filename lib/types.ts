@@ -28,6 +28,9 @@ export type PromptConfig = {
 
     // 2 by default, if strict is true
     numRetries: number;
+
+    // strip extra keys instead of failing validation
+    allowExtraKeys: boolean;
   }>;
 
   rawAttributes?: Record<string, any>;
