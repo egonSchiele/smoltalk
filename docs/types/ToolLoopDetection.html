@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="IE=edge" />
-    <title>SmolConfig | smoltalk</title>
+    <title>ToolLoopDetection | smoltalk</title>
     <meta name="description" content="Documentation for smoltalk" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="../assets/style.css" />
@@ -84,75 +84,48 @@
       <div class="col-content">
         <div class="tsd-page-title">
           <ul class="tsd-breadcrumb" aria-label="Breadcrumb">
-            <li><a href="" aria-current="page">SmolConfig</a></li>
+            <li><a href="" aria-current="page">ToolLoopDetection</a></li>
           </ul>
-          <h1>Type Alias SmolConfig</h1>
+          <h1>Type Alias ToolLoopDetection</h1>
         </div>
         <div class="tsd-signature">
           <span class="tsd-signature-keyword">type</span>
-          <span class="tsd-kind-type-alias">SmolConfig</span>
+          <span class="tsd-kind-type-alias">ToolLoopDetection</span>
           <span class="tsd-signature-symbol">=</span>
           <span class="tsd-signature-symbol">{</span><br />    <a
             class="tsd-kind-property"
-            href="#googleapikey"
-            >googleApiKey</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <span class="tsd-signature-type">string</span
-          ><span class="tsd-signature-symbol">;</span><br />    <a
-            class="tsd-kind-property"
-            href="#loglevel"
-            >logLevel</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <span class="tsd-signature-type">LogLevel</span
-          ><span class="tsd-signature-symbol">;</span><br />    <a
-            class="tsd-kind-property"
-            href="#model"
-            >model</a
+            href="#enabled"
+            >enabled</a
           ><span class="tsd-signature-symbol">:</span>
-          <a
-            href="ModelName.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >ModelName</a
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#excludetools"
+            >excludeTools</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">[]</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#intervention"
+            >intervention</a
+          ><span class="tsd-signature-symbol">?:</span><br />        <span
+            class="tsd-signature-symbol"
+            >|</span
           >
-          <span class="tsd-signature-symbol">|</span>
-          <a
-            href="ModelConfig.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >ModelConfig</a
+          <span class="tsd-signature-type">&quot;remove-tool&quot;</span
+          ><br />        <span class="tsd-signature-symbol">|</span>
+          <span class="tsd-signature-type">&quot;remove-all-tools&quot;</span
+          ><br />        <span class="tsd-signature-symbol">|</span>
+          <span class="tsd-signature-type">&quot;throw-error&quot;</span
+          ><br />        <span class="tsd-signature-symbol">|</span>
+          <span class="tsd-signature-type">&quot;halt-execution&quot;</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
-            href="#ollamaapikey"
-            >ollamaApiKey</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <span class="tsd-signature-type">string</span
-          ><span class="tsd-signature-symbol">;</span><br />    <a
-            class="tsd-kind-property"
-            href="#ollamahost"
-            >ollamaHost</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <span class="tsd-signature-type">string</span
-          ><span class="tsd-signature-symbol">;</span><br />    <a
-            class="tsd-kind-property"
-            href="#openaiapikey"
-            >openAiApiKey</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <span class="tsd-signature-type">string</span
-          ><span class="tsd-signature-symbol">;</span><br />    <a
-            class="tsd-kind-property"
-            href="#provider"
-            >provider</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <a href="Provider.html" class="tsd-signature-type tsd-kind-type-alias"
-            >Provider</a
-          ><span class="tsd-signature-symbol">;</span><br />    <a
-            class="tsd-kind-property"
-            href="#toolloopdetection"
-            >toolLoopDetection</a
-          ><span class="tsd-signature-symbol">?:</span>
-          <a
-            href="ToolLoopDetection.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >ToolLoopDetection</a
+            href="#maxconsecutive"
+            >maxConsecutive</a
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">number</span
           ><span class="tsd-signature-symbol">;</span><br /><span
             class="tsd-signature-symbol"
             >}</span
@@ -177,77 +150,41 @@
                 <section class="tsd-index-section">
                   <h3 class="tsd-index-heading">Properties</h3>
                   <div class="tsd-index-list">
-                    <a href="#googleapikey" class="tsd-index-link"
+                    <a href="#enabled" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Property"
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>google<wbr />Api<wbr />Key?</span></a
+                      ><span>enabled</span></a
                     >
-                    <a href="#loglevel" class="tsd-index-link"
+                    <a href="#excludetools" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Property"
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>log<wbr />Level?</span></a
+                      ><span>exclude<wbr />Tools?</span></a
                     >
-                    <a href="#model" class="tsd-index-link"
+                    <a href="#intervention" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Property"
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>model</span></a
+                      ><span>intervention?</span></a
                     >
-                    <a href="#ollamaapikey" class="tsd-index-link"
+                    <a href="#maxconsecutive" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Property"
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>ollama<wbr />Api<wbr />Key?</span></a
-                    >
-                    <a href="#ollamahost" class="tsd-index-link"
-                      ><svg
-                        class="tsd-kind-icon"
-                        viewBox="0 0 24 24"
-                        aria-label="Property"
-                      >
-                        <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>ollama<wbr />Host?</span></a
-                    >
-                    <a href="#openaiapikey" class="tsd-index-link"
-                      ><svg
-                        class="tsd-kind-icon"
-                        viewBox="0 0 24 24"
-                        aria-label="Property"
-                      >
-                        <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>open<wbr />Ai<wbr />Api<wbr />Key?</span></a
-                    >
-                    <a href="#provider" class="tsd-index-link"
-                      ><svg
-                        class="tsd-kind-icon"
-                        viewBox="0 0 24 24"
-                        aria-label="Property"
-                      >
-                        <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>provider?</span></a
-                    >
-                    <a href="#toolloopdetection" class="tsd-index-link"
-                      ><svg
-                        class="tsd-kind-icon"
-                        viewBox="0 0 24 24"
-                        aria-label="Property"
-                      >
-                        <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>tool<wbr />Loop<wbr />Detection?</span></a
+                      ><span>max<wbr />Consecutive</span></a
                     >
                   </div>
                 </section>
@@ -270,11 +207,10 @@
           </summary>
           <section>
             <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="googleapikey">
-                <code class="tsd-tag">Optional</code
-                ><span>google<wbr />Api<wbr />Key</span
+              <h3 class="tsd-anchor-link" id="enabled">
+                <span>enabled</span
                 ><a
-                  href="#googleapikey"
+                  href="#enabled"
                   aria-label="Permalink"
                   class="tsd-anchor-icon"
                   ><svg viewBox="0 0 24 24" aria-hidden="true">
@@ -282,133 +218,64 @@
                 ></a>
               </h3>
               <div class="tsd-signature">
-                <span class="tsd-kind-property">googleApiKey</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">string</span>
-              </div>
-            </section>
-            <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="loglevel">
-                <code class="tsd-tag">Optional</code><span>log<wbr />Level</span
-                ><a
-                  href="#loglevel"
-                  aria-label="Permalink"
-                  class="tsd-anchor-icon"
-                  ><svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="../assets/icons.svg#icon-anchor"></use></svg
-                ></a>
-              </h3>
-              <div class="tsd-signature">
-                <span class="tsd-kind-property">logLevel</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">LogLevel</span>
-              </div>
-            </section>
-            <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="model">
-                <span>model</span
-                ><a href="#model" aria-label="Permalink" class="tsd-anchor-icon"
-                  ><svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="../assets/icons.svg#icon-anchor"></use></svg
-                ></a>
-              </h3>
-              <div class="tsd-signature">
-                <span class="tsd-kind-property">model</span
+                <span class="tsd-kind-property">enabled</span
                 ><span class="tsd-signature-symbol">:</span>
-                <a
-                  href="ModelName.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >ModelName</a
+                <span class="tsd-signature-type">boolean</span>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="excludetools">
+                <code class="tsd-tag">Optional</code
+                ><span>exclude<wbr />Tools</span
+                ><a
+                  href="#excludetools"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">excludeTools</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">[]</span>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="intervention">
+                <code class="tsd-tag">Optional</code><span>intervention</span
+                ><a
+                  href="#intervention"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">intervention</span
+                ><span class="tsd-signature-symbol">?:</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >|</span
                 >
-                <span class="tsd-signature-symbol">|</span>
-                <a
-                  href="ModelConfig.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >ModelConfig</a
-                >
-              </div>
-            </section>
-            <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="ollamaapikey">
-                <code class="tsd-tag">Optional</code
-                ><span>ollama<wbr />Api<wbr />Key</span
-                ><a
-                  href="#ollamaapikey"
-                  aria-label="Permalink"
-                  class="tsd-anchor-icon"
-                  ><svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="../assets/icons.svg#icon-anchor"></use></svg
-                ></a>
-              </h3>
-              <div class="tsd-signature">
-                <span class="tsd-kind-property">ollamaApiKey</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">string</span>
-              </div>
-            </section>
-            <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="ollamahost">
-                <code class="tsd-tag">Optional</code
-                ><span>ollama<wbr />Host</span
-                ><a
-                  href="#ollamahost"
-                  aria-label="Permalink"
-                  class="tsd-anchor-icon"
-                  ><svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="../assets/icons.svg#icon-anchor"></use></svg
-                ></a>
-              </h3>
-              <div class="tsd-signature">
-                <span class="tsd-kind-property">ollamaHost</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">string</span>
-              </div>
-            </section>
-            <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="openaiapikey">
-                <code class="tsd-tag">Optional</code
-                ><span>open<wbr />Ai<wbr />Api<wbr />Key</span
-                ><a
-                  href="#openaiapikey"
-                  aria-label="Permalink"
-                  class="tsd-anchor-icon"
-                  ><svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="../assets/icons.svg#icon-anchor"></use></svg
-                ></a>
-              </h3>
-              <div class="tsd-signature">
-                <span class="tsd-kind-property">openAiApiKey</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">string</span>
-              </div>
-            </section>
-            <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="provider">
-                <code class="tsd-tag">Optional</code><span>provider</span
-                ><a
-                  href="#provider"
-                  aria-label="Permalink"
-                  class="tsd-anchor-icon"
-                  ><svg viewBox="0 0 24 24" aria-hidden="true">
-                    <use href="../assets/icons.svg#icon-anchor"></use></svg
-                ></a>
-              </h3>
-              <div class="tsd-signature">
-                <span class="tsd-kind-property">provider</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <a
-                  href="Provider.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >Provider</a
+                <span class="tsd-signature-type">&quot;remove-tool&quot;</span
+                ><br />    <span class="tsd-signature-symbol">|</span>
+                <span class="tsd-signature-type"
+                  >&quot;remove-all-tools&quot;</span
+                ><br />    <span class="tsd-signature-symbol">|</span>
+                <span class="tsd-signature-type">&quot;throw-error&quot;</span
+                ><br />    <span class="tsd-signature-symbol">|</span>
+                <span class="tsd-signature-type"
+                  >&quot;halt-execution&quot;</span
                 >
               </div>
             </section>
             <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="toolloopdetection">
-                <code class="tsd-tag">Optional</code
-                ><span>tool<wbr />Loop<wbr />Detection</span
+              <h3 class="tsd-anchor-link" id="maxconsecutive">
+                <span>max<wbr />Consecutive</span
                 ><a
-                  href="#toolloopdetection"
+                  href="#maxconsecutive"
                   aria-label="Permalink"
                   class="tsd-anchor-icon"
                   ><svg viewBox="0 0 24 24" aria-hidden="true">
@@ -416,13 +283,9 @@
                 ></a>
               </h3>
               <div class="tsd-signature">
-                <span class="tsd-kind-property">toolLoopDetection</span
-                ><span class="tsd-signature-symbol">?:</span>
-                <a
-                  href="ToolLoopDetection.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >ToolLoopDetection</a
-                >
+                <span class="tsd-kind-property">maxConsecutive</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">number</span>
               </div>
             </section>
           </section>
@@ -588,70 +451,38 @@
                   >Properties
                 </summary>
                 <div>
-                  <a href="#googleapikey"
+                  <a href="#enabled"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Property"
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>google<wbr />Api<wbr />Key</span></a
-                  ><a href="#loglevel"
+                    ><span>enabled</span></a
+                  ><a href="#excludetools"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Property"
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>log<wbr />Level</span></a
-                  ><a href="#model"
+                    ><span>exclude<wbr />Tools</span></a
+                  ><a href="#intervention"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Property"
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>model</span></a
-                  ><a href="#ollamaapikey"
+                    ><span>intervention</span></a
+                  ><a href="#maxconsecutive"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Property"
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>ollama<wbr />Api<wbr />Key</span></a
-                  ><a href="#ollamahost"
-                    ><svg
-                      class="tsd-kind-icon"
-                      viewBox="0 0 24 24"
-                      aria-label="Property"
-                    >
-                      <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>ollama<wbr />Host</span></a
-                  ><a href="#openaiapikey"
-                    ><svg
-                      class="tsd-kind-icon"
-                      viewBox="0 0 24 24"
-                      aria-label="Property"
-                    >
-                      <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>open<wbr />Ai<wbr />Api<wbr />Key</span></a
-                  ><a href="#provider"
-                    ><svg
-                      class="tsd-kind-icon"
-                      viewBox="0 0 24 24"
-                      aria-label="Property"
-                    >
-                      <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>provider</span></a
-                  ><a href="#toolloopdetection"
-                    ><svg
-                      class="tsd-kind-icon"
-                      viewBox="0 0 24 24"
-                      aria-label="Property"
-                    >
-                      <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>tool<wbr />Loop<wbr />Detection</span></a
+                    ><span>max<wbr />Consecutive</span></a
                   >
                 </div>
               </details>

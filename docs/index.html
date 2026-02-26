@@ -172,6 +172,296 @@
               required by the APIs.
             </li>
           </ul>
+          <h2 id="configuration-options" class="tsd-anchor-link">
+            Configuration Options<a
+              href="#configuration-options"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h2>
+          <p>
+            <code>SmolPromptConfig</code> is the union of client config
+            (<code>SmolConfig</code>) and per-request config
+            (<code>PromptConfig</code>). You can pass all options together to
+            <code>text()</code>, or split them between
+            <code>getClient()</code> and individual calls.
+          </p>
+          <h3 id="client-options-" class="tsd-anchor-link">
+            Client options (<code>SmolConfig</code>)<a
+              href="#client-options-"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>model</code></td>
+                <td><code>ModelName | ModelConfig</code></td>
+                <td>
+                  <strong>Required.</strong> The model to use (e.g.
+                  <code>&quot;gpt-4o&quot;</code>,
+                  <code>&quot;gemini-2.0-flash-lite&quot;</code>).
+                </td>
+              </tr>
+              <tr>
+                <td><code>openAiApiKey</code></td>
+                <td><code>string</code></td>
+                <td>OpenAI API key.</td>
+              </tr>
+              <tr>
+                <td><code>googleApiKey</code></td>
+                <td><code>string</code></td>
+                <td>Google Gemini API key.</td>
+              </tr>
+              <tr>
+                <td><code>ollamaApiKey</code></td>
+                <td><code>string</code></td>
+                <td>Ollama API key (only needed for cloud Ollama).</td>
+              </tr>
+              <tr>
+                <td><code>ollamaHost</code></td>
+                <td><code>string</code></td>
+                <td>Ollama host URL (for self-hosted or cloud Ollama).</td>
+              </tr>
+              <tr>
+                <td><code>provider</code></td>
+                <td><code>Provider</code></td>
+                <td>
+                  Override provider detection. One of
+                  <code>&quot;openai&quot;</code>,
+                  <code>&quot;openai-responses&quot;</code>,
+                  <code>&quot;google&quot;</code>,
+                  <code>&quot;ollama&quot;</code>,
+                  <code>&quot;anthropic&quot;</code>,
+                  <code>&quot;replicate&quot;</code>,
+                  <code>&quot;modal&quot;</code>,
+                  <code>&quot;local&quot;</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>logLevel</code></td>
+                <td><code>LogLevel</code></td>
+                <td>
+                  Logging verbosity: <code>&quot;debug&quot;</code>,
+                  <code>&quot;info&quot;</code>, <code>&quot;warn&quot;</code>,
+                  <code>&quot;error&quot;</code>, etc.
+                </td>
+              </tr>
+              <tr>
+                <td><code>toolLoopDetection</code></td>
+                <td><code>ToolLoopDetection</code></td>
+                <td>Config to detect and break tool call loops. See below.</td>
+              </tr>
+            </tbody>
+          </table>
+          <h3 id="request-options-" class="tsd-anchor-link">
+            Request options (<code>PromptConfig</code>)<a
+              href="#request-options-"
+              aria-label="Permalink"
+              class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>messages</code></td>
+                <td><code>Message[]</code></td>
+                <td>
+                  <strong>Required.</strong> The conversation messages to send.
+                </td>
+              </tr>
+              <tr>
+                <td><code>instructions</code></td>
+                <td><code>string</code></td>
+                <td>System-level instructions (system prompt).</td>
+              </tr>
+              <tr>
+                <td><code>tools</code></td>
+                <td><code>{ name, description?, schema }[]</code></td>
+                <td>
+                  Tool definitions. <code>schema</code> is a Zod object schema.
+                </td>
+              </tr>
+              <tr>
+                <td><code>responseFormat</code></td>
+                <td><code>ZodType</code></td>
+                <td>
+                  Zod schema for structured output. The response will be parsed
+                  and validated against this schema.
+                </td>
+              </tr>
+              <tr>
+                <td><code>responseFormatOptions</code></td>
+                <td><code>object</code></td>
+                <td>
+                  Fine-grained control over structured output (see below).
+                </td>
+              </tr>
+              <tr>
+                <td><code>maxTokens</code></td>
+                <td><code>number</code></td>
+                <td>Maximum number of output tokens to generate.</td>
+              </tr>
+              <tr>
+                <td><code>temperature</code></td>
+                <td><code>number</code></td>
+                <td>Sampling temperature (0–2 for most providers).</td>
+              </tr>
+              <tr>
+                <td><code>numSuggestions</code></td>
+                <td><code>number</code></td>
+                <td>Number of completions to generate.</td>
+              </tr>
+              <tr>
+                <td><code>parallelToolCalls</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  Whether to allow the model to call multiple tools in parallel.
+                </td>
+              </tr>
+              <tr>
+                <td><code>stream</code></td>
+                <td><code>boolean</code></td>
+                <td>
+                  If <code>true</code>, returns an
+                  <code>AsyncGenerator&lt;StreamChunk&gt;</code> instead of a
+                  <code>Promise</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>maxMessages</code></td>
+                <td><code>number</code></td>
+                <td>
+                  If the message list exceeds this count, returns a failure
+                  instead of calling the API.
+                </td>
+              </tr>
+              <tr>
+                <td><code>rawAttributes</code></td>
+                <td><code>Record&lt;string, any&gt;</code></td>
+                <td>
+                  Pass provider-specific attributes directly to the API request.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <h3 id="" class="tsd-anchor-link">
+            <code>responseFormatOptions</code>
+          </h3>
+          <p>
+            Used with <code>responseFormat</code> to control validation behavior
+            (currently OpenAI only).
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Type</th>
+                <th>Default</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>name</code></td>
+                <td><code>string</code></td>
+                <td></td>
+                <td>Name for the response format schema.</td>
+              </tr>
+              <tr>
+                <td><code>strict</code></td>
+                <td><code>boolean</code></td>
+                <td></td>
+                <td>Whether to use strict schema validation.</td>
+              </tr>
+              <tr>
+                <td><code>numRetries</code></td>
+                <td><code>number</code></td>
+                <td><code>2</code></td>
+                <td>
+                  How many times to retry if the response fails schema
+                  validation.
+                </td>
+              </tr>
+              <tr>
+                <td><code>allowExtraKeys</code></td>
+                <td><code>boolean</code></td>
+                <td></td>
+                <td>
+                  If <code>true</code>, strips unexpected keys instead of
+                  failing validation.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <h3 id="-1" class="tsd-anchor-link">
+            <code>toolLoopDetection</code
+            ><a href="#-1" aria-label="Permalink" class="tsd-anchor-icon"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <use href="assets/icons.svg#icon-anchor"></use></svg
+            ></a>
+          </h3>
+          <p>Detects when the model is stuck in a repetitive tool-call loop.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Option</th>
+                <th>Type</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>enabled</code></td>
+                <td><code>boolean</code></td>
+                <td>Whether loop detection is active.</td>
+              </tr>
+              <tr>
+                <td><code>maxConsecutive</code></td>
+                <td><code>number</code></td>
+                <td>
+                  Number of consecutive identical tool calls before triggering
+                  intervention.
+                </td>
+              </tr>
+              <tr>
+                <td><code>intervention</code></td>
+                <td><code>string</code></td>
+                <td>
+                  Action to take: <code>&quot;remove-tool&quot;</code>,
+                  <code>&quot;remove-all-tools&quot;</code>,
+                  <code>&quot;throw-error&quot;</code>, or
+                  <code>&quot;halt-execution&quot;</code>.
+                </td>
+              </tr>
+              <tr>
+                <td><code>excludeTools</code></td>
+                <td><code>string[]</code></td>
+                <td>Tool names to ignore when counting consecutive calls.</td>
+              </tr>
+            </tbody>
+          </table>
           <h2 id="prior-art" class="tsd-anchor-link">
             Prior art<a
               href="#prior-art"
@@ -390,6 +680,31 @@
                 </li>
                 <li>
                   <a href="#longer-tutorial"><span>Longer tutorial</span></a>
+                </li>
+                <li>
+                  <a href="#configuration-options"
+                    ><span>Configuration <wbr />Options</span></a
+                  >
+                </li>
+                <li>
+                  <ul>
+                    <li>
+                      <a href="#client-options-"
+                        ><span>Client options ()</span></a
+                      >
+                    </li>
+                    <li>
+                      <a href="#request-options-"
+                        ><span>Request options ()</span></a
+                      >
+                    </li>
+                    <li>
+                      <a href="#"><span></span></a>
+                    </li>
+                    <li>
+                      <a href="#-1"><span></span></a>
+                    </li>
+                  </ul>
                 </li>
                 <li>
                   <a href="#prior-art"><span>Prior art</span></a>

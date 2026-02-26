@@ -100,6 +100,12 @@
           <span class="tsd-signature-type">string</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
+            href="#maxmessages"
+            >maxMessages</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
             href="#maxtokens"
             >maxTokens</a
           ><span class="tsd-signature-symbol">?:</span>
@@ -143,10 +149,44 @@
           <span class="tsd-signature-type">ZodType</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
-            href="#responseformatname"
-            >responseFormatName</a
+            href="#responseformatoptions"
+            >responseFormatOptions</a
           ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">Partial</span
+          ><span class="tsd-signature-symbol">&lt;</span><br />        <span
+            class="tsd-signature-symbol"
+            >{</span
+          ><br />            <span class="tsd-kind-property"
+            >allowExtraKeys</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >name</span
+          ><span class="tsd-signature-symbol">:</span>
           <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >numRetries</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >strict</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />        <span
+            class="tsd-signature-symbol"
+            >}</span
+          ><span class="tsd-signature-symbol">,</span><br />    <span
+            class="tsd-signature-symbol"
+            >&gt;</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#stream"
+            >stream</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">boolean</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
             href="#temperature"
@@ -205,6 +245,15 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>instructions?</span></a
                     >
+                    <a href="#maxmessages" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>max<wbr />Messages?</span></a
+                    >
                     <a href="#maxtokens" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -259,14 +308,23 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>response<wbr />Format?</span></a
                     >
-                    <a href="#responseformatname" class="tsd-index-link"
+                    <a href="#responseformatoptions" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Property"
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>response<wbr />Format<wbr />Name?</span></a
+                      ><span>response<wbr />Format<wbr />Options?</span></a
+                    >
+                    <a href="#stream" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>stream?</span></a
                     >
                     <a href="#temperature" class="tsd-index-link"
                       ><svg
@@ -321,6 +379,24 @@
                 <span class="tsd-kind-property">instructions</span
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="maxmessages">
+                <code class="tsd-tag">Optional</code
+                ><span>max<wbr />Messages</span
+                ><a
+                  href="#maxmessages"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">maxMessages</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">number</span>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -440,11 +516,11 @@
               </div>
             </section>
             <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="responseformatname">
+              <h3 class="tsd-anchor-link" id="responseformatoptions">
                 <code class="tsd-tag">Optional</code
-                ><span>response<wbr />Format<wbr />Name</span
+                ><span>response<wbr />Format<wbr />Options</span
                 ><a
-                  href="#responseformatname"
+                  href="#responseformatoptions"
                   aria-label="Permalink"
                   class="tsd-anchor-icon"
                   ><svg viewBox="0 0 24 24" aria-hidden="true">
@@ -452,9 +528,55 @@
                 ></a>
               </h3>
               <div class="tsd-signature">
-                <span class="tsd-kind-property">responseFormatName</span
+                <span class="tsd-kind-property">responseFormatOptions</span
                 ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">string</span>
+                <span class="tsd-signature-type">Partial</span
+                ><span class="tsd-signature-symbol">&lt;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >{</span
+                ><br />        <span class="tsd-kind-property"
+                  >allowExtraKeys</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">boolean</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >name</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >numRetries</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">number</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >strict</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">boolean</span
+                ><span class="tsd-signature-symbol">;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >}</span
+                ><span class="tsd-signature-symbol">,</span><br /><span
+                  class="tsd-signature-symbol"
+                  >&gt;</span
+                >
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="stream">
+                <code class="tsd-tag">Optional</code><span>stream</span
+                ><a
+                  href="#stream"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">stream</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">boolean</span>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -672,6 +794,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>instructions</span></a
+                  ><a href="#maxmessages"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>max<wbr />Messages</span></a
                   ><a href="#maxtokens"
                     ><svg
                       class="tsd-kind-icon"
@@ -720,14 +850,22 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>response<wbr />Format</span></a
-                  ><a href="#responseformatname"
+                  ><a href="#responseformatoptions"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Property"
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>response<wbr />Format<wbr />Name</span></a
+                    ><span>response<wbr />Format<wbr />Options</span></a
+                  ><a href="#stream"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>stream</span></a
                   ><a href="#temperature"
                     ><svg
                       class="tsd-kind-icon"

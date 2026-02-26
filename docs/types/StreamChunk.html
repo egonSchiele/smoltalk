@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="IE=edge" />
-    <title>speechToTextModels | smoltalk</title>
+    <title>StreamChunk | smoltalk</title>
     <meta name="description" content="Documentation for smoltalk" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="../assets/style.css" />
@@ -84,61 +84,64 @@
       <div class="col-content">
         <div class="tsd-page-title">
           <ul class="tsd-breadcrumb" aria-label="Breadcrumb">
-            <li><a href="" aria-current="page">speechToTextModels</a></li>
+            <li><a href="" aria-current="page">StreamChunk</a></li>
           </ul>
-          <h1>Variable speechToTextModels<code class="tsd-tag">Const</code></h1>
+          <h1>Type Alias StreamChunk</h1>
         </div>
         <div class="tsd-signature">
-          <span class="tsd-kind-variable">speechToTextModels</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-keyword">readonly</span>
-          <span class="tsd-signature-symbol">[</span><br />    <span
+          <span class="tsd-kind-type-alias">StreamChunk</span
+          ><span class="tsd-signature-symbol">:</span><br />    <span
             class="tsd-signature-symbol"
-            >{</span
-          ><br />        <span class="tsd-kind-property">modelName</span
+            >|</span
+          >
+          <span class="tsd-signature-symbol">{</span>
+          <span class="tsd-kind-property">text</span
           ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;whisper-local&quot;</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >provider</span
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">type</span
           ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;local&quot;</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >type</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;speech-to-text&quot;</span
-          ><span class="tsd-signature-symbol">;</span><br />    <span
+          <span class="tsd-signature-type">&quot;text&quot;</span>
+          <span class="tsd-signature-symbol">}</span><br />    <span
             class="tsd-signature-symbol"
-            >}</span
-          ><span class="tsd-signature-symbol">,</span><br />    <span
+            >|</span
+          >
+          <span class="tsd-signature-symbol">{</span>
+          <span class="tsd-kind-property">toolCall</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">ToolCall</span
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">type</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">&quot;tool_call&quot;</span>
+          <span class="tsd-signature-symbol">}</span><br />    <span
             class="tsd-signature-symbol"
-            >{</span
-          ><br />        <span class="tsd-kind-property">modelName</span
+            >|</span
+          >
+          <span class="tsd-signature-symbol">{</span>
+          <span class="tsd-kind-property">result</span
           ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;whisper-web&quot;</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >perMinuteCost</span
+          <a
+            href="PromptResult.html"
+            class="tsd-signature-type tsd-kind-type-alias"
+            >PromptResult</a
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">type</span
           ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">0.006</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >provider</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;openai&quot;</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >type</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;speech-to-text&quot;</span
-          ><span class="tsd-signature-symbol">;</span><br />    <span
+          <span class="tsd-signature-type">&quot;done&quot;</span>
+          <span class="tsd-signature-symbol">}</span><br />    <span
             class="tsd-signature-symbol"
-            >}</span
-          ><span class="tsd-signature-symbol">,</span><br /><span
-            class="tsd-signature-symbol"
-            >]</span
-          ><span class="tsd-signature-symbol"> = ...</span>
+            >|</span
+          >
+          <span class="tsd-signature-symbol">{</span>
+          <span class="tsd-kind-property">error</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">type</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">&quot;error&quot;</span>
+          <span class="tsd-signature-symbol">}</span>
         </div>
       </div>
       <div class="col-sidebar">
