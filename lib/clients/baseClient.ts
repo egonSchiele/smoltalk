@@ -10,6 +10,7 @@ import {
   StreamChunk,
   success,
 } from "../types.js";
+import { z } from "zod";
 
 const DEFAULT_NUM_RETRIES = 2;
 
@@ -159,7 +160,7 @@ export class BaseClient implements SmolClient {
         .replace(/```\s*$/, "");
       try {
         return this.extractResponse(promptConfig, JSON.parse(stripped), schema);
-      } catch {}
+      } catch { }
       return rawValue;
     }
 
@@ -201,6 +202,21 @@ export class BaseClient implements SmolClient {
   ): Promise<Result<PromptResult>> {
     const result = await this._textSync(promptConfig);
     if (result.success) {
+
+      if (!("output" in result.value)) {
+        const retryMessages = [
+          ...promptConfig.messages,
+          userMessage(
+            `You returned "undefined" instead of a valid response. Please provide a valid response.`,
+          ),
+        ];
+
+        return this.textWithRetry(
+          { ...promptConfig, messages: retryMessages },
+          retries - 1,
+        );
+      }
+
       const { output } = result.value;
       if (
         output !== null &&
@@ -225,10 +241,17 @@ export class BaseClient implements SmolClient {
         } catch (err) {
           const errorMessage = (err as Error).message;
           const logger = getLogger();
-          logger.error(
+          logger.debug(
             `Response format validation failed (retries left: ${retries}): `,
             errorMessage,
+            "output:",
+            JSON.stringify(output, null, 2),
+            "responseFormat:",
+            JSON.stringify(promptConfig.responseFormat, null, 2),
           );
+          if (err instanceof z.ZodError) {
+            logger.debug("Zod error details:", z.prettifyError(err));
+          }
 
           const retryMessages = [
             ...promptConfig.messages,
