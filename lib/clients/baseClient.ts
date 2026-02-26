@@ -8,6 +8,7 @@ import {
   SmolClient,
   SmolConfig,
   StreamChunk,
+  success,
 } from "../types.js";
 
 const DEFAULT_NUM_RETRIES = 2;
@@ -134,6 +135,66 @@ export class BaseClient implements SmolClient {
     return { continue: true, newPromptConfig: promptConfig };
   }
 
+  extractResponse(promptConfig: PromptConfig, rawValue: any, schema: any): any {
+    // 1. Direct match — try parsing as-is
+    const direct = schema.safeParse(rawValue);
+
+    if (direct.success) {
+      return direct.data;
+    } else if (promptConfig.responseFormatOptions?.allowExtraKeys) {
+      const nonExtraKeyErrors = direct.error.issues.filter(
+        (issue: any) => issue.code !== "unrecognized_keys",
+      );
+      if (nonExtraKeyErrors.length === 0) {
+        // Only extra key errors — allow it through
+        return rawValue;
+      }
+    }
+
+    // 2. String → try JSON.parse, then recurse
+    if (typeof rawValue === "string") {
+      const stripped = rawValue
+        .trim()
+        .replace(/^```json\s*/, "")
+        .replace(/```\s*$/, "");
+      try {
+        return this.extractResponse(promptConfig, JSON.parse(stripped), schema);
+      } catch {}
+      return rawValue;
+    }
+
+    // 3. Null/undefined/primitive — nothing to unwrap
+    if (rawValue == null || typeof rawValue !== "object") {
+      return rawValue;
+    }
+
+    // 4. Array — scan every element
+    if (Array.isArray(rawValue)) {
+      for (const item of rawValue) {
+        const inner = schema.safeParse(item);
+        if (inner.success) return inner.data;
+      }
+    }
+
+    // 5. Object with "response" or "properties" key — unwrap
+    const wrapKeys = ["response", "properties"];
+    for (const key of wrapKeys) {
+      if (key in rawValue) {
+        const inner = schema.safeParse(rawValue[key]);
+        if (inner.success) return inner.data[key];
+      }
+    }
+
+    // 6. Shallow search — check every value of the object
+    for (const key of Object.keys(rawValue)) {
+      const inner = schema.safeParse(rawValue[key]);
+      if (inner.success) return inner.data;
+    }
+
+    // 8. Nothing worked — throw error
+    throw direct.error;
+  }
+
   async textWithRetry(
     promptConfig: PromptConfig,
     retries: number,
@@ -152,21 +213,15 @@ export class BaseClient implements SmolClient {
 
         try {
           const parsed = JSON.parse(output);
-          const parseResult =
-            promptConfig.responseFormat.safeParse(parsed);
-
-          if (!parseResult.success) {
-            if (allowExtraKeys) {
-              const nonExtraKeyErrors = parseResult.error.issues.filter(
-                (issue: any) => issue.code !== "unrecognized_keys",
-              );
-              if (nonExtraKeyErrors.length === 0) {
-                // Only extra key errors — allow it through
-                return result;
-              }
-            }
-            throw parseResult.error;
-          }
+          const parseResult = this.extractResponse(
+            promptConfig,
+            parsed,
+            promptConfig.responseFormat,
+          );
+          return success({
+            ...result.value,
+            output: parseResult,
+          });
         } catch (err) {
           const errorMessage = (err as Error).message;
           const logger = getLogger();
@@ -215,7 +270,10 @@ export class BaseClient implements SmolClient {
     if (messageLimitResult) {
       yield {
         type: "error",
-        error: messageLimitResult.success === false ? messageLimitResult.error : "Message limit exceeded",
+        error:
+          messageLimitResult.success === false
+            ? messageLimitResult.error
+            : "Message limit exceeded",
       };
       return;
     }

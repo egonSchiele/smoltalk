@@ -186,7 +186,8 @@ describe("textWithRetry - allowExtraKeys", () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.value.output).toBe(outputWithExtra);
+      // extractResponse returns the parsed object (with extra keys present), not the original string
+      expect(result.value.output).toEqual({ name: "Alice", extra: "field" });
     }
     // Should NOT retry — extra keys are allowed
     expect(spy.calls).toHaveLength(1);
@@ -210,5 +211,99 @@ describe("textWithRetry - allowExtraKeys", () => {
     expect(result.success).toBe(true);
     // Should retry because there's a real type error (name should be string, got number)
     expect(spy.calls).toHaveLength(2);
+  });
+});
+
+describe("extractResponse", () => {
+  const client = new TestClient({ model: "gpt-4o", openAiApiKey: "test" });
+  const schema = z.object({ result: z.number() });
+  const config = { messages: [] };
+
+  it("returns data directly when the value matches the schema", () => {
+    const result = client.extractResponse(config, { result: 42 }, schema);
+    expect(result).toEqual({ result: 42 });
+  });
+
+  it("parses a JSON string and validates it", () => {
+    const result = client.extractResponse(config, '{"result": 42}', schema);
+    expect(result).toEqual({ result: 42 });
+  });
+
+  it("strips markdown code fences before parsing a JSON string", () => {
+    const fenced = "```json\n{\"result\": 42}\n```";
+    const result = client.extractResponse(config, fenced, schema);
+    expect(result).toEqual({ result: 42 });
+  });
+
+  it("returns an unparseable string as-is", () => {
+    const result = client.extractResponse(config, "not json at all", schema);
+    expect(result).toBe("not json at all");
+  });
+
+  it("returns null as-is", () => {
+    const result = client.extractResponse(config, null, schema);
+    expect(result).toBeNull();
+  });
+
+  it("returns a non-object primitive as-is", () => {
+    const result = client.extractResponse(config, 99, schema);
+    expect(result).toBe(99);
+  });
+
+  it("unwraps a single-element array", () => {
+    const result = client.extractResponse(config, [{ result: 42 }], schema);
+    expect(result).toEqual({ result: 42 });
+  });
+
+  it("returns the first matching element of a multi-element array", () => {
+    const result = client.extractResponse(config, [{ result: 1 }, { result: 2 }], schema);
+    expect(result).toEqual({ result: 1 });
+  });
+
+  it("skips non-matching elements and finds the first match in a mixed array", () => {
+    const result = client.extractResponse(config, ["not an object", { result: 7 }], schema);
+    expect(result).toEqual({ result: 7 });
+  });
+
+  it("finds a matching value via shallow search when no wrap key is present", () => {
+    const result = client.extractResponse(config, { nested: { result: 42 } }, schema);
+    expect(result).toEqual({ result: 42 });
+  });
+
+  it("throws when no extraction strategy succeeds", () => {
+    expect(() =>
+      client.extractResponse(config, { bad: "data" }, schema),
+    ).toThrow();
+  });
+
+  it("allows extra keys when allowExtraKeys is true and the only errors are unrecognized keys", () => {
+    const strictSchema = z.object({ result: z.number() }).strict();
+    const configWithAllowExtra = {
+      messages: [],
+      responseFormatOptions: { allowExtraKeys: true },
+    };
+    // With a strict schema and allowExtraKeys, extra keys are tolerated and the original
+    // object (with extra keys present) is returned rather than throwing or retrying.
+    const result = client.extractResponse(
+      configWithAllowExtra,
+      { result: 42, extra: "ignored" },
+      strictSchema,
+    );
+    expect(result).toEqual({ result: 42, extra: "ignored" });
+  });
+
+  it("still throws on real type errors even when allowExtraKeys is true", () => {
+    const strictSchema = z.object({ result: z.number() }).strict();
+    const configWithAllowExtra = {
+      messages: [],
+      responseFormatOptions: { allowExtraKeys: true },
+    };
+    expect(() =>
+      client.extractResponse(
+        configWithAllowExtra,
+        { result: "not-a-number", extra: "ignored" },
+        strictSchema,
+      ),
+    ).toThrow();
   });
 });
