@@ -3,6 +3,12 @@ import { getLogger } from "../logger.js";
 import { FunctionCall } from "@google/genai";
 import { ResponseInputItem } from "openai/resources/responses/responses.js";
 
+export type ToolCallJSON = {
+  id: string;
+  name: string;
+  arguments: Record<string, any>;
+};
+
 export type ToolCallOptions = {};
 
 export class ToolCall {
@@ -48,7 +54,7 @@ export class ToolCall {
     return this._arguments;
   }
 
-  toJSON(): Record<string, any> {
+  toJSON(): ToolCallJSON {
     return {
       id: this._id,
       name: this._name,

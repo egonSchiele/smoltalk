@@ -5,6 +5,12 @@ import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
+export type SystemMessageJSON = {
+  role: "system";
+  content: string | Array<TextPart>;
+  name: string | undefined;
+};
+
 export class SystemMessage extends BaseMessage implements MessageClass {
   public _role = "system" as const;
   public _content: string | Array<TextPart>;
@@ -43,7 +49,7 @@ export class SystemMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toJSON() {
+  toJSON(): SystemMessageJSON {
     return {
       role: this.role,
       content: this._content,

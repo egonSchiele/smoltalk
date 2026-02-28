@@ -2,9 +2,18 @@ import { BaseMessage, MessageClass } from "./BaseMessage.js";
 import { TextPart } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, Part } from "@google/genai";
-import { ToolCall } from "../ToolCall.js";
+import { ToolCall, ToolCallJSON } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+
+export type AssistantMessageJSON = {
+  role: "assistant";
+  content: string | Array<TextPart> | null;
+  name: string | undefined;
+  audio: any | null | undefined;
+  refusal: string | null | undefined;
+  toolCalls: ToolCallJSON[] | undefined;
+};
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
   public _role = "assistant" as const;
@@ -71,7 +80,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toJSON() {
+  toJSON(): AssistantMessageJSON {
     return {
       role: this.role,
       content: this._content,

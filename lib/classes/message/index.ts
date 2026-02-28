@@ -3,6 +3,11 @@ import { AssistantMessage } from "./AssistantMessage.js";
 import { DeveloperMessage } from "./DeveloperMessage.js";
 import { SystemMessage } from "./SystemMessage.js";
 import { ToolMessage } from "./ToolMessage.js";
+import type { UserMessageJSON } from "./UserMessage.js";
+import type { AssistantMessageJSON } from "./AssistantMessage.js";
+import type { DeveloperMessageJSON } from "./DeveloperMessage.js";
+import type { SystemMessageJSON } from "./SystemMessage.js";
+import type { ToolMessageJSON } from "./ToolMessage.js";
 import { TextPart } from "../../types.js";
 
 export * from "./AssistantMessage.js";
@@ -12,7 +17,7 @@ export * from "./SystemMessage.js";
 export * from "./ToolMessage.js";
 export * from "./UserMessage.js";
 
-export function messageFromJSON(json: any) {
+export function messageFromJSON(json: MessageJSON): Message {
   switch (json.role) {
     case "user":
       return UserMessage.fromJSON(json);
@@ -25,7 +30,7 @@ export function messageFromJSON(json: any) {
     case "tool":
       return ToolMessage.fromJSON(json);
     default:
-      throw new Error(`Unknown message role: ${json.role}`);
+      throw new Error(`Unknown message: ${JSON.stringify(json)}`);
   }
 }
 
@@ -76,3 +81,10 @@ export type Message =
   | AssistantMessage
   | DeveloperMessage
   | SystemMessage;
+
+export type MessageJSON =
+  | ToolMessageJSON
+  | UserMessageJSON
+  | AssistantMessageJSON
+  | DeveloperMessageJSON
+  | SystemMessageJSON;

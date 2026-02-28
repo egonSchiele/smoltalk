@@ -5,6 +5,12 @@ import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
+export type DeveloperMessageJSON = {
+  role: "developer";
+  content: string | Array<TextPart>;
+  name: string | undefined;
+};
+
 export class DeveloperMessage extends BaseMessage implements MessageClass {
   public _role = "developer" as const;
   public _content: string | Array<TextPart>;
@@ -43,7 +49,7 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toJSON() {
+  toJSON(): DeveloperMessageJSON {
     return {
       role: this.role,
       content: this._content,

@@ -6,6 +6,12 @@ import { ToolCall } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
+export type UserMessageJSON = {
+  role: "user";
+  content: string;
+  name: string | undefined;
+};
+
 export class UserMessage extends BaseMessage implements MessageClass {
   public _role = "user" as const;
   public _content: string;
@@ -39,7 +45,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
-  toJSON() {
+  toJSON(): UserMessageJSON {
     return {
       role: this.role,
       content: this.content,
