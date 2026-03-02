@@ -83,4 +83,10 @@ export class SystemMessage extends BaseMessage implements MessageClass {
   toOllamaMessage(): Message {
     return { role: this.role, content: this.content };
   }
+
+  // System messages are passed as the top-level `system` param in Anthropic's API,
+  // not as entries in the messages array. Returns null to signal this.
+  toAnthropicMessage(): null {
+    return null;
+  }
 }

@@ -34,9 +34,10 @@ async function main() {
     stream: true,
     openAiApiKey: process.env.OPENAI_API_KEY || "",
     googleApiKey: process.env.GEMINI_API_KEY || "",
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
     logLevel: "warn",
-    model: "gpt-4o-mini",
-    provider: "openai-responses",
+    model: "claude-sonnet-4-6",
+    // provider: "openai-responses",
   });
   console.log(color.green("--------------- Response ---------------"));
   console.log(resp);

@@ -118,6 +118,52 @@ export function zodToOpenAIResponsesTool(
   return tool;
 }
 
+export type AnthropicTool = {
+  name: string;
+  description?: string;
+  input_schema: {
+    type: "object";
+    properties: Record<string, any>;
+    required?: string[];
+  };
+};
+
+export function zodToAnthropicTool(
+  name: string,
+  schema: z.ZodType,
+  options: Partial<{
+    description?: string;
+  }> = {}
+): AnthropicTool {
+  const jsonSchema = schema.toJSONSchema();
+
+  let description: string | undefined;
+  if (options?.description) {
+    description = options.description;
+  } else if (
+    typeof jsonSchema === "object" &&
+    "description" in jsonSchema &&
+    typeof jsonSchema.description === "string"
+  ) {
+    description = jsonSchema.description;
+  }
+
+  const tool: AnthropicTool = {
+    name,
+    input_schema: {
+      type: "object",
+      properties: jsonSchema.properties || {},
+      required: jsonSchema.required || [],
+    },
+  };
+
+  if (description) {
+    tool.description = description;
+  }
+
+  return tool;
+}
+
 /**
  * Removes properties that Google's API doesn't support from JSON schemas
  */

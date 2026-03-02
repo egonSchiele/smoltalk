@@ -154,4 +154,47 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       tool_calls: this.toolCalls?.map((tc) => tc.toOpenAI()),
     };
   }
+
+  toAnthropicMessage(): {
+    role: "assistant";
+    content:
+      | string
+      | Array<
+          | { type: "text"; text: string }
+          | { type: "tool_use"; id: string; name: string; input: Record<string, any> }
+        >;
+  } {
+    const hasText =
+      this._content !== null &&
+      this._content !== undefined &&
+      (typeof this._content === "string"
+        ? this._content.length > 0
+        : this._content.length > 0);
+    const hasToolCalls = this._toolCalls && this._toolCalls.length > 0;
+
+    if (!hasToolCalls) {
+      return { role: "assistant", content: this.content };
+    }
+
+    const blocks: Array<
+      | { type: "text"; text: string }
+      | { type: "tool_use"; id: string; name: string; input: Record<string, any> }
+    > = [];
+
+    if (hasText) {
+      const text =
+        typeof this._content === "string"
+          ? this._content
+          : this._content!.map((p) => p.text).join("");
+      if (text) {
+        blocks.push({ type: "text", text });
+      }
+    }
+
+    for (const tc of this._toolCalls!) {
+      blocks.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.arguments });
+    }
+
+    return { role: "assistant", content: blocks };
+  }
 }

@@ -83,4 +83,10 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
   toOllamaMessage(): Message {
     return { role: this.role, content: this.content };
   }
+
+  // Developer messages are treated like system messages in Anthropic's API.
+  // Returns null to signal they should be collected into the `system` param.
+  toAnthropicMessage(): null {
+    return null;
+  }
 }

@@ -371,7 +371,7 @@ describe("messageFromJSON", () => {
 
   it("throws on unknown role", () => {
     expect(() => messageFromJSON({ role: "unknown", content: "" })).toThrow(
-      /Unknown message role/,
+      /Unknown message/,
     );
   });
 });

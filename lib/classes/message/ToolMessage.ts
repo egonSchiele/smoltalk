@@ -112,4 +112,15 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       content: this.content,
     };
   }
+
+  // In Anthropic's API, tool results are user-role messages containing tool_result blocks.
+  toAnthropicMessage(): {
+    role: "user";
+    content: Array<{ type: "tool_result"; tool_use_id: string; content: string }>;
+  } {
+    return {
+      role: "user",
+      content: [{ type: "tool_result", tool_use_id: this.tool_call_id, content: this.content }],
+    };
+  }
 }

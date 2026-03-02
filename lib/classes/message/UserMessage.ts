@@ -86,4 +86,8 @@ export class UserMessage extends BaseMessage implements MessageClass {
       content: this.content,
     };
   }
+
+  toAnthropicMessage(): { role: "user"; content: string } {
+    return { role: "user", content: this.content };
+  }
 }
