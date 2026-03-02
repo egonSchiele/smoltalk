@@ -160,7 +160,7 @@ export class BaseClient implements SmolClient {
         .replace(/```\s*$/, "");
       try {
         return this.extractResponse(promptConfig, JSON.parse(stripped), schema);
-      } catch { }
+      } catch {}
       return rawValue;
     }
 
@@ -192,6 +192,13 @@ export class BaseClient implements SmolClient {
       if (inner.success) return inner.data;
     }
 
+    // 7. Wrap object with "response" and see if that matches the schema
+    const wrapped = { response: rawValue };
+    const wrappedParse = schema.safeParse(wrapped);
+    if (wrappedParse.success) {
+      return wrappedParse.data;
+    }
+
     // 8. Nothing worked — throw error
     throw direct.error;
   }
@@ -202,7 +209,6 @@ export class BaseClient implements SmolClient {
   ): Promise<Result<PromptResult>> {
     const result = await this._textSync(promptConfig);
     if (result.success) {
-
       if (!("output" in result.value)) {
         const retryMessages = [
           ...promptConfig.messages,
