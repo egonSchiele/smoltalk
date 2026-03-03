@@ -144,7 +144,3 @@ export type TextPart = {
   type: "text";
   text: string;
 };
-
-export type JSONEdge =
-  | { type: "regular"; to: string }
-  | { type: "conditional"; adjacentNodes: readonly string[] };

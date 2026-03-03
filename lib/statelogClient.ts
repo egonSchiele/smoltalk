@@ -1,5 +1,5 @@
 import { nanoid } from "nanoid";
-import { JSONEdge, PromptResult } from "./types.js";
+import { PromptResult } from "./types.js";
 import { failure, mergeResults, Result, success } from "./types/result.js";
 import { ModelConfig, ModelName } from "./models.js";
 
@@ -71,23 +71,6 @@ export class StatelogClient {
       type: "debug",
       message: message,
       data,
-    });
-  }
-
-  async graph({
-    nodes,
-    edges,
-    startNode,
-  }: {
-    nodes: string[];
-    edges: Record<string, JSONEdge>;
-    startNode?: string;
-  }): Promise<void> {
-    await this.post({
-      type: "graph",
-      nodes,
-      edges,
-      startNode,
     });
   }
 
