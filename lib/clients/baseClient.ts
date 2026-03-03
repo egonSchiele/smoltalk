@@ -25,6 +25,28 @@ export class BaseClient implements SmolClient {
       this.statelogClient = getStatelogClient(this.config.statelog as any);
     }
   }
+
+  protected getAbortSignal(promptConfig: PromptConfig): AbortSignal | undefined {
+    const signals: AbortSignal[] = [];
+    if (promptConfig.abortSignal) {
+      signals.push(promptConfig.abortSignal);
+    }
+    if (promptConfig.timeoutMs !== undefined) {
+      signals.push(AbortSignal.timeout(promptConfig.timeoutMs));
+    }
+    if (signals.length === 0) return undefined;
+    if (signals.length === 1) return signals[0];
+    return AbortSignal.any(signals);
+  }
+
+  protected isAbortError(err: unknown): boolean {
+    return (
+      err instanceof DOMException && err.name === "AbortError" ||
+      err instanceof DOMException && err.name === "TimeoutError" ||
+      (err instanceof Error && err.name === "AbortError") ||
+      (err instanceof Error && err.name === "TimeoutError")
+    );
+  }
   text(
     promptConfig: Omit<PromptConfig, "stream">,
   ): Promise<Result<PromptResult>>;
@@ -80,11 +102,21 @@ export class BaseClient implements SmolClient {
         value: { output: null, toolCalls: [], model: this.config.model },
       };
     }
-    const result = await this.textWithRetry(
-      newPromptConfig,
-      newPromptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES,
-    );
-    return result;
+    try {
+      const result = await this.textWithRetry(
+        newPromptConfig,
+        newPromptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES,
+      );
+      return result;
+    } catch (err) {
+      if (this.isAbortError(err)) {
+        const message = promptConfig.timeoutMs
+          ? `Request timed out after ${promptConfig.timeoutMs}ms`
+          : "Request was aborted";
+        return { success: false, error: message };
+      }
+      throw err;
+    }
   }
 
   checkForToolLoops(promptConfig: PromptConfig): {
@@ -337,7 +369,18 @@ export class BaseClient implements SmolClient {
       };
       return;
     }
-    yield* this._textStream(newPromptConfig);
+    try {
+      yield* this._textStream(newPromptConfig);
+    } catch (err) {
+      if (this.isAbortError(err)) {
+        const message = config.timeoutMs
+          ? `Request timed out after ${config.timeoutMs}ms`
+          : "Request was aborted";
+        yield { type: "timeout", error: message };
+      } else {
+        throw err;
+      }
+    }
   }
 
   // default implementation of text stream just calls the non-streaming version and yields the result

@@ -171,10 +171,11 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
 
+    const signal = this.getAbortSignal(config);
     const response = await this.client.responses.create({
       ...request,
       stream: false,
-    });
+    }, { ...(signal && { signal }) });
 
     this.logger.debug(
       "Response from OpenAI Responses API:",
@@ -209,7 +210,8 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
 
-    const stream = this.client.responses.stream(request);
+    const signal = this.getAbortSignal(config);
+    const stream = this.client.responses.stream(request, { ...(signal && { signal }) });
 
     let content = "";
     const functionCalls = new Map<

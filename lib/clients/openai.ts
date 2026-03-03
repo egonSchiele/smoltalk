@@ -104,10 +104,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
 
+    const signal = this.getAbortSignal(config);
     const completion = await this.client.chat.completions.create({
       ...request,
       stream: false as const,
-    });
+    }, { ...(signal && { signal }) });
 
     this.logger.debug(
       "Response from OpenAI:",
@@ -154,11 +155,12 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
 
+    const signal = this.getAbortSignal(config);
     const completion = await this.client.chat.completions.create({
       ...request,
       stream: true as const,
       stream_options: { include_usage: true },
-    });
+    }, { ...(signal && { signal }) });
 
     let content = "";
     const toolCallsMap = new Map<

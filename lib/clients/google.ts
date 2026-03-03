@@ -116,10 +116,14 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   }
 
   async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+    const signal = this.getAbortSignal(config);
     const request = {
       ...this.buildRequest(config),
       stream: config.stream || false,
     };
+    if (signal) {
+      request.config = { ...request.config, abortSignal: signal };
+    }
 
     this.logger.debug(
       "Sending request to Google Gemini:",
@@ -172,7 +176,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+    const signal = this.getAbortSignal(config);
     const request = this.buildRequest(config);
+    if (signal) {
+      request.config = { ...request.config, abortSignal: signal };
+    }
 
     this.logger.debug(
       "Sending streaming request to Google Gemini:",

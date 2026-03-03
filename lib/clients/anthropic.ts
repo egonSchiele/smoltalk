@@ -143,6 +143,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       thinking,
     });
 
+    const signal = this.getAbortSignal(config);
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
@@ -155,7 +156,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       }),
       ...(config.rawAttributes || {}),
       stream: false,
-    } as any);
+    } as any, { ...(signal && { signal }) });
 
     this.logger.debug("Response from Anthropic:", response);
 
@@ -200,6 +201,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       thinking,
     });
 
+    const signal = this.getAbortSignal(config);
     const stream = await this.client.messages.create({
       model: this.model,
       max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
@@ -212,7 +214,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       }),
       ...(config.rawAttributes || {}),
       stream: true,
-    } as any);
+    } as any, { ...(signal && { signal }) });
 
     let content = "";
     // Track tool blocks by index: index -> { id, name, arguments (partial JSON) }

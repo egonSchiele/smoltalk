@@ -100,8 +100,16 @@ export class SmolOllama extends BaseClient implements SmolClient {
       "Sending request to Ollama:",
       JSON.stringify(request, null, 2),
     );
+    const signal = this.getAbortSignal(config);
+    const abortHandler = signal ? () => this.client.abort() : undefined;
+    if (signal && abortHandler) {
+      signal.addEventListener("abort", abortHandler, { once: true });
+    }
     // @ts-ignore
     const result = await this.client.chat(request);
+    if (signal && abortHandler) {
+      signal.removeEventListener("abort", abortHandler);
+    }
 
     this.logger.debug("Response from Ollama:", JSON.stringify(result, null, 2));
 
@@ -156,6 +164,11 @@ export class SmolOllama extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
 
+    const signal = this.getAbortSignal(config);
+    const abortHandler = signal ? () => this.client.abort() : undefined;
+    if (signal && abortHandler) {
+      signal.addEventListener("abort", abortHandler, { once: true });
+    }
     // @ts-ignore
     const stream = await this.client.chat(request);
 
@@ -201,6 +214,10 @@ export class SmolOllama extends BaseClient implements SmolClient {
           }
         }
       }
+    }
+
+    if (signal && abortHandler) {
+      signal.removeEventListener("abort", abortHandler);
     }
 
     this.logger.debug("Streaming response completed from Ollama");

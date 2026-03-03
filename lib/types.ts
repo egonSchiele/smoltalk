@@ -56,6 +56,12 @@ export type PromptConfig = {
 
   // If set, returns a failure when the number of messages exceeds this limit
   maxMessages?: number;
+
+  // Timeout in milliseconds for the request
+  timeoutMs?: number;
+
+  // User-provided AbortSignal for cancellation
+  abortSignal?: AbortSignal;
 };
 
 export type SmolConfig = {
@@ -125,7 +131,8 @@ export type StreamChunk =
   | { type: "thinking"; text: string; signature?: string }
   | { type: "tool_call"; toolCall: ToolCall }
   | { type: "done"; result: PromptResult }
-  | { type: "error"; error: string };
+  | { type: "error"; error: string }
+  | { type: "timeout"; error: string };
 
 export interface SmolClient {
   text(
