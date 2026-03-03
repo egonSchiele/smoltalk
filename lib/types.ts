@@ -62,6 +62,12 @@ export type SmolConfig = {
   provider?: Provider;
   logLevel?: LogLevel;
   toolLoopDetection?: ToolLoopDetection;
+  statelog?: Partial<{
+    host: string;
+    projectId: string;
+    debugMode: boolean;
+    apiKey: string;
+  }>;
 };
 
 export type ToolLoopDetection = {
@@ -138,3 +144,7 @@ export type TextPart = {
   type: "text";
   text: string;
 };
+
+export type JSONEdge =
+  | { type: "regular"; to: string }
+  | { type: "conditional"; adjacentNodes: readonly string[] };

@@ -1,6 +1,7 @@
 import { userMessage, assistantMessage } from "../classes/message/index.js";
 import { getLogger } from "../logger.js";
 import { ModelName } from "../models.js";
+import { getStatelogClient, StatelogClient } from "../statelogClient.js";
 import {
   PromptConfig,
   PromptResult,
@@ -16,9 +17,13 @@ const DEFAULT_NUM_RETRIES = 2;
 
 export class BaseClient implements SmolClient {
   protected config: SmolConfig;
+  protected statelogClient?: StatelogClient;
 
   constructor(config: SmolConfig) {
     this.config = config || {};
+    if (this.config.statelog) {
+      this.statelogClient = getStatelogClient(this.config.statelog as any);
+    }
   }
   text(
     promptConfig: Omit<PromptConfig, "stream">,
@@ -75,10 +80,11 @@ export class BaseClient implements SmolClient {
         value: { output: null, toolCalls: [], model: this.config.model },
       };
     }
-    return this.textWithRetry(
+    const result = await this.textWithRetry(
       newPromptConfig,
       newPromptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES,
     );
+    return result;
   }
 
   checkForToolLoops(promptConfig: PromptConfig): {
@@ -109,6 +115,11 @@ export class BaseClient implements SmolClient {
         logger.warn(
           `Tool loop detected for tool "${toolName}" called ${count} times. Intervention: ${intervention}`,
         );
+        this.statelogClient?.debug("Tool loop detected", {
+          toolName,
+          count,
+          intervention,
+        });
         switch (intervention) {
           case "remove-tool":
             const newTools = promptConfig.tools?.filter(
@@ -247,7 +258,7 @@ export class BaseClient implements SmolClient {
         } catch (err) {
           const errorMessage = (err as Error).message;
           const logger = getLogger();
-          logger.debug(
+          logger.warn(
             `Response format validation failed (retries left: ${retries}): `,
             errorMessage,
             "output:",
@@ -256,8 +267,14 @@ export class BaseClient implements SmolClient {
             JSON.stringify(promptConfig.responseFormat, null, 2),
           );
           if (err instanceof z.ZodError) {
-            logger.debug("Zod error details:", z.prettifyError(err));
+            logger.warn("Zod error details:", z.prettifyError(err));
           }
+
+          this.statelogClient?.diff({
+            message: "Response format validation failed",
+            itemA: promptConfig.responseFormat,
+            itemB: output,
+          });
 
           const retryMessages = [
             ...promptConfig.messages,

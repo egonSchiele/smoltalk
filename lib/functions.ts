@@ -22,6 +22,7 @@ function splitConfig(config: SmolPromptConfig): {
     provider,
     logLevel,
     toolLoopDetection,
+    statelog,
     ...promptConfig
   } = config;
 
@@ -38,6 +39,7 @@ function splitConfig(config: SmolPromptConfig): {
       provider,
       logLevel,
       toolLoopDetection,
+      statelog,
     },
     promptConfig,
   };
