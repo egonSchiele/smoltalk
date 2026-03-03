@@ -33,6 +33,13 @@ export type PromptConfig = {
     budgetTokens?: number;
   };
 
+  // Provider-agnostic reasoning effort level
+  // OpenAI: passed as reasoning_effort / reasoning.effort
+  // Anthropic: mapped to thinking budget (low=2048, medium=5000, high=10000)
+  // Google: mapped to thinkingBudget (low=2048, medium=8192, high=16384)
+  // If `thinking` is also set, it takes precedence for Anthropic/Google
+  reasoningEffort?: "low" | "medium" | "high";
+
   // used by openai
   responseFormatOptions?: Partial<{
     name: string;

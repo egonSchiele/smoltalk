@@ -80,6 +80,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
           description: tool.description,
         });
       }),
+      ...(config.reasoningEffort && { reasoning_effort: config.reasoningEffort }),
       ...(config.rawAttributes || {}),
     };
     if (config.responseFormat) {

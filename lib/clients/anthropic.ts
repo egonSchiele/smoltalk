@@ -119,10 +119,14 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ) as Tool[])
         : undefined;
 
+    const reasoningBudgetMap = { low: 2048, medium: 5000, high: 10000 } as const;
+
     const thinking =
       config.thinking?.enabled
         ? { type: "enabled" as const, budget_tokens: config.thinking.budgetTokens ?? 5000 }
-        : undefined;
+        : config.reasoningEffort
+          ? { type: "enabled" as const, budget_tokens: reasoningBudgetMap[config.reasoningEffort] }
+          : undefined;
 
     return { system, messages: anthropicMessages, tools, thinking };
   }

@@ -128,6 +128,10 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       };
     }
 
+    if (config.reasoningEffort) {
+      request.reasoning = { effort: config.reasoningEffort };
+    }
+
     if (config.rawAttributes) {
       Object.assign(request, config.rawAttributes);
     }

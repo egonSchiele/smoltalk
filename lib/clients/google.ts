@@ -102,6 +102,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       genConfig.responseJsonSchema = config.responseFormat.toJSONSchema();
     }
 
+    if (!config.thinking?.enabled && config.reasoningEffort) {
+      const budgetMap = { low: 2048, medium: 8192, high: 16384 } as const;
+      genConfig.thinkingConfig = { thinkingBudget: budgetMap[config.reasoningEffort] };
+    }
+
     return {
       contents: messages,
       model: this.model,
