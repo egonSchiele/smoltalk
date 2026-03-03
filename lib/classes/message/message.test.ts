@@ -189,6 +189,109 @@ describe("AssistantMessage", () => {
       expect(ollama.tool_calls).toHaveLength(1);
     });
   });
+
+  describe("thinkingBlocks", () => {
+    const blocks = [
+      { text: "Let me think...", signature: "sig-abc" },
+      { text: "Also considering...", signature: "sig-xyz" },
+    ];
+
+    it("stores thinking blocks", () => {
+      const msg = new AssistantMessage("answer", { thinkingBlocks: blocks });
+      expect(msg.thinkingBlocks).toEqual(blocks);
+    });
+
+    it("is undefined when not provided", () => {
+      const msg = new AssistantMessage("answer");
+      expect(msg.thinkingBlocks).toBeUndefined();
+    });
+
+    describe("toJSON / fromJSON", () => {
+      it("round-trips thinking blocks", () => {
+        const original = new AssistantMessage("answer", { thinkingBlocks: blocks });
+        const restored = AssistantMessage.fromJSON(original.toJSON());
+        expect(restored.thinkingBlocks).toEqual(blocks);
+      });
+
+      it("round-trips with undefined thinking blocks", () => {
+        const original = new AssistantMessage("answer");
+        const restored = AssistantMessage.fromJSON(original.toJSON());
+        expect(restored.thinkingBlocks).toBeUndefined();
+      });
+    });
+
+    describe("toGoogleMessage", () => {
+      it("prepends thought parts before text part", () => {
+        const msg = new AssistantMessage("answer", { thinkingBlocks: blocks });
+        const google = msg.toGoogleMessage() as any;
+        expect(google.parts).toHaveLength(3);
+        expect(google.parts[0]).toEqual({
+          thought: true,
+          text: "Let me think...",
+          thoughtSignature: "sig-abc",
+        });
+        expect(google.parts[1]).toEqual({
+          thought: true,
+          text: "Also considering...",
+          thoughtSignature: "sig-xyz",
+        });
+        expect(google.parts[2]).toEqual({ text: "answer" });
+      });
+
+      it("prepends thought parts before function call parts", () => {
+        const tc = new ToolCall("tc-1", "fn", { x: 1 });
+        const msg = new AssistantMessage(null, {
+          toolCalls: [tc],
+          thinkingBlocks: [{ text: "thinking", signature: "sig-1" }],
+        });
+        const google = msg.toGoogleMessage() as any;
+        expect(google.parts).toHaveLength(2);
+        expect(google.parts[0].thoughtSignature).toBe("sig-1");
+        expect(google.parts[1].functionCall.name).toBe("fn");
+      });
+    });
+
+    describe("toAnthropicMessage", () => {
+      it("prepends thinking blocks before text in array format", () => {
+        const msg = new AssistantMessage("answer", {
+          thinkingBlocks: [{ text: "hmm", signature: "sig-1" }],
+        });
+        const anthropic = msg.toAnthropicMessage() as any;
+        expect(Array.isArray(anthropic.content)).toBe(true);
+        expect(anthropic.content[0]).toEqual({
+          type: "thinking",
+          thinking: "hmm",
+          signature: "sig-1",
+        });
+        expect(anthropic.content[1]).toEqual({ type: "text", text: "answer" });
+      });
+
+      it("prepends thinking blocks before tool_use blocks", () => {
+        const tc = new ToolCall("tc-1", "fn", { x: 1 });
+        const msg = new AssistantMessage(null, {
+          toolCalls: [tc],
+          thinkingBlocks: [{ text: "thinking", signature: "sig-2" }],
+        });
+        const anthropic = msg.toAnthropicMessage() as any;
+        expect(anthropic.content[0].type).toBe("thinking");
+        expect(anthropic.content[1].type).toBe("tool_use");
+      });
+
+      it("includes multiple thinking blocks in order", () => {
+        const msg = new AssistantMessage("ok", { thinkingBlocks: blocks });
+        const anthropic = msg.toAnthropicMessage() as any;
+        expect(anthropic.content[0].thinking).toBe("Let me think...");
+        expect(anthropic.content[1].thinking).toBe("Also considering...");
+        expect(anthropic.content[2]).toEqual({ type: "text", text: "ok" });
+      });
+
+      it("uses string shorthand when no thinking blocks and no tool calls", () => {
+        const msg = new AssistantMessage("just text");
+        const anthropic = msg.toAnthropicMessage();
+        expect(typeof anthropic.content).toBe("string");
+      });
+    });
+  });
 });
 
 describe("SystemMessage", () => {

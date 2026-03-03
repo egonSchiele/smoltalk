@@ -1,5 +1,5 @@
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart } from "../../types.js";
+import { TextPart, ThinkingBlock } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, Part } from "@google/genai";
 import { ToolCall, ToolCallJSON } from "../ToolCall.js";
@@ -13,6 +13,7 @@ export type AssistantMessageJSON = {
   audio: any | null | undefined;
   refusal: string | null | undefined;
   toolCalls: ToolCallJSON[] | undefined;
+  thinkingBlocks: ThinkingBlock[] | undefined;
 };
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
@@ -22,6 +23,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   public _audio?: any | null;
   public _refusal?: string | null;
   public _toolCalls?: ToolCall[];
+  public _thinkingBlocks?: ThinkingBlock[];
   public _rawData?: any;
 
   constructor(
@@ -31,6 +33,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       audio?: any | null;
       refusal?: string | null;
       toolCalls?: ToolCall[];
+      thinkingBlocks?: ThinkingBlock[];
       rawData?: any;
     } = {},
   ) {
@@ -40,6 +43,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     this._audio = options.audio;
     this._refusal = options.refusal;
     this._toolCalls = options.toolCalls;
+    this._thinkingBlocks = options.thinkingBlocks;
     this._rawData = options.rawData;
   }
 
@@ -80,6 +84,10 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  get thinkingBlocks(): ThinkingBlock[] | undefined {
+    return this._thinkingBlocks;
+  }
+
   toJSON(): AssistantMessageJSON {
     return {
       role: this.role,
@@ -88,6 +96,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       audio: this.audio,
       refusal: this.refusal,
       toolCalls: this.toolCalls?.map((tc) => tc.toJSON()),
+      thinkingBlocks: this._thinkingBlocks,
     };
   }
 
@@ -99,6 +108,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       toolCalls: json.toolCalls
         ? json.toolCalls.map((tcJson: any) => ToolCall.fromJSON(tcJson))
         : undefined,
+      thinkingBlocks: json.thinkingBlocks,
       rawData: json.rawData,
     });
   }
@@ -136,6 +146,12 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
 
   toGoogleMessage(): Content {
     const parts: Part[] = [];
+    // Prepend thought parts with their signatures so Gemini can resume reasoning
+    if (this._thinkingBlocks) {
+      for (const block of this._thinkingBlocks) {
+        parts.push({ thought: true, text: block.text, thoughtSignature: block.signature } as any);
+      }
+    }
     if (this.content) {
       parts.push({ text: this.content });
     }
@@ -160,6 +176,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     content:
       | string
       | Array<
+          | { type: "thinking"; thinking: string; signature: string }
           | { type: "text"; text: string }
           | { type: "tool_use"; id: string; name: string; input: Record<string, any> }
         >;
@@ -171,15 +188,25 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
         ? this._content.length > 0
         : this._content.length > 0);
     const hasToolCalls = this._toolCalls && this._toolCalls.length > 0;
+    const hasThinking = this._thinkingBlocks && this._thinkingBlocks.length > 0;
 
-    if (!hasToolCalls) {
+    // If only text and no thinking/tool calls, use string shorthand
+    if (!hasToolCalls && !hasThinking) {
       return { role: "assistant", content: this.content };
     }
 
     const blocks: Array<
+      | { type: "thinking"; thinking: string; signature: string }
       | { type: "text"; text: string }
       | { type: "tool_use"; id: string; name: string; input: Record<string, any> }
     > = [];
+
+    // Thinking blocks must come first (Anthropic requires this ordering)
+    if (hasThinking) {
+      for (const block of this._thinkingBlocks!) {
+        blocks.push({ type: "thinking", thinking: block.text, signature: block.signature });
+      }
+    }
 
     if (hasText) {
       const text =
@@ -191,7 +218,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       }
     }
 
-    for (const tc of this._toolCalls!) {
+    for (const tc of this._toolCalls ?? []) {
       blocks.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.arguments });
     }
 

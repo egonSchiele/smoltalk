@@ -6,6 +6,11 @@ import { ToolCall } from "./classes/ToolCall.js";
 import { ModelConfig, ModelName, Provider } from "./models.js";
 import { Result } from "./types/result.js";
 
+export type ThinkingBlock = {
+  text: string;
+  signature: string;
+};
+
 export type PromptConfig = {
   messages: Message[];
   tools?: {
@@ -20,6 +25,13 @@ export type PromptConfig = {
   parallelToolCalls?: boolean;
   responseFormat?: ZodType;
   stream?: boolean;
+
+  // Enable extended thinking / thought signatures (Anthropic and Google)
+  thinking?: {
+    enabled: boolean;
+    // Anthropic: token budget for thinking (defaults to 5000)
+    budgetTokens?: number;
+  };
 
   // used by openai
   responseFormatOptions?: Partial<{
@@ -89,6 +101,7 @@ export type CostEstimate = {
 export type PromptResult = {
   output: string | null;
   toolCalls: ToolCall[];
+  thinkingBlocks?: ThinkingBlock[];
   usage?: TokenUsage;
   cost?: CostEstimate;
   model?: ModelName | ModelConfig;
@@ -96,6 +109,7 @@ export type PromptResult = {
 
 export type StreamChunk =
   | { type: "text"; text: string }
+  | { type: "thinking"; text: string; signature?: string }
   | { type: "tool_call"; toolCall: ToolCall }
   | { type: "done"; result: PromptResult }
   | { type: "error"; error: string };

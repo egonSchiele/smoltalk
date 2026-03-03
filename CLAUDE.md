@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Smoltalk is a TypeScript npm package providing a unified interface across multiple LLM providers (OpenAI, Google Gemini, Ollama). It prevents vendor lock-in by letting users switch providers with minimal code changes.
+Smoltalk is a TypeScript npm package providing a unified interface across multiple LLM providers (OpenAI, Google Gemini, Anthropic, Ollama). It prevents vendor lock-in by letting users switch providers with minimal code changes.
 
 ## Quick Reference
 
@@ -48,10 +48,31 @@ lib/
 ## Key Patterns
 
 - **Result type**: Operations return `Result<T>` (success/failure union) instead of throwing
-- **Streaming**: All providers yield `AsyncGenerator<StreamChunk>` with chunk types: `text`, `tool_call`, `done`, `error`
+- **Streaming**: All providers yield `AsyncGenerator<StreamChunk>` with chunk types: `text`, `thinking`, `tool_call`, `done`, `error`
 - **Cost tracking**: Every response includes token usage and cost estimates from `models.ts` pricing data
 - **ES Modules**: Package uses `"type": "module"` — all internal imports use `.js` extensions
 - **Strict TypeScript**: `strict: true`, target ESNext, module nodenext
+
+## Thought Signatures / Extended Thinking
+
+Two providers support returning encrypted reasoning state alongside responses:
+
+- **Anthropic** (`claude-opus-4-5`, `claude-sonnet-*`, etc.): Enable via `thinking: { enabled: true, budgetTokens: 5000 }` in `PromptConfig`. Returns `ThinkingBlock[]` in `PromptResult.thinkingBlocks`. Each block has `text` (the visible reasoning) and `signature` (encrypted verification token).
+- **Google Gemini** (Gemini 3+ models): Thought signatures are returned automatically on thinking models. Parts with `thought: true` are captured into `PromptResult.thinkingBlocks`.
+- **OpenAI**: No equivalent — o1/o3 reasoning is fully hidden.
+
+**Round-tripping**: `AssistantMessage` stores `thinkingBlocks` and passes them back per provider:
+- `toAnthropicMessage()` prepends `{ type: "thinking", thinking, signature }` blocks (required by Anthropic during tool use)
+- `toGoogleMessage()` prepends `{ thought: true, text, thoughtSignature }` parts (required by Gemini 3+ during tool use)
+
+**Usage**:
+```typescript
+const result = await textSync("Solve this step by step", {
+  model: "claude-opus-4-5",
+  thinking: { enabled: true, budgetTokens: 8000 },
+});
+// result.thinkingBlocks → [{ text: "Let me think...", signature: "WaUj..." }]
+```
 
 ## Adding a New Provider
 

@@ -9,6 +9,7 @@ import {
   Result,
   SmolClient,
   StreamChunk,
+  ThinkingBlock,
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
@@ -129,6 +130,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     const output = result.text || null;
     const toolCalls: ToolCall[] = [];
+    const thinkingBlocks: ThinkingBlock[] = [];
 
     result.candidates?.forEach((candidate) => {
       if (candidate.content && candidate.content.parts) {
@@ -138,6 +140,13 @@ export class SmolGoogle extends BaseClient implements SmolClient {
             toolCalls.push(
               new ToolCall("", functionCall.name, functionCall.args),
             );
+          }
+          // Capture thought parts (thought: true indicates a thinking part)
+          if (part.thoughtSignature) {
+            thinkingBlocks.push({
+              text: part.text || "",
+              signature: part.thoughtSignature,
+            });
           }
         });
       }
@@ -150,6 +159,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return success({
       output,
       toolCalls,
+      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
       cost,
       model: request.model as ModelName,
@@ -171,6 +181,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       string,
       { id: string; name: string; arguments: any }
     >();
+    const thinkingBlocks: ThinkingBlock[] = [];
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
 
@@ -182,23 +193,27 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         cost = usageAndCost.cost;
       }
 
-      // Handle text content
-      if (chunk.text) {
-        content += chunk.text;
-        yield { type: "text", text: chunk.text };
-      }
+      // Iterate raw parts to capture thought signatures and regular content
+      for (const candidate of (chunk as any).candidates || []) {
+        for (const part of candidate?.content?.parts || []) {
+          const p = part as any;
 
-      // Handle function calls
-      if (chunk.functionCalls) {
-        for (const functionCall of chunk.functionCalls) {
-          const id = functionCall.id || functionCall.name || "";
-          const name = functionCall.name || "";
-          if (!toolCallsMap.has(id)) {
-            toolCallsMap.set(id, {
-              id: id,
-              name: name,
-              arguments: functionCall.args,
-            });
+          if (p.thoughtSignature) {
+            const block: ThinkingBlock = {
+              text: p.text || "",
+              signature: p.thoughtSignature,
+            };
+            thinkingBlocks.push(block);
+            yield { type: "thinking", text: block.text, signature: block.signature };
+          } else if (p.text) {
+            content += p.text;
+            yield { type: "text", text: p.text };
+          } else if (p.functionCall) {
+            const id = p.functionCall.id || p.functionCall.name || "";
+            const name = p.functionCall.name || "";
+            if (!toolCallsMap.has(id)) {
+              toolCallsMap.set(id, { id, name, arguments: p.functionCall.args });
+            }
           }
         }
       }
@@ -219,6 +234,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       result: {
         output: content || null,
         toolCalls,
+        ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
         usage,
         cost,
         model: request.model as ModelName,

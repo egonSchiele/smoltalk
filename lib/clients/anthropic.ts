@@ -18,6 +18,7 @@ import {
   Result,
   SmolClient,
   StreamChunk,
+  ThinkingBlock,
   TokenUsage,
   success,
 } from "../types.js";
@@ -64,6 +65,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     system: string | undefined;
     messages: MessageParam[];
     tools: Tool[] | undefined;
+    thinking: { type: "enabled"; budget_tokens: number } | undefined;
   } {
     // Split system/developer messages out into the top-level `system` param
     const systemParts = config.messages
@@ -117,11 +119,16 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ) as Tool[])
         : undefined;
 
-    return { system, messages: anthropicMessages, tools };
+    const thinking =
+      config.thinking?.enabled
+        ? { type: "enabled" as const, budget_tokens: config.thinking.budgetTokens ?? 5000 }
+        : undefined;
+
+    return { system, messages: anthropicMessages, tools, thinking };
   }
 
   async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
-    const { system, messages, tools } = this.buildRequest(config);
+    const { system, messages, tools, thinking } = this.buildRequest(config);
 
     this.logger.debug("Sending request to Anthropic:", {
       model: this.model,
@@ -129,6 +136,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       messages,
       system,
       tools,
+      thinking,
     });
 
     const response = await this.client.messages.create({
@@ -137,17 +145,19 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       messages,
       ...(system && { system }),
       ...(tools && { tools }),
+      ...(thinking && { thinking }),
       ...(config.temperature !== undefined && {
         temperature: config.temperature,
       }),
       ...(config.rawAttributes || {}),
       stream: false,
-    });
+    } as any);
 
     this.logger.debug("Response from Anthropic:", response);
 
     let output: string | null = null;
     const toolCalls: ToolCall[] = [];
+    const thinkingBlocks: ThinkingBlock[] = [];
 
     for (const block of response.content) {
       if (block.type === "text") {
@@ -156,6 +166,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         toolCalls.push(
           new ToolCall(block.id, block.name, block.input as Record<string, any>)
         );
+      } else if ((block as any).type === "thinking") {
+        const b = block as any;
+        thinkingBlocks.push({ text: b.thinking, signature: b.signature });
       }
     }
 
@@ -164,6 +177,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     return success({
       output,
       toolCalls,
+      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
       cost,
       model: this.model as ModelName,
@@ -171,7 +185,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
-    const { system, messages, tools } = this.buildRequest(config);
+    const { system, messages, tools, thinking } = this.buildRequest(config);
 
     this.logger.debug("Sending streaming request to Anthropic:", {
       model: this.model,
@@ -179,6 +193,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       messages,
       system,
       tools,
+      thinking,
     });
 
     const stream = await this.client.messages.create({
@@ -187,12 +202,13 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       messages,
       ...(system && { system }),
       ...(tools && { tools }),
+      ...(thinking && { thinking }),
       ...(config.temperature !== undefined && {
         temperature: config.temperature,
       }),
       ...(config.rawAttributes || {}),
       stream: true,
-    });
+    } as any);
 
     let content = "";
     // Track tool blocks by index: index -> { id, name, arguments (partial JSON) }
@@ -200,21 +216,27 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       number,
       { id: string; name: string; arguments: string }
     >();
+    // Track thinking blocks by index: index -> { text, signature }
+    const thinkingBlockMap = new Map<
+      number,
+      { text: string; signature: string }
+    >();
     let inputTokens = 0;
     let outputTokens = 0;
 
-    for await (const event of stream) {
+    for await (const event of stream as any) {
       if (event.type === "message_start") {
         inputTokens = event.message.usage.input_tokens;
-      } else if (
-        event.type === "content_block_start" &&
-        event.content_block.type === "tool_use"
-      ) {
-        toolBlocks.set(event.index, {
-          id: event.content_block.id,
-          name: event.content_block.name,
-          arguments: "",
-        });
+      } else if (event.type === "content_block_start") {
+        if (event.content_block.type === "tool_use") {
+          toolBlocks.set(event.index, {
+            id: event.content_block.id,
+            name: event.content_block.name,
+            arguments: "",
+          });
+        } else if (event.content_block.type === "thinking") {
+          thinkingBlockMap.set(event.index, { text: "", signature: "" });
+        }
       } else if (event.type === "content_block_delta") {
         if (event.delta.type === "text_delta") {
           content += event.delta.text;
@@ -224,6 +246,22 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           if (block) {
             block.arguments += event.delta.partial_json;
           }
+        } else if (event.delta.type === "thinking_delta") {
+          const block = thinkingBlockMap.get(event.index);
+          if (block) {
+            block.text += event.delta.thinking;
+          }
+        } else if (event.delta.type === "signature_delta") {
+          const block = thinkingBlockMap.get(event.index);
+          if (block) {
+            block.signature = event.delta.signature;
+          }
+        }
+      } else if (event.type === "content_block_stop") {
+        // Emit thinking chunk once the block is fully assembled
+        const thinkingBlock = thinkingBlockMap.get(event.index);
+        if (thinkingBlock) {
+          yield { type: "thinking", text: thinkingBlock.text, signature: thinkingBlock.signature };
         }
       } else if (event.type === "message_delta") {
         outputTokens = event.usage.output_tokens;
@@ -239,6 +277,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
+    const thinkingBlocks: ThinkingBlock[] = Array.from(thinkingBlockMap.values());
+
     const usage: TokenUsage = {
       inputTokens,
       outputTokens,
@@ -251,6 +291,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       result: {
         output: content || null,
         toolCalls,
+        ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
         usage,
         cost,
         model: this.model as ModelName,

@@ -48,6 +48,7 @@ export function assistantMessage(
     audio?: any | null;
     refusal?: string | null;
     toolCalls?: Array<any>;
+    thinkingBlocks?: Array<{ text: string; signature: string }>;
     rawData?: any;
   } = {},
 ) {
