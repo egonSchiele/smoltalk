@@ -1,5 +1,5 @@
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart, ThinkingBlock } from "../../types.js";
+import { CostEstimate, TextPart, ThinkingBlock, TokenUsage } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, Part } from "@google/genai";
 import { ToolCall, ToolCallJSON } from "../ToolCall.js";
@@ -14,6 +14,8 @@ export type AssistantMessageJSON = {
   refusal: string | null | undefined;
   toolCalls: ToolCallJSON[] | undefined;
   thinkingBlocks: ThinkingBlock[] | undefined;
+  usage: TokenUsage | undefined;
+  cost: CostEstimate | undefined;
 };
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
@@ -25,6 +27,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   public _toolCalls?: ToolCall[];
   public _thinkingBlocks?: ThinkingBlock[];
   public _rawData?: any;
+  public _usage?: TokenUsage;
+  public _cost?: CostEstimate;
 
   constructor(
     content: string | Array<TextPart> | null,
@@ -35,6 +39,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       toolCalls?: ToolCall[];
       thinkingBlocks?: ThinkingBlock[];
       rawData?: any;
+      usage?: TokenUsage;
+      cost?: CostEstimate;
     } = {},
   ) {
     super();
@@ -45,6 +51,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     this._toolCalls = options.toolCalls;
     this._thinkingBlocks = options.thinkingBlocks;
     this._rawData = options.rawData;
+    this._usage = options.usage;
+    this._cost = options.cost;
   }
 
   get content(): string {
@@ -88,6 +96,14 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._thinkingBlocks;
   }
 
+  get usage(): TokenUsage | undefined {
+    return this._usage;
+  }
+
+  get cost(): CostEstimate | undefined {
+    return this._cost;
+  }
+
   toJSON(): AssistantMessageJSON {
     return {
       role: this.role,
@@ -97,6 +113,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal: this.refusal,
       toolCalls: this.toolCalls?.map((tc) => tc.toJSON()),
       thinkingBlocks: this._thinkingBlocks,
+      usage: this._usage,
+      cost: this._cost,
     };
   }
 
@@ -110,6 +128,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
         : undefined,
       thinkingBlocks: json.thinkingBlocks,
       rawData: json.rawData,
+      usage: json.usage,
+      cost: json.cost,
     });
   }
 

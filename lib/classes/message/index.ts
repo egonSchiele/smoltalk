@@ -8,7 +8,7 @@ import type { AssistantMessageJSON } from "./AssistantMessage.js";
 import type { DeveloperMessageJSON } from "./DeveloperMessage.js";
 import type { SystemMessageJSON } from "./SystemMessage.js";
 import type { ToolMessageJSON } from "./ToolMessage.js";
-import { TextPart } from "../../types.js";
+import { CostEstimate, TextPart, TokenUsage } from "../../types.js";
 
 export * from "./AssistantMessage.js";
 export * from "./BaseMessage.js";
@@ -50,6 +50,8 @@ export function assistantMessage(
     toolCalls?: Array<any>;
     thinkingBlocks?: Array<{ text: string; signature: string }>;
     rawData?: any;
+    usage?: TokenUsage;
+    cost?: CostEstimate;
   } = {},
 ) {
   return new AssistantMessage(content, options);

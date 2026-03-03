@@ -11,6 +11,16 @@ export type ThinkingBlock = {
   signature: string;
 };
 
+export type Budget = {
+  timeBudgetMs?: number;
+  tokenBudget?: number;
+  tokensUsed?: number;
+  costBudget?: number;
+  costUsed?: number;
+  requestBudget?: number;
+  requestsUsed?: number;
+};
+
 export type PromptConfig = {
   messages: Message[];
   tools?: {
@@ -57,8 +67,8 @@ export type PromptConfig = {
   // If set, returns a failure when the number of messages exceeds this limit
   maxMessages?: number;
 
-  // Timeout in milliseconds for the request
-  timeoutMs?: number;
+  // Resource budget for this call
+  budget?: Budget;
 
   // User-provided AbortSignal for cancellation
   abortSignal?: AbortSignal;

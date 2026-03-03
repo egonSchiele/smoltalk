@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { BaseClient } from "./baseClient.js";
-import { userMessage, assistantMessage } from "../classes/message/index.js";
+import { userMessage, assistantMessage, AssistantMessage } from "../classes/message/index.js";
 import { PromptConfig, PromptResult, Result, StreamChunk } from "../types.js";
 
 class TestClient extends BaseClient {
@@ -305,5 +305,174 @@ describe("extractResponse", () => {
         strictSchema,
       ),
     ).toThrow();
+  });
+});
+
+describe("applyBudget", () => {
+  const client = new TestClient({ model: "gpt-4o", openAiApiKey: "test" });
+
+  it("returns config unchanged when no budget is set", () => {
+    const config: PromptConfig = { messages: [userMessage("hi")] };
+    const result = client.applyBudget(config);
+    expect(result.failure).toBeUndefined();
+    expect(result.config).toBe(config);
+  });
+
+  it("returns failure when request budget is exhausted", () => {
+    const messages = [
+      userMessage("q1"),
+      assistantMessage("a1"),
+      userMessage("q2"),
+      assistantMessage("a2"),
+    ];
+    const result = client.applyBudget({
+      messages,
+      budget: { requestBudget: 2 },
+    });
+    expect(result.failure).toBeDefined();
+    expect(result.failure!.success).toBe(false);
+    if (!result.failure!.success) {
+      expect(result.failure!.error).toContain("Request budget exhausted");
+    }
+  });
+
+  it("allows requests when under budget", () => {
+    const messages = [
+      userMessage("q1"),
+      assistantMessage("a1"),
+    ];
+    const result = client.applyBudget({
+      messages,
+      budget: { requestBudget: 2 },
+    });
+    expect(result.failure).toBeUndefined();
+  });
+
+  it("uses explicit requestsUsed override", () => {
+    const result = client.applyBudget({
+      messages: [userMessage("q1")],
+      budget: { requestBudget: 3, requestsUsed: 3 },
+    });
+    expect(result.failure).toBeDefined();
+    if (result.failure && !result.failure.success) {
+      expect(result.failure.error).toContain("Request budget exhausted");
+    }
+  });
+
+  it("sets maxTokens from token budget minus used", () => {
+    const messages = [
+      userMessage("q1"),
+      assistantMessage("a1", { usage: { inputTokens: 10, outputTokens: 200 } }),
+      userMessage("q2"),
+      assistantMessage("a2", { usage: { inputTokens: 10, outputTokens: 300 } }),
+    ];
+    const result = client.applyBudget({
+      messages,
+      budget: { tokenBudget: 1000 },
+    });
+    expect(result.failure).toBeUndefined();
+    // 1000 - 200 - 300 = 500
+    expect(result.config.maxTokens).toBe(500);
+  });
+
+  it("caps maxTokens to the minimum of existing and budget remaining", () => {
+    const messages = [
+      userMessage("q1"),
+      assistantMessage("a1", { usage: { inputTokens: 10, outputTokens: 100 } }),
+    ];
+    const result = client.applyBudget({
+      messages,
+      maxTokens: 200,
+      budget: { tokenBudget: 1000 },
+    });
+    expect(result.failure).toBeUndefined();
+    // min(200, 900) = 200
+    expect(result.config.maxTokens).toBe(200);
+  });
+
+  it("returns failure when token budget is exhausted", () => {
+    const result = client.applyBudget({
+      messages: [userMessage("q1")],
+      budget: { tokenBudget: 100, tokensUsed: 100 },
+    });
+    expect(result.failure).toBeDefined();
+    if (result.failure && !result.failure.success) {
+      expect(result.failure.error).toContain("Token budget exhausted");
+    }
+  });
+
+  it("returns failure when cost budget is exhausted", () => {
+    const result = client.applyBudget({
+      messages: [userMessage("q1")],
+      budget: { costBudget: 0.01, costUsed: 0.01 },
+    });
+    expect(result.failure).toBeDefined();
+    if (result.failure && !result.failure.success) {
+      expect(result.failure.error).toContain("Cost budget exhausted");
+    }
+  });
+
+  it("converts cost budget to maxTokens using model pricing", () => {
+    // gpt-4o has outputTokenCost: 10 (per 1M tokens)
+    // $0.01 remaining => floor((0.01 / 10) * 1_000_000) = 1000 tokens
+    const result = client.applyBudget({
+      messages: [userMessage("q1")],
+      budget: { costBudget: 0.01 },
+    });
+    expect(result.failure).toBeUndefined();
+    expect(result.config.maxTokens).toBe(1000);
+  });
+
+  it("auto-computes costUsed from assistant message cost data", () => {
+    const messages = [
+      userMessage("q1"),
+      assistantMessage("a1", { cost: { inputCost: 0.001, outputCost: 0.004, totalCost: 0.005, currency: "USD" } }),
+    ];
+    // costBudget=0.01, costUsed auto=0.005, remaining=0.005
+    // remainingTokens = floor((0.005 / 10) * 1_000_000) = 500
+    const result = client.applyBudget({
+      messages,
+      budget: { costBudget: 0.01 },
+    });
+    expect(result.failure).toBeUndefined();
+    expect(result.config.maxTokens).toBe(500);
+  });
+
+  it("applies both token and cost budgets, taking the minimum maxTokens", () => {
+    // tokenBudget: remaining = 2000 - 0 = 2000
+    // costBudget: remaining $0.01 => 1000 tokens
+    // min(2000, 1000) = 1000
+    const result = client.applyBudget({
+      messages: [userMessage("q1")],
+      budget: { tokenBudget: 2000, costBudget: 0.01 },
+    });
+    expect(result.failure).toBeUndefined();
+    expect(result.config.maxTokens).toBe(1000);
+  });
+
+  it("wires budget into textSync - returns failure for exhausted budget", async () => {
+    const result = await client.textSync({
+      messages: [userMessage("q1")],
+      budget: { requestBudget: 0 },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("Request budget exhausted");
+    }
+  });
+
+  it("wires budget into textStream - yields error for exhausted budget", async () => {
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of client.textStream({
+      messages: [userMessage("q1")],
+      budget: { requestBudget: 0 },
+    })) {
+      chunks.push(chunk);
+    }
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].type).toBe("error");
+    if (chunks[0].type === "error") {
+      expect(chunks[0].error).toContain("Request budget exhausted");
+    }
   });
 });
