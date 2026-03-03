@@ -65,7 +65,17 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   }
 
   private buildRequest(config: PromptConfig) {
-    const messages = config.messages.map((msg) => msg.toGoogleMessage());
+    // Google Gemini only supports "user" and "model" roles in the contents
+    // array. System and developer messages must be passed via systemInstruction.
+    const systemParts: string[] = [];
+    const contentMessages = config.messages.filter((msg) => {
+      if (msg.role === "system" || msg.role === "developer") {
+        systemParts.push(msg.content);
+        return false;
+      }
+      return true;
+    });
+    const messages = contentMessages.map((msg) => msg.toGoogleMessage());
 
     const tools = (config.tools || []).map((tool) => {
       return zodToGoogleTool(tool.name, tool.schema, {
@@ -75,10 +85,18 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     const genConfig: GenerateContentConfig = {};
 
+    if (systemParts.length > 0) {
+      genConfig.systemInstruction = systemParts.join("\n");
+    }
+
     if (tools.length > 0) {
       genConfig.tools = [{ functionDeclarations: tools }];
     }
-    if (config.responseFormat) {
+    // Google Gemini does not support combining function calling with
+    // responseMimeType 'application/json'. When tools are present, skip
+    // setting the JSON response format — the BaseClient's textWithRetry
+    // will still validate/parse the response against the schema.
+    if (config.responseFormat && tools.length === 0) {
       genConfig.responseMimeType = "application/json";
       genConfig.responseJsonSchema = config.responseFormat.toJSONSchema();
     }
