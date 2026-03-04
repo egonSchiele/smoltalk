@@ -4,7 +4,7 @@ import { BaseStrategy } from "./baseStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
-import { FallbackStrategyConfig, Strategy } from "./types.js";
+import { FallbackStrategyConfig, Strategy, StrategyJSON } from "./types.js";
 
 export * from "./baseStrategy.js";
 export * from "./fallbackStrategy.js";
@@ -36,4 +36,23 @@ export function fallback(
   );
 
   return new FallbackStrategy(strategies, config);
+}
+
+export function fromJSON(json: StrategyJSON): Strategy {
+  if (typeof json === "string") {
+    return id(json as ModelLike);
+  }
+  switch (json.type) {
+    case "id":
+      return id(json.params.model as ModelLike);
+    case "race":
+      return race(...json.params.strategies.map(fromJSON));
+    case "fallback":
+      return fallback(
+        json.params.strategies.map(fromJSON),
+        json.params.config,
+      );
+    default:
+      throw new Error(`Unknown strategy type: ${(json as any).type}`);
+  }
 }

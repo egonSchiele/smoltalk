@@ -2,6 +2,7 @@ import { text } from "../functions.js";
 import { Model } from "../model.js";
 import { SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
+import { StrategyJSON } from "./types.js";
 
 export class IDStrategy extends BaseStrategy {
   public model: Model;
@@ -19,5 +20,9 @@ export class IDStrategy extends BaseStrategy {
       config.hooks.onStrategyStart(config);
     }
     return text({ ...config, stream: false });
+  }
+
+  toJSON(): StrategyJSON {
+    return { type: "id", params: { model: this.model.getResolvedModel() } };
   }
 }

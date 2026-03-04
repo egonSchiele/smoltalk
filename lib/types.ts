@@ -7,7 +7,7 @@ import { ModelName, Provider } from "./models.js";
 import { Result } from "./types/result.js";
 import { Model, ModelConfig } from "./model.js";
 import { Part } from "@google/genai";
-import { Strategy } from "./strategies/types.js";
+import { Strategy, StrategyJSON } from "./strategies/types.js";
 
 export type ThinkingBlock = {
   text: string;
@@ -84,7 +84,7 @@ export type PromptConfig = {
     onStrategyStart: (config: SmolPromptConfig) => void;
   }>;
 
-  strategy?: Strategy;
+  strategy?: Strategy | StrategyJSON;
 };
 
 export type SmolConfig = {

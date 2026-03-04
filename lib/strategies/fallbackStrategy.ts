@@ -1,9 +1,7 @@
-import { text } from "../functions.js";
-import { Model } from "../model.js";
 import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
 import { SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { FallbackStrategyConfig, Strategy } from "./types.js";
+import { FallbackStrategyConfig, Strategy, StrategyJSON } from "./types.js";
 
 export class FallbackStrategy extends BaseStrategy {
   public strategies: Strategy[];
@@ -38,5 +36,15 @@ export class FallbackStrategy extends BaseStrategy {
       }
     }
     throw new Error(`All fallback strategies failed.`);
+  }
+
+  toJSON(): StrategyJSON {
+    return {
+      type: "fallback",
+      params: {
+        strategies: this.strategies.map((s) => s.toJSON()),
+        config: this.config,
+      },
+    };
   }
 }

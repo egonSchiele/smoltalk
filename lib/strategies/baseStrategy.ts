@@ -1,5 +1,5 @@
 import { PromptResult, Result, SmolPromptConfig } from "../types.js";
-import { Strategy } from "./types.js";
+import { Strategy, StrategyJSON } from "./types.js";
 
 export class BaseStrategy implements Strategy {
   async text(config: SmolPromptConfig): Promise<Result<PromptResult>> {
@@ -22,5 +22,9 @@ export class BaseStrategy implements Strategy {
 
   async _textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
     throw new Error("_textSync method not implemented.");
+  }
+
+  toJSON(): StrategyJSON {
+    throw new Error("toJSON method not implemented.");
   }
 }

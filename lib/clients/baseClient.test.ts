@@ -3,6 +3,7 @@ import { z } from "zod";
 import { BaseClient } from "./baseClient.js";
 import { userMessage, assistantMessage, AssistantMessage } from "../classes/message/index.js";
 import { PromptConfig, PromptResult, Result, StreamChunk } from "../types.js";
+import { SmolStructuredOutputError } from "../smolError.js";
 
 class TestClient extends BaseClient {
   async _textSync(config: PromptConfig) {
@@ -132,17 +133,14 @@ describe("textWithRetry - validation error feedback", () => {
       { success: true, value: { output: badOutput, toolCalls: [], model: "gpt-4o" } },
     ]);
 
-    const result = await spy.textSync({
-      messages: [userMessage("test")],
-      responseFormat: schema,
-      responseFormatOptions: { strict: true, numRetries: 2 },
-    });
+    await expect(
+      spy.textSync({
+        messages: [userMessage("test")],
+        responseFormat: schema,
+        responseFormatOptions: { strict: true, numRetries: 2 },
+      }),
+    ).rejects.toThrow(SmolStructuredOutputError);
 
-    // After exhausting retries, returns the last output as-is
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.value.output).toBe(badOutput);
-    }
     // 1 initial + 2 retries = 3 calls
     expect(spy.calls).toHaveLength(3);
   });

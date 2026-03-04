@@ -4,7 +4,7 @@ import { IDStrategy } from "../lib/strategies/idStrategy.js";
 import { FallbackStrategy } from "../lib/strategies/fallbackStrategy.js";
 import { RaceStrategy } from "../lib/strategies/raceStrategy.js";
 import * as strategyIndex from "../lib/strategies/index.js";
-import { Strategy } from "../lib/strategies/types.js";
+import { Strategy, StrategyJSON } from "../lib/strategies/types.js";
 import { Model } from "../lib/model.js";
 import { SmolPromptConfig, PromptResult } from "../lib/types.js";
 import { Result, Success } from "../lib/types/result.js";
@@ -428,6 +428,163 @@ describe("factory functions", () => {
         "error",
         "timeout",
       ]);
+    });
+  });
+});
+
+describe("JSON serialization", () => {
+  describe("toJSON()", () => {
+    it("IDStrategy serializes to id JSON", () => {
+      const strategy = strategyIndex.id("gpt-4o");
+      expect(strategy.toJSON()).toEqual({
+        type: "id",
+        params: { model: "gpt-4o" },
+      });
+    });
+
+    it("RaceStrategy serializes recursively", () => {
+      const strategy = strategyIndex.race("gpt-4o", "gpt-4o-mini");
+      expect(strategy.toJSON()).toEqual({
+        type: "race",
+        params: {
+          strategies: [
+            { type: "id", params: { model: "gpt-4o" } },
+            { type: "id", params: { model: "gpt-4o-mini" } },
+          ],
+        },
+      });
+    });
+
+    it("FallbackStrategy serializes with config", () => {
+      const strategy = strategyIndex.fallback(["gpt-4o", "gpt-4o-mini"], {
+        fallbackOn: ["error", "timeout"],
+      });
+      expect(strategy.toJSON()).toEqual({
+        type: "fallback",
+        params: {
+          strategies: [
+            { type: "id", params: { model: "gpt-4o" } },
+            { type: "id", params: { model: "gpt-4o-mini" } },
+          ],
+          config: { fallbackOn: ["error", "timeout"] },
+        },
+      });
+    });
+
+    it("BaseStrategy toJSON throws", () => {
+      const strategy = new BaseStrategy();
+      expect(() => strategy.toJSON()).toThrow(/not implemented/);
+    });
+  });
+
+  describe("fromJSON()", () => {
+    it("parses a string as model name → IDStrategy", () => {
+      const strategy = strategyIndex.fromJSON("gpt-4o");
+      expect(strategy).toBeInstanceOf(IDStrategy);
+      expect((strategy as IDStrategy).model.getResolvedModel()).toBe("gpt-4o");
+    });
+
+    it("parses id JSON", () => {
+      const strategy = strategyIndex.fromJSON({
+        type: "id",
+        params: { model: "gpt-4o-mini" },
+      });
+      expect(strategy).toBeInstanceOf(IDStrategy);
+      expect((strategy as IDStrategy).model.getResolvedModel()).toBe(
+        "gpt-4o-mini",
+      );
+    });
+
+    it("parses race JSON recursively", () => {
+      const strategy = strategyIndex.fromJSON({
+        type: "race",
+        params: {
+          strategies: ["gpt-4o", { type: "id", params: { model: "gpt-4o-mini" } }],
+        },
+      });
+      expect(strategy).toBeInstanceOf(RaceStrategy);
+      const inner = (strategy as RaceStrategy).strategies;
+      expect(inner).toHaveLength(2);
+      expect(inner[0]).toBeInstanceOf(IDStrategy);
+      expect(inner[1]).toBeInstanceOf(IDStrategy);
+    });
+
+    it("parses fallback JSON with config", () => {
+      const strategy = strategyIndex.fromJSON({
+        type: "fallback",
+        params: {
+          strategies: ["gpt-4o", "gpt-4o-mini"],
+          config: { fallbackOn: ["error"] },
+        },
+      });
+      expect(strategy).toBeInstanceOf(FallbackStrategy);
+      const fb = strategy as FallbackStrategy;
+      expect(fb.strategies).toHaveLength(2);
+      expect(fb.config.fallbackOn).toEqual(["error"]);
+    });
+
+    it("throws on unknown type", () => {
+      expect(() =>
+        strategyIndex.fromJSON({ type: "unknown", params: {} } as any),
+      ).toThrow(/Unknown strategy type/);
+    });
+  });
+
+  describe("round-trip", () => {
+    it("IDStrategy survives toJSON → fromJSON", () => {
+      const original = strategyIndex.id("gpt-4o");
+      const restored = strategyIndex.fromJSON(original.toJSON());
+      expect(restored).toBeInstanceOf(IDStrategy);
+      expect(restored.toJSON()).toEqual(original.toJSON());
+    });
+
+    it("RaceStrategy survives toJSON → fromJSON", () => {
+      const original = strategyIndex.race("gpt-4o", "gpt-4o-mini");
+      const restored = strategyIndex.fromJSON(original.toJSON());
+      expect(restored).toBeInstanceOf(RaceStrategy);
+      expect(restored.toJSON()).toEqual(original.toJSON());
+    });
+
+    it("FallbackStrategy survives toJSON → fromJSON", () => {
+      const original = strategyIndex.fallback(["gpt-4o", "o3-mini"], {
+        fallbackOn: ["error", "timeout"],
+      });
+      const restored = strategyIndex.fromJSON(original.toJSON());
+      expect(restored).toBeInstanceOf(FallbackStrategy);
+      expect(restored.toJSON()).toEqual(original.toJSON());
+    });
+
+    it("nested race-containing-fallback survives round-trip", () => {
+      const fb = strategyIndex.fallback(["gpt-4o", "gpt-4o-mini"], {
+        fallbackOn: ["error"],
+      });
+      const original = strategyIndex.race(fb, "o3-mini");
+      const json = original.toJSON();
+      const restored = strategyIndex.fromJSON(json);
+      expect(restored).toBeInstanceOf(RaceStrategy);
+      expect(restored.toJSON()).toEqual(json);
+    });
+  });
+
+  describe("JSON strategy in config", () => {
+    it("string strategy is accepted in config type", () => {
+      // Type-level test: this should compile without errors
+      const config: SmolPromptConfig = {
+        ...dummyConfig,
+        strategy: "gpt-4o" as StrategyJSON,
+      };
+      expect(config.strategy).toBe("gpt-4o");
+    });
+
+    it("object strategy JSON is accepted in config type", () => {
+      const config: SmolPromptConfig = {
+        ...dummyConfig,
+        strategy: { type: "id", params: { model: "gpt-4o" } },
+      };
+      expect(config.strategy).toEqual({
+        type: "id",
+        params: { model: "gpt-4o" },
+      });
     });
   });
 });

@@ -1,6 +1,6 @@
 import { SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { Strategy } from "./types.js";
+import { Strategy, StrategyJSON } from "./types.js";
 
 export class RaceStrategy extends BaseStrategy {
   public strategies: Strategy[];
@@ -39,5 +39,12 @@ export class RaceStrategy extends BaseStrategy {
         ),
       ),
     );
+  }
+
+  toJSON(): StrategyJSON {
+    return {
+      type: "race",
+      params: { strategies: this.strategies.map((s) => s.toJSON()) },
+    };
   }
 }
