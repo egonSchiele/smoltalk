@@ -3,8 +3,11 @@ import { LogLevel } from "egonlog";
 import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
-import { ModelConfig, ModelName, Provider } from "./models.js";
+import { ModelName, Provider } from "./models.js";
 import { Result } from "./types/result.js";
+import { Model, ModelConfig } from "./model.js";
+import { Part } from "@google/genai";
+import { Strategy } from "./strategies/types.js";
 
 export type ThinkingBlock = {
   text: string;
@@ -72,6 +75,16 @@ export type PromptConfig = {
 
   // User-provided AbortSignal for cancellation
   abortSignal?: AbortSignal;
+
+  hooks?: Partial<{
+    onStart: (config: PromptConfig) => void;
+    onToolCall: (toolCall: ToolCall) => void;
+    onEnd: (result: PromptResult) => void;
+    onError: (error: Error) => void;
+    onStrategyStart: (config: SmolPromptConfig) => void;
+  }>;
+
+  strategy?: Strategy;
 };
 
 export type SmolConfig = {
@@ -168,3 +181,5 @@ export type TextPart = {
   type: "text";
   text: string;
 };
+
+export type ModelLike = ModelName | ModelConfig | Model;

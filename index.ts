@@ -8,6 +8,8 @@ import {
   userMessage,
 } from "./lib/classes/message/index.js";
 import { text } from "./lib/functions.js";
+import { Model } from "./lib/model.js";
+import { id, race } from "./lib/strategies/index.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -26,23 +28,37 @@ const responseFormat = z.object({
   result: z.number(),
 });
 
+const model1 = new Model("gemini-2.5-flash");
+const model2 = new Model("gemini-2.5-flash-lite");
+
+const strategy = race("gemini-2.5-flash", "gemini-2.5-flash-lite");
+
 async function main() {
   let messages: Message[] = [];
-  messages.push(userMessage("Write me a 500 word fairy tale."));
-  const resp = text({
+  messages.push(userMessage("Write me a 10 word fairy tale."));
+  const resp = await text({
     messages,
-    stream: true,
     openAiApiKey: process.env.OPENAI_API_KEY || "",
     googleApiKey: process.env.GEMINI_API_KEY || "",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
-    logLevel: "warn",
+    logLevel: "debug",
     model: "claude-sonnet-4-6",
+    strategy,
+    hooks: {
+      onStrategyStart: (config) => {
+        console.log(
+          color.blue(
+            `Starting strategy with model ${config.model} and provider ${config.provider}`,
+          ),
+        );
+      },
+    },
     // provider: "openai-responses",
   });
   console.log(color.green("--------------- Response ---------------"));
   console.log(resp);
 
-  for await (const chunk of resp) {
+  /*   for await (const chunk of resp) {
     switch (chunk.type) {
       case "text":
         process.stdout.write(chunk.text); // print tokens as they arrive
@@ -58,7 +74,7 @@ async function main() {
         console.log("\n\nFinal result:", chunk.result);
         break;
     }
-  }
+  } */
 }
 
 main();

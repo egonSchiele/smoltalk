@@ -1,7 +1,8 @@
 import { nanoid } from "nanoid";
 import { PromptResult } from "./types.js";
 import { failure, mergeResults, Result, success } from "./types/result.js";
-import { ModelConfig, ModelName } from "./models.js";
+import { ModelName } from "./models.js";
+import { ModelConfig } from "./model.js";
 
 export type AgencyFile = {
   name: string;

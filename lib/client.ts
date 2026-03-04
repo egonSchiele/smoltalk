@@ -7,26 +7,19 @@ import { SmolAnthropic } from "./clients/anthropic.js";
 import { SmolGoogle } from "./clients/google.js";
 import { SmolOpenAi } from "./clients/openai.js";
 import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
-import {
-  getModel,
-  isModelConfig,
-  isTextModel,
-  pickModel,
-  ModelName,
-} from "./models.js";
+import { getModel, isTextModel, ModelName } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolConfig, ResolvedSmolConfig } from "./types.js";
 import { getLogger } from "./logger.js";
 import { SmolOllama } from "./clients/ollama.js";
+import { Model } from "./model.js";
 
 export function getClient(config: SmolConfig) {
   // Initialize logger singleton with desired log level
   const logger = getLogger(config.logLevel);
 
   // Resolve ModelConfig to a concrete model name
-  const modelName: ModelName = isModelConfig(config.model)
-    ? pickModel(config.model)
-    : config.model;
+  const modelName: ModelName = new Model(config.model).getResolvedModel();
 
   let provider = config.provider;
   if (!provider) {

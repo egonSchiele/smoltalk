@@ -1,5 +1,5 @@
 import { getClient } from "./client.js";
-import { isModelConfig, pickModel } from "./models.js";
+import { Model } from "./model.js";
 import {
   SmolPromptConfig,
   PromptResult,
@@ -26,7 +26,8 @@ function splitConfig(config: SmolPromptConfig): {
     ...promptConfig
   } = config;
 
-  const model = isModelConfig(rawModel) ? pickModel(rawModel) : rawModel;
+  const _model = new Model(rawModel);
+  const model = _model.getResolvedModel();
 
   return {
     smolConfig: {
@@ -54,6 +55,9 @@ export function text(
 export function text(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
+  if (config.strategy) {
+    return config.strategy.text(config);
+  }
   const { smolConfig, promptConfig } = splitConfig(config);
   const client = getClient(smolConfig);
   return client.text(promptConfig);
@@ -62,6 +66,9 @@ export function text(
 export function textSync(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> {
+  if (config.strategy) {
+    return config.strategy.textSync(config);
+  }
   const { smolConfig, promptConfig } = splitConfig(config);
   const client = getClient(smolConfig);
   return client.textSync(promptConfig);
@@ -70,7 +77,10 @@ export function textSync(
 export function textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
-  const { smolConfig, promptConfig } = splitConfig(config);
+  /*   if (config.strategy) {
+    return config.strategy.textStream(config);
+  }
+ */ const { smolConfig, promptConfig } = splitConfig(config);
   const client = getClient(smolConfig);
   return client.textStream(promptConfig);
 }
