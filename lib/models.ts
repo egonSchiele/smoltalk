@@ -50,7 +50,7 @@ export type EmbeddingsModel = {
   tokenCost?: number;
 };
 
-export type Model =
+export type ModelType =
   | SpeechToTextModel
   | TextModel
   | EmbeddingsModel
@@ -435,7 +435,8 @@ export const textModels = [
   {
     type: "text",
     modelName: "claude-3-5-haiku-latest",
-    description: "Claude 3.5 Haiku — legacy model. Use claude-haiku-4-5-20251001 instead.",
+    description:
+      "Claude 3.5 Haiku — legacy model. Use claude-haiku-4-5-20251001 instead.",
     maxInputTokens: 200_000,
     maxOutputTokens: 8192,
     inputTokenCost: 0.8,
@@ -570,179 +571,19 @@ export function getModel(modelName: ModelName) {
   return allModels.find((model) => model.modelName === modelName);
 }
 
-export function isImageModel(model: Model): model is ImageModel {
+export function isImageModel(model: ModelType): model is ImageModel {
   return model.type === "image";
 }
 
-export function isTextModel(model: Model): model is TextModel {
+export function isTextModel(model: ModelType): model is TextModel {
   return model.type === "text";
 }
 
-export function isSpeechToTextModel(model: Model): model is SpeechToTextModel {
+export function isSpeechToTextModel(
+  model: ModelType,
+): model is SpeechToTextModel {
   return model.type === "speech-to-text";
 }
-export function isEmbeddingsModel(model: Model): model is EmbeddingsModel {
+export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";
-}
-
-export type Optimization = "speed" | "accuracy" | "cost" | "large-context";
-
-export type ModelConfig = {
-  optimizeFor: Optimization[];
-  providers: Provider[];
-  limit?: {
-    cost?: number;
-  };
-};
-
-export function isModelConfig(
-  model: ModelName | ModelConfig,
-): model is ModelConfig {
-  return typeof model === "object" && "optimizeFor" in model;
-}
-
-const WEIGHTS: Record<number, number[]> = {
-  1: [1],
-  2: [0.6, 0.4],
-  3: [0.5, 0.3, 0.2],
-  4: [0.4, 0.3, 0.2, 0.1],
-};
-
-function getRawMetric(model: TextModel, optimization: Optimization): number {
-  const m = model as TextModel;
-  switch (optimization) {
-    case "cost":
-      return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
-    case "speed":
-      return m.outputTokensPerSecond ?? 0;
-    case "accuracy":
-      return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
-    case "large-context":
-      return m.maxInputTokens;
-  }
-}
-
-function isLowerBetter(optimization: Optimization): boolean {
-  return optimization === "cost";
-}
-
-export function pickModel(
-  config: ModelConfig,
-  models: readonly TextModel[] = textModels,
-): TextModelName {
-  let candidates = models.filter(
-    (m) =>
-      config.providers.includes(m.provider as Provider) &&
-      !("disabled" in m && m.disabled),
-  );
-
-  if (config.limit?.cost !== undefined) {
-    candidates = candidates.filter((m) => {
-      const cost = (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
-      return cost <= config.limit!.cost!;
-    });
-  }
-
-  if (candidates.length === 0) {
-    throw new SmolError(
-      "No models available for providers: " +
-        config.providers.join(", ") +
-        ". Check that the providers have non-disabled models.",
-    );
-  }
-
-  if (candidates.length === 1) {
-    return candidates[0].modelName as TextModelName;
-  }
-
-  const optimizations = config.optimizeFor;
-  const weights = WEIGHTS[optimizations.length] ?? WEIGHTS[4]!;
-
-  const scores = new Map<string, number>();
-  for (const c of candidates) {
-    scores.set(c.modelName, 0);
-  }
-
-  for (let i = 0; i < optimizations.length; i++) {
-    const opt = optimizations[i];
-    const weight = weights[i];
-    const rawValues = candidates.map((c) => getRawMetric(c, opt));
-    const min = Math.min(...rawValues);
-    const max = Math.max(...rawValues);
-    const range = max - min;
-
-    for (let j = 0; j < candidates.length; j++) {
-      const raw = rawValues[j];
-      let normalized: number;
-      if (range === 0) {
-        normalized = 0;
-      } else if (isLowerBetter(opt)) {
-        normalized = (raw - min) / range;
-      } else {
-        normalized = (max - raw) / range;
-      }
-      scores.set(
-        candidates[j].modelName,
-        scores.get(candidates[j].modelName)! + weight * normalized,
-      );
-    }
-  }
-
-  let bestModel = candidates[0];
-  let bestScore = scores.get(candidates[0].modelName)!;
-  for (let i = 1; i < candidates.length; i++) {
-    const score = scores.get(candidates[i].modelName)!;
-    if (score < bestScore) {
-      bestScore = score;
-      bestModel = candidates[i];
-    }
-  }
-
-  return bestModel.modelName as TextModelName;
-}
-
-export function calculateCost(
-  modelName: ModelName,
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-    cachedInputTokens?: number;
-  },
-): {
-  inputCost: number;
-  outputCost: number;
-  cachedInputCost?: number;
-  totalCost: number;
-  currency: string;
-} | null {
-  const model = getModel(modelName);
-  if (!model || !isTextModel(model)) {
-    return null;
-  }
-
-  const inputCost = round(
-    (usage.inputTokens * (model.inputTokenCost || 0)) / 1_000_000,
-    2,
-  );
-  const outputCost = round(
-    (usage.outputTokens * (model.outputTokenCost || 0)) / 1_000_000,
-    2,
-  );
-  const cachedInputCost =
-    usage.cachedInputTokens && model.cachedInputTokenCost
-      ? round(
-          (usage.cachedInputTokens * model.cachedInputTokenCost) / 1_000_000,
-          2,
-        )
-      : undefined;
-
-  const totalCost = round(inputCost + outputCost + (cachedInputCost || 0), 2);
-
-  return {
-    inputCost,
-    outputCost,
-    cachedInputCost,
-    totalCost,
-    currency: "USD",
-  };
 }

@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { pickModel, isModelConfig, textModels } from "./models.js";
+import { describe, expect, it } from "vitest";
+import { isModelConfig, pickModel, textModels } from "./models.js";
 
 // Small fixture models for controlled tests
 const testModels = [
