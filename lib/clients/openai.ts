@@ -19,7 +19,8 @@ import { isFunctionToolCall } from "../util.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAITool } from "../util/tool.js";
-import { calculateCost, ModelName } from "../models.js";
+import { ModelName } from "../models.js";
+import { Model } from "../model.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 
 export type SmolOpenAiConfig = BaseClientConfig;
@@ -27,7 +28,7 @@ export type SmolOpenAiConfig = BaseClientConfig;
 export class SmolOpenAi extends BaseClient implements SmolClient {
   private client: OpenAI;
   private logger: EgonLog;
-  private model: string;
+  private model: Model;
   constructor(config: SmolOpenAiConfig) {
     super(config);
     if (!config.openAiApiKey) {
@@ -35,15 +36,15 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
     this.client = new OpenAI({ apiKey: config.openAiApiKey });
     this.logger = getLogger();
-    this.model = config.model;
+    this.model = new Model(config.model);
   }
 
   getClient() {
     return this.client;
   }
 
-  getModel() {
-    return this.model;
+  getModel(): ModelName {
+    return this.model.getResolvedModel();
   }
 
   private calculateUsageAndCost(usageData: any): {
@@ -61,7 +62,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         totalTokens: usageData.total_tokens,
       };
 
-      const calculatedCost = calculateCost(this.model as ModelName, usage);
+      const calculatedCost = this.model.calculateCost(usage);
       if (calculatedCost) {
         cost = calculatedCost;
       }
@@ -73,14 +74,16 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   private buildRequest(config: PromptConfig) {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
     const request = {
-      model: this.model,
+      model: this.getModel(),
       messages,
       tools: config.tools?.map((tool) => {
         return zodToOpenAITool(tool.name, tool.schema, {
           description: tool.description,
         });
       }),
-      ...(config.reasoningEffort && { reasoning_effort: config.reasoningEffort }),
+      ...(config.reasoningEffort && {
+        reasoning_effort: config.reasoningEffort,
+      }),
       ...(config.rawAttributes || {}),
     };
     if (config.responseFormat) {
@@ -105,10 +108,13 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     );
 
     const signal = this.getAbortSignal(config);
-    const completion = await this.client.chat.completions.create({
-      ...request,
-      stream: false as const,
-    }, { ...(signal && { signal }) });
+    const completion = await this.client.chat.completions.create(
+      {
+        ...request,
+        stream: false as const,
+      },
+      { ...(signal && { signal }) },
+    );
 
     this.logger.debug(
       "Response from OpenAI:",
@@ -143,7 +149,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       toolCalls,
       usage,
       cost,
-      model: request.model as ModelName,
+      model: this.getModel(),
     });
   }
 
@@ -156,11 +162,14 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     );
 
     const signal = this.getAbortSignal(config);
-    const completion = await this.client.chat.completions.create({
-      ...request,
-      stream: true as const,
-      stream_options: { include_usage: true },
-    }, { ...(signal && { signal }) });
+    const completion = await this.client.chat.completions.create(
+      {
+        ...request,
+        stream: true as const,
+        stream_options: { include_usage: true },
+      },
+      { ...(signal && { signal }) },
+    );
 
     let content = "";
     const toolCallsMap = new Map<
@@ -223,7 +232,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         toolCalls,
         usage,
         cost,
-        model: request.model as ModelName,
+        model: this.getModel(),
       },
     };
   }

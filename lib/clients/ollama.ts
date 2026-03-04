@@ -14,20 +14,21 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import { BaseClient } from "./baseClient.js";
-import { calculateCost, ModelName } from "../models.js";
+import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
+import { Model } from "../model.js";
 
 export const DEFAULT_OLLAMA_HOST = "http://localhost:11434";
 export type SmolOllamaConfig = BaseClientConfig;
 
 export class SmolOllama extends BaseClient implements SmolClient {
   private logger: EgonLog;
-  private model: string;
+  private model: Model;
   private client: Ollama;
   constructor(config: SmolOllamaConfig) {
     super(config);
     this.logger = getLogger();
-    this.model = config.model;
+    this.model = new Model(config.model);
     if (config.ollamaApiKey) {
       this.client = new Ollama({
         host: "https://cloud.ollama.com",
@@ -43,8 +44,8 @@ export class SmolOllama extends BaseClient implements SmolClient {
     return this.client;
   }
 
-  getModel() {
-    return this.model;
+  getModel(): ModelName {
+    return this.model.getResolvedModel();
   }
 
   private calculateUsageAndCost(responseData: any): {
@@ -64,7 +65,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
         totalTokens: inputTokens + outputTokens,
       };
 
-      const calculatedCost = calculateCost(this.model as ModelName, usage);
+      const calculatedCost = this.model.calculateCost(usage);
       if (calculatedCost) {
         cost = calculatedCost;
       }
@@ -84,7 +85,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
     const request: ChatRequest = {
       messages: messages as Message[],
-      model: this.model,
+      model: this.getModel(),
     };
     if (tools.length > 0) {
       request.tools = tools.map((t) => ({ type: "function", function: t }));
@@ -132,7 +133,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     const { usage, cost } = this.calculateUsageAndCost(result);
 
     // Return the response, updating the chat history
-    return success({ output, toolCalls, usage, cost, model: this.model as ModelName });
+    return success({ output, toolCalls, usage, cost, model: this.getModel() });
   }
 
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
@@ -146,7 +147,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
     const request: ChatRequest = {
       messages: messages as Message[],
-      model: this.model,
+      model: this.getModel(),
       stream: true,
     };
     if (tools.length > 0) {
@@ -239,7 +240,13 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
     yield {
       type: "done",
-      result: { output: content || null, toolCalls, usage, cost, model: this.model as ModelName },
+      result: {
+        output: content || null,
+        toolCalls,
+        usage,
+        cost,
+        model: this.getModel(),
+      },
     };
   }
 }

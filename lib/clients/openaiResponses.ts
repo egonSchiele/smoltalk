@@ -13,19 +13,20 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
-import { calculateCost, ModelName } from "../models.js";
+import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 import type {
   ResponseInputItem,
   ResponseStreamEvent,
 } from "openai/resources/responses/responses.js";
+import { Model } from "../model.js";
 
 export type SmolOpenAiResponsesConfig = BaseClientConfig;
 
 export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   private client: OpenAI;
   private logger: EgonLog;
-  private model: string;
+  private model: Model;
 
   constructor(config: SmolOpenAiResponsesConfig) {
     super(config);
@@ -36,15 +37,15 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     }
     this.client = new OpenAI({ apiKey: config.openAiApiKey });
     this.logger = getLogger();
-    this.model = config.model;
+    this.model = new Model(config.model);
   }
 
   getClient() {
     return this.client;
   }
 
-  getModel() {
-    return this.model;
+  getModel(): ModelName {
+    return this.model.getResolvedModel();
   }
 
   private convertMessages(config: PromptConfig): {
@@ -90,7 +91,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       text?: any;
       [key: string]: any;
     } = {
-      model: this.model,
+      model: this.getModel(),
       input,
     };
 
@@ -154,7 +155,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
         totalTokens: usageData.total_tokens,
       };
 
-      const calculatedCost = calculateCost(this.model as ModelName, usage);
+      const calculatedCost = this.model.calculateCost(usage);
       if (calculatedCost) {
         cost = calculatedCost;
       }
@@ -172,10 +173,13 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     );
 
     const signal = this.getAbortSignal(config);
-    const response = await this.client.responses.create({
-      ...request,
-      stream: false,
-    }, { ...(signal && { signal }) });
+    const response = await this.client.responses.create(
+      {
+        ...request,
+        stream: false,
+      },
+      { ...(signal && { signal }) },
+    );
 
     this.logger.debug(
       "Response from OpenAI Responses API:",
@@ -198,7 +202,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       toolCalls,
       usage,
       cost,
-      model: request.model as ModelName,
+      model: this.getModel(),
     });
   }
 
@@ -211,7 +215,9 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     );
 
     const signal = this.getAbortSignal(config);
-    const stream = this.client.responses.stream(request, { ...(signal && { signal }) });
+    const stream = this.client.responses.stream(request, {
+      ...(signal && { signal }),
+    });
 
     let content = "";
     const functionCalls = new Map<
@@ -300,7 +306,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
         toolCalls,
         usage,
         cost,
-        model: request.model as ModelName,
+        model: this.getModel(),
       },
     };
   }

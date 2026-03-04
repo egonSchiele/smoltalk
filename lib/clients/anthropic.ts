@@ -5,10 +5,7 @@ import type {
 } from "@anthropic-ai/sdk/resources/messages.js";
 import { EgonLog } from "egonlog";
 import { ToolCall } from "../classes/ToolCall.js";
-import {
-  SystemMessage,
-  DeveloperMessage,
-} from "../classes/message/index.js";
+import { SystemMessage, DeveloperMessage } from "../classes/message/index.js";
 import { getLogger } from "../logger.js";
 import {
   BaseClientConfig,
@@ -24,7 +21,8 @@ import {
 } from "../types.js";
 import { zodToAnthropicTool } from "../util/tool.js";
 import { BaseClient } from "./baseClient.js";
-import { calculateCost, ModelName } from "../models.js";
+import { ModelName, TextModelName } from "../models.js";
+import { Model } from "../model.js";
 
 const DEFAULT_MAX_TOKENS = 4096;
 
@@ -35,17 +33,17 @@ export type SmolAnthropicConfig = BaseClientConfig & {
 export class SmolAnthropic extends BaseClient implements SmolClient {
   private client: Anthropic;
   private logger: EgonLog;
-  private model: string;
+  private model: Model;
 
   constructor(config: SmolAnthropicConfig) {
     super(config);
     this.client = new Anthropic({ apiKey: config.anthropicApiKey });
     this.logger = getLogger();
-    this.model = config.model;
+    this.model = new Model(config.model);
   }
 
-  getModel() {
-    return this.model;
+  getModel(): ModelName {
+    return this.model.getResolvedModel();
   }
 
   private calculateUsageAndCost(usageData: {
@@ -57,7 +55,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       outputTokens: usageData.output_tokens,
       totalTokens: usageData.input_tokens + usageData.output_tokens,
     };
-    const cost = calculateCost(this.model as ModelName, usage) ?? undefined;
+    const cost = this.model.calculateCost(usage) ?? undefined;
     return { usage, cost };
   }
 
@@ -70,12 +68,11 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     // Split system/developer messages out into the top-level `system` param
     const systemParts = config.messages
       .filter(
-        (m) => m instanceof SystemMessage || m instanceof DeveloperMessage
+        (m) => m instanceof SystemMessage || m instanceof DeveloperMessage,
       )
       .map((m) => m.content);
 
-    const system =
-      systemParts.length > 0 ? systemParts.join("\n") : undefined;
+    const system = systemParts.length > 0 ? systemParts.join("\n") : undefined;
 
     // Convert remaining messages, merging consecutive tool_result user messages
     const anthropicMessages: MessageParam[] = [];
@@ -91,9 +88,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       if (
         converted.role === "user" &&
         Array.isArray(converted.content) &&
-        (converted.content as any[]).every(
-          (c: any) => c.type === "tool_result"
-        )
+        (converted.content as any[]).every((c: any) => c.type === "tool_result")
       ) {
         const last = anthropicMessages[anthropicMessages.length - 1];
         if (
@@ -115,18 +110,27 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         ? (config.tools.map((tool) =>
             zodToAnthropicTool(tool.name, tool.schema, {
               description: tool.description,
-            })
+            }),
           ) as Tool[])
         : undefined;
 
-    const reasoningBudgetMap = { low: 2048, medium: 5000, high: 10000 } as const;
+    const reasoningBudgetMap = {
+      low: 2048,
+      medium: 5000,
+      high: 10000,
+    } as const;
 
-    const thinking =
-      config.thinking?.enabled
-        ? { type: "enabled" as const, budget_tokens: config.thinking.budgetTokens ?? 5000 }
-        : config.reasoningEffort
-          ? { type: "enabled" as const, budget_tokens: reasoningBudgetMap[config.reasoningEffort] }
-          : undefined;
+    const thinking = config.thinking?.enabled
+      ? {
+          type: "enabled" as const,
+          budget_tokens: config.thinking.budgetTokens ?? 5000,
+        }
+      : config.reasoningEffort
+        ? {
+            type: "enabled" as const,
+            budget_tokens: reasoningBudgetMap[config.reasoningEffort],
+          }
+        : undefined;
 
     return { system, messages: anthropicMessages, tools, thinking };
   }
@@ -135,7 +139,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     const { system, messages, tools, thinking } = this.buildRequest(config);
 
     this.logger.debug("Sending request to Anthropic:", {
-      model: this.model,
+      model: this.getModel(),
       max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
       messages,
       system,
@@ -144,19 +148,22 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     });
 
     const signal = this.getAbortSignal(config);
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
-      messages,
-      ...(system && { system }),
-      ...(tools && { tools }),
-      ...(thinking && { thinking }),
-      ...(config.temperature !== undefined && {
-        temperature: config.temperature,
-      }),
-      ...(config.rawAttributes || {}),
-      stream: false,
-    } as any, { ...(signal && { signal }) });
+    const response = await this.client.messages.create(
+      {
+        model: this.getModel(),
+        max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
+        messages,
+        ...(system && { system }),
+        ...(tools && { tools }),
+        ...(thinking && { thinking }),
+        ...(config.temperature !== undefined && {
+          temperature: config.temperature,
+        }),
+        ...(config.rawAttributes || {}),
+        stream: false,
+      } as any,
+      { ...(signal && { signal }) },
+    );
 
     this.logger.debug("Response from Anthropic:", response);
 
@@ -169,7 +176,11 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         output = (output ?? "") + block.text;
       } else if (block.type === "tool_use") {
         toolCalls.push(
-          new ToolCall(block.id, block.name, block.input as Record<string, any>)
+          new ToolCall(
+            block.id,
+            block.name,
+            block.input as Record<string, any>,
+          ),
         );
       } else if ((block as any).type === "thinking") {
         const b = block as any;
@@ -185,7 +196,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
       cost,
-      model: this.model as ModelName,
+      model: this.getModel(),
     });
   }
 
@@ -202,19 +213,22 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     });
 
     const signal = this.getAbortSignal(config);
-    const stream = await this.client.messages.create({
-      model: this.model,
-      max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
-      messages,
-      ...(system && { system }),
-      ...(tools && { tools }),
-      ...(thinking && { thinking }),
-      ...(config.temperature !== undefined && {
-        temperature: config.temperature,
-      }),
-      ...(config.rawAttributes || {}),
-      stream: true,
-    } as any, { ...(signal && { signal }) });
+    const stream = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
+        messages,
+        ...(system && { system }),
+        ...(tools && { tools }),
+        ...(thinking && { thinking }),
+        ...(config.temperature !== undefined && {
+          temperature: config.temperature,
+        }),
+        ...(config.rawAttributes || {}),
+        stream: true,
+      } as any,
+      { ...(signal && { signal }) },
+    );
 
     let content = "";
     // Track tool blocks by index: index -> { id, name, arguments (partial JSON) }
@@ -267,7 +281,11 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         // Emit thinking chunk once the block is fully assembled
         const thinkingBlock = thinkingBlockMap.get(event.index);
         if (thinkingBlock) {
-          yield { type: "thinking", text: thinkingBlock.text, signature: thinkingBlock.signature };
+          yield {
+            type: "thinking",
+            text: thinkingBlock.text,
+            signature: thinkingBlock.signature,
+          };
         }
       } else if (event.type === "message_delta") {
         outputTokens = event.usage.output_tokens;
@@ -283,14 +301,16 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    const thinkingBlocks: ThinkingBlock[] = Array.from(thinkingBlockMap.values());
+    const thinkingBlocks: ThinkingBlock[] = Array.from(
+      thinkingBlockMap.values(),
+    );
 
     const usage: TokenUsage = {
       inputTokens,
       outputTokens,
       totalTokens: inputTokens + outputTokens,
     };
-    const cost = calculateCost(this.model as ModelName, usage) ?? undefined;
+    const cost = this.model.calculateCost(usage) ?? undefined;
 
     yield {
       type: "done",
@@ -300,7 +320,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
         usage,
         cost,
-        model: this.model as ModelName,
+        model: this.getModel(),
       },
     };
   }

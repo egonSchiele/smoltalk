@@ -1,6 +1,11 @@
-import { AssistantMessage, userMessage, assistantMessage } from "../classes/message/index.js";
+import {
+  AssistantMessage,
+  userMessage,
+  assistantMessage,
+} from "../classes/message/index.js";
 import { getLogger } from "../logger.js";
 import { getModel, isTextModel, ModelName } from "../models.js";
+import { SmolStructuredOutputError } from "../smolError.js";
 import { getStatelogClient, StatelogClient } from "../statelogClient.js";
 import {
   PromptConfig,
@@ -26,7 +31,9 @@ export class BaseClient implements SmolClient {
     }
   }
 
-  protected getAbortSignal(promptConfig: PromptConfig): AbortSignal | undefined {
+  protected getAbortSignal(
+    promptConfig: PromptConfig,
+  ): AbortSignal | undefined {
     const signals: AbortSignal[] = [];
     if (promptConfig.abortSignal) {
       signals.push(promptConfig.abortSignal);
@@ -42,8 +49,8 @@ export class BaseClient implements SmolClient {
 
   protected isAbortError(err: unknown): boolean {
     return (
-      err instanceof DOMException && err.name === "AbortError" ||
-      err instanceof DOMException && err.name === "TimeoutError" ||
+      (err instanceof DOMException && err.name === "AbortError") ||
+      (err instanceof DOMException && err.name === "TimeoutError") ||
       (err instanceof Error && err.name === "AbortError") ||
       (err instanceof Error && err.name === "TimeoutError")
     );
@@ -91,7 +98,10 @@ export class BaseClient implements SmolClient {
     return null;
   }
 
-  applyBudget(promptConfig: PromptConfig): { config: PromptConfig; failure?: Result<PromptResult> } {
+  applyBudget(promptConfig: PromptConfig): {
+    config: PromptConfig;
+    failure?: Result<PromptResult>;
+  } {
     const budget = promptConfig.budget;
     if (!budget) return { config: promptConfig };
 
@@ -102,16 +112,24 @@ export class BaseClient implements SmolClient {
       (m): m is AssistantMessage => m instanceof AssistantMessage,
     );
 
-    const tokensUsed = budget.tokensUsed ??
-      assistantMessages.reduce((sum, m) => sum + (m.usage?.outputTokens ?? 0), 0);
+    const tokensUsed =
+      budget.tokensUsed ??
+      assistantMessages.reduce(
+        (sum, m) => sum + (m.usage?.outputTokens ?? 0),
+        0,
+      );
 
-    const costUsed = budget.costUsed ??
+    const costUsed =
+      budget.costUsed ??
       assistantMessages.reduce((sum, m) => sum + (m.cost?.totalCost ?? 0), 0);
 
     const requestsUsed = budget.requestsUsed ?? assistantMessages.length;
 
     // Request budget check
-    if (budget.requestBudget !== undefined && requestsUsed >= budget.requestBudget) {
+    if (
+      budget.requestBudget !== undefined &&
+      requestsUsed >= budget.requestBudget
+    ) {
       return {
         config,
         failure: {
@@ -150,8 +168,13 @@ export class BaseClient implements SmolClient {
       }
       const model = getModel(this.config.model as ModelName);
       if (model && isTextModel(model) && model.outputTokenCost) {
-        const remainingTokens = Math.floor((remainingUSD / model.outputTokenCost) * 1_000_000);
-        config.maxTokens = Math.min(config.maxTokens ?? Infinity, remainingTokens);
+        const remainingTokens = Math.floor(
+          (remainingUSD / model.outputTokenCost) * 1_000_000,
+        );
+        config.maxTokens = Math.min(
+          config.maxTokens ?? Infinity,
+          remainingTokens,
+        );
       }
     }
 
@@ -162,7 +185,8 @@ export class BaseClient implements SmolClient {
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
 
-    const { config: budgetedConfig, failure: budgetFailure } = this.applyBudget(promptConfig);
+    const { config: budgetedConfig, failure: budgetFailure } =
+      this.applyBudget(promptConfig);
     if (budgetFailure) return budgetFailure;
 
     const { continue: shouldContinue, newPromptConfig } =
@@ -176,7 +200,8 @@ export class BaseClient implements SmolClient {
     try {
       const result = await this.textWithRetry(
         newPromptConfig,
-        newPromptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES,
+        newPromptConfig.responseFormatOptions?.numRetries ||
+          DEFAULT_NUM_RETRIES,
       );
       return result;
     } catch (err) {
@@ -324,6 +349,13 @@ export class BaseClient implements SmolClient {
   ): Promise<Result<PromptResult>> {
     const result = await this._textSync(promptConfig);
     if (result.success) {
+      if (
+        !promptConfig.responseFormat ||
+        !promptConfig.responseFormatOptions?.strict
+      ) {
+        return result;
+      }
+
       if (!("output" in result.value)) {
         const retryMessages = [
           ...promptConfig.messages,
@@ -395,7 +427,9 @@ export class BaseClient implements SmolClient {
         }
       }
     }
-    return result;
+    throw new SmolStructuredOutputError(
+      `Failed to get valid response after ${DEFAULT_NUM_RETRIES} attempts: ${result.success ? "Output did not match expected format" : result.error}`,
+    );
   }
 
   async _textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
@@ -428,11 +462,15 @@ export class BaseClient implements SmolClient {
       return;
     }
 
-    const { config: budgetedConfig, failure: budgetFailure } = this.applyBudget(config);
+    const { config: budgetedConfig, failure: budgetFailure } =
+      this.applyBudget(config);
     if (budgetFailure) {
       yield {
         type: "error",
-        error: budgetFailure.success === false ? budgetFailure.error : "Budget exceeded",
+        error:
+          budgetFailure.success === false
+            ? budgetFailure.error
+            : "Budget exceeded",
       };
       return;
     }

@@ -14,15 +14,16 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import { BaseClient } from "./baseClient.js";
-import { calculateCost, ModelName } from "../models.js";
+import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
+import { Model } from "../model.js";
 
 export type SmolGoogleConfig = BaseClientConfig;
 
 export class SmolGoogle extends BaseClient implements SmolClient {
   private client: GoogleGenAI;
   private logger: EgonLog;
-  private model: string;
+  private model: Model;
   constructor(config: SmolGoogleConfig) {
     super(config);
     if (!config.googleApiKey) {
@@ -30,15 +31,15 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     }
     this.client = new GoogleGenAI({ apiKey: config.googleApiKey });
     this.logger = getLogger();
-    this.model = config.model;
+    this.model = new Model(config.model);
   }
 
   getClient() {
     return this.client;
   }
 
-  getModel() {
-    return this.model;
+  getModel(): ModelName {
+    return this.model.getResolvedModel();
   }
 
   private calculateUsageAndCost(usageMetadata: any): {
@@ -55,8 +56,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         cachedInputTokens: usageMetadata.cachedContentTokenCount,
         totalTokens: usageMetadata.totalTokenCount,
       };
-
-      const calculatedCost = calculateCost(this.model as ModelName, usage);
+      const calculatedCost = this.model.calculateCost(usage);
       if (calculatedCost) {
         cost = calculatedCost;
       }
@@ -104,12 +104,14 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     if (!config.thinking?.enabled && config.reasoningEffort) {
       const budgetMap = { low: 2048, medium: 8192, high: 16384 } as const;
-      genConfig.thinkingConfig = { thinkingBudget: budgetMap[config.reasoningEffort] };
+      genConfig.thinkingConfig = {
+        thinkingBudget: budgetMap[config.reasoningEffort],
+      };
     }
 
     return {
       contents: messages,
-      model: this.model,
+      model: this.getModel(),
       config: genConfig,
       ...(config.rawAttributes || {}),
     };
@@ -217,7 +219,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
               signature: p.thoughtSignature,
             };
             thinkingBlocks.push(block);
-            yield { type: "thinking", text: block.text, signature: block.signature };
+            yield {
+              type: "thinking",
+              text: block.text,
+              signature: block.signature,
+            };
           } else if (p.text) {
             content += p.text;
             yield { type: "text", text: p.text };
@@ -225,7 +231,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
             const id = p.functionCall.id || p.functionCall.name || "";
             const name = p.functionCall.name || "";
             if (!toolCallsMap.has(id)) {
-              toolCallsMap.set(id, { id, name, arguments: p.functionCall.args });
+              toolCallsMap.set(id, {
+                id,
+                name,
+                arguments: p.functionCall.args,
+              });
             }
           }
         }
