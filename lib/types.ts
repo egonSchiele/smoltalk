@@ -81,7 +81,7 @@ export type PromptConfig = {
     onToolCall: (toolCall: ToolCall) => void;
     onEnd: (result: PromptResult) => void;
     onError: (error: Error) => void;
-    onStrategyStart: (config: SmolPromptConfig) => void;
+    onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
 
   strategy?: Strategy | StrategyJSON;

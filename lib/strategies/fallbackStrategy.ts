@@ -1,5 +1,5 @@
 import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
-import { SmolPromptConfig } from "../types.js";
+import { SmolPromptConfig, success } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { FallbackStrategyConfig, Strategy, StrategyJSON } from "./types.js";
 
@@ -12,6 +12,10 @@ export class FallbackStrategy extends BaseStrategy {
     this.config = config;
   }
 
+  toString() {
+    return `FallbackStrategy([${this.strategies.map((s) => s.toString()).join(", ")}], config: ${JSON.stringify(this.config)})`;
+  }
+
   async _text(config: SmolPromptConfig) {
     for (let i = 0; i < this.strategies.length; i++) {
       const strategy = this.strategies[i];
@@ -19,6 +23,12 @@ export class FallbackStrategy extends BaseStrategy {
         const result = await strategy.text(config);
         return result;
       } catch (error) {
+        // If the abort signal was triggered (e.g. by a race strategy winner
+        // or external cancellation), stop without trying further fallbacks.
+        if (config.abortSignal?.aborted) {
+          return success({ output: null, toolCalls: [] });
+        }
+
         if (error instanceof SmolTimeoutError) {
           if (this.config.fallbackOn.includes("timeout")) {
             continue;
@@ -27,11 +37,11 @@ export class FallbackStrategy extends BaseStrategy {
           if (this.config.fallbackOn.includes("structuredOutputFailure")) {
             continue;
           }
-        } else {
-          if (this.config.fallbackOn.includes("error")) {
-            continue;
-          }
         }
+        if (this.config.fallbackOn.includes("error")) {
+          continue;
+        }
+
         throw error;
       }
     }

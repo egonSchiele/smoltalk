@@ -9,6 +9,10 @@ export class RaceStrategy extends BaseStrategy {
     this.strategies = strategies;
   }
 
+  toString() {
+    return `RaceStrategy([${this.strategies.map((s) => s.toString()).join(", ")}])`;
+  }
+
   async _text(config: SmolPromptConfig) {
     const controllers = this.strategies.map(() => new AbortController());
 
@@ -16,7 +20,11 @@ export class RaceStrategy extends BaseStrategy {
     if (config.abortSignal) {
       const external = config.abortSignal;
       for (const controller of controllers) {
-        external.addEventListener("abort", () => controller.abort(external.reason), { once: true });
+        external.addEventListener(
+          "abort",
+          () => controller.abort(external.reason),
+          { once: true },
+        );
       }
     }
 
@@ -29,14 +37,12 @@ export class RaceStrategy extends BaseStrategy {
 
     return Promise.race(
       promises.map((p, i) =>
-        p.then(
-          (result) => {
-            for (let j = 0; j < controllers.length; j++) {
-              if (j !== i) controllers[j].abort();
-            }
-            return result;
-          },
-        ),
+        p.then((result) => {
+          for (let j = 0; j < controllers.length; j++) {
+            if (j !== i) controllers[j].abort();
+          }
+          return result;
+        }),
       ),
     );
   }

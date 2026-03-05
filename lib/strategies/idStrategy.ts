@@ -11,14 +11,15 @@ export class IDStrategy extends BaseStrategy {
     this.model = model;
   }
 
+  toString() {
+    return `IDStrategy(model: ${this.model.getResolvedModel()})`;
+  }
+
   async _text(_config: SmolPromptConfig) {
     const config = {
       ..._config,
       model: this.model.getResolvedModel(),
     };
-    if (config.hooks?.onStrategyStart) {
-      config.hooks.onStrategyStart(config);
-    }
     return text({ ...config, stream: false });
   }
 

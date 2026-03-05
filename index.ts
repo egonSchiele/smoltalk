@@ -9,7 +9,7 @@ import {
 } from "./lib/classes/message/index.js";
 import { text } from "./lib/functions.js";
 import { Model } from "./lib/model.js";
-import { id, race } from "./lib/strategies/index.js";
+import { fallback, id, race, StrategyJSON } from "./lib/strategies/index.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -31,7 +31,32 @@ const responseFormat = z.object({
 const model1 = new Model("gemini-2.5-flash");
 const model2 = new Model("gemini-2.5-flash-lite");
 
-const strategy = race("gemini-2.5-flash", "gemini-2.5-flash-lite");
+// const strategy = race("gemini-2.5-flash", "gemini-2.5-flash-lite");
+const strategy: StrategyJSON = {
+  type: "race",
+  params: {
+    strategies: [
+      {
+        type: "fallback",
+        params: {
+          strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+          config: {
+            fallbackOn: ["error"],
+          },
+        },
+      },
+      {
+        type: "fallback",
+        params: {
+          strategies: ["gpt-4o-mini", "gpt-4o"],
+          config: {
+            fallbackOn: ["error"],
+          },
+        },
+      },
+    ],
+  },
+};
 
 async function main() {
   let messages: Message[] = [];
@@ -45,10 +70,10 @@ async function main() {
     model: "claude-sonnet-4-6",
     strategy,
     hooks: {
-      onStrategyStart: (config) => {
+      onStrategyStart: (strategy, config) => {
         console.log(
           color.blue(
-            `Starting strategy with model ${config.model} and provider ${config.provider}`,
+            `Starting strategy ${strategy} with model ${config.model} and provider ${config.provider}`,
           ),
         );
       },

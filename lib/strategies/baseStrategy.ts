@@ -3,6 +3,10 @@ import { Strategy, StrategyJSON } from "./types.js";
 
 export class BaseStrategy implements Strategy {
   async text(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    if (config.hooks?.onStrategyStart) {
+      config.hooks.onStrategyStart(this, config);
+    }
+
     return this._text({ ...config, strategy: undefined });
   }
 
