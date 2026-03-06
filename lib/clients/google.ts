@@ -264,6 +264,16 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       request.config = { ...request.config, abortSignal: signal };
     }
 
+    const hasTools = config.tools && config.tools.length > 0;
+    const hasStructuredResponse = !!config.responseFormat;
+    if (hasTools && hasStructuredResponse) {
+      this.logger.debug(
+        "Gemini does not support streaming responses with both tool calls and structured response formats. Response format will be ignored.",
+      );
+      request.config.responseMimeType = undefined;
+      request.config.responseJsonSchema = undefined;
+    }
+
     this.logger.debug(
       "Sending streaming request to Google Gemini:",
       JSON.stringify(request, null, 2),
