@@ -140,6 +140,45 @@ export type CostEstimate = {
   currency: string;
 };
 
+export function addTokenUsage(_a?: TokenUsage, _b?: TokenUsage): TokenUsage {
+  let a = _a;
+  let b = _b;
+  if (a && !b) return a;
+  if (b && !a) return b;
+  if (!a && !b) return { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  a = _a as TokenUsage;
+  b = _b as TokenUsage;
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cachedInputTokens: (a.cachedInputTokens || 0) + (b.cachedInputTokens || 0),
+    totalTokens: (a.totalTokens || 0) + (b.totalTokens || 0),
+  };
+}
+
+export function addCosts(_a?: CostEstimate, _b?: CostEstimate): CostEstimate {
+  let a = _a;
+  let b = _b;
+  if (a && !b) return a;
+  if (b && !a) return b;
+  if (!a && !b)
+    return { inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" };
+  a = _a as CostEstimate;
+  b = _b as CostEstimate;
+  if (a.currency !== b.currency) {
+    throw new Error(
+      `Cannot add costs with different currencies: ${a.currency} and ${b.currency}`,
+    );
+  }
+  return {
+    inputCost: a.inputCost + b.inputCost,
+    outputCost: a.outputCost + b.outputCost,
+    cachedInputCost: (a.cachedInputCost || 0) + (b.cachedInputCost || 0),
+    totalCost: a.totalCost + b.totalCost,
+    currency: a.currency,
+  };
+}
+
 export type PromptResult = {
   output: string | null;
   toolCalls: ToolCall[];

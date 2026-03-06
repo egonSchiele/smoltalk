@@ -1,4 +1,4 @@
-import { GenerateContentConfig, GoogleGenAI } from "@google/genai";
+import { Content, GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import { EgonLog } from "egonlog";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../logger.js";
@@ -10,6 +10,8 @@ import {
   SmolClient,
   StreamChunk,
   ThinkingBlock,
+  addCosts,
+  addTokenUsage,
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
@@ -17,9 +19,14 @@ import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 import { Model } from "../model.js";
+import { userMessage } from "../classes/message/index.js";
 
 export type SmolGoogleConfig = BaseClientConfig;
-
+type GeneratedRequest = {
+  contents: Content[];
+  model: ModelName;
+  config: GenerateContentConfig;
+};
 export class SmolGoogle extends BaseClient implements SmolClient {
   private client: GoogleGenAI;
   private logger: EgonLog;
@@ -65,7 +72,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
-  private buildRequest(config: PromptConfig) {
+  private buildRequest(config: PromptConfig): GeneratedRequest {
     // Google Gemini only supports "user" and "model" roles in the contents
     // array. System and developer messages must be passed via systemInstruction.
     const systemParts: string[] = [];
@@ -93,11 +100,8 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     if (tools.length > 0) {
       genConfig.tools = [{ functionDeclarations: tools }];
     }
-    // Google Gemini does not support combining function calling with
-    // responseMimeType 'application/json'. When tools are present, skip
-    // setting the JSON response format — the BaseClient's textWithRetry
-    // will still validate/parse the response against the schema.
-    if (config.responseFormat && tools.length === 0) {
+
+    if (config.responseFormat) {
       genConfig.responseMimeType = "application/json";
       genConfig.responseJsonSchema = config.responseFormat.toJSONSchema();
     }
@@ -126,7 +130,83 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     if (signal) {
       request.config = { ...request.config, abortSignal: signal };
     }
+    const hasTools = config.tools && config.tools.length > 0;
+    const hasStructuredResponse = !!config.responseFormat;
+    if (!hasTools && !hasStructuredResponse) {
+      // If there are no tools or structured response, we can make a single request and return immediately
+      return this.__textSync(request);
+    }
 
+    // Google Gemini does not support combining function calling with
+    // responseMimeType 'application/json'. When tools are present, we
+    // make two requests instead
+    /*********** TOOL CALL REQUEST ************/
+    this.logger.debug(
+      "Detected both tool calls and structured response in call to Google Gemini. Making separate request to Google Gemini for tool calls.",
+    );
+    const toolRequest = {
+      ...request,
+      config: {
+        ...request.config,
+        responseMimeType: undefined,
+        responseJsonSchema: undefined,
+      },
+    };
+    const toolResult = await this.__textSync(toolRequest);
+    if (!toolResult.success) {
+      return toolResult;
+    }
+    if (toolResult.value.toolCalls.length > 0) {
+      this.logger.debug(
+        "Tool calls detected. Returning tool calls without making second request for structured response.",
+      );
+      return toolResult;
+    }
+    if (!toolResult.value.output) {
+      throw new Error(
+        "No output or tool calls detected in Google Gemini response. This should not happen.",
+      );
+    }
+
+    this.logger.debug(
+      "No tool calls detected. Making second request to Google Gemini for structured response.",
+    );
+
+    /*********** STRUCTURED OUTPUT REQUEST ************/
+    const message = userMessage(
+      `Please return this output in the specified structured format. Output: ${toolResult.value.output}`,
+    );
+    const messages = [message.toGoogleMessage()];
+
+    const responseRequest = {
+      ...request,
+      config: {
+        ...request.config,
+        tools: undefined,
+      },
+      messages,
+    };
+    const responseResult = await this.__textSync(responseRequest);
+    if (!responseResult.success) {
+      return responseResult;
+    }
+    const thinkingBlocks = [
+      ...(toolResult.value.thinkingBlocks || []),
+      ...(responseResult.value.thinkingBlocks || []),
+    ];
+
+    return success({
+      output: responseResult.value.output,
+      // if there were tool calls, we would have returned already, so we know these are empty
+      toolCalls: [],
+      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
+      usage: addTokenUsage(toolResult.value.usage, responseResult.value.usage),
+      cost: addCosts(toolResult.value.cost, responseResult.value.cost),
+      model: request.model as ModelName,
+    });
+  }
+
+  async __textSync(request: GeneratedRequest): Promise<Result<PromptResult>> {
     this.logger.debug(
       "Sending request to Google Gemini:",
       JSON.stringify(request, null, 2),
