@@ -31,4 +31,12 @@ export class BaseStrategy implements Strategy {
   toJSON(): StrategyJSON {
     throw new Error("toJSON method not implemented.");
   }
+
+  toString(): string {
+    return "BaseStrategy";
+  }
+
+  toShortString(): string {
+    return this.toString();
+  }
 }

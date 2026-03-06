@@ -15,6 +15,10 @@ export class IDStrategy extends BaseStrategy {
     return `IDStrategy(model: ${this.model.getResolvedModel()})`;
   }
 
+  toShortString() {
+    return `id(${this.model.getResolvedModel()})`;
+  }
+
   async _text(_config: SmolPromptConfig) {
     const config = {
       ..._config,

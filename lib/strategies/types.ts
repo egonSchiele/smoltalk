@@ -9,6 +9,8 @@ export interface Strategy {
     config: SmolPromptConfig,
   ): Promise<Result<AsyncIterable<PromptResult>>>;
   toJSON(): StrategyJSON;
+  toString(): string;
+  toShortString(): string;
 }
 
 type FallbackReason = "error" | "timeout" | "structuredOutputFailure";
@@ -21,4 +23,7 @@ export type StrategyJSON =
   | string
   | { type: "id"; params: { model: string } }
   | { type: "race"; params: { strategies: StrategyJSON[] } }
-  | { type: "fallback"; params: { strategies: StrategyJSON[]; config: FallbackStrategyConfig } };
+  | {
+      type: "fallback";
+      params: { strategies: StrategyJSON[]; config: FallbackStrategyConfig };
+    };

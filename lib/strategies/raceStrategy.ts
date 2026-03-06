@@ -13,6 +13,10 @@ export class RaceStrategy extends BaseStrategy {
     return `RaceStrategy([${this.strategies.map((s) => s.toString()).join(", ")}])`;
   }
 
+  toShortString() {
+    return `race(${this.strategies.map((s) => s.toShortString?.() || s.toString()).join(", ")})`;
+  }
+
   async _text(config: SmolPromptConfig) {
     const controllers = this.strategies.map(() => new AbortController());
 

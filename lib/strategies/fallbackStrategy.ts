@@ -16,6 +16,10 @@ export class FallbackStrategy extends BaseStrategy {
     return `FallbackStrategy([${this.strategies.map((s) => s.toString()).join(", ")}], config: ${JSON.stringify(this.config)})`;
   }
 
+  toShortString() {
+    return `fallback([${this.strategies.map((s) => s.toShortString?.() || s.toString()).join(", ")}])`;
+  }
+
   async _text(config: SmolPromptConfig) {
     for (let i = 0; i < this.strategies.length; i++) {
       const strategy = this.strategies[i];

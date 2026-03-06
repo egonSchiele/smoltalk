@@ -166,21 +166,21 @@ export class Model {
 
     const inputCost = round(
       (usage.inputTokens * (model.inputTokenCost || 0)) / 1_000_000,
-      2,
+      6,
     );
     const outputCost = round(
       (usage.outputTokens * (model.outputTokenCost || 0)) / 1_000_000,
-      2,
+      6,
     );
     const cachedInputCost =
       usage.cachedInputTokens && model.cachedInputTokenCost
         ? round(
             (usage.cachedInputTokens * model.cachedInputTokenCost) / 1_000_000,
-            2,
+            6,
           )
         : undefined;
 
-    const totalCost = round(inputCost + outputCost + (cachedInputCost || 0), 2);
+    const totalCost = round(inputCost + outputCost + (cachedInputCost || 0), 6);
 
     return {
       inputCost,
