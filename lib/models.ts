@@ -40,6 +40,18 @@ export type TextModel = BaseModel & {
   maxInputTokens: number;
   maxOutputTokens: number;
   outputTokensPerSecond?: number;
+  reasoning?: {
+    /** Available effort/thinking levels (provider-specific). Omit for budget-based thinking (Anthropic, Gemini 2.5). */
+    levels?: readonly string[];
+    /** Default reasoning level */
+    defaultLevel?: string;
+    /** Whether reasoning/thinking can be fully disabled */
+    canDisable?: boolean;
+    /** Whether the response includes visible thinking content (thinking blocks/parts) */
+    outputsThinking?: boolean;
+    /** Whether cryptographic thinking signatures are returned for round-tripping */
+    outputsSignatures?: boolean;
+  };
 };
 
 export type EmbeddingsModel = {
@@ -114,6 +126,13 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     outputTokenCost: 8,
     outputTokensPerSecond: 94,
+    reasoning: {
+      levels: ["low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -127,6 +146,13 @@ export const textModels = [
     cachedInputTokenCost: 0.55,
     outputTokenCost: 4.4,
     outputTokensPerSecond: 214,
+    reasoning: {
+      levels: ["low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -140,6 +166,13 @@ export const textModels = [
     cachedInputTokenCost: 0.275,
     outputTokenCost: 4.4,
     outputTokensPerSecond: 135,
+    reasoning: {
+      levels: ["low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -151,6 +184,11 @@ export const textModels = [
     maxOutputTokens: 100000,
     inputTokenCost: 20,
     outputTokenCost: 80,
+    reasoning: {
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -164,6 +202,13 @@ export const textModels = [
     cachedInputTokenCost: 7.5,
     outputTokenCost: 60,
     outputTokensPerSecond: 100,
+    reasoning: {
+      levels: ["low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -252,6 +297,13 @@ export const textModels = [
     cachedInputTokenCost: 0.125,
     outputTokenCost: 10,
     outputTokensPerSecond: 72,
+    reasoning: {
+      levels: ["minimal", "low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -265,6 +317,13 @@ export const textModels = [
     cachedInputTokenCost: 0.025,
     outputTokenCost: 2,
     outputTokensPerSecond: 69,
+    reasoning: {
+      levels: ["minimal", "low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -278,6 +337,13 @@ export const textModels = [
     cachedInputTokenCost: 0.005,
     outputTokenCost: 0.4,
     outputTokensPerSecond: 140,
+    reasoning: {
+      levels: ["minimal", "low", "medium", "high"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -290,6 +356,13 @@ export const textModels = [
     inputTokenCost: 1.25,
     cachedInputTokenCost: 0.125,
     outputTokenCost: 10,
+    reasoning: {
+      levels: ["none", "low", "medium", "high"],
+      defaultLevel: "none",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -303,6 +376,13 @@ export const textModels = [
     cachedInputTokenCost: 0.175,
     outputTokenCost: 14,
     outputTokensPerSecond: 61,
+    reasoning: {
+      levels: ["none", "low", "medium", "high"],
+      defaultLevel: "none",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -315,6 +395,13 @@ export const textModels = [
     inputTokenCost: 2.5,
     cachedInputTokenCost: 0.25,
     outputTokenCost: 15,
+    reasoning: {
+      levels: ["none", "low", "medium", "high", "xhigh"],
+      defaultLevel: "none",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -326,6 +413,13 @@ export const textModels = [
     maxOutputTokens: 128000,
     inputTokenCost: 30,
     outputTokenCost: 180,
+    reasoning: {
+      levels: ["medium", "high", "xhigh"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
     provider: "openai",
   },
   {
@@ -338,6 +432,13 @@ export const textModels = [
     inputTokenCost: 2.0,
     outputTokenCost: 12.0,
     outputTokensPerSecond: 112,
+    reasoning: {
+      levels: ["low", "medium", "high"],
+      defaultLevel: "high",
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "google",
   },
   {
@@ -362,6 +463,13 @@ export const textModels = [
     inputTokenCost: 0.5,
     outputTokenCost: 3.0,
     outputTokensPerSecond: 146,
+    reasoning: {
+      levels: ["minimal", "low", "medium", "high"],
+      defaultLevel: "high",
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "google",
   },
   {
@@ -374,6 +482,13 @@ export const textModels = [
     inputTokenCost: 0.25,
     outputTokenCost: 1.5,
     outputTokensPerSecond: 379,
+    reasoning: {
+      levels: ["minimal", "low", "medium", "high"],
+      defaultLevel: "minimal",
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "google",
   },
   {
@@ -386,6 +501,11 @@ export const textModels = [
     inputTokenCost: 1.25,
     outputTokenCost: 10.0,
     outputTokensPerSecond: 134,
+    reasoning: {
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "google",
   },
   {
@@ -398,6 +518,11 @@ export const textModels = [
     inputTokenCost: 0.3,
     outputTokenCost: 2.5,
     outputTokensPerSecond: 245,
+    reasoning: {
+      canDisable: true,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "google",
   },
   {
@@ -410,6 +535,11 @@ export const textModels = [
     inputTokenCost: 0.1,
     outputTokenCost: 0.4,
     outputTokensPerSecond: 400,
+    reasoning: {
+      canDisable: true,
+      outputsThinking: true,
+      outputsSignatures: false,
+    },
     provider: "google",
   },
   {
@@ -498,6 +628,11 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     outputTokenCost: 25,
     outputTokensPerSecond: 53,
+    reasoning: {
+      canDisable: true,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "anthropic",
   },
   {
@@ -510,6 +645,11 @@ export const textModels = [
     inputTokenCost: 3,
     cachedInputTokenCost: 0.3,
     outputTokenCost: 15,
+    reasoning: {
+      canDisable: true,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "anthropic",
   },
   {
@@ -523,6 +663,11 @@ export const textModels = [
     cachedInputTokenCost: 0.1,
     outputTokenCost: 5,
     outputTokensPerSecond: 97,
+    reasoning: {
+      canDisable: true,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     provider: "anthropic",
   },
   {
@@ -535,6 +680,11 @@ export const textModels = [
     inputTokenCost: 3,
     outputTokenCost: 15,
     outputTokensPerSecond: 78,
+    reasoning: {
+      canDisable: true,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
     disabled: true,
     provider: "anthropic",
   },
