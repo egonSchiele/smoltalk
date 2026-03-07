@@ -14,10 +14,7 @@ import {
 } from "../lib/smolError.js";
 
 // Helper to create a mock strategy that returns a given result or throws
-function mockStrategy(
-  result?: Result<PromptResult>,
-  error?: Error,
-): Strategy {
+function mockStrategy(result?: Result<PromptResult>, error?: Error): Strategy {
   return {
     text: vi.fn(async () => {
       if (error) throw error;
@@ -80,9 +77,7 @@ describe("BaseStrategy", () => {
 
   it("text() calls _text() with strategy stripped from config", async () => {
     const strategy = new BaseStrategy();
-    const spy = vi
-      .spyOn(strategy, "_text")
-      .mockResolvedValue(makeResult("ok"));
+    const spy = vi.spyOn(strategy, "_text").mockResolvedValue(makeResult("ok"));
     const configWithStrategy = {
       ...dummyConfig,
       strategy: strategy,
@@ -147,15 +142,16 @@ describe("FallbackStrategy", () => {
     expect(out).toBe(result);
   });
 
-  it("does NOT fall back on timeout when only 'error' is configured", async () => {
+  it("'error' should handle all errors and trigger a fallback", async () => {
     const s1 = mockStrategy(undefined, new SmolTimeoutError("timed out"));
     const s2 = mockStrategy(makeResult("second"));
 
     const fallback = new FallbackStrategy([s1, s2], {
       fallbackOn: ["error"],
     });
-    await expect(fallback.text(dummyConfig)).rejects.toThrow(SmolTimeoutError);
-    expect(s2.text).not.toHaveBeenCalled();
+    const out = await fallback.text(dummyConfig);
+    expect(out).toEqual(makeResult("second"));
+    expect(s2.text).toHaveBeenCalled();
   });
 
   it("does NOT fall back on generic error when only 'timeout' is configured", async () => {
@@ -327,7 +323,10 @@ describe("RaceStrategy", () => {
     };
 
     const race = new RaceStrategy([s1, s2]);
-    const promise = race.text({ ...dummyConfig, abortSignal: externalController.signal });
+    const promise = race.text({
+      ...dummyConfig,
+      abortSignal: externalController.signal,
+    });
 
     // Abort externally
     externalController.abort();
@@ -499,7 +498,10 @@ describe("JSON serialization", () => {
       const strategy = strategyIndex.fromJSON({
         type: "race",
         params: {
-          strategies: ["gpt-4o", { type: "id", params: { model: "gpt-4o-mini" } }],
+          strategies: [
+            "gpt-4o",
+            { type: "id", params: { model: "gpt-4o-mini" } },
+          ],
         },
       });
       expect(strategy).toBeInstanceOf(RaceStrategy);

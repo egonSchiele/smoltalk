@@ -248,10 +248,13 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     );
     this.statelogClient?.promptResponse(result as any);
 
-    const output = result.text || null;
     const toolCalls: ToolCall[] = [];
     const thinkingBlocks: ThinkingBlock[] = [];
+    let textContent = "";
 
+    // Extract text, tool calls, and thinking blocks manually from parts
+    // instead of using result.text, which logs a noisy console.warn when
+    // non-text parts (like functionCall) are present in the response.
     result.candidates?.forEach((candidate) => {
       if (candidate.content && candidate.content.parts) {
         candidate.content.parts.forEach((part: any) => {
@@ -260,17 +263,20 @@ export class SmolGoogle extends BaseClient implements SmolClient {
             toolCalls.push(
               new ToolCall("", functionCall.name, functionCall.args),
             );
-          }
-          // Capture thought parts (thought: true indicates a thinking part)
-          if (part.thoughtSignature) {
+          } else if (part.thoughtSignature) {
+            // Capture thought parts (thought: true indicates a thinking part)
             thinkingBlocks.push({
               text: part.text || "",
               signature: part.thoughtSignature,
             });
+          } else if (typeof part.text === "string" && !part.thought) {
+            textContent += part.text;
           }
         });
       }
     });
+
+    const output = textContent || null;
 
     // Extract usage and calculate cost
     const { usage, cost } = this.calculateUsageAndCost(result.usageMetadata);

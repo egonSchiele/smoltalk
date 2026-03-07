@@ -40,9 +40,17 @@ export class RaceStrategy extends BaseStrategy {
       });
     });
 
+    let winnerIndex: number | null = null;
+
     return Promise.race(
       promises.map((p, i) =>
         p.then((result) => {
+          if (winnerIndex !== null) {
+            // This strategy resolved after the winner (e.g. due to being aborted).
+            // Do not attempt to abort other strategies again.
+            return result;
+          }
+          winnerIndex = i;
           for (let j = 0; j < controllers.length; j++) {
             if (j !== i) {
               const logger = getLogger();

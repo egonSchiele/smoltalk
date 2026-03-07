@@ -229,6 +229,7 @@ export class BaseClient implements SmolClient {
         this.statelogClient?.debug("Request aborted or timed out", {
           reason: message,
           timeBudgetMs,
+          promptConfig,
         });
         return { success: false, error: message };
       }
@@ -369,6 +370,12 @@ export class BaseClient implements SmolClient {
   ): Promise<Result<PromptResult>> {
     const result = await this._textSync(promptConfig);
     if (result.success) {
+      // If there are tool calls, return them immediately — format validation
+      // only applies to the final text output, not intermediate tool-call turns.
+      if (result.value.toolCalls.length > 0) {
+        return result;
+      }
+
       if (
         !promptConfig.responseFormat ||
         !promptConfig.responseFormatOptions?.strict
@@ -523,6 +530,7 @@ export class BaseClient implements SmolClient {
         this.statelogClient?.debug("Streaming request aborted or timed out", {
           reason: message,
           timeBudgetMs,
+          newPromptConfig,
         });
         yield { type: "timeout", error: message };
       } else {
