@@ -101,6 +101,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
       "Sending request to Ollama:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request as any);
     const signal = this.getAbortSignal(config);
     const abortHandler = signal ? () => this.client.abort() : undefined;
     if (signal && abortHandler) {
@@ -113,6 +114,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     }
 
     this.logger.debug("Response from Ollama:", JSON.stringify(result, null, 2));
+    this.statelogClient?.promptResponse(result as any);
 
     const output = result.message?.content || null;
     const toolCalls: ToolCall[] = [];
@@ -164,6 +166,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
       "Sending streaming request to Ollama:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request as any);
 
     const signal = this.getAbortSignal(config);
     const abortHandler = signal ? () => this.client.abort() : undefined;
@@ -229,6 +232,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
       usage = usageAndCost.usage;
       cost = usageAndCost.cost;
     }
+    this.statelogClient?.promptResponse({ content, usage, cost });
 
     // Yield tool calls
     const toolCalls: ToolCall[] = [];

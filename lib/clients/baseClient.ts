@@ -90,6 +90,10 @@ export class BaseClient implements SmolClient {
       logger.warn(
         `Message limit exceeded: ${promptConfig.messages.length} messages sent, but maxMessages is set to ${promptConfig.maxMessages}. Aborting request.`,
       );
+      this.statelogClient?.debug("Message limit exceeded", {
+        messageCount: promptConfig.messages.length,
+        maxMessages: promptConfig.maxMessages,
+      });
       return {
         success: false,
         error: `Message limit exceeded: ${promptConfig.messages.length} messages exceeds the maxMessages limit of ${promptConfig.maxMessages}`,
@@ -130,6 +134,10 @@ export class BaseClient implements SmolClient {
       budget.requestBudget !== undefined &&
       requestsUsed >= budget.requestBudget
     ) {
+      this.statelogClient?.debug("Request budget exhausted", {
+        requestsUsed,
+        requestBudget: budget.requestBudget,
+      });
       return {
         config,
         failure: {
@@ -143,6 +151,10 @@ export class BaseClient implements SmolClient {
     if (budget.tokenBudget !== undefined) {
       const remaining = budget.tokenBudget - tokensUsed;
       if (remaining <= 0) {
+        this.statelogClient?.debug("Token budget exhausted", {
+          tokensUsed,
+          tokenBudget: budget.tokenBudget,
+        });
         return {
           config,
           failure: {
@@ -158,6 +170,10 @@ export class BaseClient implements SmolClient {
     if (budget.costBudget !== undefined) {
       const remainingUSD = budget.costBudget - costUsed;
       if (remainingUSD <= 0) {
+        this.statelogClient?.debug("Cost budget exhausted", {
+          costUsed,
+          costBudget: budget.costBudget,
+        });
         return {
           config,
           failure: {
@@ -210,6 +226,10 @@ export class BaseClient implements SmolClient {
         const message = timeBudgetMs
           ? `Request timed out after ${timeBudgetMs}ms`
           : "Request was aborted";
+        this.statelogClient?.debug("Request aborted or timed out", {
+          reason: message,
+          timeBudgetMs,
+        });
         return { success: false, error: message };
       }
       throw err;
@@ -406,6 +426,10 @@ export class BaseClient implements SmolClient {
             logger.warn("Zod error details:", z.prettifyError(err));
           }
 
+          this.statelogClient?.debug("Response format validation failed", {
+            retriesLeft: retries,
+            error: errorMessage,
+          });
           this.statelogClient?.diff({
             message: "Response format validation failed",
             itemA: promptConfig.responseFormat,
@@ -496,6 +520,10 @@ export class BaseClient implements SmolClient {
         const message = timeBudgetMs
           ? `Request timed out after ${timeBudgetMs}ms`
           : "Request was aborted";
+        this.statelogClient?.debug("Streaming request aborted or timed out", {
+          reason: message,
+          timeBudgetMs,
+        });
         yield { type: "timeout", error: message };
       } else {
         throw err;

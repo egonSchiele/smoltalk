@@ -1,3 +1,4 @@
+import { getLogger } from "../logger.js";
 import { SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { Strategy, StrategyJSON } from "./types.js";
@@ -43,7 +44,20 @@ export class RaceStrategy extends BaseStrategy {
       promises.map((p, i) =>
         p.then((result) => {
           for (let j = 0; j < controllers.length; j++) {
-            if (j !== i) controllers[j].abort();
+            if (j !== i) {
+              const logger = getLogger();
+              logger.debug(
+                `RaceStrategy: aborting strategy ${this.strategies[j]} because strategy ${this.strategies[i]} won the race.`,
+              );
+              this.statelogClient?.debug(
+                "RaceStrategy: aborting losing strategy",
+                {
+                  winner: this.strategies[i].toString(),
+                  aborted: this.strategies[j].toString(),
+                },
+              );
+              controllers[j].abort();
+            }
           }
           return result;
         }),

@@ -138,14 +138,16 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const { system, messages, tools, thinking } = this.buildRequest(config);
 
-    this.logger.debug("Sending request to Anthropic:", {
+    let debugData = {
       model: this.getModel(),
       max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
       messages,
       system,
       tools,
       thinking,
-    });
+    };
+    this.logger.debug("Sending request to Anthropic:", debugData);
+    this.statelogClient?.promptRequest(debugData);
 
     const signal = this.getAbortSignal(config);
     const response = await this.client.messages.create(
@@ -166,6 +168,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     );
 
     this.logger.debug("Response from Anthropic:", response);
+    this.statelogClient?.promptResponse(response);
 
     let output: string | null = null;
     const toolCalls: ToolCall[] = [];
@@ -203,14 +206,16 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
     const { system, messages, tools, thinking } = this.buildRequest(config);
 
-    this.logger.debug("Sending streaming request to Anthropic:", {
+    const streamDebugData = {
       model: this.model,
       max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
       messages,
       system,
       tools,
       thinking,
-    });
+    };
+    this.logger.debug("Sending streaming request to Anthropic:", streamDebugData);
+    this.statelogClient?.promptRequest(streamDebugData);
 
     const signal = this.getAbortSignal(config);
     const stream = await this.client.messages.create(
@@ -293,6 +298,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     }
 
     this.logger.debug("Streaming response completed from Anthropic");
+    this.statelogClient?.promptResponse({ content, usage: { inputTokens, outputTokens } });
 
     const toolCalls: ToolCall[] = [];
     for (const block of toolBlocks.values()) {

@@ -144,6 +144,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     this.logger.debug(
       "Detected both tool calls and structured response in call to Google Gemini. Making separate request to Google Gemini for tool calls.",
     );
+    this.statelogClient?.debug("Google Gemini: splitting tool calls and structured response into separate requests", {});
     const toolRequest = {
       ...request,
       config: {
@@ -211,6 +212,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       "Sending request to Google Gemini:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request as any);
     // Send the prompt as the latest message
     const result = await this.client.models.generateContent(request);
 
@@ -218,6 +220,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       "Response from Google Gemini:",
       JSON.stringify(result, null, 2),
     );
+    this.statelogClient?.promptResponse(result as any);
 
     const output = result.text || null;
     const toolCalls: ToolCall[] = [];
@@ -270,6 +273,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       this.logger.debug(
         "Gemini does not support streaming responses with both tool calls and structured response formats. Response format will be ignored.",
       );
+      this.statelogClient?.debug("Google Gemini: streaming with tools + structured response not supported, ignoring response format", {});
       request.config.responseMimeType = undefined;
       request.config.responseJsonSchema = undefined;
     }
@@ -278,6 +282,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       "Sending streaming request to Google Gemini:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request as any);
 
     const stream = await this.client.models.generateContentStream(request);
 
@@ -333,6 +338,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     }
 
     this.logger.debug("Streaming response completed from Google Gemini");
+    this.statelogClient?.promptResponse({ content, usage, cost });
 
     // Yield tool calls
     const toolCalls: ToolCall[] = [];

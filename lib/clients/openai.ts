@@ -106,6 +106,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       "Sending request to OpenAI:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
     const completion = await this.client.chat.completions.create(
@@ -120,6 +121,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       "Response from OpenAI:",
       JSON.stringify(completion, null, 2),
     );
+    this.statelogClient?.promptResponse(completion as any);
     const message: ChatCompletionMessage = completion.choices[0].message;
     const output = message.content;
     const _toolCalls: ChatCompletionMessageToolCall[] | undefined =
@@ -137,6 +139,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
           this.logger.warn(
             `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`,
           );
+          this.statelogClient?.debug(`Unsupported tool call type: ${tc.type}`, { toolCallId: tc.id });
         }
       }
     }
@@ -160,6 +163,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       "Sending streaming request to OpenAI:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
     const completion = await this.client.chat.completions.create(
@@ -217,6 +221,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
 
     this.logger.debug("Streaming response completed from OpenAI");
+    this.statelogClient?.promptResponse({ content, usage, cost });
 
     const toolCalls: ToolCall[] = [];
     for (const tc of toolCallsMap.values()) {

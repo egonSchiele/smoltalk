@@ -35,14 +35,27 @@ export class FallbackStrategy extends BaseStrategy {
 
         if (error instanceof SmolTimeoutError) {
           if (this.config.fallbackOn.includes("timeout")) {
+            this.statelogClient?.debug("FallbackStrategy: falling back due to timeout", {
+              failedStrategy: strategy.toString(),
+              strategyIndex: i,
+            });
             continue;
           }
         } else if (error instanceof SmolStructuredOutputError) {
           if (this.config.fallbackOn.includes("structuredOutputFailure")) {
+            this.statelogClient?.debug("FallbackStrategy: falling back due to structured output failure", {
+              failedStrategy: strategy.toString(),
+              strategyIndex: i,
+            });
             continue;
           }
         }
         if (this.config.fallbackOn.includes("error")) {
+          this.statelogClient?.debug("FallbackStrategy: falling back due to error", {
+            failedStrategy: strategy.toString(),
+            strategyIndex: i,
+            error: (error as Error).message,
+          });
           continue;
         }
 

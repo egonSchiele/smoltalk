@@ -171,6 +171,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       "Sending request to OpenAI Responses API:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
     const response = await this.client.responses.create(
@@ -185,6 +186,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       "Response from OpenAI Responses API:",
       JSON.stringify(response, null, 2),
     );
+    this.statelogClient?.promptResponse(response as any);
 
     const output = response.output_text || null;
 
@@ -213,6 +215,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       "Sending streaming request to OpenAI Responses API:",
       JSON.stringify(request, null, 2),
     );
+    this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
     const stream = this.client.responses.stream(request, {
@@ -291,6 +294,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     }
 
     this.logger.debug("Streaming response completed from OpenAI Responses API");
+    this.statelogClient?.promptResponse({ content, usage, cost });
 
     const toolCalls: ToolCall[] = [];
     for (const fc of functionCalls.values()) {

@@ -101,6 +101,7 @@ export type SmolConfig = {
   statelog?: Partial<{
     host: string;
     projectId: string;
+    traceId: string;
     debugMode: boolean;
     apiKey: string;
   }>;

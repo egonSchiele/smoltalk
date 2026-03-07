@@ -167,6 +167,20 @@ export class StatelogClient {
     });
   }
 
+  async promptRequest(data: Record<string, any>): Promise<void> {
+    await this.post({
+      type: "promptRequest",
+      data,
+    });
+  }
+
+  async promptResponse(data: Record<string, any>): Promise<void> {
+    await this.post({
+      type: "promptResponse",
+      data,
+    });
+  }
+
   async promptCompletion({
     messages,
     completion,
@@ -451,7 +465,7 @@ export function getStatelogClient(config: {
   const statelogConfig = {
     host: config.host,
     traceId: config.traceId || nanoid(),
-    apiKey: process.env.STATELOG_API_KEY || "",
+    apiKey: process.env.STATELOG_SMOLTALK_API_KEY || "",
     projectId: config.projectId,
     debugMode: config.debugMode || false,
   };

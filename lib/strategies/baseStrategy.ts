@@ -1,8 +1,14 @@
+import { getStatelogClient, StatelogClient } from "../statelogClient.js";
 import { PromptResult, Result, SmolPromptConfig } from "../types.js";
 import { Strategy, StrategyJSON } from "./types.js";
 
 export class BaseStrategy implements Strategy {
+  public statelogClient?: StatelogClient;
   async text(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    this.statelogClient = config.statelog
+      ? getStatelogClient(config.statelog as any)
+      : undefined;
+
     if (config.hooks?.onStrategyStart) {
       config.hooks.onStrategyStart(this, config);
     }
@@ -11,6 +17,10 @@ export class BaseStrategy implements Strategy {
   }
 
   async textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    this.statelogClient = config.statelog
+      ? getStatelogClient(config.statelog as any)
+      : undefined;
+
     return this._textSync({ ...config, strategy: undefined });
   }
 
