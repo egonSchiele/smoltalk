@@ -9,7 +9,12 @@ export class BaseStrategy implements Strategy {
       ? getStatelogClient(config.statelog as any)
       : undefined;
 
+    this.statelogClient?.debug(`Starting strategy ${this.toString()}`);
+
     if (config.hooks?.onStrategyStart) {
+      this.statelogClient?.debug(
+        `Calling onStrategyStart hook for strategy ${this.toString()}`,
+      );
       config.hooks.onStrategyStart(this, config);
     }
 
@@ -20,6 +25,8 @@ export class BaseStrategy implements Strategy {
     this.statelogClient = config.statelog
       ? getStatelogClient(config.statelog as any)
       : undefined;
+
+    this.statelogClient?.debug(`Starting strategy (sync) ${this.toString()}`);
 
     return this._textSync({ ...config, strategy: undefined });
   }

@@ -35,33 +35,53 @@ export class FallbackStrategy extends BaseStrategy {
 
         if (error instanceof SmolTimeoutError) {
           if (this.config.fallbackOn.includes("timeout")) {
-            this.statelogClient?.debug("FallbackStrategy: falling back due to timeout", {
-              failedStrategy: strategy.toString(),
-              strategyIndex: i,
-            });
+            this.statelogClient?.debug(
+              "FallbackStrategy: falling back due to timeout",
+              {
+                failedStrategy: strategy.toString(),
+                strategyIndex: i,
+              },
+            );
             continue;
           }
         } else if (error instanceof SmolStructuredOutputError) {
           if (this.config.fallbackOn.includes("structuredOutputFailure")) {
-            this.statelogClient?.debug("FallbackStrategy: falling back due to structured output failure", {
-              failedStrategy: strategy.toString(),
-              strategyIndex: i,
-            });
+            this.statelogClient?.debug(
+              "FallbackStrategy: falling back due to structured output failure",
+              {
+                failedStrategy: strategy.toString(),
+                strategyIndex: i,
+              },
+            );
             continue;
           }
         }
         if (this.config.fallbackOn.includes("error")) {
-          this.statelogClient?.debug("FallbackStrategy: falling back due to error", {
-            failedStrategy: strategy.toString(),
-            strategyIndex: i,
-            error: (error as Error).message,
-          });
+          this.statelogClient?.debug(
+            "FallbackStrategy: falling back due to error",
+            {
+              failedStrategy: strategy.toString(),
+              strategyIndex: i,
+              error: (error as Error).message,
+            },
+          );
           continue;
         }
+
+        this.statelogClient?.debug("FallbackStrategy error", {
+          failedStrategy: strategy.toString(),
+          strategyIndex: i,
+          strategies: this.strategies.map((s) => s.toString()),
+          error: (error as Error).message,
+        });
 
         throw error;
       }
     }
+    this.statelogClient?.debug("All strategies in FallbackStrategy failed", {
+      strategies: this.strategies.map((s) => s.toString()),
+    });
+
     throw new Error(`All fallback strategies failed.`);
   }
 

@@ -132,8 +132,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     }
     const hasTools = config.tools && config.tools.length > 0;
     const hasStructuredResponse = !!config.responseFormat;
-    if (!hasTools && !hasStructuredResponse) {
-      // If there are no tools or structured response, we can make a single request and return immediately
+    if (!(hasTools && hasStructuredResponse)) {
+      // Unless we have both tools and structured response,
+      // we can make a single request and return immediately
       return this.__textSync(request);
     }
 
@@ -144,7 +145,14 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     this.logger.debug(
       "Detected both tool calls and structured response in call to Google Gemini. Making separate request to Google Gemini for tool calls.",
     );
-    this.statelogClient?.debug("Google Gemini: splitting tool calls and structured response into separate requests", {});
+    this.statelogClient?.debug(
+      "Detected both tool calls and structured response in call to Google Gemini. Making separate request to Google Gemini for tool calls.",
+      {
+        contents: request.contents,
+        tools: config.tools,
+        responseFormat: config.responseFormat,
+      },
+    );
     const toolRequest = {
       ...request,
       config: {
@@ -161,9 +169,21 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       this.logger.debug(
         "Tool calls detected. Returning tool calls without making second request for structured response.",
       );
+      this.statelogClient?.debug(
+        "Tool calls detected in Google Gemini response, skipping structured response request",
+        {
+          toolCalls: toolResult.value.toolCalls,
+        },
+      );
       return toolResult;
     }
     if (!toolResult.value.output) {
+      this.statelogClient?.debug(
+        "No output or tool calls detected in Google Gemini response",
+        {
+          response: toolResult.value,
+        },
+      );
       throw new Error(
         "No output or tool calls detected in Google Gemini response. This should not happen.",
       );
@@ -171,6 +191,12 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "No tool calls detected. Making second request to Google Gemini for structured response.",
+    );
+    this.statelogClient?.debug(
+      "No tool calls detected in Google Gemini response. Making second request for structured response.",
+      {
+        response: toolResult.value,
+      },
     );
 
     /*********** STRUCTURED OUTPUT REQUEST ************/
@@ -273,7 +299,10 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       this.logger.debug(
         "Gemini does not support streaming responses with both tool calls and structured response formats. Response format will be ignored.",
       );
-      this.statelogClient?.debug("Google Gemini: streaming with tools + structured response not supported, ignoring response format", {});
+      this.statelogClient?.debug(
+        "Google Gemini: streaming with tools + structured response not supported, ignoring response format",
+        {},
+      );
       request.config.responseMimeType = undefined;
       request.config.responseJsonSchema = undefined;
     }

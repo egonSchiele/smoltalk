@@ -67,7 +67,7 @@ export class StatelogClient {
     };
   }
 
-  async debug(message: string, data: any): Promise<void> {
+  async debug(message: string, data: any = {}): Promise<void> {
     await this.post({
       type: "debug",
       message: message,
