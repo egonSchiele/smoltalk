@@ -1,7 +1,7 @@
 import { getLogger } from "../logger.js";
 import { SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { Strategy, StrategyJSON } from "./types.js";
+import { RaceStrategyJSON, Strategy, StrategyJSON } from "./types.js";
 
 export class RaceStrategy extends BaseStrategy {
   public strategies: Strategy[];
@@ -78,5 +78,12 @@ export class RaceStrategy extends BaseStrategy {
       type: "race",
       params: { strategies: this.strategies.map((s) => s.toJSON()) },
     };
+  }
+
+  static fromJSON(json: RaceStrategyJSON): RaceStrategy {
+    const strategies = json.params.strategies.map((s) =>
+      BaseStrategy.fromJSON(s),
+    );
+    return new RaceStrategy(strategies);
   }
 }

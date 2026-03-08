@@ -19,7 +19,7 @@ export function getClient(config: SmolConfig) {
   const logger = getLogger(config.logLevel);
 
   // Resolve ModelConfig to a concrete model name
-  const modelName: ModelName = new Model(config.model).getResolvedModel();
+  const modelName: ModelName = Model.create(config.model).getResolvedModel();
 
   let provider = config.provider;
   if (!provider) {

@@ -83,8 +83,6 @@ export type PromptConfig = {
     onError: (error: Error) => void;
     onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
-
-  strategy?: Strategy | StrategyJSON;
 };
 
 export type SmolConfig = {
@@ -94,7 +92,7 @@ export type SmolConfig = {
   // only needed for cloud ollama
   ollamaApiKey?: string;
   ollamaHost?: string;
-  model: ModelName | ModelConfig;
+  model: ModelName | ModelConfig | Strategy | StrategyJSON;
   provider?: Provider;
   logLevel?: LogLevel;
   toolLoopDetection?: ToolLoopDetection;
@@ -122,9 +120,7 @@ export type ResolvedSmolConfig = Omit<SmolConfig, "model"> & {
   model: ModelName;
 };
 
-export type BaseClientConfig = ResolvedSmolConfig & {
-  //logger: EgonLog;
-};
+export type BaseClientConfig = ResolvedSmolConfig;
 
 export type TokenUsage = {
   inputTokens: number;

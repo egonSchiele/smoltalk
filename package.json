@@ -37,8 +37,7 @@
     "termcolors": "github:egonSchiele/termcolors",
     "typedoc": "^0.28.15",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.16",
-    "zod": "^4.3.5"
+    "vitest": "^4.0.16"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -46,6 +45,7 @@
     "egonlog": "^0.0.2",
     "nanoid": "^5.1.6",
     "ollama": "^0.6.3",
-    "openai": "^6.15.0"
+    "openai": "^6.15.0",
+    "zod": "^4.3.6"
   }
 }

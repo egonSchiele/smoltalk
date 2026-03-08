@@ -1,14 +1,15 @@
 import { text } from "../functions.js";
 import { Model } from "../model.js";
-import { SmolPromptConfig } from "../types.js";
+import { ModelName } from "../models.js";
+import { ModelLike, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { StrategyJSON } from "./types.js";
+import { IDStrategyJSON, StrategyJSON } from "./types.js";
 
 export class IDStrategy extends BaseStrategy {
   public model: Model;
-  constructor(model: Model) {
+  constructor(model: ModelLike) {
     super();
-    this.model = model;
+    this.model = Model.create(model);
   }
 
   toString() {
@@ -29,5 +30,9 @@ export class IDStrategy extends BaseStrategy {
 
   toJSON(): StrategyJSON {
     return { type: "id", params: { model: this.model.getResolvedModel() } };
+  }
+
+  static fromJSON(json: IDStrategyJSON): IDStrategy {
+    return new IDStrategy(json.params.model as ModelName);
   }
 }
