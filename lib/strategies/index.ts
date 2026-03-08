@@ -1,10 +1,21 @@
 import { Model } from "../model.js";
+import { ModelName } from "../models.js";
 import { ModelLike } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
-import { FallbackStrategyConfig, Strategy, StrategyJSON } from "./types.js";
+import {
+  FallbackStrategyConfig,
+  FallbackStrategyJSON,
+  FallbackStrategyJSONSchema,
+  IDStrategyJSON,
+  IDStrategyJSONSchema,
+  RaceStrategyJSON,
+  RaceStrategyJSONSchema,
+  Strategy,
+  StrategyJSON,
+} from "./types.js";
 
 export * from "./baseStrategy.js";
 export * from "./fallbackStrategy.js";
@@ -39,20 +50,15 @@ export function fallback(
 }
 
 export function fromJSON(json: StrategyJSON): Strategy {
-  if (typeof json === "string") {
-    return id(json as ModelLike);
-  }
-  switch (json.type) {
-    case "id":
-      return id(json.params.model as ModelLike);
-    case "race":
-      return race(...json.params.strategies.map(fromJSON));
-    case "fallback":
-      return fallback(
-        json.params.strategies.map(fromJSON),
-        json.params.config,
-      );
-    default:
-      throw new Error(`Unknown strategy type: ${(json as any).type}`);
+  if (IDStrategyJSONSchema.safeParse(json).success) {
+    return IDStrategy.fromJSON(json as IDStrategyJSON);
+  } else if (RaceStrategyJSONSchema.safeParse(json).success) {
+    return RaceStrategy.fromJSON(json as RaceStrategyJSON);
+  } else if (FallbackStrategyJSONSchema.safeParse(json).success) {
+    return FallbackStrategy.fromJSON(json as FallbackStrategyJSON);
+  } else if (typeof json === "string") {
+    return id(json as ModelName);
+  } else {
+    throw new Error(`Unknown strategy JSON: ${JSON.stringify(json)}`);
   }
 }

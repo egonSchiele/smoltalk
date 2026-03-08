@@ -31,7 +31,7 @@ export type FallbackStrategyConfig = z.infer<
 >;
 
 export type StrategyJSON =
-  | ModelName
+  | string
   | { type: "id"; params: { model: string } }
   | { type: "race"; params: { strategies: StrategyJSON[] } }
   | {

@@ -92,7 +92,7 @@ export type SmolConfig = {
   // only needed for cloud ollama
   ollamaApiKey?: string;
   ollamaHost?: string;
-  model: ModelName | ModelConfig | Strategy | StrategyJSON;
+  model: ModelName | ModelConfig;
   provider?: Provider;
   logLevel?: LogLevel;
   toolLoopDetection?: ToolLoopDetection;
@@ -120,7 +120,9 @@ export type ResolvedSmolConfig = Omit<SmolConfig, "model"> & {
   model: ModelName;
 };
 
-export type BaseClientConfig = ResolvedSmolConfig;
+export type BaseClientConfig = ResolvedSmolConfig & {
+  //logger: EgonLog;
+};
 
 export type TokenUsage = {
   inputTokens: number;
@@ -211,7 +213,10 @@ export interface SmolClient {
   ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
 }
 
-export type SmolPromptConfig = SmolConfig & PromptConfig;
+export type SmolPromptConfig = Omit<SmolConfig, "model"> &
+  PromptConfig & {
+    model: ModelName | ModelConfig | Strategy | StrategyJSON;
+  };
 
 export type TextPart = {
   type: "text";

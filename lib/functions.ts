@@ -1,3 +1,5 @@
+// @ts-nocheck
+import { exit } from "process";
 import { getClient } from "./client.js";
 import { Model } from "./model.js";
 import { BaseStrategy } from "./strategies/baseStrategy.js";
@@ -18,7 +20,7 @@ import { Result } from "./types/result.js";
 function getStrategy(config: SmolPromptConfig): Strategy | null {
   const { model } = config;
   if (model instanceof BaseStrategy) return model;
-  if (isStrategy(model)) return BaseStrategy.fromJSON(model as StrategyJSON);
+  if (isStrategy(model)) return fromJSON(model as StrategyJSON);
   return null;
 }
 
@@ -70,6 +72,8 @@ export function text(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
   const strategy = getStrategy(config);
+  console.log(JSON.stringify(strategy, null, 2));
+  exit(0);
   if (strategy) {
     return strategy.text(config);
   }
