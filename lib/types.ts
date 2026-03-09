@@ -75,6 +75,7 @@ export type PromptConfig = {
   // User-provided AbortSignal for cancellation
   abortSignal?: AbortSignal;
 
+  /* Define behavior if too many tool calls are made. */
   toolLoopDetection?: ToolLoopDetection;
 
   hooks?: Partial<{

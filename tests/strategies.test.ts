@@ -46,7 +46,7 @@ function mockStrategy(result?: Result<PromptResult>, error?: Error): Strategy {
 function makeResult(output: string): Success<PromptResult> {
   return {
     success: true,
-    data: {
+    value: {
       output,
       toolCalls: [],
     },
