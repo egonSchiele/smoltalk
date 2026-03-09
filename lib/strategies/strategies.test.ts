@@ -29,41 +29,42 @@ describe("Strategy toJSON/fromJSON round-trip", () => {
   });
 
   it("FallbackStrategy with IDStrategy children round-trips correctly", () => {
-    const strategy = new FallbackStrategy(
-      [new IDStrategy("gpt-4o"), new IDStrategy("claude-sonnet-4-6")],
-      { fallbackOn: ["error", "timeout"] },
-    );
+    const strategy = new FallbackStrategy(new IDStrategy("gpt-4o"), {
+      error: [{ type: "id", params: { model: "claude-sonnet-4-6" } }],
+      timeout: [{ type: "id", params: { model: "claude-sonnet-4-6" } }],
+    });
     roundTrip(strategy);
   });
 
   it("FallbackStrategy with all fallback reasons round-trips correctly", () => {
-    const strategy = new FallbackStrategy(
-      [new IDStrategy("gpt-4o")],
-      { fallbackOn: ["error", "timeout", "structuredOutputFailure"] },
-    );
+    const strategy = new FallbackStrategy(new IDStrategy("gpt-4o"), {
+      error: [{ type: "id", params: { model: "gpt-4o-mini" } }],
+      timeout: [{ type: "id", params: { model: "gpt-4o-mini" } }],
+      structuredOutputFailure: [
+        { type: "id", params: { model: "gpt-4o-mini" } },
+      ],
+    });
     roundTrip(strategy);
   });
 
   it("nested RaceStrategy inside FallbackStrategy round-trips correctly", () => {
     const strategy = new FallbackStrategy(
-      [
-        new RaceStrategy([
-          new IDStrategy("gpt-4o"),
-          new IDStrategy("claude-sonnet-4-6"),
-        ]),
-        new IDStrategy("gemini-2.0-flash"),
-      ],
-      { fallbackOn: ["error"] },
+      new RaceStrategy([
+        new IDStrategy("gpt-4o"),
+        new IDStrategy("claude-sonnet-4-6"),
+      ]),
+      {
+        error: [{ type: "id", params: { model: "gemini-2.0-flash" } }],
+      },
     );
     roundTrip(strategy);
   });
 
   it("nested FallbackStrategy inside RaceStrategy round-trips correctly", () => {
     const strategy = new RaceStrategy([
-      new FallbackStrategy(
-        [new IDStrategy("gpt-4o"), new IDStrategy("gemini-2.0-flash")],
-        { fallbackOn: ["timeout"] },
-      ),
+      new FallbackStrategy(new IDStrategy("gpt-4o"), {
+        timeout: [{ type: "id", params: { model: "gemini-2.0-flash" } }],
+      }),
       new IDStrategy("claude-sonnet-4-6"),
     ]);
     roundTrip(strategy);
@@ -71,17 +72,19 @@ describe("Strategy toJSON/fromJSON round-trip", () => {
 
   it("deeply nested strategies round-trip correctly", () => {
     const strategy = new FallbackStrategy(
-      [
-        new RaceStrategy([
-          new FallbackStrategy(
-            [new IDStrategy("gpt-4o"), new IDStrategy("gpt-4o-mini")],
-            { fallbackOn: ["error", "structuredOutputFailure"] },
-          ),
-          new IDStrategy("claude-sonnet-4-6"),
-        ]),
-        new IDStrategy("gemini-2.0-flash"),
-      ],
-      { fallbackOn: ["error", "timeout"] },
+      new RaceStrategy([
+        new FallbackStrategy(new IDStrategy("gpt-4o"), {
+          error: [{ type: "id", params: { model: "gpt-4o-mini" } }],
+          structuredOutputFailure: [
+            { type: "id", params: { model: "gpt-4o-mini" } },
+          ],
+        }),
+        new IDStrategy("claude-sonnet-4-6"),
+      ]),
+      {
+        error: [{ type: "id", params: { model: "gemini-2.0-flash" } }],
+        timeout: [{ type: "id", params: { model: "gemini-2.0-flash" } }],
+      },
     );
     roundTrip(strategy);
   });

@@ -1,4 +1,5 @@
-import { fromJSON, IDStrategy } from "../index.js";
+import { IDStrategy } from "./idStrategy.js";
+import { fromJSON } from "./index.js";
 import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
 import {
   ModelLike,
