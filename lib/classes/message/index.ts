@@ -30,7 +30,7 @@ export function messageFromJSON(json: MessageJSON): Message {
     case "tool":
       return ToolMessage.fromJSON(json);
     default:
-      throw new Error(`Unknown message: ${JSON.stringify(json)}`);
+      throw new Error(`Unknown message role: ${(json as any)?.role}`);
   }
 }
 

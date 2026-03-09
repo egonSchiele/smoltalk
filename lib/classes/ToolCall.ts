@@ -1,13 +1,16 @@
 import { EgonLog } from "egonlog";
+import { z } from "zod";
 import { getLogger } from "../logger.js";
 import { FunctionCall } from "@google/genai";
 import { ResponseInputItem } from "openai/resources/responses/responses.js";
 
-export type ToolCallJSON = {
-  id: string;
-  name: string;
-  arguments: Record<string, any>;
-};
+export const ToolCallJSONSchema = z.object({
+  id: z.string().default(""),
+  name: z.string(),
+  arguments: z.record(z.string(), z.any()).default({}),
+});
+
+export type ToolCallJSON = z.infer<typeof ToolCallJSONSchema>;
 
 export type ToolCallOptions = {};
 
@@ -62,8 +65,9 @@ export class ToolCall {
     };
   }
 
-  static fromJSON(json: any): ToolCall {
-    return new ToolCall(json.id, json.name, json.arguments);
+  static fromJSON(json: unknown): ToolCall {
+    const parsed = ToolCallJSONSchema.parse(json);
+    return new ToolCall(parsed.id, parsed.name, parsed.arguments);
   }
 
   toOpenAI(): any {

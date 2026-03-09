@@ -1,22 +1,35 @@
+import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { CostEstimate, TextPart, ThinkingBlock, TokenUsage } from "../../types.js";
+import {
+  CostEstimate,
+  CostEstimateSchema,
+  TextPart,
+  TextPartSchema,
+  ThinkingBlock,
+  ThinkingBlockSchema,
+  TokenUsage,
+  TokenUsageSchema,
+} from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, Part } from "@google/genai";
-import { ToolCall, ToolCallJSON } from "../ToolCall.js";
+import { ToolCall, ToolCallJSON, ToolCallJSONSchema } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
-export type AssistantMessageJSON = {
-  role: "assistant";
-  content: string | Array<TextPart> | null;
-  name: string | undefined;
-  audio: any | null | undefined;
-  refusal: string | null | undefined;
-  toolCalls: ToolCallJSON[] | undefined;
-  thinkingBlocks: ThinkingBlock[] | undefined;
-  usage: TokenUsage | undefined;
-  cost: CostEstimate | undefined;
-};
+export const AssistantMessageJSONSchema = z.object({
+  role: z.literal("assistant"),
+  content: z.union([z.string(), z.array(TextPartSchema), z.null()]),
+  name: z.string().optional(),
+  audio: z.any().optional(),
+  refusal: z.string().nullable().optional(),
+  toolCalls: z.array(ToolCallJSONSchema).optional(),
+  thinkingBlocks: z.array(ThinkingBlockSchema).optional(),
+  rawData: z.any().optional(),
+  usage: TokenUsageSchema.optional(),
+  cost: CostEstimateSchema.optional(),
+});
+
+export type AssistantMessageJSON = z.infer<typeof AssistantMessageJSONSchema>;
 
 export class AssistantMessage extends BaseMessage implements MessageClass {
   public _role = "assistant" as const;
@@ -118,18 +131,17 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     };
   }
 
-  static fromJSON(json: any): AssistantMessage {
-    return new AssistantMessage(json.content, {
-      name: json.name,
-      audio: json.audio,
-      refusal: json.refusal,
-      toolCalls: json.toolCalls
-        ? json.toolCalls.map((tcJson: any) => ToolCall.fromJSON(tcJson))
-        : undefined,
-      thinkingBlocks: json.thinkingBlocks,
-      rawData: json.rawData,
-      usage: json.usage,
-      cost: json.cost,
+  static fromJSON(json: unknown): AssistantMessage {
+    const parsed = AssistantMessageJSONSchema.parse(json);
+    return new AssistantMessage(parsed.content, {
+      name: parsed.name,
+      audio: parsed.audio,
+      refusal: parsed.refusal,
+      toolCalls: parsed.toolCalls?.map((tc) => ToolCall.fromJSON(tc)),
+      thinkingBlocks: parsed.thinkingBlocks,
+      rawData: parsed.rawData,
+      usage: parsed.usage,
+      cost: parsed.cost,
     });
   }
 

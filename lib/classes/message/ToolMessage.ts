@@ -1,16 +1,20 @@
+import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart } from "../../types.js";
+import { TextPart, TextPartSchema } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
-export type ToolMessageJSON = {
-  role: "tool";
-  content: string | Array<TextPart>;
-  name: string;
-  tool_call_id: string;
-};
+export const ToolMessageJSONSchema = z.object({
+  role: z.literal("tool"),
+  content: z.union([z.string(), z.array(TextPartSchema)]),
+  name: z.string(),
+  tool_call_id: z.string().default(""),
+  rawData: z.any().optional(),
+});
+
+export type ToolMessageJSON = z.infer<typeof ToolMessageJSONSchema>;
 
 export class ToolMessage extends BaseMessage implements MessageClass {
   public _role = "tool" as const;
@@ -65,11 +69,12 @@ export class ToolMessage extends BaseMessage implements MessageClass {
     };
   }
 
-  static fromJSON(json: any): ToolMessage {
-    return new ToolMessage(json.content, {
-      tool_call_id: json.tool_call_id,
-      name: json.name,
-      rawData: json.rawData,
+  static fromJSON(json: unknown): ToolMessage {
+    const parsed = ToolMessageJSONSchema.parse(json);
+    return new ToolMessage(parsed.content, {
+      tool_call_id: parsed.tool_call_id,
+      name: parsed.name,
+      rawData: parsed.rawData,
     });
   }
 

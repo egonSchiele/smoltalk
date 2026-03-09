@@ -1,15 +1,19 @@
+import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart } from "../../types.js";
+import { TextPart, TextPartSchema } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
-export type SystemMessageJSON = {
-  role: "system";
-  content: string | Array<TextPart>;
-  name: string | undefined;
-};
+export const SystemMessageJSONSchema = z.object({
+  role: z.literal("system"),
+  content: z.union([z.string(), z.array(TextPartSchema)]),
+  name: z.string().optional(),
+  rawData: z.any().optional(),
+});
+
+export type SystemMessageJSON = z.infer<typeof SystemMessageJSONSchema>;
 
 export class SystemMessage extends BaseMessage implements MessageClass {
   public _role = "system" as const;
@@ -57,10 +61,11 @@ export class SystemMessage extends BaseMessage implements MessageClass {
     };
   }
 
-  static fromJSON(json: any): SystemMessage {
-    return new SystemMessage(json.content, {
-      name: json.name,
-      rawData: json.rawData,
+  static fromJSON(json: unknown): SystemMessage {
+    const parsed = SystemMessageJSONSchema.parse(json);
+    return new SystemMessage(parsed.content, {
+      name: parsed.name,
+      rawData: parsed.rawData,
     });
   }
 

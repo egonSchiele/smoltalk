@@ -1,15 +1,19 @@
+import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart } from "../../types.js";
+import { TextPart, TextPartSchema } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
-export type DeveloperMessageJSON = {
-  role: "developer";
-  content: string | Array<TextPart>;
-  name: string | undefined;
-};
+export const DeveloperMessageJSONSchema = z.object({
+  role: z.literal("developer"),
+  content: z.union([z.string(), z.array(TextPartSchema)]),
+  name: z.string().optional(),
+  rawData: z.any().optional(),
+});
+
+export type DeveloperMessageJSON = z.infer<typeof DeveloperMessageJSONSchema>;
 
 export class DeveloperMessage extends BaseMessage implements MessageClass {
   public _role = "developer" as const;
@@ -57,10 +61,11 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
     };
   }
 
-  static fromJSON(json: any): DeveloperMessage {
-    return new DeveloperMessage(json.content, {
-      name: json.name,
-      rawData: json.rawData,
+  static fromJSON(json: unknown): DeveloperMessage {
+    const parsed = DeveloperMessageJSONSchema.parse(json);
+    return new DeveloperMessage(parsed.content, {
+      name: parsed.name,
+      rawData: parsed.rawData,
     });
   }
 

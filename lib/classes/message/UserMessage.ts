@@ -1,4 +1,5 @@
 import { ContentListUnion } from "@google/genai";
+import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
@@ -6,11 +7,14 @@ import { ToolCall } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
-export type UserMessageJSON = {
-  role: "user";
-  content: string;
-  name: string | undefined;
-};
+export const UserMessageJSONSchema = z.object({
+  role: z.literal("user"),
+  content: z.string(),
+  name: z.string().optional(),
+  rawData: z.any().optional(),
+});
+
+export type UserMessageJSON = z.infer<typeof UserMessageJSONSchema>;
 
 export class UserMessage extends BaseMessage implements MessageClass {
   public _role = "user" as const;
@@ -53,10 +57,11 @@ export class UserMessage extends BaseMessage implements MessageClass {
     };
   }
 
-  static fromJSON(json: any): UserMessage {
-    return new UserMessage(json.content, {
-      name: json.name,
-      rawData: json.rawData,
+  static fromJSON(json: unknown): UserMessage {
+    const parsed = UserMessageJSONSchema.parse(json);
+    return new UserMessage(parsed.content, {
+      name: parsed.name,
+      rawData: parsed.rawData,
     });
   }
 
