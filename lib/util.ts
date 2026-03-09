@@ -5,7 +5,15 @@ export function round(num: number, places: number): number {
   return Math.round(num * factor) / factor;
 }
 
-const DANGEROUS_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+const DANGEROUS_KEYS = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+  "__defineGetter__",
+  "__defineSetter__",
+  "__lookupGetter__",
+  "__lookupSetter__",
+]);
 
 /**
  * Sanitizes an object by removing keys that could cause prototype pollution.

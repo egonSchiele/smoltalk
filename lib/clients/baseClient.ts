@@ -27,6 +27,9 @@ export class BaseClient implements SmolClient {
 
   constructor(config: ResolvedSmolConfig) {
     this.config = config || {};
+    if (this.config.logLevel) {
+      getLogger(this.config.logLevel);
+    }
     if (this.config.statelog) {
       this.statelogClient = getStatelogClient(this.config.statelog as any);
     }
@@ -327,7 +330,11 @@ export class BaseClient implements SmolClient {
         .replace(/```\s*$/, "");
       try {
         return this.extractResponse(promptConfig, JSON.parse(stripped), schema, depth + 1);
-      } catch {}
+      } catch (err) {
+        const logger = getLogger();
+        logger.debug("extractResponse: failed to parse JSON from string", { error: (err as Error).message, rawValue: stripped });
+        this.statelogClient?.debug("extractResponse: failed to parse JSON from string", { error: (err as Error).message });
+      }
       return rawValue;
     }
 
@@ -349,7 +356,7 @@ export class BaseClient implements SmolClient {
     for (const key of wrapKeys) {
       if (key in rawValue) {
         const inner = schema.safeParse(rawValue[key]);
-        if (inner.success) return inner.data[key];
+        if (inner.success) return inner.data;
       }
     }
 
@@ -455,8 +462,9 @@ export class BaseClient implements SmolClient {
         }
       }
     }
+    const numRetries = promptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES;
     throw new SmolStructuredOutputError(
-      `Failed to get valid response after ${DEFAULT_NUM_RETRIES} attempts: ${result.success ? "Output did not match expected format" : result.error}`,
+      `Failed to get valid response after ${numRetries} attempts: ${result.success ? "Output did not match expected format" : result.error}`,
     );
   }
 

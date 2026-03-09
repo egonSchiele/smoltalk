@@ -38,6 +38,7 @@ export class ToolCall {
           e,
           args,
         );
+        this.logger.debug("Falling back to empty arguments object for ToolCall", { name, id, rawArgs: args });
         this._arguments = {};
       }
     } else {

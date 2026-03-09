@@ -6,7 +6,6 @@
   "scripts": {
     "test": "vitest",
     "test:tsc": "tsc -p tests/tsconfig.json",
-    "coverage": "vitest --coverage",
     "build": "rm -rf dist && tsc",
     "start": "cd dist && node index.js",
     "doc": "typedoc --disableSources --out docs lib && prettier docs/ --write",

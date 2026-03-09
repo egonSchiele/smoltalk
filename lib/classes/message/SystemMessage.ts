@@ -32,9 +32,7 @@ export class SystemMessage extends BaseMessage implements MessageClass {
   }
 
   get content(): string {
-    return typeof this._content === "string"
-      ? this._content
-      : JSON.stringify(this._content);
+    return this.contentToString(this._content);
   }
 
   set content(value: string) {

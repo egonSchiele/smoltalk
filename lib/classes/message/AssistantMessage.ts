@@ -69,12 +69,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   }
 
   get content(): string {
-    if (this._content === null || this._content === undefined) {
-      return "";
-    }
-    return typeof this._content === "string"
-      ? this._content
-      : JSON.stringify(this._content);
+    return this.contentToString(this._content);
   }
 
   set content(value: string) {
@@ -235,7 +230,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
 
     // Thinking blocks must come first (Anthropic requires this ordering)
     if (hasThinking) {
-      for (const block of this._thinkingBlocks!) {
+      for (const block of this._thinkingBlocks ?? []) {
         blocks.push({ type: "thinking", thinking: block.text, signature: block.signature });
       }
     }

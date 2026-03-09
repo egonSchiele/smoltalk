@@ -90,8 +90,7 @@ export function textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
   const { smolConfig, promptConfig } = splitConfig(config);
-  // @ts-ignore
-  const client = getClient(smolConfig, "");
+  const client = getClient(smolConfig);
   return client.textStream(promptConfig);
 }
 
@@ -100,7 +99,6 @@ export function prompt(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
   const { smolConfig, promptConfig } = splitConfig(config);
-  // @ts-ignore
-  const client = getClient(smolConfig, "");
+  const client = getClient(smolConfig);
   return client.prompt(promptText, promptConfig);
 }
