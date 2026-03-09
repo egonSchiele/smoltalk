@@ -15,6 +15,7 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
+import { sanitizeAttributes } from "../util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
@@ -117,7 +118,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       contents: messages,
       model: this.getModel(),
       config: genConfig,
-      ...(config.rawAttributes || {}),
+      ...sanitizeAttributes(config.rawAttributes),
     };
   }
 

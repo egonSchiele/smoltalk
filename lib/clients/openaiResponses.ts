@@ -13,6 +13,7 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
+import { sanitizeAttributes } from "../util.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 import type {
@@ -133,9 +134,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       request.reasoning = { effort: config.reasoningEffort };
     }
 
-    if (config.rawAttributes) {
-      Object.assign(request, config.rawAttributes);
-    }
+    Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
     return request;
   }

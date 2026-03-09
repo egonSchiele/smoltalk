@@ -13,6 +13,7 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
+import { sanitizeAttributes } from "../util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
@@ -93,9 +94,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     if (config.responseFormat) {
       request.format = config.responseFormat.toJSONSchema();
     }
-    if (config.rawAttributes) {
-      Object.assign(request, config.rawAttributes);
-    }
+    Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
     this.logger.debug(
       "Sending request to Ollama:",
@@ -107,10 +106,14 @@ export class SmolOllama extends BaseClient implements SmolClient {
     if (signal && abortHandler) {
       signal.addEventListener("abort", abortHandler, { once: true });
     }
-    // @ts-ignore
-    const result = await this.client.chat(request);
-    if (signal && abortHandler) {
-      signal.removeEventListener("abort", abortHandler);
+    let result;
+    try {
+      // @ts-ignore
+      result = await this.client.chat(request);
+    } finally {
+      if (signal && abortHandler) {
+        signal.removeEventListener("abort", abortHandler);
+      }
     }
 
     this.logger.debug("Response from Ollama:", JSON.stringify(result, null, 2));
@@ -158,9 +161,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     if (config.responseFormat) {
       request.format = config.responseFormat.toJSONSchema();
     }
-    if (config.rawAttributes) {
-      Object.assign(request, config.rawAttributes);
-    }
+    Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
     this.logger.debug(
       "Sending streaming request to Ollama:",
@@ -173,6 +174,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     if (signal && abortHandler) {
       signal.addEventListener("abort", abortHandler, { once: true });
     }
+    try {
     // @ts-ignore
     const stream = await this.client.chat(request);
 
@@ -220,10 +222,6 @@ export class SmolOllama extends BaseClient implements SmolClient {
       }
     }
 
-    if (signal && abortHandler) {
-      signal.removeEventListener("abort", abortHandler);
-    }
-
     this.logger.debug("Streaming response completed from Ollama");
 
     // Extract usage from the last chunk
@@ -252,5 +250,10 @@ export class SmolOllama extends BaseClient implements SmolClient {
         model: this.getModel(),
       },
     };
+    } finally {
+      if (signal && abortHandler) {
+        signal.removeEventListener("abort", abortHandler);
+      }
+    }
   }
 }

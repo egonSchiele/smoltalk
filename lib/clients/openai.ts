@@ -15,7 +15,7 @@ import {
   ChatCompletionMessageToolCall,
 } from "openai/resources";
 import { ToolCall } from "../classes/ToolCall.js";
-import { isFunctionToolCall } from "../util.js";
+import { isFunctionToolCall, sanitizeAttributes } from "../util.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAITool } from "../util/tool.js";
@@ -84,7 +84,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       ...(config.reasoningEffort && {
         reasoning_effort: config.reasoningEffort,
       }),
-      ...(config.rawAttributes || {}),
+      ...sanitizeAttributes(config.rawAttributes),
     };
     if (config.responseFormat) {
       (request as any).response_format = {
@@ -184,8 +184,6 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     let cost: CostEstimate | undefined;
 
     for await (const chunk of completion) {
-      const delta = chunk.choices[0]?.delta;
-
       // Extract usage from the final chunk
       if (chunk.usage) {
         const usageAndCost = this.calculateUsageAndCost(chunk.usage);
@@ -193,6 +191,8 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         cost = usageAndCost.cost;
       }
 
+      if (!chunk.choices || chunk.choices.length === 0) continue;
+      const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 
       if (delta.content) {
