@@ -1,6 +1,3 @@
-import { SmolError } from "./smolError.js";
-import { round } from "./util.js";
-
 export type Provider =
   | "local"
   | "ollama"

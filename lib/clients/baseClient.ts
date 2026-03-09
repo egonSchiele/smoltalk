@@ -257,7 +257,7 @@ export class BaseClient implements SmolClient {
 
     for (const [toolName, count] of Object.entries(toolCallCounts)) {
       if (
-        count >= promptConfig.toolLoopDetection.maxConsecutive &&
+        count >= promptConfig.toolLoopDetection.maxCalls &&
         !(promptConfig.toolLoopDetection.excludeTools ?? []).includes(toolName)
       ) {
         const intervention =

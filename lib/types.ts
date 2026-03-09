@@ -94,6 +94,94 @@ export type SmolConfig = {
   // only needed for cloud ollama
   ollamaApiKey?: string;
   ollamaHost?: string;
+
+  /*
+  The given model determines both
+  - what client is used
+  - what strategy is executed.
+
+  ## 1. Specifying a model directly
+  The simplest case is to specify the name of a model from lib/models.ts.
+  Example:
+
+  ```
+    model: "claude-sonnet-4-6"
+  ```
+
+  ## 2. Specifying a model config (letting Smoltalk pick the model)
+  You can instead also choose to let Smoltalk pick the model that it thinks
+  will be best for certain parameters. For example:
+  ```
+    model: {
+      // find the fastest model
+      optimizeFor: ["speed"],
+
+      // from either Anthropic or Google, whichever is faster
+      providers: ["anthropic", "google"],
+      limit: {
+        // 1 mil input tokens + 1 mil output tokens together
+        // should cost less than $10 for the models being considered
+        cost: 10,
+      },
+    }
+  ```
+
+  This can be a good option because as better models come out,
+  you won't need to update your code. You can just update Smoltalk
+  and it will pick the best model automatically.
+
+  ## 3. Specifying a strategy
+  Finally, you can instead specify a strategy to execute. For example:
+
+  ```
+    model: {
+      type: "race",
+      params: {
+        strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+      },
+    }
+  ```
+
+  In this case, Smoltalk will run your request over using both LLMs simultaneously,
+  and take the response that finishes first.
+
+  You can also choose to specify fallbacks in case the first model
+  returns an error for some reason. This can be a good way to try something
+  with a fast model and then use a slower but more powerful model if the first one fails.
+
+  ```
+    model: {
+      type: "fallback",
+      params: {
+        strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+        config: {
+          fallbackOn: ["error"],
+        },
+      },
+    }
+  ```
+
+  You can of course combine strategies together to create more complex behavior:
+
+  ```
+    const geminiLiteWithFallback = {
+      type: "fallback",
+      params: {
+        strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+        config: {
+          fallbackOn: ["error"],
+        },
+      },
+    };
+
+    model: {
+      type: "race",
+      params: {
+        strategies: ["gemini-2.5-pro", geminiLiteWithFallback],
+      },
+    }
+  ```
+    */
   model: ModelParam;
   provider?: Provider;
   logLevel?: LogLevel;
@@ -108,12 +196,18 @@ export type SmolConfig = {
 
 export type ToolLoopDetection = {
   enabled: boolean;
-  maxConsecutive: number;
+
+  /* Max calls for a specific tool before intervention is triggered. */
+  maxCalls: number;
+
+  /* Define the intervention to take when the max calls limit is reached. */
   intervention?:
     | "remove-tool"
     | "remove-all-tools"
     | "throw-error"
     | "halt-execution";
+
+  /* These tools will be excluded from loop detection. */
   excludeTools?: string[];
 };
 
@@ -121,9 +215,7 @@ export type ResolvedSmolConfig = Omit<SmolConfig, "model"> & {
   model: ModelName;
 };
 
-export type BaseClientConfig = ResolvedSmolConfig & {
-  //logger: EgonLog;
-};
+export type BaseClientConfig = ResolvedSmolConfig;
 
 export type TokenUsage = {
   inputTokens: number;
