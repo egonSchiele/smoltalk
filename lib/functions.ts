@@ -1,23 +1,30 @@
+import { exit } from "process";
 import { getClient } from "./client.js";
 import { Model } from "./model.js";
 import { BaseStrategy } from "./strategies/baseStrategy.js";
-import { fromJSON, Strategy, StrategyJSON } from "./strategies/index.js";
+import {
+  fromJSON,
+  isStrategy,
+  Strategy,
+  StrategyJSON,
+} from "./strategies/index.js";
 import {
   SmolPromptConfig,
   PromptResult,
   StreamChunk,
   PromptConfig,
+  ModelLike,
+  ModelParam,
 } from "./types.js";
 import { Result } from "./types/result.js";
+import { ModelName } from "./models.js";
 
-function hydrateStrategy(config: SmolPromptConfig): SmolPromptConfig {
-  if (config.strategy && !(config.strategy instanceof BaseStrategy)) {
-    return { ...config, strategy: fromJSON(config.strategy as StrategyJSON) };
-  }
-  return config;
+function getStrategy(model: ModelParam): Strategy {
+  if (model instanceof BaseStrategy) return model;
+  return fromJSON(model as StrategyJSON);
 }
 
-function splitConfig(config: SmolPromptConfig): {
+export function splitConfig(config: SmolPromptConfig): {
   smolConfig: Parameters<typeof getClient>[0];
   promptConfig: PromptConfig;
 } {
@@ -30,12 +37,11 @@ function splitConfig(config: SmolPromptConfig): {
     model: rawModel,
     provider,
     logLevel,
-    toolLoopDetection,
     statelog,
     ...promptConfig
   } = config;
 
-  const _model = new Model(rawModel);
+  const _model = new Model(rawModel as any);
   const model = _model.getResolvedModel();
 
   return {
@@ -48,7 +54,6 @@ function splitConfig(config: SmolPromptConfig): {
       model,
       provider,
       logLevel,
-      toolLoopDetection,
       statelog,
     },
     promptConfig,
@@ -64,36 +69,23 @@ export function text(
 export function text(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
-  config = hydrateStrategy(config);
-  if (config.strategy) {
-    return (config.strategy as Strategy).text(config);
-  }
-  const { smolConfig, promptConfig } = splitConfig(config);
-  const client = getClient(smolConfig);
-  return client.text(promptConfig);
+  const strategy = getStrategy(config.model);
+  return strategy.text(config);
 }
 
 export function textSync(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> {
-  config = hydrateStrategy(config);
-  if (config.strategy) {
-    return (config.strategy as Strategy).textSync(config);
-  }
-  const { smolConfig, promptConfig } = splitConfig(config);
-  const client = getClient(smolConfig);
-  return client.textSync(promptConfig);
+  const strategy = getStrategy(config.model);
+  return strategy.textSync(config);
 }
 
 export function textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
-  config = hydrateStrategy(config);
-  /*   if (config.strategy) {
-    return (config.strategy as import("./strategies/types.js").Strategy).textStream(config);
-  }
- */ const { smolConfig, promptConfig } = splitConfig(config);
-  const client = getClient(smolConfig);
+  const { smolConfig, promptConfig } = splitConfig(config);
+  // @ts-ignore
+  const client = getClient(smolConfig, "");
   return client.textStream(promptConfig);
 }
 
@@ -102,6 +94,7 @@ export function prompt(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
   const { smolConfig, promptConfig } = splitConfig(config);
-  const client = getClient(smolConfig);
+  // @ts-ignore
+  const client = getClient(smolConfig, "");
   return client.prompt(promptText, promptConfig);
 }

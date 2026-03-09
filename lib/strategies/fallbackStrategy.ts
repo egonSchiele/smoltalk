@@ -1,7 +1,13 @@
+import { fromJSON } from "../index.js";
 import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
 import { SmolPromptConfig, success } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { FallbackStrategyConfig, Strategy, StrategyJSON } from "./types.js";
+import {
+  FallbackStrategyConfig,
+  FallbackStrategyJSON,
+  Strategy,
+  StrategyJSON,
+} from "./types.js";
 
 export class FallbackStrategy extends BaseStrategy {
   public strategies: Strategy[];
@@ -93,5 +99,10 @@ export class FallbackStrategy extends BaseStrategy {
         config: this.config,
       },
     };
+  }
+
+  static fromJSON(json: FallbackStrategyJSON): FallbackStrategy {
+    const strategies = json.params.strategies.map((s) => fromJSON(s));
+    return new FallbackStrategy(strategies, json.params.config);
   }
 }

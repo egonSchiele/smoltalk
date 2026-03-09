@@ -3,11 +3,10 @@ import { LogLevel } from "egonlog";
 import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
-import { ModelName, Provider } from "./models.js";
-import { Result } from "./types/result.js";
 import { Model, ModelConfig } from "./model.js";
-import { Part } from "@google/genai";
+import { ModelName, Provider } from "./models.js";
 import { Strategy, StrategyJSON } from "./strategies/types.js";
+import { Result } from "./types/result.js";
 
 export type ThinkingBlock = {
   text: string;
@@ -76,6 +75,9 @@ export type PromptConfig = {
   // User-provided AbortSignal for cancellation
   abortSignal?: AbortSignal;
 
+  /* Define behavior if too many tool calls are made. */
+  toolLoopDetection?: ToolLoopDetection;
+
   hooks?: Partial<{
     onStart: (config: PromptConfig) => void;
     onToolCall: (toolCall: ToolCall) => void;
@@ -83,8 +85,6 @@ export type PromptConfig = {
     onError: (error: Error) => void;
     onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
-
-  strategy?: Strategy | StrategyJSON;
 };
 
 export type SmolConfig = {
@@ -94,10 +94,9 @@ export type SmolConfig = {
   // only needed for cloud ollama
   ollamaApiKey?: string;
   ollamaHost?: string;
-  model: ModelName | ModelConfig;
+  model: ModelParam;
   provider?: Provider;
   logLevel?: LogLevel;
-  toolLoopDetection?: ToolLoopDetection;
   statelog?: Partial<{
     host: string;
     projectId: string;
@@ -215,7 +214,7 @@ export interface SmolClient {
   ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
 }
 
-export type SmolPromptConfig = SmolConfig & PromptConfig;
+export type SmolPromptConfig = PromptConfig & SmolConfig;
 
 export type TextPart = {
   type: "text";
@@ -223,3 +222,4 @@ export type TextPart = {
 };
 
 export type ModelLike = ModelName | ModelConfig | Model;
+export type ModelParam = ModelName | ModelConfig | Strategy | StrategyJSON;

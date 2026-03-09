@@ -67,8 +67,7 @@ async function main() {
     googleApiKey: process.env.GEMINI_API_KEY || "",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
     logLevel: "debug",
-    model: "claude-sonnet-4-6",
-    strategy,
+    model: strategy,
     hooks: {
       onStrategyStart: (strategy, config) => {
         console.log(

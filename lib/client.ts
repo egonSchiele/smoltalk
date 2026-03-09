@@ -14,14 +14,9 @@ import { getLogger } from "./logger.js";
 import { SmolOllama } from "./clients/ollama.js";
 import { Model } from "./model.js";
 
-export function getClient(config: SmolConfig) {
-  // Initialize logger singleton with desired log level
-  const logger = getLogger(config.logLevel);
-
-  // Resolve ModelConfig to a concrete model name
-  const modelName: ModelName = new Model(config.model).getResolvedModel();
-
+export function getClient(config: ResolvedSmolConfig) {
   let provider = config.provider;
+  const modelName = config.model;
   if (!provider) {
     const model = getModel(modelName);
     if (model === undefined) {

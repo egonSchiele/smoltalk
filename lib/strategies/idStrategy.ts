@@ -1,14 +1,16 @@
-import { text } from "../functions.js";
+import { getClient } from "../client.js";
+import { splitConfig } from "../functions.js";
 import { Model } from "../model.js";
-import { SmolPromptConfig } from "../types.js";
+import { ModelName } from "../models.js";
+import { ModelLike, PromptResult, Result, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { StrategyJSON } from "./types.js";
+import { IDStrategyJSON, StrategyJSON } from "./types.js";
 
 export class IDStrategy extends BaseStrategy {
   public model: Model;
-  constructor(model: Model) {
+  constructor(model: ModelLike) {
     super();
-    this.model = model;
+    this.model = Model.create(model);
   }
 
   toString() {
@@ -24,10 +26,28 @@ export class IDStrategy extends BaseStrategy {
       ..._config,
       model: this.model.getResolvedModel(),
     };
-    return text({ ...config, stream: false });
+    const { smolConfig, promptConfig } = splitConfig(config);
+    const client = getClient({
+      ...smolConfig,
+      model: this.model.getResolvedModel(),
+    });
+    return client.text(promptConfig);
+  }
+
+  async _textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    const { smolConfig, promptConfig } = splitConfig(config);
+    const client = getClient({
+      ...smolConfig,
+      model: this.model.getResolvedModel(),
+    });
+    return client.textSync(promptConfig);
   }
 
   toJSON(): StrategyJSON {
     return { type: "id", params: { model: this.model.getResolvedModel() } };
+  }
+
+  static fromJSON(json: IDStrategyJSON): IDStrategy {
+    return new IDStrategy(json.params.model as ModelName);
   }
 }

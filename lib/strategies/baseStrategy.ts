@@ -18,7 +18,7 @@ export class BaseStrategy implements Strategy {
       config.hooks.onStrategyStart(this, config);
     }
 
-    return this._text({ ...config, strategy: undefined });
+    return this._text(config);
   }
 
   async textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
@@ -28,7 +28,7 @@ export class BaseStrategy implements Strategy {
 
     this.statelogClient?.debug(`Starting strategy (sync) ${this.toString()}`);
 
-    return this._textSync({ ...config, strategy: undefined });
+    return this._textSync(config);
   }
 
   async textStream(

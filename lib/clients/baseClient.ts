@@ -10,6 +10,7 @@ import { getStatelogClient, StatelogClient } from "../statelogClient.js";
 import {
   PromptConfig,
   PromptResult,
+  ResolvedSmolConfig,
   Result,
   SmolClient,
   SmolConfig,
@@ -21,10 +22,10 @@ import { z } from "zod";
 const DEFAULT_NUM_RETRIES = 2;
 
 export class BaseClient implements SmolClient {
-  protected config: SmolConfig;
+  protected config: ResolvedSmolConfig;
   protected statelogClient?: StatelogClient;
 
-  constructor(config: SmolConfig) {
+  constructor(config: ResolvedSmolConfig) {
     this.config = config || {};
     if (this.config.statelog) {
       this.statelogClient = getStatelogClient(this.config.statelog as any);
@@ -241,7 +242,7 @@ export class BaseClient implements SmolClient {
     continue: boolean;
     newPromptConfig: PromptConfig;
   } {
-    if (!this.config.toolLoopDetection?.enabled) {
+    if (!promptConfig.toolLoopDetection?.enabled) {
       return { continue: true, newPromptConfig: promptConfig };
     }
 
@@ -256,11 +257,11 @@ export class BaseClient implements SmolClient {
 
     for (const [toolName, count] of Object.entries(toolCallCounts)) {
       if (
-        count >= this.config.toolLoopDetection.maxConsecutive &&
-        !(this.config.toolLoopDetection.excludeTools ?? []).includes(toolName)
+        count >= promptConfig.toolLoopDetection.maxConsecutive &&
+        !(promptConfig.toolLoopDetection.excludeTools ?? []).includes(toolName)
       ) {
         const intervention =
-          this.config.toolLoopDetection.intervention || "remove-tool";
+          promptConfig.toolLoopDetection.intervention || "remove-tool";
         const logger = getLogger();
         logger.warn(
           `Tool loop detected for tool "${toolName}" called ${count} times. Intervention: ${intervention}`,

@@ -4,7 +4,7 @@ import { IDStrategy } from "../lib/strategies/idStrategy.js";
 import { FallbackStrategy } from "../lib/strategies/fallbackStrategy.js";
 import { RaceStrategy } from "../lib/strategies/raceStrategy.js";
 import * as strategyIndex from "../lib/strategies/index.js";
-import { Strategy, StrategyJSON } from "../lib/strategies/types.js";
+import { Strategy } from "../lib/strategies/types.js";
 import { Model } from "../lib/model.js";
 import { SmolPromptConfig, PromptResult } from "../lib/types.js";
 import { Result, Success } from "../lib/types/result.js";
@@ -35,13 +35,18 @@ function mockStrategy(result?: Result<PromptResult>, error?: Error): Strategy {
     textStream: vi.fn(async () => {
       throw new Error("not implemented");
     }),
+    toJSON: vi.fn(() => {
+      throw new Error("not implemented");
+    }),
+    toString: vi.fn(() => "MockStrategy"),
+    toShortString: vi.fn(() => "Mock"),
   };
 }
 
 function makeResult(output: string): Success<PromptResult> {
   return {
     success: true,
-    data: {
+    value: {
       output,
       toolCalls: [],
     },
@@ -75,17 +80,11 @@ describe("BaseStrategy", () => {
     );
   });
 
-  it("text() calls _text() with strategy stripped from config", async () => {
+  it("text() calls _text() with the config passed through", async () => {
     const strategy = new BaseStrategy();
     const spy = vi.spyOn(strategy, "_text").mockResolvedValue(makeResult("ok"));
-    const configWithStrategy = {
-      ...dummyConfig,
-      strategy: strategy,
-    };
-    await strategy.text(configWithStrategy);
-    expect(spy).toHaveBeenCalledWith(
-      expect.objectContaining({ strategy: undefined }),
-    );
+    await strategy.text(dummyConfig);
+    expect(spy).toHaveBeenCalledWith(dummyConfig);
   });
 });
 
@@ -528,7 +527,7 @@ describe("JSON serialization", () => {
     it("throws on unknown type", () => {
       expect(() =>
         strategyIndex.fromJSON({ type: "unknown", params: {} } as any),
-      ).toThrow(/Unknown strategy type/);
+      ).toThrow(/Unknown strategy/);
     });
   });
 
@@ -568,22 +567,22 @@ describe("JSON serialization", () => {
     });
   });
 
-  describe("JSON strategy in config", () => {
-    it("string strategy is accepted in config type", () => {
-      // Type-level test: this should compile without errors
+  describe("strategy in model field", () => {
+    it("Strategy instance is accepted in model field", () => {
+      const strategy = strategyIndex.id("gpt-4o");
       const config: SmolPromptConfig = {
         ...dummyConfig,
-        strategy: "gpt-4o" as StrategyJSON,
+        model: strategy,
       };
-      expect(config.strategy).toBe("gpt-4o");
+      expect(config.model).toBe(strategy);
     });
 
-    it("object strategy JSON is accepted in config type", () => {
+    it("StrategyJSON object is accepted in model field", () => {
       const config: SmolPromptConfig = {
         ...dummyConfig,
-        strategy: { type: "id", params: { model: "gpt-4o" } },
+        model: { type: "id", params: { model: "gpt-4o" } },
       };
-      expect(config.strategy).toEqual({
+      expect(config.model).toEqual({
         type: "id",
         params: { model: "gpt-4o" },
       });
