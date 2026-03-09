@@ -11,6 +11,7 @@ import {
   FallbackStrategyJSONSchema,
   IDStrategyJSON,
   IDStrategyJSONSchema,
+  ModelNameAndProviderSchema,
   RaceStrategyJSON,
   RaceStrategyJSONSchema,
   Strategy,
@@ -40,6 +41,8 @@ export function fallback(
 
 export function fromJSON(json: StrategyJSON): Strategy {
   if (IDStrategyJSONSchema.safeParse(json).success) {
+    return IDStrategy.fromJSON(json as IDStrategyJSON);
+  } else if (ModelNameAndProviderSchema.safeParse(json).success) {
     return IDStrategy.fromJSON(json as IDStrategyJSON);
   } else if (RaceStrategyJSONSchema.safeParse(json).success) {
     return RaceStrategy.fromJSON(json as RaceStrategyJSON);

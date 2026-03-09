@@ -1,12 +1,15 @@
-export type Provider =
-  | "local"
-  | "ollama"
-  | "openai"
-  | "openai-responses"
-  | "anthropic"
-  | "google"
-  | "replicate"
-  | "modal";
+import { z } from "zod";
+export const providers = [
+  "local",
+  "ollama",
+  "openai",
+  "anthropic",
+  "google",
+  "replicate",
+  "modal",
+] as const;
+export const ProviderSchema = z.enum(providers);
+export type Provider = z.infer<typeof ProviderSchema>;
 
 export type BaseModel = {
   modelName: string;

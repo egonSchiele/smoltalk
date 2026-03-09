@@ -5,7 +5,11 @@ import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { Model, ModelConfig } from "./model.js";
 import { ModelName, Provider } from "./models.js";
-import { Strategy, StrategyJSON } from "./strategies/types.js";
+import {
+  ModelNameAndProvider,
+  Strategy,
+  StrategyJSON,
+} from "./strategies/types.js";
 import { Result } from "./types/result.js";
 
 export type ThinkingBlock = {
@@ -337,16 +341,6 @@ export type TextPart = {
   type: "text";
   text: string;
 };
-
-export type ModelNameAndProvider = {
-  modelName: ModelName;
-  provider: Provider;
-};
-
-export const ModelNameAndProviderSchema = z.object({
-  modelName: z.string(),
-  provider: z.string(),
-});
 
 export type ModelLike = ModelName | ModelConfig | Model;
 export type ModelParam =

@@ -4,7 +4,12 @@ import { Model } from "../model.js";
 import { ModelName, Provider } from "../models.js";
 import { ModelLike, PromptResult, Result, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { IDStrategyJSON, IDStrategyJSONSchema, StrategyJSON } from "./types.js";
+import {
+  IDStrategyJSON,
+  IDStrategyJSONSchema,
+  ModelNameAndProviderSchema,
+  StrategyJSON,
+} from "./types.js";
 
 export class IDStrategy extends BaseStrategy {
   public model: Model;
@@ -55,7 +60,20 @@ export class IDStrategy extends BaseStrategy {
   }
 
   static fromJSON(json: unknown): IDStrategy {
-    const parsed = IDStrategyJSONSchema.parse(json);
-    return new IDStrategy(parsed.params.model as ModelName, parsed.params.provider);
+    const parsed = IDStrategyJSONSchema.safeParse(json);
+    if (parsed.success) {
+      return new IDStrategy(
+        parsed.data.params.model as ModelName,
+        parsed.data.params.provider,
+      );
+    }
+
+    const parsedNameAndProvider = ModelNameAndProviderSchema.safeParse(json);
+    if (parsedNameAndProvider.success) {
+      const { modelName, provider } = parsedNameAndProvider.data;
+      return new IDStrategy(modelName as ModelName, provider);
+    }
+
+    throw new Error(`Invalid IDStrategy JSON: ${JSON.stringify(json)}`);
   }
 }

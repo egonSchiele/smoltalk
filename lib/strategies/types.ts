@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SmolPromptConfig, Result, PromptResult } from "../types.js";
-import { ModelName } from "../models.js";
+import { ModelName, Provider, ProviderSchema } from "../models.js";
 
 export interface Strategy {
   text(config: SmolPromptConfig): Promise<Result<PromptResult>>;
@@ -31,13 +31,11 @@ export type FallbackStrategyConfig = z.infer<
 >;
 
 export type StrategyJSON =
-  | string
-  | { type: "id"; params: { model: string; provider?: string } }
-  | { type: "race"; params: { strategies: StrategyJSON[] } }
-  | {
-      type: "fallback";
-      params: { primaryStrategy: StrategyJSON; config: FallbackStrategyConfig };
-    };
+  | string // model name
+  | ModelNameAndProvider
+  | IDStrategyJSON
+  | RaceStrategyJSON
+  | FallbackStrategyJSON;
 
 export const IDStrategyJSONSchema = z.object({
   type: z.literal("id"),
@@ -46,30 +44,58 @@ export const IDStrategyJSONSchema = z.object({
 
 export type IDStrategyJSON = z.infer<typeof IDStrategyJSONSchema>;
 
-export const RaceStrategyJSONSchema = z.lazy(() =>
+export const RaceStrategyJSONSchema: z.ZodType<RaceStrategyJSON> = z.lazy(() =>
   z.object({
     type: z.literal("race"),
     params: z.object({ strategies: z.array(StrategyJSONSchema) }),
   }),
 );
 
-export type RaceStrategyJSON = z.infer<typeof RaceStrategyJSONSchema>;
+export type RaceStrategyJSON = {
+  type: "race";
+  params: { strategies: StrategyJSON[] };
+};
 
-export const FallbackStrategyJSONSchema = z.lazy(() =>
-  z.object({
-    type: z.literal("fallback"),
-    params: z.object({
-      primaryStrategy: StrategyJSONSchema,
-      config: FallbackStrategyConfigSchema,
+export const FallbackStrategyJSONSchema: z.ZodType<FallbackStrategyJSON> =
+  z.lazy(() =>
+    z.object({
+      type: z.literal("fallback"),
+      params: z.object({
+        primaryStrategy: StrategyJSONSchema,
+        config: FallbackStrategyConfigSchema,
+      }),
     }),
-  }),
-);
+  );
 
-export type FallbackStrategyJSON = z.infer<typeof FallbackStrategyJSONSchema>;
+export type FallbackStrategyJSON = {
+  type: "fallback";
+  params: {
+    primaryStrategy: StrategyJSON;
+    config: FallbackStrategyConfig;
+  };
+};
+
+export type ModelNameAndProvider = {
+  modelName: string;
+  provider: string;
+};
+
+export const ModelNameAndProviderSchema = z.object({
+  modelName: z.string(),
+  provider: z.string(),
+});
+
+export const ModelNameSchema = z
+  .string()
+  .regex(
+    /^[a-zA-Z0-9._-]+$/,
+    "Model name must only contain letters, numbers, dots, underscores, and hyphens",
+  );
 
 export const StrategyJSONSchema: z.ZodType<StrategyJSON> = z.lazy(() =>
   z.union([
-    z.string(),
+    ModelNameSchema,
+    ModelNameAndProviderSchema,
     IDStrategyJSONSchema,
     RaceStrategyJSONSchema,
     FallbackStrategyJSONSchema,
