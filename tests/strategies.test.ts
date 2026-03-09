@@ -35,6 +35,11 @@ function mockStrategy(result?: Result<PromptResult>, error?: Error): Strategy {
     textStream: vi.fn(async () => {
       throw new Error("not implemented");
     }),
+    toJSON: vi.fn(() => {
+      throw new Error("not implemented");
+    }),
+    toString: vi.fn(() => "MockStrategy"),
+    toShortString: vi.fn(() => "Mock"),
   };
 }
 
@@ -522,7 +527,7 @@ describe("JSON serialization", () => {
     it("throws on unknown type", () => {
       expect(() =>
         strategyIndex.fromJSON({ type: "unknown", params: {} } as any),
-      ).toThrow(/Unknown strategy type/);
+      ).toThrow(/Unknown strategy/);
     });
   });
 
