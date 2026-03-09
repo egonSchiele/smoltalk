@@ -298,7 +298,12 @@ export class BaseClient implements SmolClient {
     return { continue: true, newPromptConfig: promptConfig };
   }
 
-  extractResponse(promptConfig: PromptConfig, rawValue: any, schema: any): any {
+  extractResponse(promptConfig: PromptConfig, rawValue: any, schema: any, depth: number = 0): any {
+    const MAX_DEPTH = 5;
+    if (depth > MAX_DEPTH) {
+      throw new Error("extractResponse exceeded maximum depth");
+    }
+
     // 1. Direct match — try parsing as-is
     const direct = schema.safeParse(rawValue);
 
@@ -321,7 +326,7 @@ export class BaseClient implements SmolClient {
         .replace(/^```json\s*/, "")
         .replace(/```\s*$/, "");
       try {
-        return this.extractResponse(promptConfig, JSON.parse(stripped), schema);
+        return this.extractResponse(promptConfig, JSON.parse(stripped), schema, depth + 1);
       } catch {}
       return rawValue;
     }
@@ -348,7 +353,7 @@ export class BaseClient implements SmolClient {
       }
     }
 
-    // 6. Shallow search — check every value of the object
+    // 6. Shallow search — check every value of the object (own keys only)
     for (const key of Object.keys(rawValue)) {
       const inner = schema.safeParse(rawValue[key]);
       if (inner.success) return inner.data;
@@ -425,10 +430,6 @@ export class BaseClient implements SmolClient {
           logger.warn(
             `Response format validation failed (retries left: ${retries}): `,
             errorMessage,
-            "output:",
-            JSON.stringify(output, null, 2),
-            "responseFormat:",
-            JSON.stringify(promptConfig.responseFormat, null, 2),
           );
           if (err instanceof z.ZodError) {
             logger.warn("Zod error details:", z.prettifyError(err));
@@ -437,11 +438,6 @@ export class BaseClient implements SmolClient {
           this.statelogClient?.debug("Response format validation failed", {
             retriesLeft: retries,
             error: errorMessage,
-          });
-          this.statelogClient?.diff({
-            message: "Response format validation failed",
-            itemA: promptConfig.responseFormat,
-            itemB: output,
           });
 
           const retryMessages = [
