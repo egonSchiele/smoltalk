@@ -23,30 +23,19 @@ export * from "./idStrategy.js";
 export * from "./raceStrategy.js";
 export * from "./types.js";
 
-export function race(..._strategies: (Strategy | ModelLike)[]): Strategy {
-  const strategies = _strategies.map((s) =>
-    s instanceof BaseStrategy
-      ? s
-      : new IDStrategy(Model.create(s as ModelLike)),
-  );
+export function race(...strategies: (Strategy | ModelLike)[]): Strategy {
   return new RaceStrategy(strategies);
 }
 
 export function id(model: ModelLike): Strategy {
-  return new IDStrategy(Model.create(model));
+  return new IDStrategy(model);
 }
 
 export function fallback(
-  _strategies: (Strategy | ModelLike)[],
+  primaryStrategy: Strategy | ModelLike,
   config: FallbackStrategyConfig,
 ): Strategy {
-  const strategies = _strategies.map((s) =>
-    s instanceof BaseStrategy
-      ? s
-      : new IDStrategy(Model.create(s as ModelLike)),
-  );
-
-  return new FallbackStrategy(strategies, config);
+  return new FallbackStrategy(primaryStrategy, config);
 }
 
 export function fromJSON(json: StrategyJSON): Strategy {

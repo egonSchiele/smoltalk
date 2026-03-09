@@ -8,7 +8,7 @@ import {
   textModels,
 } from "./models.js";
 import { SmolError } from "./smolError.js";
-import { ModelLike } from "./types.js";
+import { ModelLike, ModelNameAndProvider } from "./types.js";
 import { round } from "./util.js";
 
 export type Optimization = "speed" | "reasoning" | "cost" | "large-context";
@@ -29,9 +29,9 @@ const WEIGHTS: Record<number, number[]> = {
 };
 
 export class Model {
-  private model: ModelName | ModelConfig;
+  private model: ModelName | ModelConfig | ModelNameAndProvider;
   private resolvedModel: ModelName;
-  constructor(model: ModelName | ModelConfig) {
+  constructor(model: ModelName | ModelConfig | ModelNameAndProvider) {
     this.model = model;
     this.resolvedModel = this.resolveModel();
   }
@@ -43,7 +43,10 @@ export class Model {
   getResolvedModel() {
     return this.resolvedModel;
   }
-  isModelConfig(model: ModelName | ModelConfig): model is ModelConfig {
+
+  isModelConfig(
+    model: ModelName | ModelConfig | ModelNameAndProvider,
+  ): model is ModelConfig {
     return typeof model === "object" && "optimizeFor" in model;
   }
 
@@ -53,7 +56,7 @@ export class Model {
       const model = getModel(modelName);
       if (!model) {
         throw new SmolError(
-          `Model ${modelName} is not recognized. Please specify a known model or a valid ModelConfig.`,
+          `Model ${JSON.stringify(modelName)} is not recognized. Please specify a known model or a valid ModelConfig.`,
         );
       }
       return modelName as ModelName;

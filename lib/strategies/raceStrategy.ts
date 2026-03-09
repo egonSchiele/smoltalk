@@ -1,14 +1,16 @@
 import { getLogger } from "../logger.js";
-import { SmolPromptConfig } from "../types.js";
+import { ModelLike, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { fromJSON } from "./index.js";
+import { fromJSON, IDStrategy } from "./index.js";
 import { RaceStrategyJSON, Strategy, StrategyJSON } from "./types.js";
 
 export class RaceStrategy extends BaseStrategy {
   public strategies: Strategy[];
-  constructor(strategies: Strategy[]) {
+  constructor(strategies: (Strategy | ModelLike)[]) {
     super();
-    this.strategies = strategies;
+    this.strategies = strategies.map((s) =>
+      s instanceof BaseStrategy ? s : new IDStrategy(s as ModelLike),
+    );
   }
 
   toString() {

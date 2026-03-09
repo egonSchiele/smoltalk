@@ -28,29 +28,26 @@ const responseFormat = z.object({
   result: z.number(),
 });
 
-const model1 = new Model("gemini-2.5-flash");
-const model2 = new Model("gemini-2.5-flash-lite");
-
-// const strategy = race("gemini-2.5-flash", "gemini-2.5-flash-lite");
 const strategy: StrategyJSON = {
   type: "race",
   params: {
     strategies: [
+      "gemini-2.5-flash-lite",
       {
         type: "fallback",
         params: {
-          strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+          primaryStrategy: "gemini-3.1-flash-lite-preview",
           config: {
-            fallbackOn: ["error"],
+            error: ["gemini-3-flash-preview"],
           },
         },
       },
       {
         type: "fallback",
         params: {
-          strategies: ["gpt-4o-mini", "gpt-4o"],
+          primaryStrategy: "gpt-4o-mini",
           config: {
-            fallbackOn: ["error"],
+            error: ["gpt-4o"],
           },
         },
       },

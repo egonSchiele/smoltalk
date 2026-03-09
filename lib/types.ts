@@ -1,6 +1,6 @@
 export * from "./types/result.js";
 import { LogLevel } from "egonlog";
-import { ZodType } from "zod";
+import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { Model, ModelConfig } from "./model.js";
@@ -153,9 +153,9 @@ export type SmolConfig = {
     model: {
       type: "fallback",
       params: {
-        strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+        primaryStrategy: "gemini-2.5-flash-lite",
         config: {
-          fallbackOn: ["error"],
+          error: ["gemini-2.5-pro"],
         },
       },
     }
@@ -167,9 +167,9 @@ export type SmolConfig = {
     const geminiLiteWithFallback = {
       type: "fallback",
       params: {
-        strategies: ["gemini-2.5-flash-lite", "gemini-2.5-pro"],
+        primaryStrategy: "gemini-2.5-flash-lite",
         config: {
-          fallbackOn: ["error"],
+          error: ["gemini-2.5-pro"],
         },
       },
     };
@@ -313,5 +313,20 @@ export type TextPart = {
   text: string;
 };
 
+export type ModelNameAndProvider = {
+  modelName: ModelName;
+  provider: Provider;
+};
+
+export const ModelNameAndProviderSchema = z.object({
+  modelName: z.string(),
+  provider: z.string(),
+});
+
 export type ModelLike = ModelName | ModelConfig | Model;
-export type ModelParam = ModelName | ModelConfig | Strategy | StrategyJSON;
+export type ModelParam =
+  | ModelName
+  | ModelNameAndProvider
+  | ModelConfig
+  | Strategy
+  | StrategyJSON;

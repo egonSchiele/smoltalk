@@ -21,9 +21,9 @@ export const FallbackReasonSchema = z.enum([
   "structuredOutputFailure",
 ]);
 
-export const FallbackStrategyConfigSchema = z.object({
-  fallbackOn: z.array(FallbackReasonSchema),
-});
+export const FallbackStrategyConfigSchema = z.lazy(() =>
+  z.partialRecord(FallbackReasonSchema, z.array(StrategyJSONSchema)),
+);
 
 export type FallbackReason = z.infer<typeof FallbackReasonSchema>;
 export type FallbackStrategyConfig = z.infer<
@@ -32,16 +32,16 @@ export type FallbackStrategyConfig = z.infer<
 
 export type StrategyJSON =
   | string
-  | { type: "id"; params: { model: string } }
+  | { type: "id"; params: { model: string; provider?: string } }
   | { type: "race"; params: { strategies: StrategyJSON[] } }
   | {
       type: "fallback";
-      params: { strategies: StrategyJSON[]; config: FallbackStrategyConfig };
+      params: { primaryStrategy: StrategyJSON; config: FallbackStrategyConfig };
     };
 
 export const IDStrategyJSONSchema = z.object({
   type: z.literal("id"),
-  params: z.object({ model: z.string() }),
+  params: z.object({ model: z.string(), provider: z.string().optional() }),
 });
 
 export type IDStrategyJSON = z.infer<typeof IDStrategyJSONSchema>;
@@ -59,7 +59,7 @@ export const FallbackStrategyJSONSchema = z.lazy(() =>
   z.object({
     type: z.literal("fallback"),
     params: z.object({
-      strategies: z.array(StrategyJSONSchema),
+      primaryStrategy: StrategyJSONSchema,
       config: FallbackStrategyConfigSchema,
     }),
   }),

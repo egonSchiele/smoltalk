@@ -1,6 +1,12 @@
-import { fromJSON } from "../index.js";
+import { fromJSON, IDStrategy } from "../index.js";
 import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
-import { SmolPromptConfig, success } from "../types.js";
+import {
+  ModelLike,
+  PromptResult,
+  Result,
+  SmolPromptConfig,
+  success,
+} from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import {
   FallbackStrategyConfig,
@@ -10,99 +16,124 @@ import {
 } from "./types.js";
 
 export class FallbackStrategy extends BaseStrategy {
-  public strategies: Strategy[];
+  public primaryStrategy: Strategy;
   public config: FallbackStrategyConfig;
-  constructor(strategies: Strategy[], config: FallbackStrategyConfig) {
+  constructor(
+    primaryStrategy: Strategy | ModelLike,
+    config: FallbackStrategyConfig,
+  ) {
     super();
-    this.strategies = strategies;
+    this.primaryStrategy =
+      primaryStrategy instanceof BaseStrategy
+        ? primaryStrategy
+        : new IDStrategy(primaryStrategy as ModelLike);
     this.config = config;
   }
 
   toString() {
-    return `FallbackStrategy([${this.strategies.map((s) => s.toString()).join(", ")}], config: ${JSON.stringify(this.config)})`;
+    return `FallbackStrategy([${this.primaryStrategy.toString()}], config: ${JSON.stringify(this.config)})`;
   }
 
   toShortString() {
-    return `fallback([${this.strategies.map((s) => s.toShortString?.() || s.toString()).join(", ")}])`;
+    return `fallback([${this.primaryStrategy.toString()}])`;
   }
 
-  async _text(config: SmolPromptConfig) {
-    for (let i = 0; i < this.strategies.length; i++) {
-      const strategy = this.strategies[i];
-      try {
-        const result = await strategy.text(config);
-        return result;
-      } catch (error) {
-        // If the abort signal was triggered (e.g. by a race strategy winner
-        // or external cancellation), stop without trying further fallbacks.
-        if (config.abortSignal?.aborted) {
-          return success({ output: null, toolCalls: [] });
-        }
+  async _text(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    return this._textWithFallbacks(config, this.primaryStrategy, this.config);
+  }
+  async _textWithFallbacks(
+    config: SmolPromptConfig,
+    strategy: Strategy,
+    fallbackStrategies: FallbackStrategyConfig,
+  ): Promise<Result<PromptResult>> {
+    try {
+      const result = await strategy.text(config);
+      return result;
+    } catch (error) {
+      // If the abort signal was triggered (e.g. by a race strategy winner
+      // or external cancellation), stop without trying further fallbacks.
+      if (config.abortSignal?.aborted) {
+        return success({ output: null, toolCalls: [] });
+      }
 
-        if (error instanceof SmolTimeoutError) {
-          if (this.config.fallbackOn.includes("timeout")) {
-            this.statelogClient?.debug(
-              "FallbackStrategy: falling back due to timeout",
-              {
-                failedStrategy: strategy.toString(),
-                strategyIndex: i,
-              },
-            );
-            continue;
-          }
-        } else if (error instanceof SmolStructuredOutputError) {
-          if (this.config.fallbackOn.includes("structuredOutputFailure")) {
-            this.statelogClient?.debug(
-              "FallbackStrategy: falling back due to structured output failure",
-              {
-                failedStrategy: strategy.toString(),
-                strategyIndex: i,
-              },
-            );
-            continue;
-          }
-        }
-        if (this.config.fallbackOn.includes("error")) {
+      if (error instanceof SmolTimeoutError) {
+        if (
+          fallbackStrategies.timeout &&
+          fallbackStrategies.timeout.length > 0
+        ) {
           this.statelogClient?.debug(
-            "FallbackStrategy: falling back due to error",
+            "FallbackStrategy: falling back due to timeout",
             {
               failedStrategy: strategy.toString(),
-              strategyIndex: i,
-              error: (error as Error).message,
             },
           );
-          continue;
+          return this._textWithFallbacks(
+            config,
+            fromJSON(fallbackStrategies.timeout[0]) as Strategy,
+            // from here on, only consider the remaining fallbacks for this specific reason
+            { timeout: fallbackStrategies.timeout.slice(1) },
+          );
         }
-
-        this.statelogClient?.debug("FallbackStrategy error", {
-          failedStrategy: strategy.toString(),
-          strategyIndex: i,
-          strategies: this.strategies.map((s) => s.toString()),
-          error: (error as Error).message,
-        });
-
-        throw error;
+      } else if (error instanceof SmolStructuredOutputError) {
+        if (
+          fallbackStrategies.structuredOutputFailure &&
+          fallbackStrategies.structuredOutputFailure.length > 0
+        ) {
+          this.statelogClient?.debug(
+            "FallbackStrategy: falling back due to structured output failure",
+            {
+              failedStrategy: strategy.toString(),
+            },
+          );
+          return this._textWithFallbacks(
+            config,
+            fromJSON(fallbackStrategies.structuredOutputFailure[0]) as Strategy,
+            // from here on, only consider the remaining fallbacks for this specific reason
+            {
+              structuredOutputFailure:
+                fallbackStrategies.structuredOutputFailure.slice(1),
+            },
+          );
+        }
       }
-    }
-    this.statelogClient?.debug("All strategies in FallbackStrategy failed", {
-      strategies: this.strategies.map((s) => s.toString()),
-    });
+      if (fallbackStrategies.error && fallbackStrategies.error.length > 0) {
+        this.statelogClient?.debug(
+          "FallbackStrategy: falling back due to error",
+          {
+            failedStrategy: strategy.toString(),
+            error: (error as Error).message,
+          },
+        );
+        return this._textWithFallbacks(
+          config,
+          fromJSON(fallbackStrategies.error[0]) as Strategy,
+          // from here on, only consider the remaining fallbacks for this specific reason
+          { error: fallbackStrategies.error.slice(1) },
+        );
+      }
 
-    throw new Error(`All fallback strategies failed.`);
+      this.statelogClient?.debug("All strategies in FallbackStrategy failed", {
+        fallbackStrategy: this.toJSON(),
+        strategy,
+        fallbackStrategies,
+      });
+
+      throw error;
+    }
   }
 
   toJSON(): StrategyJSON {
     return {
       type: "fallback",
       params: {
-        strategies: this.strategies.map((s) => s.toJSON()),
+        primaryStrategy: this.primaryStrategy.toJSON(),
         config: this.config,
       },
     };
   }
 
   static fromJSON(json: FallbackStrategyJSON): FallbackStrategy {
-    const strategies = json.params.strategies.map((s) => fromJSON(s));
-    return new FallbackStrategy(strategies, json.params.config);
+    const primaryStrategy = fromJSON(json.params.primaryStrategy) as Strategy;
+    return new FallbackStrategy(primaryStrategy, json.params.config);
   }
 }

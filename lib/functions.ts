@@ -15,12 +15,18 @@ import {
   PromptConfig,
   ModelLike,
   ModelParam,
+  ModelNameAndProviderSchema,
 } from "./types.js";
 import { Result } from "./types/result.js";
 import { ModelName } from "./models.js";
 
 function getStrategy(model: ModelParam): Strategy {
   if (model instanceof BaseStrategy) return model;
+  const nameAndProvider = ModelNameAndProviderSchema.safeParse(model);
+  if (nameAndProvider.success) {
+    const { modelName, provider } = nameAndProvider.data;
+    return fromJSON({ type: "id", params: { model: modelName } }) as Strategy;
+  }
   return fromJSON(model as StrategyJSON);
 }
 
