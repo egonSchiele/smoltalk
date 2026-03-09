@@ -4,7 +4,7 @@ import { Model } from "../model.js";
 import { ModelName, Provider } from "../models.js";
 import { ModelLike, PromptResult, Result, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
-import { IDStrategyJSON, StrategyJSON } from "./types.js";
+import { IDStrategyJSON, IDStrategyJSONSchema, StrategyJSON } from "./types.js";
 
 export class IDStrategy extends BaseStrategy {
   public model: Model;
@@ -54,7 +54,8 @@ export class IDStrategy extends BaseStrategy {
     };
   }
 
-  static fromJSON(json: IDStrategyJSON): IDStrategy {
-    return new IDStrategy(json.params.model as ModelName, json.params.provider);
+  static fromJSON(json: unknown): IDStrategy {
+    const parsed = IDStrategyJSONSchema.parse(json);
+    return new IDStrategy(parsed.params.model as ModelName, parsed.params.provider);
   }
 }

@@ -49,11 +49,11 @@ export class StatelogClient {
     if (this.debugMode) {
       console.log(
         `Statelog client initialized with host: ${host} and traceId: ${this.traceId}`,
-        { config },
+        { ...config, apiKey: "unset or [REDACTED]" },
       );
     }
 
-    if (!this.apiKey) {
+    if (!this.apiKey || this.apiKey.trim() === "") {
       throw new Error("API key is required for StatelogClient");
     }
   }
@@ -271,7 +271,7 @@ export class StatelogClient {
       const fullUrl = new URL(`/api/projects/${projectId}/upload`, this.host);
       const url = fullUrl.toString();
       const postBody = JSON.stringify({ entrypoint, files });
-      console.log({ entrypoint, files }, postBody);
+      if (this.debugMode) console.log({ entrypoint, fileCount: files.length });
       const result = await fetch(url, {
         method: "POST",
         headers: {
@@ -323,7 +323,7 @@ export class StatelogClient {
         entrypoint,
         args,
       });
-      console.log({ entrypoint, args }, body);
+      if (this.debugMode) console.log({ entrypoint, argCount: args?.length });
       const result = await fetch(url, {
         method: "POST",
         headers: {

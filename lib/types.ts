@@ -13,6 +13,16 @@ export type ThinkingBlock = {
   signature: string;
 };
 
+export const TextPartSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+export const ThinkingBlockSchema = z.object({
+  text: z.string(),
+  signature: z.string(),
+});
+
 export type Budget = {
   timeBudgetMs?: number;
   tokenBudget?: number;
@@ -224,6 +234,13 @@ export type TokenUsage = {
   totalTokens?: number;
 };
 
+export const TokenUsageSchema = z.object({
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  cachedInputTokens: z.number().optional(),
+  totalTokens: z.number().optional(),
+});
+
 export type CostEstimate = {
   inputCost: number;
   outputCost: number;
@@ -231,6 +248,14 @@ export type CostEstimate = {
   totalCost: number;
   currency: string;
 };
+
+export const CostEstimateSchema = z.object({
+  inputCost: z.number(),
+  outputCost: z.number(),
+  cachedInputCost: z.number().optional(),
+  totalCost: z.number(),
+  currency: z.string(),
+});
 
 export function addTokenUsage(_a?: TokenUsage, _b?: TokenUsage): TokenUsage {
   let a = _a;

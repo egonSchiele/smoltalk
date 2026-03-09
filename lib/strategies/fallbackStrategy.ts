@@ -12,6 +12,7 @@ import { BaseStrategy } from "./baseStrategy.js";
 import {
   FallbackStrategyConfig,
   FallbackStrategyJSON,
+  FallbackStrategyJSONSchema,
   Strategy,
   StrategyJSON,
 } from "./types.js";
@@ -133,8 +134,9 @@ export class FallbackStrategy extends BaseStrategy {
     };
   }
 
-  static fromJSON(json: FallbackStrategyJSON): FallbackStrategy {
-    const primaryStrategy = fromJSON(json.params.primaryStrategy) as Strategy;
-    return new FallbackStrategy(primaryStrategy, json.params.config);
+  static fromJSON(json: unknown): FallbackStrategy {
+    const parsed = FallbackStrategyJSONSchema.parse(json);
+    const primaryStrategy = fromJSON(parsed.params.primaryStrategy) as Strategy;
+    return new FallbackStrategy(primaryStrategy, parsed.params.config);
   }
 }
