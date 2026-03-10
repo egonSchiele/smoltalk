@@ -34,9 +34,17 @@ export function id(model: ModelLike): Strategy {
 
 export function fallback(
   primaryStrategy: ModelParam,
-  config: FallbackStrategyConfig,
+  config: FallbackStrategyConfig | string | string[],
 ): Strategy {
-  return new FallbackStrategy(primaryStrategy, config);
+  let resolvedConfig: FallbackStrategyConfig;
+  if (typeof config === "string") {
+    resolvedConfig = { error: [config] };
+  } else if (Array.isArray(config)) {
+    resolvedConfig = { error: config };
+  } else {
+    resolvedConfig = config;
+  }
+  return new FallbackStrategy(primaryStrategy, resolvedConfig);
 }
 
 export function fromJSON(json: StrategyJSON): Strategy {

@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { IDStrategy } from "./idStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
-import { fromJSON } from "./index.js";
+import { fallback, fromJSON } from "./index.js";
 
 function roundTrip(strategy: { toJSON(): any }) {
   const json1 = strategy.toJSON();
@@ -68,6 +68,28 @@ describe("Strategy toJSON/fromJSON round-trip", () => {
       new IDStrategy("claude-sonnet-4-6"),
     ]);
     roundTrip(strategy);
+  });
+
+  it("fallback() with string shorthand sets error fallback", () => {
+    const strategy = fallback("gpt-4o", "claude-sonnet-4-6");
+    expect(strategy).toBeInstanceOf(FallbackStrategy);
+    const fs = strategy as FallbackStrategy;
+    expect(fs.config).toEqual({ error: ["claude-sonnet-4-6"] });
+  });
+
+  it("fallback() with array shorthand sets error fallback list", () => {
+    const strategy = fallback("gpt-4o", ["claude-sonnet-4-6", "gemini-2.5-flash"]);
+    expect(strategy).toBeInstanceOf(FallbackStrategy);
+    const fs = strategy as FallbackStrategy;
+    expect(fs.config).toEqual({ error: ["claude-sonnet-4-6", "gemini-2.5-flash"] });
+  });
+
+  it("fallback() with config object passes through unchanged", () => {
+    const config = { timeout: [{ type: "id" as const, params: { model: "gpt-4o-mini" } }] };
+    const strategy = fallback("gpt-4o", config);
+    expect(strategy).toBeInstanceOf(FallbackStrategy);
+    const fs = strategy as FallbackStrategy;
+    expect(fs.config).toEqual(config);
   });
 
   it("deeply nested strategies round-trip correctly", () => {
