@@ -169,6 +169,8 @@ export class Model {
         return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
       case "large-context":
         return m.maxInputTokens;
+      default:
+        throw new SmolError(`Unknown optimization: ${optimization}`);
     }
   }
 

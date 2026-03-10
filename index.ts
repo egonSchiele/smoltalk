@@ -1,4 +1,3 @@
-import { color } from "termcolors";
 import { z } from "zod";
 import { Message, userMessage } from "./lib/classes/message/index.js";
 import { text } from "./lib/functions.js";
@@ -86,15 +85,13 @@ async function main() {
     hooks: {
       onStrategyStart: (strategy, config) => {
         console.log(
-          color.blue(
-            `Starting strategy ${strategy} with model ${config.model} and provider ${config.provider}`,
-          ),
+          `Starting strategy ${strategy} with model ${config.model} and provider ${config.provider}`,
         );
       },
     },
     // provider: "openai-responses",
   });
-  console.log(color.green("--------------- Response ---------------"));
+  console.log("--------------- Response ---------------");
   console.log(resp);
 
   /*   for await (const chunk of resp) {

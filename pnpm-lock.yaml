@@ -36,9 +36,6 @@ importers:
       prettier:
         specifier: ^3.7.4
         version: 3.7.4
-      termcolors:
-        specifier: github:egonSchiele/termcolors
-        version: https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f
       typedoc:
         specifier: ^0.28.15
         version: 0.28.15(typescript@5.9.3)
