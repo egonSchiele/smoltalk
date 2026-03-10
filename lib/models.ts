@@ -14,7 +14,7 @@ export type Provider = z.infer<typeof ProviderSchema>;
 
 export type BaseModel = {
   modelName: string;
-  provider: Provider;
+  provider: string;
   description?: string;
   // costs per 1M tokens, in dollars
   inputTokenCost?: number;
@@ -37,7 +37,6 @@ export type ImageModel = BaseModel & {
 
 export type TextModel = BaseModel & {
   type: "text";
-  modelName: string;
   maxInputTokens: number;
   maxOutputTokens: number;
   outputTokensPerSecond?: number;
@@ -823,8 +822,21 @@ export type EmbeddingsModelName =
   (typeof embeddingsModels)[number]["modelName"];
 export type ModelName = TextModelName | ImageModelName | SpeechToTextModelName;
 
+export const registeredTextModels: TextModel[] = [];
+
+export function registerTextModel(
+  model: Omit<TextModel, "type"> & { type?: "text" },
+) {
+  registeredTextModels.push({ ...model, type: "text" });
+}
+
 export function getModel(modelName: ModelName) {
-  const allModels = [...textModels, ...imageModels, ...speechToTextModels];
+  const allModels = [
+    ...textModels,
+    ...imageModels,
+    ...speechToTextModels,
+    ...registeredTextModels,
+  ];
   return allModels.find((model) => model.modelName === modelName);
 }
 

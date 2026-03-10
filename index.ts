@@ -12,6 +12,7 @@ import {
 } from "./lib/types.js";
 import { BaseClient } from "./lib/clients/baseClient.js";
 import { registerProvider } from "./lib/client.js";
+import { registerTextModel } from "./lib/models.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -37,6 +38,13 @@ class ConsoleLogger extends BaseClient {
 }
 
 registerProvider("console-logger", ConsoleLogger);
+
+registerTextModel({
+  modelName: "foo",
+  provider: "console-logger",
+  maxInputTokens: 1000,
+  maxOutputTokens: 1000,
+});
 
 const strategy: StrategyJSON = {
   type: "race",
@@ -74,10 +82,7 @@ async function main() {
     googleApiKey: process.env.GEMINI_API_KEY || "",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
     logLevel: "debug",
-    model: race("gemini-2.5-flash-lite", {
-      model: "foo",
-      provider: "console-logger",
-    }),
+    model: race("gemini-2.5-flash-lite", "foo"),
     hooks: {
       onStrategyStart: (strategy, config) => {
         console.log(

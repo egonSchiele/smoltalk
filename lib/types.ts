@@ -4,7 +4,7 @@ import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { Model } from "./model.js";
-import { ModelName, Provider } from "./models.js";
+import { ModelName } from "./models.js";
 import {
   ModelConfig,
   ModelNameAndProvider,
@@ -198,7 +198,7 @@ export type SmolConfig = {
   ```
     */
   model: ModelParam;
-  provider?: Provider;
+  provider?: string;
   logLevel?: LogLevel;
   statelog?: Partial<{
     host: string;

@@ -6,6 +6,7 @@ import {
   TextModel,
   TextModelName,
   textModels,
+  registeredTextModels,
 } from "./models.js";
 import { SmolError } from "./smolError.js";
 import {
@@ -67,7 +68,9 @@ export class Model {
     return undefined;
   }
 
-  resolveModel(models: readonly TextModel[] = textModels): ModelName {
+  resolveModel(
+    models: readonly TextModel[] = [...registeredTextModels, ...textModels],
+  ): ModelName {
     if (ModelNameSchema.safeParse(this.model).success) {
       return this.model as ModelName;
     }
