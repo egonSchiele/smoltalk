@@ -3,9 +3,10 @@ import { LogLevel } from "egonlog";
 import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
-import { Model, ModelConfig } from "./model.js";
+import { Model } from "./model.js";
 import { ModelName, Provider } from "./models.js";
 import {
+  ModelConfig,
   ModelNameAndProvider,
   Strategy,
   StrategyJSON,
@@ -309,6 +310,24 @@ export type PromptResult = {
   model?: ModelName | ModelConfig;
 };
 
+export function promptResult({
+  output,
+  toolCalls,
+  thinkingBlocks,
+  usage,
+  cost,
+  model,
+}: Partial<PromptResult>): PromptResult {
+  return {
+    output: output || null,
+    toolCalls: toolCalls || [],
+    thinkingBlocks: thinkingBlocks,
+    usage,
+    cost,
+    model,
+  };
+}
+
 export type StreamChunk =
   | { type: "text"; text: string }
   | { type: "thinking"; text: string; signature?: string }
@@ -329,10 +348,6 @@ export interface SmolClient {
 
   // Override this function to provide streaming text generation implementation
   _textStream(config: PromptConfig): AsyncGenerator<StreamChunk>;
-  prompt(
-    text: string,
-    config?: PromptConfig,
-  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
 }
 
 export type SmolPromptConfig = PromptConfig & SmolConfig;
@@ -342,10 +357,10 @@ export type TextPart = {
   text: string;
 };
 
-export type ModelLike = ModelName | ModelConfig | Model;
+export type ModelLike = ModelName | ModelConfig | Model | ModelNameAndProvider;
 export type ModelParam =
   | ModelName
-  | ModelNameAndProvider
   | ModelConfig
+  | ModelNameAndProvider
   | Strategy
   | StrategyJSON;

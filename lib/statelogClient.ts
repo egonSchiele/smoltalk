@@ -1,8 +1,7 @@
 import { nanoid } from "nanoid";
-import { PromptResult } from "./types.js";
+import { ModelLike, PromptResult } from "./types.js";
 import { failure, mergeResults, Result, success } from "./types/result.js";
 import { ModelName } from "./models.js";
-import { ModelConfig } from "./model.js";
 
 export type AgencyFile = {
   name: string;
@@ -191,7 +190,7 @@ export class StatelogClient {
   }: {
     messages: any[];
     completion: any;
-    model?: ModelName | ModelConfig | string;
+    model?: ModelLike;
     timeTaken?: number;
     tools?: {
       name: string;
@@ -221,7 +220,7 @@ export class StatelogClient {
     toolName: string;
     args: any;
     output: any;
-    model?: ModelName | ModelConfig;
+    model?: ModelLike;
     timeTaken?: number;
   }): Promise<void> {
     await this.post({

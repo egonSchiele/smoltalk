@@ -13,23 +13,17 @@ import {
 
 export class IDStrategy extends BaseStrategy {
   public model: Model;
-  public provider: string | undefined;
   constructor(model: ModelLike, provider?: string) {
     super();
-    this.model = Model.create(model);
-    this.provider = provider;
+    this.model = Model.create(model, provider as Provider | undefined);
   }
 
   toString() {
-    const params = [`model: ${this.model.getResolvedModel()}`];
-    if (this.provider) params.push(`provider: ${this.provider}`);
-    return `IDStrategy(${params.join(", ")})`;
+    return `IDStrategy(${this.model.toString()})`;
   }
 
   toShortString() {
-    const params = [`model: ${this.model.getResolvedModel()}`];
-    if (this.provider) params.push(`provider: ${this.provider}`);
-    return `id(${params.join(", ")})`;
+    return `id(${this.model.toString()})`;
   }
 
   async _text(config: SmolPromptConfig) {
@@ -39,7 +33,7 @@ export class IDStrategy extends BaseStrategy {
   async _textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
     const configOverrides = {
       model: this.model.getResolvedModel(),
-      provider: config.provider || (this.provider as Provider | undefined),
+      provider: this.model.getProvider(),
     };
     const { smolConfig, promptConfig } = splitConfig({
       ...config,
@@ -52,10 +46,15 @@ export class IDStrategy extends BaseStrategy {
     return client.textSync(promptConfig);
   }
 
+  // todo: this toJSON isn't fully accurate as it resolves the model,
+  // so strategy vs strategy.fromJSON(strategy.toJSON()) won't be the same
   toJSON(): StrategyJSON {
     return {
       type: "id",
-      params: { model: this.model.getResolvedModel(), provider: this.provider },
+      params: {
+        model: this.model.getResolvedModel(),
+        provider: this.model.getProvider(),
+      },
     };
   }
 
@@ -70,8 +69,8 @@ export class IDStrategy extends BaseStrategy {
 
     const parsedNameAndProvider = ModelNameAndProviderSchema.safeParse(json);
     if (parsedNameAndProvider.success) {
-      const { modelName, provider } = parsedNameAndProvider.data;
-      return new IDStrategy(modelName as ModelName, provider);
+      const { model, provider } = parsedNameAndProvider.data;
+      return new IDStrategy(model as ModelName, provider);
     }
 
     throw new Error(`Invalid IDStrategy JSON: ${JSON.stringify(json)}`);

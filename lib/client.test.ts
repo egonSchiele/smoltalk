@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { getClient } from "./client.js";
+import { getClient, registerProvider } from "./client.js";
+import { BaseClient } from "./clients/baseClient.js";
+import { PromptConfig, PromptResult, promptResult, success } from "./types.js";
+import { Result } from "./types/result.js";
 
 describe("getClient", () => {
   it("throws on unrecognized model name", () => {
@@ -60,6 +63,32 @@ describe("getClient", () => {
     const client = getClient({
       model: "deepseek-r1:8b",
     });
+    expect(client).toBeDefined();
+  });
+});
+
+describe("registerProvider", () => {
+  class EchoClient extends BaseClient {
+    async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+      return success(promptResult({ output: "echo" }));
+    }
+  }
+
+  it("allows registering a custom provider class", () => {
+    registerProvider("echo", EchoClient);
+    const client = getClient({ model: "any-model", provider: "echo" as any });
+    expect(client).toBeInstanceOf(EchoClient);
+  });
+
+  it("throws for unregistered provider", () => {
+    expect(() =>
+      getClient({ model: "any-model", provider: "not-registered" as any }),
+    ).toThrow(/not supported/);
+  });
+
+  it("registered provider is used when model specifies it", () => {
+    registerProvider("echo2", EchoClient);
+    const client = getClient({ model: "my-model", provider: "echo2" as any });
     expect(client).toBeDefined();
   });
 });

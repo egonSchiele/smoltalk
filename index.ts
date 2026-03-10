@@ -1,15 +1,17 @@
 import { color } from "termcolors";
 import { z } from "zod";
-import {
-  assistantMessage,
-  Message,
-  messageFromJSON,
-  toolMessage,
-  userMessage,
-} from "./lib/classes/message/index.js";
+import { Message, userMessage } from "./lib/classes/message/index.js";
 import { text } from "./lib/functions.js";
-import { Model } from "./lib/model.js";
-import { fallback, id, race, StrategyJSON } from "./lib/strategies/index.js";
+import { race, StrategyJSON } from "./lib/strategies/index.js";
+import {
+  PromptConfig,
+  promptResult,
+  PromptResult,
+  Result,
+  success,
+} from "./lib/types.js";
+import { BaseClient } from "./lib/clients/baseClient.js";
+import { registerProvider } from "./lib/client.js";
 
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
@@ -27,6 +29,14 @@ const addTool = {
 const responseFormat = z.object({
   result: z.number(),
 });
+
+class ConsoleLogger extends BaseClient {
+  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+    return success(promptResult({ output: JSON.stringify(config.messages) }));
+  }
+}
+
+registerProvider("console-logger", ConsoleLogger);
 
 const strategy: StrategyJSON = {
   type: "race",
@@ -64,7 +74,10 @@ async function main() {
     googleApiKey: process.env.GEMINI_API_KEY || "",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
     logLevel: "debug",
-    model: strategy,
+    model: race("gemini-2.5-flash-lite", {
+      model: "foo",
+      provider: "console-logger",
+    }),
     hooks: {
       onStrategyStart: (strategy, config) => {
         console.log(

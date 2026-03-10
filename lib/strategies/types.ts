@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { SmolPromptConfig, Result, PromptResult } from "../types.js";
-import { ModelName, Provider, ProviderSchema } from "../models.js";
+import { ModelName, ProviderSchema } from "../models.js";
 
 export interface Strategy {
   text(config: SmolPromptConfig): Promise<Result<PromptResult>>;
@@ -76,21 +76,42 @@ export type FallbackStrategyJSON = {
 };
 
 export type ModelNameAndProvider = {
-  modelName: string;
+  model: string;
   provider: string;
 };
 
 export const ModelNameAndProviderSchema = z.object({
-  modelName: z.string(),
+  model: z.string(),
   provider: z.string(),
 });
 
 export const ModelNameSchema = z
   .string()
   .regex(
-    /^[a-zA-Z0-9._-]+$/,
-    "Model name must only contain letters, numbers, dots, underscores, and hyphens",
+    /^[a-zA-Z0-9._:-]+$/,
+    "Model name must only contain letters, numbers, dots, underscores, hyphens, and colons",
   );
+
+export const OptimizationSchema = z.enum([
+  "speed",
+  "reasoning",
+  "cost",
+  "large-context",
+]);
+
+export type Optimization = z.infer<typeof OptimizationSchema>;
+
+export const ModelConfigSchema = z.object({
+  optimizeFor: z.array(OptimizationSchema),
+  providers: z.array(ProviderSchema),
+  limit: z
+    .object({
+      cost: z.number().optional(),
+    })
+    .optional(),
+});
+
+export type ModelConfig = z.infer<typeof ModelConfigSchema>;
 
 export const StrategyJSONSchema: z.ZodType<StrategyJSON> = z.lazy(() =>
   z.union([

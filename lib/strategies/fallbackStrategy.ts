@@ -1,17 +1,17 @@
-import { IDStrategy } from "./idStrategy.js";
-import { fromJSON } from "./index.js";
 import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
 import {
   ModelLike,
+  ModelParam,
   PromptResult,
   Result,
   SmolPromptConfig,
   success,
 } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
+import { IDStrategy } from "./idStrategy.js";
+import { fromJSON } from "./index.js";
 import {
   FallbackStrategyConfig,
-  FallbackStrategyJSON,
   FallbackStrategyJSONSchema,
   Strategy,
   StrategyJSON,
@@ -20,10 +20,7 @@ import {
 export class FallbackStrategy extends BaseStrategy {
   public primaryStrategy: Strategy;
   public config: FallbackStrategyConfig;
-  constructor(
-    primaryStrategy: Strategy | ModelLike,
-    config: FallbackStrategyConfig,
-  ) {
+  constructor(primaryStrategy: ModelParam, config: FallbackStrategyConfig) {
     super();
     this.primaryStrategy =
       primaryStrategy instanceof BaseStrategy

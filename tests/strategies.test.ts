@@ -353,6 +353,23 @@ describe("factory functions", () => {
     });
   });
 
+  describe("id() with ModelNameAndProvider", () => {
+    it("creates an IDStrategy from a ModelNameAndProvider object", () => {
+      const strategy = strategyIndex.id({ model: "my-model", provider: "ollama" });
+      expect(strategy).toBeInstanceOf(IDStrategy);
+      expect((strategy as IDStrategy).model.getResolvedModel()).toBe("my-model");
+      expect((strategy as IDStrategy).model.getProvider()).toBe("ollama");
+    });
+
+    it("serializes ModelNameAndProvider to id JSON with provider", () => {
+      const strategy = strategyIndex.id({ model: "my-model", provider: "ollama" });
+      expect(strategy.toJSON()).toEqual({
+        type: "id",
+        params: { model: "my-model", provider: "ollama" },
+      });
+    });
+  });
+
   describe("race()", () => {
     it("creates a RaceStrategy from model name strings", () => {
       const strategy = strategyIndex.race("gpt-4o", "gpt-4o-mini");
@@ -419,7 +436,7 @@ describe("JSON serialization", () => {
       const strategy = strategyIndex.id("gpt-4o");
       expect(strategy.toJSON()).toEqual({
         type: "id",
-        params: { model: "gpt-4o" },
+        params: { model: "gpt-4o", provider: "openai" },
       });
     });
 
@@ -429,8 +446,8 @@ describe("JSON serialization", () => {
         type: "race",
         params: {
           strategies: [
-            { type: "id", params: { model: "gpt-4o" } },
-            { type: "id", params: { model: "gpt-4o-mini" } },
+            { type: "id", params: { model: "gpt-4o", provider: "openai" } },
+            { type: "id", params: { model: "gpt-4o-mini", provider: "openai" } },
           ],
         },
       });
@@ -444,7 +461,7 @@ describe("JSON serialization", () => {
       expect(strategy.toJSON()).toEqual({
         type: "fallback",
         params: {
-          primaryStrategy: { type: "id", params: { model: "gpt-4o" } },
+          primaryStrategy: { type: "id", params: { model: "gpt-4o", provider: "openai" } },
           config: {
             error: [{ type: "id", params: { model: "gpt-4o-mini" } }],
             timeout: [{ type: "id", params: { model: "o3-mini" } }],

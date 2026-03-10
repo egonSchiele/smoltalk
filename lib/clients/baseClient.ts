@@ -301,7 +301,12 @@ export class BaseClient implements SmolClient {
     return { continue: true, newPromptConfig: promptConfig };
   }
 
-  extractResponse(promptConfig: PromptConfig, rawValue: any, schema: any, depth: number = 0): any {
+  extractResponse(
+    promptConfig: PromptConfig,
+    rawValue: any,
+    schema: any,
+    depth: number = 0,
+  ): any {
     const MAX_DEPTH = 5;
     if (depth > MAX_DEPTH) {
       throw new Error("extractResponse exceeded maximum depth");
@@ -329,11 +334,22 @@ export class BaseClient implements SmolClient {
         .replace(/^```json\s*/, "")
         .replace(/```\s*$/, "");
       try {
-        return this.extractResponse(promptConfig, JSON.parse(stripped), schema, depth + 1);
+        return this.extractResponse(
+          promptConfig,
+          JSON.parse(stripped),
+          schema,
+          depth + 1,
+        );
       } catch (err) {
         const logger = getLogger();
-        logger.debug("extractResponse: failed to parse JSON from string", { error: (err as Error).message, rawValue: stripped });
-        this.statelogClient?.debug("extractResponse: failed to parse JSON from string", { error: (err as Error).message });
+        logger.debug("extractResponse: failed to parse JSON from string", {
+          error: (err as Error).message,
+          rawValue: stripped,
+        });
+        this.statelogClient?.debug(
+          "extractResponse: failed to parse JSON from string",
+          { error: (err as Error).message },
+        );
       }
       return rawValue;
     }
@@ -462,7 +478,8 @@ export class BaseClient implements SmolClient {
         }
       }
     }
-    const numRetries = promptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES;
+    const numRetries =
+      promptConfig.responseFormatOptions?.numRetries || DEFAULT_NUM_RETRIES;
     throw new SmolStructuredOutputError(
       `Failed to get valid response after ${numRetries} attempts: ${result.success ? "Output did not match expected format" : result.error}`,
     );
@@ -470,19 +487,6 @@ export class BaseClient implements SmolClient {
 
   async _textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
     throw new Error("Method not implemented.");
-  }
-  prompt(
-    text: string,
-    promptConfig?: PromptConfig,
-  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
-    const msg = userMessage(text);
-    const newPromptConfig: PromptConfig = {
-      ...promptConfig,
-      messages: promptConfig?.messages
-        ? [...promptConfig.messages, msg]
-        : [msg],
-    };
-    return this.text(newPromptConfig);
   }
 
   async *textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {

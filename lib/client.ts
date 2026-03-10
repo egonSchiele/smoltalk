@@ -2,17 +2,24 @@ export * from "./clients/anthropic.js";
 export * from "./clients/google.js";
 export * from "./clients/openai.js";
 export * from "./clients/openaiResponses.js";
-import { EgonLog } from "egonlog";
 import { SmolAnthropic } from "./clients/anthropic.js";
+import { BaseClient } from "./clients/baseClient.js";
 import { SmolGoogle } from "./clients/google.js";
+import { SmolOllama } from "./clients/ollama.js";
 import { SmolOpenAi } from "./clients/openai.js";
 import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
-import { getModel, isTextModel, ModelName } from "./models.js";
+import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
-import { SmolConfig, ResolvedSmolConfig } from "./types.js";
-import { getLogger } from "./logger.js";
-import { SmolOllama } from "./clients/ollama.js";
-import { Model } from "./model.js";
+import { ResolvedSmolConfig } from "./types.js";
+
+const registeredProviders: Record<string, typeof BaseClient> = {};
+
+export function registerProvider(
+  providerName: string,
+  clientClass: typeof BaseClient,
+) {
+  registeredProviders[providerName] = clientClass;
+}
 
 export function getClient(config: ResolvedSmolConfig) {
   let provider = config.provider;
@@ -68,6 +75,10 @@ export function getClient(config: ResolvedSmolConfig) {
     case "ollama":
       return new SmolOllama(clientConfig);
     default:
+      if (provider in registeredProviders) {
+        const ClientClass = registeredProviders[provider];
+        return new ClientClass(clientConfig);
+      }
       throw new SmolError(`Model provider ${provider} is not supported.`);
   }
 }

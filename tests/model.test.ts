@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { Model, ModelConfig } from "../lib/model.js";
+import { Model } from "../lib/model.js";
 import { TextModel, textModels } from "../lib/models.js";
+import { ModelConfig } from "../lib/strategies/types.js";
+import { promptResult } from "../lib/types.js";
 
 describe("Model", () => {
   describe("with a direct model name", () => {
@@ -10,24 +12,10 @@ describe("Model", () => {
       expect(model.getModel()).toBe("gpt-4o");
     });
 
-    it("throws for an unknown model name", () => {
-      expect(() => new Model("nonexistent-model" as any)).toThrow(
-        /not recognized/,
-      );
-    });
-  });
-
-  describe("isModelConfig", () => {
-    it("returns true for ModelConfig objects", () => {
-      const model = new Model("gpt-4o");
-      expect(
-        model.isModelConfig({ optimizeFor: ["cost"], providers: ["openai"] }),
-      ).toBe(true);
-    });
-
-    it("returns false for string model names", () => {
-      const model = new Model("gpt-4o");
-      expect(model.isModelConfig("gpt-4o" as any)).toBe(false);
+    it("accepts an unknown model name without throwing", () => {
+      const model = new Model("nonexistent-model" as any);
+      expect(model.getResolvedModel()).toBe("nonexistent-model");
+      expect(model.getProvider()).toBeUndefined();
     });
   });
 
@@ -295,7 +283,75 @@ describe("Model", () => {
       };
       const result = Model.create(config);
       expect(result).toBeInstanceOf(Model);
-      expect(result.isModelConfig(result.getModel())).toBe(true);
     });
+
+    it("creates a new Model from a ModelNameAndProvider", () => {
+      const result = Model.create({ model: "my-custom-model", provider: "ollama" });
+      expect(result).toBeInstanceOf(Model);
+      expect(result.getResolvedModel()).toBe("my-custom-model");
+      expect(result.getProvider()).toBe("ollama");
+    });
+
+    it("accepts an explicit provider override", () => {
+      const result = Model.create("gpt-4o", "anthropic" as any);
+      expect(result.getProvider()).toBe("anthropic");
+    });
+  });
+
+  describe("getProvider()", () => {
+    it("returns the provider inferred from model registry", () => {
+      const model = new Model("gpt-4o");
+      expect(model.getProvider()).toBe("openai");
+    });
+
+    it("returns the provider from ModelNameAndProvider", () => {
+      const model = new Model({ model: "custom-model", provider: "ollama" });
+      expect(model.getProvider()).toBe("ollama");
+    });
+
+    it("returns undefined for unknown model with no registry entry", () => {
+      const model = new Model("nonexistent-model" as any);
+      expect(model.getProvider()).toBeUndefined();
+    });
+  });
+
+  describe("toString()", () => {
+    it("returns a human-readable string for a model name", () => {
+      const model = new Model("gpt-4o");
+      expect(model.toString()).toContain("gpt-4o");
+    });
+
+    it("returns a human-readable string for a ModelNameAndProvider", () => {
+      const model = new Model({ model: "my-model", provider: "ollama" });
+      expect(model.toString()).toContain("my-model");
+    });
+  });
+});
+
+describe("promptResult()", () => {
+  it("creates a PromptResult with output", () => {
+    const result = promptResult({ output: "hello" });
+    expect(result.output).toBe("hello");
+    expect(result.toolCalls).toEqual([]);
+  });
+
+  it("defaults output to null when not provided", () => {
+    const result = promptResult({});
+    expect(result.output).toBeNull();
+  });
+
+  it("defaults toolCalls to empty array when not provided", () => {
+    const result = promptResult({ output: "test" });
+    expect(result.toolCalls).toEqual([]);
+  });
+
+  it("passes through optional fields", () => {
+    const result = promptResult({
+      output: "hi",
+      usage: { inputTokens: 10, outputTokens: 5 },
+      model: "gpt-4o",
+    });
+    expect(result.usage).toEqual({ inputTokens: 10, outputTokens: 5 });
+    expect(result.model).toBe("gpt-4o");
   });
 });

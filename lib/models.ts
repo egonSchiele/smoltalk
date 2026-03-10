@@ -3,6 +3,7 @@ export const providers = [
   "local",
   "ollama",
   "openai",
+  "openai-responses",
   "anthropic",
   "google",
   "replicate",

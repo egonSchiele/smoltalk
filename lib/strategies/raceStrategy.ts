@@ -1,12 +1,17 @@
 import { getLogger } from "../logger.js";
-import { ModelLike, SmolPromptConfig } from "../types.js";
+import { ModelLike, ModelParam, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { fromJSON, IDStrategy } from "./index.js";
-import { RaceStrategyJSON, RaceStrategyJSONSchema, Strategy, StrategyJSON } from "./types.js";
+import {
+  RaceStrategyJSON,
+  RaceStrategyJSONSchema,
+  Strategy,
+  StrategyJSON,
+} from "./types.js";
 
 export class RaceStrategy extends BaseStrategy {
   public strategies: Strategy[];
-  constructor(strategies: (Strategy | ModelLike)[]) {
+  constructor(strategies: ModelParam[]) {
     super();
     this.strategies = strategies.map((s) =>
       s instanceof BaseStrategy ? s : new IDStrategy(s as ModelLike),

@@ -1,6 +1,6 @@
 import { Model } from "../model.js";
 import { ModelName } from "../models.js";
-import { ModelLike } from "../types.js";
+import { ModelLike, ModelParam } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
@@ -24,7 +24,7 @@ export * from "./idStrategy.js";
 export * from "./raceStrategy.js";
 export * from "./types.js";
 
-export function race(...strategies: (Strategy | ModelLike)[]): Strategy {
+export function race(...strategies: ModelParam[]): Strategy {
   return new RaceStrategy(strategies);
 }
 
@@ -33,7 +33,7 @@ export function id(model: ModelLike): Strategy {
 }
 
 export function fallback(
-  primaryStrategy: Strategy | ModelLike,
+  primaryStrategy: ModelParam,
   config: FallbackStrategyConfig,
 ): Strategy {
   return new FallbackStrategy(primaryStrategy, config);

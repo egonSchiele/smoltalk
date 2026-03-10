@@ -8,18 +8,16 @@ import {
   textModels,
 } from "./models.js";
 import { SmolError } from "./smolError.js";
-import { ModelLike, ModelNameAndProvider } from "./types.js";
+import {
+  ModelConfig,
+  ModelConfigSchema,
+  ModelNameAndProvider,
+  ModelNameAndProviderSchema,
+  ModelNameSchema,
+  Optimization,
+} from "./strategies/types.js";
+import { ModelLike } from "./types.js";
 import { round } from "./util.js";
-
-export type Optimization = "speed" | "reasoning" | "cost" | "large-context";
-
-export type ModelConfig = {
-  optimizeFor: Optimization[];
-  providers: Provider[];
-  limit?: {
-    cost?: number;
-  };
-};
 
 const WEIGHTS: Record<number, number[]> = {
   1: [1],
@@ -31,9 +29,14 @@ const WEIGHTS: Record<number, number[]> = {
 export class Model {
   private model: ModelName | ModelConfig | ModelNameAndProvider;
   private resolvedModel: ModelName;
-  constructor(model: ModelName | ModelConfig | ModelNameAndProvider) {
+  private provider?: Provider;
+  constructor(
+    model: ModelName | ModelConfig | ModelNameAndProvider,
+    provider?: Provider,
+  ) {
     this.model = model;
     this.resolvedModel = this.resolveModel();
+    this.provider = provider || this.setProvider();
   }
 
   getModel() {
@@ -44,22 +47,41 @@ export class Model {
     return this.resolvedModel;
   }
 
-  isModelConfig(
-    model: ModelName | ModelConfig | ModelNameAndProvider,
-  ): model is ModelConfig {
-    return typeof model === "object" && "optimizeFor" in model;
+  getProvider(): Provider | undefined {
+    if (this.provider) {
+      return this.provider;
+    }
+    return undefined;
+  }
+
+  setProvider(): Provider | undefined {
+    if (ModelNameAndProviderSchema.safeParse(this.model).success) {
+      const { model, provider } = this.model as ModelNameAndProvider;
+      return provider as Provider;
+    }
+    const resolved = this.getResolvedModel();
+    const modelInfo = getModel(resolved);
+    if (modelInfo) {
+      return modelInfo.provider as Provider;
+    }
+    return undefined;
   }
 
   resolveModel(models: readonly TextModel[] = textModels): ModelName {
-    if (!this.isModelConfig(this.model)) {
-      const modelName = this.model as ModelName;
-      const model = getModel(modelName);
-      if (!model) {
-        throw new SmolError(
-          `Model ${JSON.stringify(modelName)} is not recognized. Please specify a known model or a valid ModelConfig.`,
-        );
-      }
-      return modelName as ModelName;
+    if (ModelNameSchema.safeParse(this.model).success) {
+      return this.model as ModelName;
+    }
+    if (ModelNameAndProviderSchema.safeParse(this.model).success) {
+      const { model, provider } = this.model as ModelNameAndProvider;
+      return model as ModelName;
+    }
+
+    const isModelConfig = ModelConfigSchema.safeParse(this.model).success;
+
+    if (!isModelConfig) {
+      throw new SmolError(
+        `Model ${JSON.stringify(this.model)} is not recognized. Please specify a known model or a valid ModelConfig.`,
+      );
     }
     const model = this.model as ModelConfig;
     let candidates = models.filter(
@@ -194,10 +216,14 @@ export class Model {
     };
   }
 
-  static create(model: ModelLike): Model {
+  toString() {
+    return `Model(${JSON.stringify(this.model)})`;
+  }
+
+  static create(model: ModelLike, provider?: Provider): Model {
     if (model instanceof Model) {
       return model;
     }
-    return new Model(model);
+    return new Model(model, provider);
   }
 }
