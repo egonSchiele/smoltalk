@@ -12,19 +12,72 @@ describe("getClient", () => {
   });
 
   it("throws on missing OpenAI API key", () => {
-    expect(() => getClient({ model: "gpt-4o" })).toThrow(/No OpenAI API key/);
+    const orig = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+      expect(() => getClient({ model: "gpt-4o" })).toThrow(/No OpenAI API key/);
+    } finally {
+      if (orig !== undefined) process.env.OPENAI_API_KEY = orig;
+    }
   });
 
   it("throws on missing OpenAI API key for openai-responses provider", () => {
-    expect(() =>
-      getClient({ model: "gpt-4o", provider: "openai-responses" }),
-    ).toThrow(/No OpenAI API key/);
+    const orig = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    try {
+      expect(() =>
+        getClient({ model: "gpt-4o", provider: "openai-responses" }),
+      ).toThrow(/No OpenAI API key/);
+    } finally {
+      if (orig !== undefined) process.env.OPENAI_API_KEY = orig;
+    }
   });
 
   it("throws on missing Google API key", () => {
-    expect(() => getClient({ model: "gemini-2.5-flash" })).toThrow(
-      /No Google API key/,
-    );
+    const orig = process.env.GEMINI_API_KEY;
+    delete process.env.GEMINI_API_KEY;
+    try {
+      expect(() => getClient({ model: "gemini-2.5-flash" })).toThrow(
+        /No Google API key/,
+      );
+    } finally {
+      if (orig !== undefined) process.env.GEMINI_API_KEY = orig;
+    }
+  });
+
+  it("uses OPENAI_API_KEY env var when no key provided in config", () => {
+    const orig = process.env.OPENAI_API_KEY;
+    process.env.OPENAI_API_KEY = "env-test-key";
+    try {
+      expect(() => getClient({ model: "gpt-4o" })).not.toThrow();
+    } finally {
+      if (orig !== undefined) process.env.OPENAI_API_KEY = orig;
+      else delete process.env.OPENAI_API_KEY;
+    }
+  });
+
+  it("uses GEMINI_API_KEY env var when no key provided in config", () => {
+    const orig = process.env.GEMINI_API_KEY;
+    process.env.GEMINI_API_KEY = "env-test-key";
+    try {
+      expect(() => getClient({ model: "gemini-2.5-flash" })).not.toThrow();
+    } finally {
+      if (orig !== undefined) process.env.GEMINI_API_KEY = orig;
+      else delete process.env.GEMINI_API_KEY;
+    }
+  });
+
+  it("uses ANTHROPIC_API_KEY env var when no key provided in config", () => {
+    const orig = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = "env-test-key";
+    try {
+      expect(() =>
+        getClient({ model: "claude-sonnet-4-6" }),
+      ).not.toThrow();
+    } finally {
+      if (orig !== undefined) process.env.ANTHROPIC_API_KEY = orig;
+      else delete process.env.ANTHROPIC_API_KEY;
+    }
   });
 
   it("throws on unsupported provider", () => {

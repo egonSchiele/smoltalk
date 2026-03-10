@@ -1,6 +1,6 @@
 # Smoltalk
 
-Smoltalk is a package that exposes a common interface across different LLM providers. It exists because I think it's important to have an npm package that allows users to try out different kinds of LLMs, and prevents vendor lock-in. Using a different LLM should be as simple as switching out a model name.
+Smoltalk exposes a common API to different LLM providers. There are other packages that do this, but Smoltalk allows you to build strategies on top of it. Here is a simple example. Hello world, this is functionality that other packages allow.
 
 ## Install
 
@@ -8,7 +8,7 @@ Smoltalk is a package that exposes a common interface across different LLM provi
 pnpm install smoltalk
 ```
 
-## Quickstart
+## Hello world example
 
 ```typescript
 import { getClient } from "smoltalk";

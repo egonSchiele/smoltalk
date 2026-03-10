@@ -110,7 +110,7 @@ export type SmolConfig = {
   ollamaApiKey?: string;
   ollamaHost?: string;
 
-  /*
+  /**
   The given model determines both
   - what client is used
   - what strategy is executed.

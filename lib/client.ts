@@ -39,36 +39,45 @@ export function getClient(config: ResolvedSmolConfig) {
     provider = model.provider;
   }
 
-  const clientConfig: ResolvedSmolConfig = { ...config, model: modelName };
+  const resolvedKeys = {
+    openAiApiKey: config.openAiApiKey || process.env.OPENAI_API_KEY,
+    googleApiKey: config.googleApiKey || process.env.GEMINI_API_KEY,
+    anthropicApiKey: config.anthropicApiKey || process.env.ANTHROPIC_API_KEY,
+  };
+  const clientConfig: ResolvedSmolConfig = {
+    ...config,
+    ...resolvedKeys,
+    model: modelName,
+  };
   switch (provider) {
     case "anthropic":
-      if (!config.anthropicApiKey) {
+      if (!resolvedKeys.anthropicApiKey) {
         throw new SmolError(
-          "No Anthropic API key provided. Please provide an Anthropic API key in the config using anthropicApiKey.",
+          "No Anthropic API key provided. Please provide an Anthropic API key in the config using anthropicApiKey, or set the ANTHROPIC_API_KEY environment variable.",
         );
       }
       return new SmolAnthropic({
         ...clientConfig,
-        anthropicApiKey: config.anthropicApiKey,
+        anthropicApiKey: resolvedKeys.anthropicApiKey,
       });
     case "openai":
-      if (!config.openAiApiKey) {
+      if (!resolvedKeys.openAiApiKey) {
         throw new SmolError(
-          "No OpenAI API key provided. Please provide an OpenAI API key in the config using openAiApiKey.",
+          "No OpenAI API key provided. Please provide an OpenAI API key in the config using openAiApiKey, or set the OPENAI_API_KEY environment variable.",
         );
       }
       return new SmolOpenAi(clientConfig);
     case "openai-responses":
-      if (!config.openAiApiKey) {
+      if (!resolvedKeys.openAiApiKey) {
         throw new SmolError(
-          "No OpenAI API key provided. Please provide an OpenAI API key in the config using openAiApiKey.",
+          "No OpenAI API key provided. Please provide an OpenAI API key in the config using openAiApiKey, or set the OPENAI_API_KEY environment variable.",
         );
       }
       return new SmolOpenAiResponses(clientConfig);
     case "google":
-      if (!config.googleApiKey) {
+      if (!resolvedKeys.googleApiKey) {
         throw new SmolError(
-          "No Google API key provided. Please provide a Google API key in the config using googleApiKey.",
+          "No Google API key provided. Please provide a Google API key in the config using googleApiKey, or set the GEMINI_API_KEY environment variable.",
         );
       }
       return new SmolGoogle(clientConfig);
