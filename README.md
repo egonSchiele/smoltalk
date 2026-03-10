@@ -1,6 +1,6 @@
 # Smoltalk
 
-Smoltalk exposes a common API to different LLM providers. There are other packages that do this, but Smoltalk allows you to build strategies on top of it. Here is a simple example. Hello world, this is functionality that other packages allow.
+Smoltalk exposes a common API to different LLM providers. There are other packages that do this, but Smoltalk allows you to build strategies on top of it. Here is a simple example.
 
 ## Install
 
@@ -11,22 +11,79 @@ pnpm install smoltalk
 ## Hello world example
 
 ```typescript
-import { getClient } from "smoltalk";
-
-const client = getClient({
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
-  googleApiKey: process.env.GEMINI_API_KEY || "",
-  logLevel: "debug",
-  model: "gemini-2.0-flash-lite",
-});
+import { text, userMessage } from "smoltalk";
 
 async function main() {
-  const resp = await client.prompt("Hello, how are you?");
-  console.log(resp);
+  const messages = [userMessage("Write me a 10 word story.")];
+  const response = await text({
+    messages,
+    model: "gpt-5.4",
+  });
+  console.log(response);
 }
 
 main();
 ```
+
+This is functionality that other packages allow.
+<details>
+  <summary>Response</summary>
+
+```
+{
+  success: true,
+  value: {
+    output: 'Clock stopped; everyone smiled as tomorrow finally arrived before yesterday.',
+    toolCalls: [],
+    usage: {
+      inputTokens: 14,
+      outputTokens: 15,
+      cachedInputTokens: 0,
+      totalTokens: 29
+    },
+    cost: {
+      inputCost: 0.000035,
+      outputCost: 0.000225,
+      cachedInputCost: undefined,
+      totalCost: 0.00026,
+      currency: 'USD'
+    },
+    model: 'gpt-5.4'
+  }
+}
+```
+</details>
+
+What if you wanted to have fallbacks in case the OpenAI API was down? Just change the `model` field:
+
+```ts
+  const response = await text({
+    messages,
+    model: fallback("gpt-5.4", "gemini-2.5-flash-lite"),
+    // or multiple fallbacks:
+    // model: fallback("gpt-5.4", ["gemini-2.5-flash-lite", "gemini-3-flash-preview"]),
+  });
+```
+
+Or what if you wanted to try a couple of models and take the first response?
+
+```ts
+  const response = await text({
+    messages,
+    model: race("gpt-5.4", "gemini-2.5-flash-lite", "o4-mini"),
+  });
+```
+
+Or combine them:
+
+```ts
+  const response = await text({
+    messages,
+    model: race(fallback("gpt-5.4", "gemini-2.5-flash-lite"), "o4-mini"),
+  });
+```
+
+You get the idea.
 
 ## Longer tutorial
 To use Smoltak, you first create a client:
@@ -157,20 +214,15 @@ Detects when the model is stuck in a repetitive tool-call loop.
 | `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
 | `excludeTools` | `string[]` | Tool names to ignore when counting consecutive calls. |
 
-## Prior art
+## Limitations
+Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
+
 - Langchain
-OpenRouter
+- OpenRouter
 - Vercel AI
 
-These are all good options, but they are quite heavy, and I wanted a lighter option. That said, you may be better off with one of the above alternatives:
-- They are backed by a business and are more likely to be responsive.
-- They support way more functionality and providers. Smoltalk currently supports just a subset of functionality for OpenAI and Google.
-
-## Functionality
-Smoltalk pretty much lets you generate text using an OpenAI or Google model, with support for function calling and structured output, and that's it. I will add functionality and providers sporadically when I have time and need.
-
 ## Contributing
-This repo could use some help! Any of the following contributions would be helpful:
+Contributions are welcome. Any of the following contributions would be helpful:
 - Adding support for API parameters or endpoints
 - Adding support for different providers
 - Updating the list of models
