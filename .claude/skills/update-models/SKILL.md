@@ -51,6 +51,7 @@ Focus on these model families:
 - Gemini 2.5 Pro, Flash, and Flash-Lite
 - Gemini 2.0 models
 - Image generation models (Gemini Pro Image, etc.)
+- Any new production-ready models
 
 ### 4. Update the Models File
 
@@ -69,7 +70,7 @@ For each model that needs updating:
 If available, fetch any performance benchmarks or latency information for the models to set the `outputTokensPerSecond` field on models. Here's a site that provides this data:
 https://artificialanalysis.ai/leaderboards/models
 
-### 5. Verify Changes
+### 6. Verify Changes
 
 After making updates:
 
@@ -78,7 +79,7 @@ After making updates:
 - Check that new models follow the existing type structure
 - Verify that pricing information is accurate
 
-### 6. Provide Summary
+### 7. Provide Summary
 
 Create a clear summary for the user showing:
 

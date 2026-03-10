@@ -93,7 +93,7 @@ export const textModels = [
     type: "text",
     modelName: "gpt-4o-mini",
     description:
-      "GPT-4o mini (“o” for “omni”) is a fast, affordable small model for focused tasks. It accepts both text and image inputs, and produces text outputs (including Structured Outputs). It is ideal for fine-tuning, and model outputs from a larger model like GPT-4o can be distilled to GPT-4o-mini to produce similar results at lower cost and latency. The knowledge cutoff for GPT-4o-mini models is October, 2023.",
+      "GPT-4o mini ('o' for 'omni') is a fast, affordable small model for focused tasks. It accepts both text and image inputs, and produces text outputs (including Structured Outputs). It is ideal for fine-tuning, and model outputs from a larger model like GPT-4o can be distilled to GPT-4o-mini to produce similar results at lower cost and latency. Knowledge cutoff: July 2025.",
     maxInputTokens: 128000,
     maxOutputTokens: 16384,
     inputTokenCost: 0.15,
@@ -106,7 +106,7 @@ export const textModels = [
     type: "text",
     modelName: "gpt-4o",
     description:
-      "GPT-4o (“o” for “omni”) is our versatile, high-intelligence flagship model. It accepts both text and image inputs, and produces text outputs (including Structured Outputs). The knowledge cutoff for GPT-4o-mini models is October, 2023.",
+      "GPT-4o ('o' for 'omni') is our versatile, high-intelligence flagship model. It accepts both text and image inputs, and produces text outputs (including Structured Outputs). Knowledge cutoff: April 2024.",
     maxInputTokens: 128000,
     maxOutputTokens: 16384,
     inputTokenCost: 2.5,
@@ -119,7 +119,7 @@ export const textModels = [
     type: "text",
     modelName: "o3",
     description:
-      "o3 is a reasoning model that sets a new standard for math, science, coding, visual reasoning tasks, and technical writing. Part of the o-series of reasoning models. The knowledge cutoff for o3 models is October, 2023.",
+      "o3 is a reasoning model that sets a new standard for math, science, coding, visual reasoning tasks, and technical writing. Part of the o-series of reasoning models. Knowledge cutoff: June 2024.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 2,
@@ -139,8 +139,8 @@ export const textModels = [
     type: "text",
     modelName: "o3-mini",
     description:
-      "o3-mini is our most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini. o3-mini also supports key developer features, like Structured Outputs, function calling, Batch API, and more. Like other models in the o-series, it is designed to excel at science, math, and coding tasks.The knowledge cutoff for o3-mini models is October, 2023.",
-    maxInputTokens: 200000,
+      "o3-mini is our most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini. o3-mini also supports key developer features, like Structured Outputs, function calling, Batch API, and more. Like other models in the o-series, it is designed to excel at science, math, and coding tasks. Knowledge cutoff: June 2024.",
+    maxInputTokens: 500000,
     maxOutputTokens: 100000,
     inputTokenCost: 1.1,
     cachedInputTokenCost: 0.55,
@@ -162,9 +162,9 @@ export const textModels = [
       "Latest small o-series model optimized for fast, effective reasoning with exceptional performance in coding and visual tasks. Knowledge cutoff: June 2024.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
-    inputTokenCost: 1.1,
-    cachedInputTokenCost: 0.275,
-    outputTokenCost: 4.4,
+    inputTokenCost: 0.6,
+    cachedInputTokenCost: 0.3,
+    outputTokenCost: 2.4,
     outputTokensPerSecond: 135,
     reasoning: {
       levels: ["low", "medium", "high"],
@@ -380,6 +380,22 @@ export const textModels = [
       levels: ["none", "low", "medium", "high"],
       defaultLevel: "none",
       canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gpt-5.2-pro",
+    description:
+      "GPT-5.2 Pro uses more compute for complex reasoning tasks. 400K context window. Knowledge cutoff: August 2025.",
+    maxInputTokens: 400000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 21,
+    outputTokenCost: 168,
+    reasoning: {
+      canDisable: false,
       outputsThinking: false,
       outputsSignatures: false,
     },
