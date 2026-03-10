@@ -88,7 +88,7 @@
           </ul>
           <h1>Class AssistantMessage</h1>
         </div>
-        <section class="tsd-panel tsd-hierarchy" data-refl="1222">
+        <section class="tsd-panel tsd-hierarchy" data-refl="2092">
           <h4>
             Hierarchy (<a href="../hierarchy.html#AssistantMessage"
               >View Summary</a
@@ -172,6 +172,15 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>_<wbr />content</span></a
                     >
+                    <a href="#_cost" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>_<wbr />cost?</span></a
+                    >
                     <a href="#_name" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -208,6 +217,15 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>_<wbr />role</span></a
                     >
+                    <a href="#_thinkingblocks" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>_<wbr />thinking<wbr />Blocks?</span></a
+                    >
                     <a href="#_toolcalls" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -216,6 +234,15 @@
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>_<wbr />tool<wbr />Calls?</span></a
+                    >
+                    <a href="#_usage" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>_<wbr />usage?</span></a
                     >
                   </div>
                 </section>
@@ -239,6 +266,15 @@
                       >
                         <use href="../assets/icons.svg#icon-262144"></use></svg
                       ><span>content</span></a
+                    >
+                    <a href="#cost" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Accessor"
+                      >
+                        <use href="../assets/icons.svg#icon-262144"></use></svg
+                      ><span>cost</span></a
                     >
                     <a href="#name" class="tsd-index-link"
                       ><svg
@@ -276,6 +312,15 @@
                         <use href="../assets/icons.svg#icon-262144"></use></svg
                       ><span>role</span></a
                     >
+                    <a href="#thinkingblocks" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Accessor"
+                      >
+                        <use href="../assets/icons.svg#icon-262144"></use></svg
+                      ><span>thinking<wbr />Blocks</span></a
+                    >
                     <a href="#toolcalls" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -285,11 +330,40 @@
                         <use href="../assets/icons.svg#icon-262144"></use></svg
                       ><span>tool<wbr />Calls</span></a
                     >
+                    <a href="#usage" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Accessor"
+                      >
+                        <use href="../assets/icons.svg#icon-262144"></use></svg
+                      ><span>usage</span></a
+                    >
                   </div>
                 </section>
                 <section class="tsd-index-section">
                   <h3 class="tsd-index-heading">Methods</h3>
                   <div class="tsd-index-list">
+                    <a
+                      href="#contenttostring"
+                      class="tsd-index-link tsd-is-protected tsd-is-inherited"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Method"
+                      >
+                        <use href="../assets/icons.svg#icon-2048"></use></svg
+                      ><span>content<wbr />To<wbr />String</span></a
+                    >
+                    <a href="#toanthropicmessage" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Method"
+                      >
+                        <use href="../assets/icons.svg#icon-2048"></use></svg
+                      ><span>to<wbr />Anthropic<wbr />Message</span></a
+                    >
                     <a href="#togooglemessage" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -411,6 +485,13 @@
                     ><span class="tsd-signature-symbol">?:</span>
                     <span class="tsd-signature-type">any</span
                     ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property">cost</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <a
+                      href="../types/CostEstimate.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >CostEstimate</a
+                    ><span class="tsd-signature-symbol">;</span
                     ><br />        <span class="tsd-kind-property">name</span
                     ><span class="tsd-signature-symbol">?:</span>
                     <span class="tsd-signature-type">string</span
@@ -426,10 +507,29 @@
                     <span class="tsd-signature-type">null</span
                     ><span class="tsd-signature-symbol">;</span
                     ><br />        <span class="tsd-kind-property"
+                      >thinkingBlocks</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <a
+                      href="../types/ThinkingBlock.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >ThinkingBlock</a
+                    ><span class="tsd-signature-symbol">[]</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
                       >toolCalls</span
                     ><span class="tsd-signature-symbol">?:</span>
-                    <span class="tsd-signature-type">ToolCall</span
+                    <a
+                      href="ToolCall.html"
+                      class="tsd-signature-type tsd-kind-class"
+                      >ToolCall</a
                     ><span class="tsd-signature-symbol">[]</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property">usage</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <a
+                      href="../types/TokenUsage.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >TokenUsage</a
                     ><span class="tsd-signature-symbol">;</span><br />    <span
                       class="tsd-signature-symbol"
                       >}</span
@@ -475,6 +575,14 @@
                             <span class="tsd-signature-type">any</span
                             ><span class="tsd-signature-symbol">;</span
                             ><br />    <span class="tsd-kind-property"
+                              >cost</span
+                            ><span class="tsd-signature-symbol">?:</span>
+                            <a
+                              href="../types/CostEstimate.html"
+                              class="tsd-signature-type tsd-kind-type-alias"
+                              >CostEstimate</a
+                            ><span class="tsd-signature-symbol">;</span
+                            ><br />    <span class="tsd-kind-property"
                               >name</span
                             ><span class="tsd-signature-symbol">?:</span>
                             <span class="tsd-signature-type">string</span
@@ -492,10 +600,30 @@
                             <span class="tsd-signature-type">null</span
                             ><span class="tsd-signature-symbol">;</span
                             ><br />    <span class="tsd-kind-property"
+                              >thinkingBlocks</span
+                            ><span class="tsd-signature-symbol">?:</span>
+                            <a
+                              href="../types/ThinkingBlock.html"
+                              class="tsd-signature-type tsd-kind-type-alias"
+                              >ThinkingBlock</a
+                            ><span class="tsd-signature-symbol">[]</span
+                            ><span class="tsd-signature-symbol">;</span
+                            ><br />    <span class="tsd-kind-property"
                               >toolCalls</span
                             ><span class="tsd-signature-symbol">?:</span>
-                            <span class="tsd-signature-type">ToolCall</span
+                            <a
+                              href="ToolCall.html"
+                              class="tsd-signature-type tsd-kind-class"
+                              >ToolCall</a
                             ><span class="tsd-signature-symbol">[]</span
+                            ><span class="tsd-signature-symbol">;</span
+                            ><br />    <span class="tsd-kind-property"
+                              >usage</span
+                            ><span class="tsd-signature-symbol">?:</span>
+                            <a
+                              href="../types/TokenUsage.html"
+                              class="tsd-signature-type tsd-kind-type-alias"
+                              >TokenUsage</a
                             ><span class="tsd-signature-symbol">;</span
                             ><br /><span class="tsd-signature-symbol">}</span
                             ><span class="tsd-signature-symbol">
@@ -582,6 +710,24 @@
               </div>
             </section>
             <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="_cost">
+                <code class="tsd-tag">Optional</code><span>_<wbr />cost</span
+                ><a href="#_cost" aria-label="Permalink" class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">_cost</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <a
+                  href="../types/CostEstimate.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >CostEstimate</a
+                >
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="_name">
                 <code class="tsd-tag">Optional</code><span>_<wbr />name</span
                 ><a href="#_name" aria-label="Permalink" class="tsd-anchor-icon"
@@ -648,6 +794,28 @@
               </div>
             </section>
             <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="_thinkingblocks">
+                <code class="tsd-tag">Optional</code
+                ><span>_<wbr />thinking<wbr />Blocks</span
+                ><a
+                  href="#_thinkingblocks"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">_thinkingBlocks</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <a
+                  href="../types/ThinkingBlock.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >ThinkingBlock</a
+                ><span class="tsd-signature-symbol">[]</span>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="_toolcalls">
                 <code class="tsd-tag">Optional</code
                 ><span>_<wbr />tool<wbr />Calls</span
@@ -662,8 +830,32 @@
               <div class="tsd-signature">
                 <span class="tsd-kind-property">_toolCalls</span
                 ><span class="tsd-signature-symbol">?:</span>
-                <span class="tsd-signature-type">ToolCall</span
+                <a
+                  href="ToolCall.html"
+                  class="tsd-signature-type tsd-kind-class"
+                  >ToolCall</a
                 ><span class="tsd-signature-symbol">[]</span>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="_usage">
+                <code class="tsd-tag">Optional</code><span>_<wbr />usage</span
+                ><a
+                  href="#_usage"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">_usage</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <a
+                  href="../types/TokenUsage.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >TokenUsage</a
+                >
               </div>
             </section>
           </section>
@@ -766,6 +958,44 @@
                     <aside class="tsd-sources">
                       <p>Implementation of MessageClass.content</p>
                     </aside>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="cost">
+                <span>cost</span
+                ><a href="#cost" aria-label="Permalink" class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures">
+                <li>
+                  <div class="tsd-signature" id="costcost">
+                    <span class="tsd-signature-keyword">get</span>
+                    <span class="tsd-kind-get-signature">cost</span
+                    ><span class="tsd-signature-symbol">()</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <a
+                      href="../types/CostEstimate.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >CostEstimate</a
+                    >
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">undefined</span>
+                  </div>
+                  <div class="tsd-description">
+                    <h4 class="tsd-returns-title">
+                      Returns
+                      <a
+                        href="../types/CostEstimate.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >CostEstimate</a
+                      >
+                      <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type">undefined</span>
+                    </h4>
                   </div>
                 </li>
               </ul>
@@ -903,6 +1133,47 @@
               </ul>
             </section>
             <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="thinkingblocks">
+                <span>thinking<wbr />Blocks</span
+                ><a
+                  href="#thinkingblocks"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures">
+                <li>
+                  <div class="tsd-signature" id="thinkingblocksthinkingblocks">
+                    <span class="tsd-signature-keyword">get</span>
+                    <span class="tsd-kind-get-signature">thinkingBlocks</span
+                    ><span class="tsd-signature-symbol">()</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <a
+                      href="../types/ThinkingBlock.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >ThinkingBlock</a
+                    ><span class="tsd-signature-symbol">[]</span>
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">undefined</span>
+                  </div>
+                  <div class="tsd-description">
+                    <h4 class="tsd-returns-title">
+                      Returns
+                      <a
+                        href="../types/ThinkingBlock.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >ThinkingBlock</a
+                      ><span class="tsd-signature-symbol">[]</span>
+                      <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type">undefined</span>
+                    </h4>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="toolcalls">
                 <span>tool<wbr />Calls</span
                 ><a
@@ -920,15 +1191,60 @@
                     <span class="tsd-kind-get-signature">toolCalls</span
                     ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">ToolCall</span
+                    <a
+                      href="ToolCall.html"
+                      class="tsd-signature-type tsd-kind-class"
+                      >ToolCall</a
                     ><span class="tsd-signature-symbol">[]</span>
                     <span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">undefined</span>
                   </div>
                   <div class="tsd-description">
                     <h4 class="tsd-returns-title">
-                      Returns <span class="tsd-signature-type">ToolCall</span
+                      Returns
+                      <a
+                        href="ToolCall.html"
+                        class="tsd-signature-type tsd-kind-class"
+                        >ToolCall</a
                       ><span class="tsd-signature-symbol">[]</span>
+                      <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type">undefined</span>
+                    </h4>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="usage">
+                <span>usage</span
+                ><a href="#usage" aria-label="Permalink" class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures">
+                <li>
+                  <div class="tsd-signature" id="usageusage">
+                    <span class="tsd-signature-keyword">get</span>
+                    <span class="tsd-kind-get-signature">usage</span
+                    ><span class="tsd-signature-symbol">()</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <a
+                      href="../types/TokenUsage.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >TokenUsage</a
+                    >
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">undefined</span>
+                  </div>
+                  <div class="tsd-description">
+                    <h4 class="tsd-returns-title">
+                      Returns
+                      <a
+                        href="../types/TokenUsage.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >TokenUsage</a
+                      >
                       <span class="tsd-signature-symbol">|</span>
                       <span class="tsd-signature-type">undefined</span>
                     </h4>
@@ -952,6 +1268,268 @@
             <h2>Methods</h2>
           </summary>
           <section>
+            <section
+              class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"
+            >
+              <h3 class="tsd-anchor-link" id="contenttostring">
+                <code class="tsd-tag">Protected</code
+                ><span>content<wbr />To<wbr />String</span
+                ><a
+                  href="#contenttostring"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures tsd-is-protected tsd-is-inherited">
+                <li class="tsd-is-inherited">
+                  <div
+                    class="tsd-signature tsd-anchor-link"
+                    id="contenttostring-1"
+                  >
+                    <span class="tsd-kind-call-signature">contentToString</span
+                    ><span class="tsd-signature-symbol">(</span
+                    ><span class="tsd-kind-parameter">content</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span>
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">unknown</span
+                    ><span class="tsd-signature-symbol">[]</span>
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">null</span>
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">undefined</span
+                    ><span class="tsd-signature-symbol">)</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><a
+                      href="#contenttostring-1"
+                      aria-label="Permalink"
+                      class="tsd-anchor-icon"
+                      ><svg viewBox="0 0 24 24" aria-hidden="true">
+                        <use href="../assets/icons.svg#icon-anchor"></use></svg
+                    ></a>
+                  </div>
+                  <div class="tsd-description">
+                    <div class="tsd-parameters">
+                      <h4 class="tsd-parameters-title">Parameters</h4>
+                      <ul class="tsd-parameter-list">
+                        <li>
+                          <span
+                            ><span class="tsd-kind-parameter">content</span>:
+                            <span class="tsd-signature-type">string</span>
+                            <span class="tsd-signature-symbol">|</span>
+                            <span class="tsd-signature-type">unknown</span
+                            ><span class="tsd-signature-symbol">[]</span>
+                            <span class="tsd-signature-symbol">|</span>
+                            <span class="tsd-signature-type">null</span>
+                            <span class="tsd-signature-symbol">|</span>
+                            <span class="tsd-signature-type"
+                              >undefined</span
+                            ></span
+                          >
+                        </li>
+                      </ul>
+                    </div>
+                    <h4 class="tsd-returns-title">
+                      Returns <span class="tsd-signature-type">string</span>
+                    </h4>
+                    <aside class="tsd-sources">
+                      <p>
+                        Inherited from
+                        <a href="BaseMessage.html">BaseMessage</a>.<a
+                          href="BaseMessage.html#contenttostring"
+                          >contentToString</a
+                        >
+                      </p>
+                    </aside>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="toanthropicmessage">
+                <span>to<wbr />Anthropic<wbr />Message</span
+                ><a
+                  href="#toanthropicmessage"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures">
+                <li class="">
+                  <div
+                    class="tsd-signature tsd-anchor-link"
+                    id="toanthropicmessage-1"
+                  >
+                    <span class="tsd-kind-call-signature"
+                      >toAnthropicMessage</span
+                    ><span class="tsd-signature-symbol">()</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-symbol">{</span><br />    <span
+                      class="tsd-kind-property"
+                      >content</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">string</span
+                    ><br />    <span class="tsd-signature-symbol">|</span>
+                    (<br />        <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-symbol">{</span>
+                    <span class="tsd-kind-property">signature</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">thinking</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">type</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">&quot;thinking&quot;</span>
+                    <span class="tsd-signature-symbol">}</span
+                    ><br />        <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-symbol">{</span>
+                    <span class="tsd-kind-property">text</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">type</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">&quot;text&quot;</span>
+                    <span class="tsd-signature-symbol">}</span
+                    ><br />        <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-symbol">{</span
+                    ><br />            <span class="tsd-kind-property">id</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />            <span class="tsd-kind-property"
+                      >input</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">Record</span
+                    ><span class="tsd-signature-symbol">&lt;</span
+                    ><span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">,</span>
+                    <span class="tsd-signature-type">any</span
+                    ><span class="tsd-signature-symbol">&gt;</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />            <span class="tsd-kind-property"
+                      >name</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />            <span class="tsd-kind-property"
+                      >type</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">&quot;tool_use&quot;</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-signature-symbol">}</span
+                    ><br />    )<span class="tsd-signature-symbol">[]</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-kind-property"
+                      >role</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">&quot;assistant&quot;</span
+                    ><span class="tsd-signature-symbol">;</span><br /><span
+                      class="tsd-signature-symbol"
+                      >}</span
+                    ><a
+                      href="#toanthropicmessage-1"
+                      aria-label="Permalink"
+                      class="tsd-anchor-icon"
+                      ><svg viewBox="0 0 24 24" aria-hidden="true">
+                        <use href="../assets/icons.svg#icon-anchor"></use></svg
+                    ></a>
+                  </div>
+                  <div class="tsd-description">
+                    <h4 class="tsd-returns-title">
+                      Returns <span class="tsd-signature-symbol">{</span
+                      ><br />    <span class="tsd-kind-property">content</span
+                      ><span class="tsd-signature-symbol">:</span
+                      ><br />        <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type">string</span
+                      ><br />        <span class="tsd-signature-symbol">|</span>
+                      (<br />            <span class="tsd-signature-symbol"
+                        >|</span
+                      >
+                      <span class="tsd-signature-symbol">{</span>
+                      <span class="tsd-kind-property">signature</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">thinking</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">type</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type"
+                        >&quot;thinking&quot;</span
+                      >
+                      <span class="tsd-signature-symbol">}</span
+                      ><br />            <span class="tsd-signature-symbol"
+                        >|</span
+                      >
+                      <span class="tsd-signature-symbol">{</span>
+                      <span class="tsd-kind-property">text</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">type</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">&quot;text&quot;</span>
+                      <span class="tsd-signature-symbol">}</span
+                      ><br />            <span class="tsd-signature-symbol"
+                        >|</span
+                      >
+                      <span class="tsd-signature-symbol">{</span
+                      ><br />                <span class="tsd-kind-property"
+                        >id</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />                <span class="tsd-kind-property"
+                        >input</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">Record</span
+                      ><span class="tsd-signature-symbol">&lt;</span
+                      ><span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">,</span>
+                      <span class="tsd-signature-type">any</span
+                      ><span class="tsd-signature-symbol">&gt;</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />                <span class="tsd-kind-property"
+                        >name</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />                <span class="tsd-kind-property"
+                        >type</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type"
+                        >&quot;tool_use&quot;</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />            <span class="tsd-signature-symbol"
+                        >}</span
+                      ><br />        )<span class="tsd-signature-symbol"
+                        >[]</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-kind-property">role</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type"
+                        >&quot;assistant&quot;</span
+                      ><span class="tsd-signature-symbol">;</span><br /><span
+                        class="tsd-signature-symbol"
+                        >}</span
+                      >
+                    </h4>
+                  </div>
+                </li>
+              </ul>
+            </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="togooglemessage">
                 <span>to<wbr />Google<wbr />Message</span
@@ -1020,7 +1598,7 @@
                     <span class="tsd-signature-symbol">{</span><br />    <span
                       class="tsd-kind-property"
                       >audio</span
-                    ><span class="tsd-signature-symbol">:</span>
+                    ><span class="tsd-signature-symbol">?:</span>
                     <span class="tsd-signature-type">any</span
                     ><span class="tsd-signature-symbol">;</span><br />    <span
                       class="tsd-kind-property"
@@ -1028,10 +1606,15 @@
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-type">string</span
                     ><br />    <span class="tsd-signature-symbol">|</span>
-                    <a
-                      href="../types/TextPart.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >TextPart</a
+                    <span class="tsd-signature-symbol">{</span>
+                    <span class="tsd-kind-property">text</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">type</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">&quot;text&quot;</span>
+                    <span class="tsd-signature-symbol">}</span
                     ><span class="tsd-signature-symbol">[]</span><br />    <span
                       class="tsd-signature-symbol"
                       >|</span
@@ -1039,20 +1622,53 @@
                     <span class="tsd-signature-type">null</span
                     ><span class="tsd-signature-symbol">;</span><br />    <span
                       class="tsd-kind-property"
-                      >name</span
+                      >cost</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-symbol">{</span
+                    ><br />        <span class="tsd-kind-property"
+                      >cachedInputCost</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >currency</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">string</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">undefined</span
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >inputCost</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >outputCost</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >totalCost</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-signature-symbol"
+                      >}</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-kind-property"
+                      >name</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-kind-property"
+                      >rawData</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">any</span
                     ><span class="tsd-signature-symbol">;</span><br />    <span
                       class="tsd-kind-property"
                       >refusal</span
-                    ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">string</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">null</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">undefined</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><br />    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">null</span
                     ><span class="tsd-signature-symbol">;</span><br />    <span
                       class="tsd-kind-property"
                       >role</span
@@ -1060,7 +1676,24 @@
                     <span class="tsd-signature-type">&quot;assistant&quot;</span
                     ><span class="tsd-signature-symbol">;</span><br />    <span
                       class="tsd-kind-property"
+                      >thinkingBlocks</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-symbol">{</span>
+                    <span class="tsd-kind-property">signature</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">text</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span>
+                    <span class="tsd-signature-symbol">}</span
+                    ><span class="tsd-signature-symbol">[]</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-kind-property"
                       >toolCalls</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-symbol">{</span>
+                    <span class="tsd-kind-property">arguments</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-type">Record</span
                     ><span class="tsd-signature-symbol">&lt;</span
@@ -1068,9 +1701,43 @@
                     ><span class="tsd-signature-symbol">,</span>
                     <span class="tsd-signature-type">any</span
                     ><span class="tsd-signature-symbol">&gt;</span
-                    ><span class="tsd-signature-symbol">[]</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">undefined</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">id</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">name</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">string</span>
+                    <span class="tsd-signature-symbol">}</span
+                    ><span class="tsd-signature-symbol">[]</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-kind-property"
+                      >usage</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-symbol">{</span
+                    ><br />        <span class="tsd-kind-property"
+                      >cachedInputTokens</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >inputTokens</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >outputTokens</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span
+                    ><br />        <span class="tsd-kind-property"
+                      >totalTokens</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">;</span><br />    <span
+                      class="tsd-signature-symbol"
+                      >}</span
                     ><span class="tsd-signature-symbol">;</span><br /><span
                       class="tsd-signature-symbol"
                       >}</span
@@ -1086,41 +1753,93 @@
                     <h4 class="tsd-returns-title">
                       Returns <span class="tsd-signature-symbol">{</span
                       ><br />    <span class="tsd-kind-property">audio</span
-                      ><span class="tsd-signature-symbol">:</span>
+                      ><span class="tsd-signature-symbol">?:</span>
                       <span class="tsd-signature-type">any</span
                       ><span class="tsd-signature-symbol">;</span
                       ><br />    <span class="tsd-kind-property">content</span
                       ><span class="tsd-signature-symbol">:</span>
                       <span class="tsd-signature-type">string</span>
                       <span class="tsd-signature-symbol">|</span>
-                      <a
-                        href="../types/TextPart.html"
-                        class="tsd-signature-type tsd-kind-type-alias"
-                        >TextPart</a
+                      <span class="tsd-signature-symbol">{</span>
+                      <span class="tsd-kind-property">text</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">type</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">&quot;text&quot;</span>
+                      <span class="tsd-signature-symbol">}</span
                       ><span class="tsd-signature-symbol">[]</span>
                       <span class="tsd-signature-symbol">|</span>
                       <span class="tsd-signature-type">null</span
                       ><span class="tsd-signature-symbol">;</span
-                      ><br />    <span class="tsd-kind-property">name</span
+                      ><br />    <span class="tsd-kind-property">cost</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-symbol">{</span
+                      ><br />        <span class="tsd-kind-property"
+                        >cachedInputCost</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >currency</span
                       ><span class="tsd-signature-symbol">:</span>
-                      <span class="tsd-signature-type">string</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">undefined</span
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >inputCost</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >outputCost</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >totalCost</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-signature-symbol">}</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-kind-property">name</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-kind-property">rawData</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-type">any</span
                       ><span class="tsd-signature-symbol">;</span
                       ><br />    <span class="tsd-kind-property">refusal</span
-                      ><span class="tsd-signature-symbol">:</span>
-                      <span class="tsd-signature-type">string</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">null</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">undefined</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><br />    <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type">null</span
                       ><span class="tsd-signature-symbol">;</span
                       ><br />    <span class="tsd-kind-property">role</span
                       ><span class="tsd-signature-symbol">:</span>
                       <span class="tsd-signature-type"
                         >&quot;assistant&quot;</span
                       ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-kind-property"
+                        >thinkingBlocks</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-symbol">{</span>
+                      <span class="tsd-kind-property">signature</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">text</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span>
+                      <span class="tsd-signature-symbol">}</span
+                      ><span class="tsd-signature-symbol">[]</span
+                      ><span class="tsd-signature-symbol">;</span
                       ><br />    <span class="tsd-kind-property">toolCalls</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-symbol">{</span>
+                      <span class="tsd-kind-property">arguments</span
                       ><span class="tsd-signature-symbol">:</span>
                       <span class="tsd-signature-type">Record</span
                       ><span class="tsd-signature-symbol">&lt;</span
@@ -1128,9 +1847,41 @@
                       ><span class="tsd-signature-symbol">,</span>
                       <span class="tsd-signature-type">any</span
                       ><span class="tsd-signature-symbol">&gt;</span
-                      ><span class="tsd-signature-symbol">[]</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">undefined</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">id</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">name</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">string</span>
+                      <span class="tsd-signature-symbol">}</span
+                      ><span class="tsd-signature-symbol">[]</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-kind-property">usage</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-symbol">{</span
+                      ><br />        <span class="tsd-kind-property"
+                        >cachedInputTokens</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >inputTokens</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >outputTokens</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />        <span class="tsd-kind-property"
+                        >totalTokens</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <span class="tsd-signature-type">number</span
+                      ><span class="tsd-signature-symbol">;</span
+                      ><br />    <span class="tsd-signature-symbol">}</span
                       ><span class="tsd-signature-symbol">;</span><br /><span
                         class="tsd-signature-symbol"
                         >}</span
@@ -1325,7 +2076,7 @@
                     ><span class="tsd-signature-symbol">(</span
                     ><span class="tsd-kind-parameter">json</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">any</span
+                    <span class="tsd-signature-type">unknown</span
                     ><span class="tsd-signature-symbol">)</span
                     ><span class="tsd-signature-symbol">:</span>
                     <a href="" class="tsd-signature-type tsd-kind-class"
@@ -1345,7 +2096,9 @@
                         <li>
                           <span
                             ><span class="tsd-kind-parameter">json</span>:
-                            <span class="tsd-signature-type">any</span></span
+                            <span class="tsd-signature-type"
+                              >unknown</span
+                            ></span
                           >
                         </li>
                       </ul>
@@ -1566,6 +2319,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>_<wbr />content</span></a
+                  ><a href="#_cost"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>_<wbr />cost</span></a
                   ><a href="#_name"
                     ><svg
                       class="tsd-kind-icon"
@@ -1598,6 +2359,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>_<wbr />role</span></a
+                  ><a href="#_thinkingblocks"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>_<wbr />thinking<wbr />Blocks</span></a
                   ><a href="#_toolcalls"
                     ><svg
                       class="tsd-kind-icon"
@@ -1606,6 +2375,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>_<wbr />tool<wbr />Calls</span></a
+                  ><a href="#_usage"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>_<wbr />usage</span></a
                   >
                 </div>
               </details>
@@ -1641,6 +2418,14 @@
                     >
                       <use href="../assets/icons.svg#icon-262144"></use></svg
                     ><span>content</span></a
+                  ><a href="#cost"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Accessor"
+                    >
+                      <use href="../assets/icons.svg#icon-262144"></use></svg
+                    ><span>cost</span></a
                   ><a href="#name"
                     ><svg
                       class="tsd-kind-icon"
@@ -1673,6 +2458,14 @@
                     >
                       <use href="../assets/icons.svg#icon-262144"></use></svg
                     ><span>role</span></a
+                  ><a href="#thinkingblocks"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Accessor"
+                    >
+                      <use href="../assets/icons.svg#icon-262144"></use></svg
+                    ><span>thinking<wbr />Blocks</span></a
                   ><a href="#toolcalls"
                     ><svg
                       class="tsd-kind-icon"
@@ -1681,6 +2474,14 @@
                     >
                       <use href="../assets/icons.svg#icon-262144"></use></svg
                     ><span>tool<wbr />Calls</span></a
+                  ><a href="#usage"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Accessor"
+                    >
+                      <use href="../assets/icons.svg#icon-262144"></use></svg
+                    ><span>usage</span></a
                   >
                 </div>
               </details>
@@ -1700,7 +2501,25 @@
                   >Methods
                 </summary>
                 <div>
-                  <a href="#togooglemessage"
+                  <a
+                    href="#contenttostring"
+                    class="tsd-is-protected tsd-is-inherited"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Method"
+                    >
+                      <use href="../assets/icons.svg#icon-2048"></use></svg
+                    ><span>content<wbr />To<wbr />String</span></a
+                  ><a href="#toanthropicmessage"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Method"
+                    >
+                      <use href="../assets/icons.svg#icon-2048"></use></svg
+                    ><span>to<wbr />Anthropic<wbr />Message</span></a
+                  ><a href="#togooglemessage"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"

@@ -94,6 +94,12 @@
           <span class="tsd-signature-symbol">=</span>
           <span class="tsd-signature-symbol">{</span><br />    <a
             class="tsd-kind-property"
+            href="#anthropicapikey"
+            >anthropicApiKey</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
             href="#googleapikey"
             >googleApiKey</a
           ><span class="tsd-signature-symbol">?:</span>
@@ -110,15 +116,9 @@
             >model</a
           ><span class="tsd-signature-symbol">:</span>
           <a
-            href="ModelName.html"
+            href="ModelParam.html"
             class="tsd-signature-type tsd-kind-type-alias"
-            >ModelName</a
-          >
-          <span class="tsd-signature-symbol">|</span>
-          <a
-            href="ModelConfig.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >ModelConfig</a
+            >ModelParam</a
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
             href="#ollamaapikey"
@@ -142,17 +142,45 @@
             href="#provider"
             >provider</a
           ><span class="tsd-signature-symbol">?:</span>
-          <a href="Provider.html" class="tsd-signature-type tsd-kind-type-alias"
-            >Provider</a
+          <span class="tsd-signature-type">string</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
-            href="#toolloopdetection"
-            >toolLoopDetection</a
+            href="#statelog"
+            >statelog</a
           ><span class="tsd-signature-symbol">?:</span>
-          <a
-            href="ToolLoopDetection.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >ToolLoopDetection</a
+          <span class="tsd-signature-type">Partial</span
+          ><span class="tsd-signature-symbol">&lt;</span><br />        <span
+            class="tsd-signature-symbol"
+            >{</span
+          ><br />            <span class="tsd-kind-property">apiKey</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >debugMode</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >host</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >projectId</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >traceId</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />        <span
+            class="tsd-signature-symbol"
+            >}</span
+          ><span class="tsd-signature-symbol">,</span><br />    <span
+            class="tsd-signature-symbol"
+            >&gt;</span
           ><span class="tsd-signature-symbol">;</span><br /><span
             class="tsd-signature-symbol"
             >}</span
@@ -177,6 +205,15 @@
                 <section class="tsd-index-section">
                   <h3 class="tsd-index-heading">Properties</h3>
                   <div class="tsd-index-list">
+                    <a href="#anthropicapikey" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>anthropic<wbr />Api<wbr />Key?</span></a
+                    >
                     <a href="#googleapikey" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -240,14 +277,14 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>provider?</span></a
                     >
-                    <a href="#toolloopdetection" class="tsd-index-link"
+                    <a href="#statelog" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Property"
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
-                      ><span>tool<wbr />Loop<wbr />Detection?</span></a
+                      ><span>statelog?</span></a
                     >
                   </div>
                 </section>
@@ -269,6 +306,24 @@
             <h2>Properties</h2>
           </summary>
           <section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="anthropicapikey">
+                <code class="tsd-tag">Optional</code
+                ><span>anthropic<wbr />Api<wbr />Key</span
+                ><a
+                  href="#anthropicapikey"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">anthropicApiKey</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">string</span>
+              </div>
+            </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="googleapikey">
                 <code class="tsd-tag">Optional</code
@@ -316,15 +371,9 @@
                 <span class="tsd-kind-property">model</span
                 ><span class="tsd-signature-symbol">:</span>
                 <a
-                  href="ModelName.html"
+                  href="ModelParam.html"
                   class="tsd-signature-type tsd-kind-type-alias"
-                  >ModelName</a
-                >
-                <span class="tsd-signature-symbol">|</span>
-                <a
-                  href="ModelConfig.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >ModelConfig</a
+                  >ModelParam</a
                 >
               </div>
             </section>
@@ -396,19 +445,14 @@
               <div class="tsd-signature">
                 <span class="tsd-kind-property">provider</span
                 ><span class="tsd-signature-symbol">?:</span>
-                <a
-                  href="Provider.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >Provider</a
-                >
+                <span class="tsd-signature-type">string</span>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
-              <h3 class="tsd-anchor-link" id="toolloopdetection">
-                <code class="tsd-tag">Optional</code
-                ><span>tool<wbr />Loop<wbr />Detection</span
+              <h3 class="tsd-anchor-link" id="statelog">
+                <code class="tsd-tag">Optional</code><span>statelog</span
                 ><a
-                  href="#toolloopdetection"
+                  href="#statelog"
                   aria-label="Permalink"
                   class="tsd-anchor-icon"
                   ><svg viewBox="0 0 24 24" aria-hidden="true">
@@ -416,12 +460,41 @@
                 ></a>
               </h3>
               <div class="tsd-signature">
-                <span class="tsd-kind-property">toolLoopDetection</span
+                <span class="tsd-kind-property">statelog</span
                 ><span class="tsd-signature-symbol">?:</span>
-                <a
-                  href="ToolLoopDetection.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >ToolLoopDetection</a
+                <span class="tsd-signature-type">Partial</span
+                ><span class="tsd-signature-symbol">&lt;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >{</span
+                ><br />        <span class="tsd-kind-property">apiKey</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >debugMode</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">boolean</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >host</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >projectId</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >traceId</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >}</span
+                ><span class="tsd-signature-symbol">,</span><br /><span
+                  class="tsd-signature-symbol"
+                  >&gt;</span
                 >
               </div>
             </section>
@@ -588,7 +661,15 @@
                   >Properties
                 </summary>
                 <div>
-                  <a href="#googleapikey"
+                  <a href="#anthropicapikey"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>anthropic<wbr />Api<wbr />Key</span></a
+                  ><a href="#googleapikey"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
@@ -644,14 +725,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>provider</span></a
-                  ><a href="#toolloopdetection"
+                  ><a href="#statelog"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Property"
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
-                    ><span>tool<wbr />Loop<wbr />Detection</span></a
+                    ><span>statelog</span></a
                   >
                 </div>
               </details>

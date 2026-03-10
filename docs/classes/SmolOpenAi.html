@@ -88,7 +88,7 @@
           </ul>
           <h1>Class SmolOpenAi</h1>
         </div>
-        <section class="tsd-panel tsd-hierarchy" data-refl="78">
+        <section class="tsd-panel tsd-hierarchy" data-refl="181">
           <h4>Hierarchy</h4>
           <ul class="tsd-hierarchy">
             <li class="tsd-hierarchy-item">
@@ -157,6 +157,17 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>config</span></a
                     >
+                    <a
+                      href="#statelogclient"
+                      class="tsd-index-link tsd-is-protected tsd-is-inherited"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>statelog<wbr />Client?</span></a
+                    >
                   </div>
                 </section>
                 <section class="tsd-index-section">
@@ -179,6 +190,17 @@
                       >
                         <use href="../assets/icons.svg#icon-2048"></use></svg
                       ><span>_<wbr />text<wbr />Sync</span></a
+                    >
+                    <a
+                      href="#applybudget"
+                      class="tsd-index-link tsd-is-inherited"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Method"
+                      >
+                        <use href="../assets/icons.svg#icon-2048"></use></svg
+                      ><span>apply<wbr />Budget</span></a
                     >
                     <a
                       href="#checkfortoolloops"
@@ -213,6 +235,17 @@
                         <use href="../assets/icons.svg#icon-2048"></use></svg
                       ><span>extract<wbr />Response</span></a
                     >
+                    <a
+                      href="#getabortsignal"
+                      class="tsd-index-link tsd-is-protected tsd-is-inherited"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Method"
+                      >
+                        <use href="../assets/icons.svg#icon-2048"></use></svg
+                      ><span>get<wbr />Abort<wbr />Signal</span></a
+                    >
                     <a href="#getclient" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -231,14 +264,16 @@
                         <use href="../assets/icons.svg#icon-2048"></use></svg
                       ><span>get<wbr />Model</span></a
                     >
-                    <a href="#prompt" class="tsd-index-link tsd-is-inherited"
+                    <a
+                      href="#isaborterror"
+                      class="tsd-index-link tsd-is-protected tsd-is-inherited"
                       ><svg
                         class="tsd-kind-icon"
                         viewBox="0 0 24 24"
                         aria-label="Method"
                       >
                         <use href="../assets/icons.svg#icon-2048"></use></svg
-                      ><span>prompt</span></a
+                      ><span>is<wbr />Abort<wbr />Error</span></a
                     >
                     <a href="#text" class="tsd-index-link tsd-is-inherited"
                       ><svg
@@ -327,9 +362,9 @@
                     ><span class="tsd-kind-parameter">config</span
                     ><span class="tsd-signature-symbol">:</span>
                     <a
-                      href="../types/BaseClientConfig.html"
+                      href="../types/ResolvedSmolConfig.html"
                       class="tsd-signature-type tsd-kind-type-alias"
-                      >BaseClientConfig</a
+                      >ResolvedSmolConfig</a
                     ><span class="tsd-signature-symbol">)</span
                     ><span class="tsd-signature-symbol">:</span>
                     <a href="" class="tsd-signature-type tsd-kind-class"
@@ -350,9 +385,9 @@
                           <span
                             ><span class="tsd-kind-parameter">config</span>:
                             <a
-                              href="../types/BaseClientConfig.html"
+                              href="../types/ResolvedSmolConfig.html"
                               class="tsd-signature-type tsd-kind-type-alias"
-                              >BaseClientConfig</a
+                              >ResolvedSmolConfig</a
                             ></span
                           >
                         </li>
@@ -404,13 +439,37 @@
                 <span class="tsd-kind-property">config</span
                 ><span class="tsd-signature-symbol">:</span>
                 <a
-                  href="../types/SmolConfig.html"
+                  href="../types/ResolvedSmolConfig.html"
                   class="tsd-signature-type tsd-kind-type-alias"
-                  >SmolConfig</a
+                  >ResolvedSmolConfig</a
                 >
               </div>
               <aside class="tsd-sources">
                 <p>Inherited from BaseClient.config</p>
+              </aside>
+            </section>
+            <section
+              class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"
+            >
+              <h3 class="tsd-anchor-link" id="statelogclient">
+                <code class="tsd-tag">Protected</code>
+                <code class="tsd-tag">Optional</code
+                ><span>statelog<wbr />Client</span
+                ><a
+                  href="#statelogclient"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">statelogClient</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">StatelogClient</span>
+              </div>
+              <aside class="tsd-sources">
+                <p>Inherited from BaseClient.statelogClient</p>
               </aside>
             </section>
           </section>
@@ -593,6 +652,109 @@
                         >
                       </p>
                       <p>Overrides BaseClient._textSync</p>
+                    </aside>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section class="tsd-panel tsd-member tsd-is-inherited">
+              <h3 class="tsd-anchor-link" id="applybudget">
+                <span>apply<wbr />Budget</span
+                ><a
+                  href="#applybudget"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures tsd-is-inherited">
+                <li class="tsd-is-inherited">
+                  <div class="tsd-signature tsd-anchor-link" id="applybudget-1">
+                    <span class="tsd-kind-call-signature">applyBudget</span
+                    ><span class="tsd-signature-symbol">(</span><br />    <span
+                      class="tsd-kind-parameter"
+                      >promptConfig</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <a
+                      href="../types/PromptConfig.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >PromptConfig</a
+                    ><span class="tsd-signature-symbol">,</span><br /><span
+                      class="tsd-signature-symbol"
+                      >)</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-symbol">{</span>
+                    <span class="tsd-kind-property">config</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <a
+                      href="../types/PromptConfig.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >PromptConfig</a
+                    ><span class="tsd-signature-symbol">;</span>
+                    <span class="tsd-kind-property">failure</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <a
+                      href="../types/Result.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >Result</a
+                    ><span class="tsd-signature-symbol">&lt;</span
+                    ><a
+                      href="../types/PromptResult.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >PromptResult</a
+                    ><span class="tsd-signature-symbol">&gt;</span>
+                    <span class="tsd-signature-symbol">}</span
+                    ><a
+                      href="#applybudget-1"
+                      aria-label="Permalink"
+                      class="tsd-anchor-icon"
+                      ><svg viewBox="0 0 24 24" aria-hidden="true">
+                        <use href="../assets/icons.svg#icon-anchor"></use></svg
+                    ></a>
+                  </div>
+                  <div class="tsd-description">
+                    <div class="tsd-parameters">
+                      <h4 class="tsd-parameters-title">Parameters</h4>
+                      <ul class="tsd-parameter-list">
+                        <li>
+                          <span
+                            ><span class="tsd-kind-parameter">promptConfig</span
+                            >:
+                            <a
+                              href="../types/PromptConfig.html"
+                              class="tsd-signature-type tsd-kind-type-alias"
+                              >PromptConfig</a
+                            ></span
+                          >
+                        </li>
+                      </ul>
+                    </div>
+                    <h4 class="tsd-returns-title">
+                      Returns <span class="tsd-signature-symbol">{</span>
+                      <span class="tsd-kind-property">config</span
+                      ><span class="tsd-signature-symbol">:</span>
+                      <a
+                        href="../types/PromptConfig.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >PromptConfig</a
+                      ><span class="tsd-signature-symbol">;</span>
+                      <span class="tsd-kind-property">failure</span
+                      ><span class="tsd-signature-symbol">?:</span>
+                      <a
+                        href="../types/Result.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >Result</a
+                      ><span class="tsd-signature-symbol">&lt;</span
+                      ><a
+                        href="../types/PromptResult.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >PromptResult</a
+                      ><span class="tsd-signature-symbol">&gt;</span>
+                      <span class="tsd-signature-symbol">}</span>
+                    </h4>
+                    <aside class="tsd-sources">
+                      <p>Inherited from BaseClient.applyBudget</p>
                     </aside>
                   </div>
                 </li>
@@ -794,22 +956,32 @@
                     id="extractresponse-1"
                   >
                     <span class="tsd-kind-call-signature">extractResponse</span
-                    ><span class="tsd-signature-symbol">(</span
-                    ><span class="tsd-kind-parameter">promptConfig</span
+                    ><span class="tsd-signature-symbol">(</span><br />    <span
+                      class="tsd-kind-parameter"
+                      >promptConfig</span
                     ><span class="tsd-signature-symbol">:</span>
                     <a
                       href="../types/PromptConfig.html"
                       class="tsd-signature-type tsd-kind-type-alias"
                       >PromptConfig</a
-                    ><span class="tsd-signature-symbol">,</span>
-                    <span class="tsd-kind-parameter">rawValue</span
+                    ><span class="tsd-signature-symbol">,</span><br />    <span
+                      class="tsd-kind-parameter"
+                      >rawValue</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-type">any</span
-                    ><span class="tsd-signature-symbol">,</span>
-                    <span class="tsd-kind-parameter">schema</span
+                    ><span class="tsd-signature-symbol">,</span><br />    <span
+                      class="tsd-kind-parameter"
+                      >schema</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-type">any</span
-                    ><span class="tsd-signature-symbol">)</span
+                    ><span class="tsd-signature-symbol">,</span><br />    <span
+                      class="tsd-kind-parameter"
+                      >depth</span
+                    ><span class="tsd-signature-symbol">?:</span>
+                    <span class="tsd-signature-type">number</span
+                    ><span class="tsd-signature-symbol">,</span><br /><span
+                      class="tsd-signature-symbol"
+                      >)</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-type">any</span
                     ><a
@@ -847,6 +1019,15 @@
                             <span class="tsd-signature-type">any</span></span
                           >
                         </li>
+                        <li>
+                          <span
+                            ><span class="tsd-kind-parameter">depth</span>:
+                            <span class="tsd-signature-type">number</span
+                            ><span class="tsd-signature-symbol">
+                              = 0</span
+                            ></span
+                          >
+                        </li>
                       </ul>
                     </div>
                     <h4 class="tsd-returns-title">
@@ -854,6 +1035,77 @@
                     </h4>
                     <aside class="tsd-sources">
                       <p>Inherited from BaseClient.extractResponse</p>
+                    </aside>
+                  </div>
+                </li>
+              </ul>
+            </section>
+            <section
+              class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"
+            >
+              <h3 class="tsd-anchor-link" id="getabortsignal">
+                <code class="tsd-tag">Protected</code
+                ><span>get<wbr />Abort<wbr />Signal</span
+                ><a
+                  href="#getabortsignal"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <ul class="tsd-signatures tsd-is-protected tsd-is-inherited">
+                <li class="tsd-is-inherited">
+                  <div
+                    class="tsd-signature tsd-anchor-link"
+                    id="getabortsignal-1"
+                  >
+                    <span class="tsd-kind-call-signature">getAbortSignal</span
+                    ><span class="tsd-signature-symbol">(</span
+                    ><span class="tsd-kind-parameter">promptConfig</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <a
+                      href="../types/PromptConfig.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >PromptConfig</a
+                    ><span class="tsd-signature-symbol">)</span
+                    ><span class="tsd-signature-symbol">:</span>
+                    <span class="tsd-signature-type">AbortSignal</span>
+                    <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">undefined</span
+                    ><a
+                      href="#getabortsignal-1"
+                      aria-label="Permalink"
+                      class="tsd-anchor-icon"
+                      ><svg viewBox="0 0 24 24" aria-hidden="true">
+                        <use href="../assets/icons.svg#icon-anchor"></use></svg
+                    ></a>
+                  </div>
+                  <div class="tsd-description">
+                    <div class="tsd-parameters">
+                      <h4 class="tsd-parameters-title">Parameters</h4>
+                      <ul class="tsd-parameter-list">
+                        <li>
+                          <span
+                            ><span class="tsd-kind-parameter">promptConfig</span
+                            >:
+                            <a
+                              href="../types/PromptConfig.html"
+                              class="tsd-signature-type tsd-kind-type-alias"
+                              >PromptConfig</a
+                            ></span
+                          >
+                        </li>
+                      </ul>
+                    </div>
+                    <h4 class="tsd-returns-title">
+                      Returns
+                      <span class="tsd-signature-type">AbortSignal</span>
+                      <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type">undefined</span>
+                    </h4>
+                    <aside class="tsd-sources">
+                      <p>Inherited from BaseClient.getAbortSignal</p>
                     </aside>
                   </div>
                 </li>
@@ -910,7 +1162,10 @@
                     <span class="tsd-kind-call-signature">getModel</span
                     ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">string</span
+                    <a
+                      href="../types/ModelName.html"
+                      class="tsd-signature-type tsd-kind-type-alias"
+                      >ModelName</a
                     ><a
                       href="#getmodel-1"
                       aria-label="Permalink"
@@ -921,71 +1176,47 @@
                   </div>
                   <div class="tsd-description">
                     <h4 class="tsd-returns-title">
-                      Returns <span class="tsd-signature-type">string</span>
+                      Returns
+                      <a
+                        href="../types/ModelName.html"
+                        class="tsd-signature-type tsd-kind-type-alias"
+                        >ModelName</a
+                      >
                     </h4>
                   </div>
                 </li>
               </ul>
             </section>
-            <section class="tsd-panel tsd-member tsd-is-inherited">
-              <h3 class="tsd-anchor-link" id="prompt">
-                <span>prompt</span
+            <section
+              class="tsd-panel tsd-member tsd-is-protected tsd-is-inherited"
+            >
+              <h3 class="tsd-anchor-link" id="isaborterror">
+                <code class="tsd-tag">Protected</code
+                ><span>is<wbr />Abort<wbr />Error</span
                 ><a
-                  href="#prompt"
+                  href="#isaborterror"
                   aria-label="Permalink"
                   class="tsd-anchor-icon"
                   ><svg viewBox="0 0 24 24" aria-hidden="true">
                     <use href="../assets/icons.svg#icon-anchor"></use></svg
                 ></a>
               </h3>
-              <ul class="tsd-signatures tsd-is-inherited">
+              <ul class="tsd-signatures tsd-is-protected tsd-is-inherited">
                 <li class="tsd-is-inherited">
-                  <div class="tsd-signature tsd-anchor-link" id="prompt-1">
-                    <span class="tsd-kind-call-signature">prompt</span
-                    ><span class="tsd-signature-symbol">(</span><br />    <span
-                      class="tsd-kind-parameter"
-                      >text</span
+                  <div
+                    class="tsd-signature tsd-anchor-link"
+                    id="isaborterror-1"
+                  >
+                    <span class="tsd-kind-call-signature">isAbortError</span
+                    ><span class="tsd-signature-symbol">(</span
+                    ><span class="tsd-kind-parameter">err</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">string</span
-                    ><span class="tsd-signature-symbol">,</span><br />    <span
-                      class="tsd-kind-parameter"
-                      >promptConfig</span
-                    ><span class="tsd-signature-symbol">?:</span>
-                    <a
-                      href="../types/PromptConfig.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >PromptConfig</a
-                    ><span class="tsd-signature-symbol">,</span><br /><span
-                      class="tsd-signature-symbol"
-                      >)</span
+                    <span class="tsd-signature-type">unknown</span
+                    ><span class="tsd-signature-symbol">)</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">Promise</span
-                    ><span class="tsd-signature-symbol">&lt;</span
+                    <span class="tsd-signature-type">boolean</span
                     ><a
-                      href="../types/Result.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >Result</a
-                    ><span class="tsd-signature-symbol">&lt;</span
-                    ><a
-                      href="../types/PromptResult.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >PromptResult</a
-                    ><span class="tsd-signature-symbol">&gt;</span
-                    ><span class="tsd-signature-symbol">&gt;</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">AsyncGenerator</span
-                    ><span class="tsd-signature-symbol">&lt;</span
-                    ><a
-                      href="../types/StreamChunk.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >StreamChunk</a
-                    ><span class="tsd-signature-symbol">,</span>
-                    <span class="tsd-signature-type">any</span
-                    ><span class="tsd-signature-symbol">,</span>
-                    <span class="tsd-signature-type">any</span
-                    ><span class="tsd-signature-symbol">&gt;</span
-                    ><a
-                      href="#prompt-1"
+                      href="#isaborterror-1"
                       aria-label="Permalink"
                       class="tsd-anchor-icon"
                       ><svg viewBox="0 0 24 24" aria-hidden="true">
@@ -998,60 +1229,19 @@
                       <ul class="tsd-parameter-list">
                         <li>
                           <span
-                            ><span class="tsd-kind-parameter">text</span>:
-                            <span class="tsd-signature-type">string</span></span
-                          >
-                        </li>
-                        <li>
-                          <span
-                            ><code class="tsd-tag">Optional</code
-                            ><span class="tsd-kind-parameter">promptConfig</span
-                            >:
-                            <a
-                              href="../types/PromptConfig.html"
-                              class="tsd-signature-type tsd-kind-type-alias"
-                              >PromptConfig</a
+                            ><span class="tsd-kind-parameter">err</span>:
+                            <span class="tsd-signature-type"
+                              >unknown</span
                             ></span
                           >
                         </li>
                       </ul>
                     </div>
                     <h4 class="tsd-returns-title">
-                      Returns <span class="tsd-signature-type">Promise</span
-                      ><span class="tsd-signature-symbol">&lt;</span
-                      ><a
-                        href="../types/Result.html"
-                        class="tsd-signature-type tsd-kind-type-alias"
-                        >Result</a
-                      ><span class="tsd-signature-symbol">&lt;</span
-                      ><a
-                        href="../types/PromptResult.html"
-                        class="tsd-signature-type tsd-kind-type-alias"
-                        >PromptResult</a
-                      ><span class="tsd-signature-symbol">&gt;</span
-                      ><span class="tsd-signature-symbol">&gt;</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">AsyncGenerator</span
-                      ><span class="tsd-signature-symbol">&lt;</span
-                      ><a
-                        href="../types/StreamChunk.html"
-                        class="tsd-signature-type tsd-kind-type-alias"
-                        >StreamChunk</a
-                      ><span class="tsd-signature-symbol">,</span>
-                      <span class="tsd-signature-type">any</span
-                      ><span class="tsd-signature-symbol">,</span>
-                      <span class="tsd-signature-type">any</span
-                      ><span class="tsd-signature-symbol">&gt;</span>
+                      Returns <span class="tsd-signature-type">boolean</span>
                     </h4>
                     <aside class="tsd-sources">
-                      <p>
-                        Implementation of
-                        <a href="../interfaces/SmolClient.html">SmolClient</a
-                        >.<a href="../interfaces/SmolClient.html#prompt"
-                          >prompt</a
-                        >
-                      </p>
-                      <p>Inherited from BaseClient.prompt</p>
+                      <p>Inherited from BaseClient.isAbortError</p>
                     </aside>
                   </div>
                 </li>
@@ -1900,6 +2090,16 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>config</span></a
+                  ><a
+                    href="#statelogclient"
+                    class="tsd-is-protected tsd-is-inherited"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>statelog<wbr />Client</span></a
                   >
                 </div>
               </details>
@@ -1935,6 +2135,14 @@
                     >
                       <use href="../assets/icons.svg#icon-2048"></use></svg
                     ><span>_<wbr />text<wbr />Sync</span></a
+                  ><a href="#applybudget" class="tsd-is-inherited"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Method"
+                    >
+                      <use href="../assets/icons.svg#icon-2048"></use></svg
+                    ><span>apply<wbr />Budget</span></a
                   ><a href="#checkfortoolloops" class="tsd-is-inherited"
                     ><svg
                       class="tsd-kind-icon"
@@ -1959,6 +2167,16 @@
                     >
                       <use href="../assets/icons.svg#icon-2048"></use></svg
                     ><span>extract<wbr />Response</span></a
+                  ><a
+                    href="#getabortsignal"
+                    class="tsd-is-protected tsd-is-inherited"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Method"
+                    >
+                      <use href="../assets/icons.svg#icon-2048"></use></svg
+                    ><span>get<wbr />Abort<wbr />Signal</span></a
                   ><a href="#getclient"
                     ><svg
                       class="tsd-kind-icon"
@@ -1975,14 +2193,16 @@
                     >
                       <use href="../assets/icons.svg#icon-2048"></use></svg
                     ><span>get<wbr />Model</span></a
-                  ><a href="#prompt" class="tsd-is-inherited"
+                  ><a
+                    href="#isaborterror"
+                    class="tsd-is-protected tsd-is-inherited"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
                       aria-label="Method"
                     >
                       <use href="../assets/icons.svg#icon-2048"></use></svg
-                    ><span>prompt</span></a
+                    ><span>is<wbr />Abort<wbr />Error</span></a
                   ><a href="#text" class="tsd-is-inherited"
                     ><svg
                       class="tsd-kind-icon"
