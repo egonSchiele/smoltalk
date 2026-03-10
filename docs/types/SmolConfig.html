@@ -376,6 +376,91 @@
                   >ModelParam</a
                 >
               </div>
+              <div class="tsd-comment tsd-typography">
+                <p>The given model determines both</p>
+                <ul>
+                  <li>what client is used</li>
+                  <li>what strategy is executed.</li>
+                </ul>
+                <h2 id="1-specifying-a-model-directly" class="tsd-anchor-link">
+                  1. Specifying a model directly<a
+                    href="#1-specifying-a-model-directly"
+                    aria-label="Permalink"
+                    class="tsd-anchor-icon"
+                    ><svg viewBox="0 0 24 24" aria-hidden="true">
+                      <use href="../assets/icons.svg#icon-anchor"></use></svg
+                  ></a>
+                </h2>
+                <p>
+                  The simplest case is to specify the name of a model from
+                  lib/models.ts. Example:
+                </p>
+                <pre><code><span class="hl-1">  </span><span class="hl-10">model</span><span class="hl-1">: </span><span class="hl-2">&quot;claude-sonnet-4-6&quot;</span>
+</code><button>Copy</button></pre>
+
+                <h2
+                  id="2-specifying-a-model-config-letting-smoltalk-pick-the-model"
+                  class="tsd-anchor-link"
+                >
+                  2. Specifying a model config (letting Smoltalk pick the
+                  model)<a
+                    href="#2-specifying-a-model-config-letting-smoltalk-pick-the-model"
+                    aria-label="Permalink"
+                    class="tsd-anchor-icon"
+                    ><svg viewBox="0 0 24 24" aria-hidden="true">
+                      <use href="../assets/icons.svg#icon-anchor"></use></svg
+                  ></a>
+                </h2>
+                <p>
+                  You can instead also choose to let Smoltalk pick the model
+                  that it thinks will be best for certain parameters. For
+                  example:
+                </p>
+                <pre><code><span class="hl-1">  </span><span class="hl-10">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-8">// find the fastest model</span><br/><span class="hl-1">    </span><span class="hl-10">optimizeFor</span><span class="hl-1">: [</span><span class="hl-2">&quot;speed&quot;</span><span class="hl-1">],</span><br/><br/><span class="hl-1">    </span><span class="hl-8">// from either Anthropic or Google, whichever is faster</span><br/><span class="hl-1">    </span><span class="hl-10">providers</span><span class="hl-1">: [</span><span class="hl-2">&quot;anthropic&quot;</span><span class="hl-1">, </span><span class="hl-2">&quot;google&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">    </span><span class="hl-10">limit</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-8">// 1 mil input tokens + 1 mil output tokens together</span><br/><span class="hl-1">      </span><span class="hl-8">// should cost less than $10 for the models being considered</span><br/><span class="hl-1">      </span><span class="hl-10">cost</span><span class="hl-1">: </span><span class="hl-9">10</span><span class="hl-1">,</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
+</code><button>Copy</button></pre>
+
+                <p>
+                  This can be a good option because as better models come out,
+                  you won't need to update your code. You can just update
+                  Smoltalk and it will pick the best model automatically.
+                </p>
+                <h2 id="3-specifying-a-strategy" class="tsd-anchor-link">
+                  3. Specifying a strategy<a
+                    href="#3-specifying-a-strategy"
+                    aria-label="Permalink"
+                    class="tsd-anchor-icon"
+                    ><svg viewBox="0 0 24 24" aria-hidden="true">
+                      <use href="../assets/icons.svg#icon-anchor"></use></svg
+                  ></a>
+                </h2>
+                <p>
+                  Finally, you can instead specify a strategy to execute. For
+                  example:
+                </p>
+                <pre><code><span class="hl-1">  </span><span class="hl-10">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-10">type</span><span class="hl-1">: </span><span class="hl-2">&quot;race&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-10">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-10">strategies</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">, </span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
+</code><button>Copy</button></pre>
+
+                <p>
+                  In this case, Smoltalk will run your request over using both
+                  LLMs simultaneously, and take the response that finishes
+                  first.
+                </p>
+                <p>
+                  You can also choose to specify fallbacks in case the first
+                  model returns an error for some reason. This can be a good way
+                  to try something with a fast model and then use a slower but
+                  more powerful model if the first one fails.
+                </p>
+                <pre><code><span class="hl-1">  </span><span class="hl-10">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-10">type</span><span class="hl-1">: </span><span class="hl-2">&quot;fallback&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-10">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-10">primaryStrategy</span><span class="hl-1">: </span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-10">config</span><span class="hl-1">: {</span><br/><span class="hl-1">        </span><span class="hl-10">error</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">      },</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
+</code><button>Copy</button></pre>
+
+                <p>
+                  You can of course combine strategies together to create more
+                  complex behavior:
+                </p>
+                <pre><code><span class="hl-1">  </span><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">geminiLiteWithFallback</span><span class="hl-1"> = {</span><br/><span class="hl-1">    </span><span class="hl-4">type:</span><span class="hl-1"> </span><span class="hl-2">&quot;fallback&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-4">params:</span><span class="hl-1"> {</span><br/><span class="hl-1">      </span><span class="hl-4">primaryStrategy:</span><span class="hl-1"> </span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-4">config:</span><span class="hl-1"> {</span><br/><span class="hl-1">        </span><span class="hl-4">error:</span><span class="hl-1"> [</span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">      },</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  };</span><br/><br/><span class="hl-1">  </span><span class="hl-10">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-10">type</span><span class="hl-1">: </span><span class="hl-2">&quot;race&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-10">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-10">strategies</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">, </span><span class="hl-4">geminiLiteWithFallback</span><span class="hl-1">],</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
+</code><button>Copy</button></pre>
+              </div>
             </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="ollamaapikey">
@@ -693,7 +778,35 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>model</span></a
-                  ><a href="#ollamaapikey"
+                  >
+                  <ul>
+                    <li>
+                      <ul>
+                        <li>
+                          <a href="#1-specifying-a-model-directly"
+                            ><span
+                              >1. <wbr />Specifying a model directly</span
+                            ></a
+                          >
+                        </li>
+                        <li>
+                          <a
+                            href="#2-specifying-a-model-config-letting-smoltalk-pick-the-model"
+                            ><span
+                              >2. <wbr />Specifying a model config (letting
+                              <wbr />Smoltalk pick the model)</span
+                            ></a
+                          >
+                        </li>
+                        <li>
+                          <a href="#3-specifying-a-strategy"
+                            ><span>3. <wbr />Specifying a strategy</span></a
+                          >
+                        </li>
+                      </ul>
+                    </li>
+                  </ul>
+                  <a href="#ollamaapikey"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
