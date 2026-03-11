@@ -2,6 +2,7 @@ export * from "./clients/anthropic.js";
 export * from "./clients/google.js";
 export * from "./clients/openai.js";
 export * from "./clients/openaiResponses.js";
+export * from "./clients/baseClient.js";
 import { SmolAnthropic } from "./clients/anthropic.js";
 import { BaseClient } from "./clients/baseClient.js";
 import { SmolGoogle } from "./clients/google.js";

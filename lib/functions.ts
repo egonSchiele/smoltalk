@@ -30,6 +30,7 @@ export function splitConfig(config: SmolPromptConfig): {
     provider,
     logLevel,
     statelog,
+    metadata,
     ...promptConfig
   } = config;
 
@@ -47,6 +48,7 @@ export function splitConfig(config: SmolPromptConfig): {
       provider,
       logLevel,
       statelog,
+      metadata,
     },
     promptConfig,
   };

@@ -39,75 +39,116 @@ export type Budget = {
 };
 
 export type PromptConfig = {
+  /** The conversation messages to send to the model. */
   messages: Message[];
+
+  /** Tools (functions) the model can call. Each tool has a name, optional description, and a Zod schema defining its parameters. */
   tools?: {
     name: string;
     description?: string;
     schema: ZodType;
   }[];
+
+  /** System-level instructions prepended to the conversation. (OpenAI Responses API only) */
   instructions?: string;
+
+  /** Maximum number of tokens the model can generate in its response. */
   maxTokens?: number;
+
+  /** Sampling temperature (0-2). Higher values make output more random, lower values more deterministic. (OpenAI only) */
   temperature?: number;
+
+  /** Number of alternative completions to generate. Not currently used by any provider. */
   numSuggestions?: number;
+
+  /** Whether the model can call multiple tools in a single turn. (OpenAI Responses API only) */
   parallelToolCalls?: boolean;
+
+  /** A Zod schema to constrain the model's output to structured JSON matching the schema. */
   responseFormat?: ZodType;
+
+  /** If true, returns an AsyncGenerator of StreamChunks instead of a single result. */
   stream?: boolean;
 
-  // Enable extended thinking / thought signatures (Anthropic and Google)
+  /**
+   * Enable extended thinking / thought signatures.
+   * When enabled, the model returns its reasoning process alongside the response.
+   * (Anthropic and Google only — OpenAI reasoning tokens are not exposed)
+   */
   thinking?: {
+    /** Whether to enable extended thinking. */
     enabled: boolean;
-    // Anthropic: token budget for thinking (defaults to 5000)
+    /** Token budget for the thinking process. Defaults to 5000. (Anthropic only) */
     budgetTokens?: number;
   };
 
-  // Provider-agnostic reasoning effort level
-  // OpenAI: passed as reasoning_effort / reasoning.effort
-  // Anthropic: mapped to thinking budget (low=2048, medium=5000, high=10000)
-  // Google: mapped to thinkingBudget (low=2048, medium=8192, high=16384)
-  // If `thinking` is also set, it takes precedence for Anthropic/Google
+  /**
+   * Provider-agnostic reasoning effort level.
+   * - OpenAI: passed as reasoning_effort / reasoning.effort
+   * - Anthropic: mapped to thinking budget (low=2048, medium=5000, high=10000)
+   * - Google: mapped to thinkingBudget (low=2048, medium=8192, high=16384)
+   * If `thinking` is also set, it takes precedence for Anthropic/Google.
+   */
   reasoningEffort?: "low" | "medium" | "high";
 
-  // used by openai
+  /**
+   * Additional options for structured output validation and retries. (OpenAI only)
+   */
   responseFormatOptions?: Partial<{
+    /** Name for the response format schema. */
     name: string;
+    /** Whether to enforce strict schema adherence. */
     strict: boolean;
-
-    // 2 by default, if strict is true
+    /** Number of retries if validation fails. Defaults to 2 when strict is true. */
     numRetries: number;
-
-    // strip extra keys instead of failing validation
+    /** If true, strip extra keys from the response instead of failing validation. */
     allowExtraKeys: boolean;
   }>;
 
+  /** Arbitrary provider-specific attributes passed directly to the underlying API call. */
   rawAttributes?: Record<string, any>;
 
-  // If set, returns a failure when the number of messages exceeds this limit
+  /** If set, returns a failure when the number of messages exceeds this limit. */
   maxMessages?: number;
 
-  // Resource budget for this call
+  /** Resource budget (time, tokens, cost, requests) for this call. */
   budget?: Budget;
 
-  // User-provided AbortSignal for cancellation
+  /** An AbortSignal for cancelling the request. */
   abortSignal?: AbortSignal;
 
-  /* Define behavior if too many tool calls are made. */
+  /** Define behavior if too many repeated tool calls are detected (loop prevention). */
   toolLoopDetection?: ToolLoopDetection;
 
+  /** Lifecycle hooks called at various points during execution. */
   hooks?: Partial<{
+    /** Called when the prompt execution starts. */
     onStart: (config: PromptConfig) => void;
+    /** Called each time the model invokes a tool. */
     onToolCall: (toolCall: ToolCall) => void;
+    /** Called when the prompt execution completes successfully. */
     onEnd: (result: PromptResult) => void;
+    /** Called when an error occurs during execution. */
     onError: (error: Error) => void;
+    /** Called when a strategy begins execution. */
     onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
 };
 
 export type SmolConfig = {
+  /** API key for OpenAI. Required when using OpenAI models. */
   openAiApiKey?: string;
+
+  /** API key for Google Gemini. Required when using Google models. */
   googleApiKey?: string;
+
+  /** API key for Anthropic. Required when using Anthropic/Claude models. */
   anthropicApiKey?: string;
-  // only needed for cloud ollama
+
+  /** API key for Ollama. Only needed when connecting to a cloud-hosted Ollama instance. */
   ollamaApiKey?: string;
+
+  /** Base URL for the Ollama server. Defaults to localhost if not set. (Ollama only) */
   ollamaHost?: string;
 
   /**
@@ -198,15 +239,29 @@ export type SmolConfig = {
   ```
     */
   model: ModelParam;
+
+  /** Override the provider for the given model (e.g., use a custom endpoint for an OpenAI-compatible model). */
   provider?: string;
+
+  /** Log level for internal debug logging. */
   logLevel?: LogLevel;
+
+  /** Configuration for Statelog observability/tracing integration. */
   statelog?: Partial<{
+    /** Statelog server host URL. */
     host: string;
+    /** Project identifier for grouping traces. */
     projectId: string;
+    /** Trace identifier for correlating related requests. */
     traceId: string;
+    /** Enable debug mode for verbose Statelog output. */
     debugMode: boolean;
+    /** API key for authenticating with the Statelog server. */
     apiKey: string;
   }>;
+
+  /** Arbitrary metadata passed to custom/registered model providers. */
+  metadata?: Record<string, any>;
 };
 
 export type ToolLoopDetection = {
