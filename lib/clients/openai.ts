@@ -18,6 +18,10 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { isFunctionToolCall, sanitizeAttributes } from "../util.js";
 import { getLogger } from "../logger.js";
 import { BaseClient } from "./baseClient.js";
+import {
+  SmolContentPolicyError,
+  SmolContextWindowExceededError,
+} from "../smolError.js";
 import { zodToOpenAITool } from "../util/tool.js";
 import { ModelName } from "../models.js";
 import { Model } from "../model.js";
@@ -99,6 +103,18 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return request;
   }
 
+  private rethrowAsSmolError(error: unknown): never {
+    if (error instanceof OpenAI.APIError) {
+      if (error.code === "context_length_exceeded") {
+        throw new SmolContextWindowExceededError(error.message);
+      }
+      if (error.code === "content_policy_violation") {
+        throw new SmolContentPolicyError(error.message);
+      }
+    }
+    throw error;
+  }
+
   async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const request = this.buildRequest(config);
 
@@ -109,19 +125,31 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
-    const completion = await this.client.chat.completions.create(
-      {
-        ...request,
-        stream: false as const,
-      },
-      { ...(signal && { signal }) },
-    );
+    let completion;
+    try {
+      completion = await this.client.chat.completions.create(
+        {
+          ...request,
+          stream: false as const,
+        },
+        { ...(signal && { signal }) },
+      );
+    } catch (error) {
+      this.rethrowAsSmolError(error);
+    }
 
     this.logger.debug(
       "Response from OpenAI:",
       JSON.stringify(completion, null, 2),
     );
     this.statelogClient?.promptResponse(completion as any);
+
+    if (completion.choices[0]?.finish_reason === "content_filter") {
+      throw new SmolContentPolicyError(
+        "Content blocked by OpenAI content filter",
+      );
+    }
+
     const message: ChatCompletionMessage = completion.choices[0].message;
     const output = message.content;
     const _toolCalls: ChatCompletionMessageToolCall[] | undefined =
@@ -166,14 +194,19 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
-    const completion = await this.client.chat.completions.create(
-      {
-        ...request,
-        stream: true as const,
-        stream_options: { include_usage: true },
-      },
-      { ...(signal && { signal }) },
-    );
+    let completion;
+    try {
+      completion = await this.client.chat.completions.create(
+        {
+          ...request,
+          stream: true as const,
+          stream_options: { include_usage: true },
+        },
+        { ...(signal && { signal }) },
+      );
+    } catch (error) {
+      this.rethrowAsSmolError(error);
+    }
 
     let content = "";
     const toolCallsMap = new Map<
@@ -192,6 +225,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
 
       if (!chunk.choices || chunk.choices.length === 0) continue;
+      if (chunk.choices[0]?.finish_reason === "content_filter") {
+        throw new SmolContentPolicyError(
+          "Content blocked by OpenAI content filter",
+        );
+      }
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 

@@ -15,6 +15,10 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
+import {
+  SmolContentPolicyError,
+  SmolContextWindowExceededError,
+} from "../smolError.js";
 import { sanitizeAttributes } from "../util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
@@ -240,14 +244,36 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       JSON.stringify(request, null, 2),
     );
     this.statelogClient?.promptRequest(request as any);
-    // Send the prompt as the latest message
-    const result = await this.client.models.generateContent(request);
+    let result;
+    try {
+      result = await this.client.models.generateContent(request);
+    } catch (error) {
+      const msg = ((error as Error).message || "").toLowerCase();
+      if (
+        msg.includes("token") &&
+        (msg.includes("exceed") ||
+          msg.includes("too long") ||
+          msg.includes("limit"))
+      ) {
+        throw new SmolContextWindowExceededError((error as Error).message);
+      }
+      throw error;
+    }
 
     this.logger.debug(
       "Response from Google Gemini:",
       JSON.stringify(result, null, 2),
     );
     this.statelogClient?.promptResponse(result as any);
+
+    for (const candidate of result.candidates || []) {
+      const finishReason = (candidate as any).finishReason;
+      if (finishReason === "SAFETY" || finishReason === "PROHIBITED_CONTENT") {
+        throw new SmolContentPolicyError(
+          `Content blocked by Google safety filter: ${finishReason}`,
+        );
+      }
+    }
 
     const toolCalls: ToolCall[] = [];
     const thinkingBlocks: ThinkingBlock[] = [];
@@ -320,7 +346,21 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     );
     this.statelogClient?.promptRequest(request as any);
 
-    const stream = await this.client.models.generateContentStream(request);
+    let stream;
+    try {
+      stream = await this.client.models.generateContentStream(request);
+    } catch (error) {
+      const msg = ((error as Error).message || "").toLowerCase();
+      if (
+        msg.includes("token") &&
+        (msg.includes("exceed") ||
+          msg.includes("too long") ||
+          msg.includes("limit"))
+      ) {
+        throw new SmolContextWindowExceededError((error as Error).message);
+      }
+      throw error;
+    }
 
     let content = "";
     const toolCallsMap = new Map<

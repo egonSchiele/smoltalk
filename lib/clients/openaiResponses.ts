@@ -21,6 +21,10 @@ import type {
   ResponseStreamEvent,
 } from "openai/resources/responses/responses.js";
 import { Model } from "../model.js";
+import {
+  SmolContentPolicyError,
+  SmolContextWindowExceededError,
+} from "../smolError.js";
 
 export type SmolOpenAiResponsesConfig = BaseClientConfig;
 
@@ -163,6 +167,18 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
+  private rethrowAsSmolError(error: unknown): never {
+    if (error instanceof OpenAI.APIError) {
+      if (error.code === "context_length_exceeded") {
+        throw new SmolContextWindowExceededError(error.message);
+      }
+      if (error.code === "content_policy_violation") {
+        throw new SmolContentPolicyError(error.message);
+      }
+    }
+    throw error;
+  }
+
   async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const request = this.buildRequest(config);
 
@@ -173,13 +189,18 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
-    const response = await this.client.responses.create(
-      {
-        ...request,
-        stream: false,
-      },
-      { ...(signal && { signal }) },
-    );
+    let response;
+    try {
+      response = await this.client.responses.create(
+        {
+          ...request,
+          stream: false,
+        },
+        { ...(signal && { signal }) },
+      );
+    } catch (error) {
+      this.rethrowAsSmolError(error);
+    }
 
     this.logger.debug(
       "Response from OpenAI Responses API:",
@@ -217,9 +238,14 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
-    const stream = this.client.responses.stream(request, {
-      ...(signal && { signal }),
-    });
+    let stream;
+    try {
+      stream = this.client.responses.stream(request, {
+        ...(signal && { signal }),
+      });
+    } catch (error) {
+      this.rethrowAsSmolError(error);
+    }
 
     let content = "";
     const functionCalls = new Map<

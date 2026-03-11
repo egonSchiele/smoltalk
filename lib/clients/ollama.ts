@@ -15,6 +15,7 @@ import {
 import { zodToGoogleTool } from "../util/tool.js";
 import { sanitizeAttributes } from "../util.js";
 import { BaseClient } from "./baseClient.js";
+import { SmolContextWindowExceededError } from "../smolError.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 import { Model } from "../model.js";
@@ -110,6 +111,12 @@ export class SmolOllama extends BaseClient implements SmolClient {
     try {
       // @ts-ignore
       result = await this.client.chat(request);
+    } catch (error) {
+      const msg = ((error as Error).message || "").toLowerCase();
+      if (msg.includes("context length") || msg.includes("context window")) {
+        throw new SmolContextWindowExceededError((error as Error).message);
+      }
+      throw error;
     } finally {
       if (signal && abortHandler) {
         signal.removeEventListener("abort", abortHandler);

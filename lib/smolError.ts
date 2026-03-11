@@ -18,3 +18,17 @@ export class SmolTimeoutError extends SmolError {
     this.name = "SmolTimeoutError";
   }
 }
+
+export class SmolContentPolicyError extends SmolError {
+  constructor(message: string) {
+    super(message);
+    this.name = "SmolContentPolicyError";
+  }
+}
+
+export class SmolContextWindowExceededError extends SmolError {
+  constructor(message: string) {
+    super(message);
+    this.name = "SmolContextWindowExceededError";
+  }
+}

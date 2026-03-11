@@ -20,6 +20,10 @@ import {
   success,
 } from "../types.js";
 import { zodToAnthropicTool } from "../util/tool.js";
+import {
+  SmolContentPolicyError,
+  SmolContextWindowExceededError,
+} from "../smolError.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName, TextModelName } from "../models.js";
 import { Model } from "../model.js";
@@ -135,6 +139,29 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     return { system, messages: anthropicMessages, tools, thinking };
   }
 
+  private rethrowAsSmolError(error: unknown): never {
+    if (error instanceof Anthropic.APIError) {
+      const msg = error.message.toLowerCase();
+      if (
+        msg.includes("prompt is too long") ||
+        msg.includes("context length") ||
+        msg.includes("context window") ||
+        msg.includes("too many tokens")
+      ) {
+        throw new SmolContextWindowExceededError(error.message);
+      }
+      if (
+        msg.includes("content policy") ||
+        msg.includes("usage policies") ||
+        msg.includes("content filtering") ||
+        msg.includes("violates our")
+      ) {
+        throw new SmolContentPolicyError(error.message);
+      }
+    }
+    throw error;
+  }
+
   async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
     const { system, messages, tools, thinking } = this.buildRequest(config);
 
@@ -150,22 +177,27 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(debugData);
 
     const signal = this.getAbortSignal(config);
-    const response = await this.client.messages.create(
-      {
-        model: this.getModel(),
-        max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
-        messages,
-        ...(system && { system }),
-        ...(tools && { tools }),
-        ...(thinking && { thinking }),
-        ...(config.temperature !== undefined && {
-          temperature: config.temperature,
-        }),
-        ...(config.rawAttributes || {}),
-        stream: false,
-      } as any,
-      { ...(signal && { signal }) },
-    );
+    let response;
+    try {
+      response = await this.client.messages.create(
+        {
+          model: this.getModel(),
+          max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
+          messages,
+          ...(system && { system }),
+          ...(tools && { tools }),
+          ...(thinking && { thinking }),
+          ...(config.temperature !== undefined && {
+            temperature: config.temperature,
+          }),
+          ...(config.rawAttributes || {}),
+          stream: false,
+        } as any,
+        { ...(signal && { signal }) },
+      );
+    } catch (error) {
+      this.rethrowAsSmolError(error);
+    }
 
     this.logger.debug("Response from Anthropic:", response);
     this.statelogClient?.promptResponse(response);
@@ -218,22 +250,27 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(streamDebugData);
 
     const signal = this.getAbortSignal(config);
-    const stream = await this.client.messages.create(
-      {
-        model: this.model,
-        max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
-        messages,
-        ...(system && { system }),
-        ...(tools && { tools }),
-        ...(thinking && { thinking }),
-        ...(config.temperature !== undefined && {
-          temperature: config.temperature,
-        }),
-        ...(config.rawAttributes || {}),
-        stream: true,
-      } as any,
-      { ...(signal && { signal }) },
-    );
+    let stream;
+    try {
+      stream = await this.client.messages.create(
+        {
+          model: this.model,
+          max_tokens: config.maxTokens ?? DEFAULT_MAX_TOKENS,
+          messages,
+          ...(system && { system }),
+          ...(tools && { tools }),
+          ...(thinking && { thinking }),
+          ...(config.temperature !== undefined && {
+            temperature: config.temperature,
+          }),
+          ...(config.rawAttributes || {}),
+          stream: true,
+        } as any,
+        { ...(signal && { signal }) },
+      );
+    } catch (error) {
+      this.rethrowAsSmolError(error);
+    }
 
     let content = "";
     // Track tool blocks by index: index -> { id, name, arguments (partial JSON) }

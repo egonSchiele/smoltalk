@@ -1,4 +1,9 @@
-import { SmolStructuredOutputError, SmolTimeoutError } from "../smolError.js";
+import {
+  SmolContentPolicyError,
+  SmolContextWindowExceededError,
+  SmolStructuredOutputError,
+  SmolTimeoutError,
+} from "../smolError.js";
 import {
   ModelLike,
   ModelParam,
@@ -91,6 +96,48 @@ export class FallbackStrategy extends BaseStrategy {
             {
               structuredOutputFailure:
                 fallbackStrategies.structuredOutputFailure.slice(1),
+            },
+          );
+        }
+      } else if (error instanceof SmolContentPolicyError) {
+        if (
+          fallbackStrategies.contentPolicyViolation &&
+          fallbackStrategies.contentPolicyViolation.length > 0
+        ) {
+          this.statelogClient?.debug(
+            "FallbackStrategy: falling back due to content policy violation",
+            {
+              failedStrategy: strategy.toString(),
+            },
+          );
+          return this._textWithFallbacks(
+            config,
+            fromJSON(fallbackStrategies.contentPolicyViolation[0]) as Strategy,
+            {
+              contentPolicyViolation:
+                fallbackStrategies.contentPolicyViolation.slice(1),
+            },
+          );
+        }
+      } else if (error instanceof SmolContextWindowExceededError) {
+        if (
+          fallbackStrategies.contextWindowExceeded &&
+          fallbackStrategies.contextWindowExceeded.length > 0
+        ) {
+          this.statelogClient?.debug(
+            "FallbackStrategy: falling back due to context window exceeded",
+            {
+              failedStrategy: strategy.toString(),
+            },
+          );
+          return this._textWithFallbacks(
+            config,
+            fromJSON(
+              fallbackStrategies.contextWindowExceeded[0],
+            ) as Strategy,
+            {
+              contextWindowExceeded:
+                fallbackStrategies.contextWindowExceeded.slice(1),
             },
           );
         }

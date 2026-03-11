@@ -19,6 +19,8 @@ export const FallbackReasonSchema = z.enum([
   "error",
   "timeout",
   "structuredOutputFailure",
+  "contentPolicyViolation",
+  "contextWindowExceeded",
 ]);
 
 export const FallbackStrategyConfigSchema = z.lazy(() =>
