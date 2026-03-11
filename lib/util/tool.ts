@@ -1,6 +1,6 @@
 import { FunctionDeclaration } from "@google/genai";
 import { z } from "zod";
-import { validateToolName } from "../util.js";
+import { validateToolName } from "./util.js";
 
 type OpenAIToolParameters = {
   type: "object";
@@ -24,7 +24,7 @@ export function zodToOpenAITool(
   options: Partial<{
     description?: string;
     strict?: boolean;
-  }> = {}
+  }> = {},
 ): OpenAITool {
   validateToolName(name);
   // Convert Zod schema to JSON Schema
@@ -82,7 +82,7 @@ export function zodToOpenAIResponsesTool(
   options: Partial<{
     description?: string;
     strict?: boolean;
-  }> = {}
+  }> = {},
 ): OpenAIResponsesFunctionTool {
   validateToolName(name);
   const jsonSchema = schema.toJSONSchema();
@@ -136,7 +136,7 @@ export function zodToAnthropicTool(
   schema: z.ZodType,
   options: Partial<{
     description?: string;
-  }> = {}
+  }> = {},
 ): AnthropicTool {
   validateToolName(name);
   const jsonSchema = schema.toJSONSchema();
@@ -172,7 +172,7 @@ export function zodToAnthropicTool(
  * Removes properties that Google's API doesn't support from JSON schemas
  */
 function removeUnsupportedProperties(
-  obj: Record<string, unknown>
+  obj: Record<string, unknown>,
 ): Record<string, unknown> {
   if (typeof obj === "object" && obj !== null) {
     const newObj = { ...obj };
@@ -189,11 +189,11 @@ function removeUnsupportedProperties(
           newObj[key] = (newObj[key] as unknown[]).map((item) =>
             typeof item === "object" && item !== null
               ? removeUnsupportedProperties(item as Record<string, unknown>)
-              : item
+              : item,
           );
         } else if (typeof newObj[key] === "object" && newObj[key] !== null) {
           newObj[key] = removeUnsupportedProperties(
-            newObj[key] as Record<string, unknown>
+            newObj[key] as Record<string, unknown>,
           );
         }
       }
@@ -247,13 +247,13 @@ function removeUnsupportedProperties(
  * ```
  */
 export function openAIToGoogleTool(
-  openAITool: OpenAITool
+  openAITool: OpenAITool,
 ): FunctionDeclaration {
   return {
     name: openAITool.function.name,
     description: openAITool.function.description,
     parametersJsonSchema: removeUnsupportedProperties(
-      openAITool.function.parameters
+      openAITool.function.parameters,
     ),
   };
 }
@@ -264,7 +264,7 @@ export function zodToGoogleTool(
   options: Partial<{
     description?: string;
     strict?: boolean;
-  }> = {}
+  }> = {},
 ): FunctionDeclaration {
   const openAITool = zodToOpenAITool(name, schema, options);
   return openAIToGoogleTool(openAITool);

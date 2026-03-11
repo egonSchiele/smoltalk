@@ -4,7 +4,7 @@ import {
   assistantMessage,
 } from "../classes/message/index.js";
 import { latencyTracker } from "../latencyTracker.js";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import { getModel, isTextModel, ModelName } from "../models.js";
 import { SmolStructuredOutputError } from "../smolError.js";
 import { getStatelogClient, StatelogClient } from "../statelogClient.js";

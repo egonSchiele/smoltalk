@@ -10,10 +10,10 @@ import {
 } from "../types.js";
 import { EgonLog } from "egonlog";
 import { ToolCall } from "../classes/ToolCall.js";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
-import { sanitizeAttributes } from "../util.js";
+import { sanitizeAttributes } from "../util/util.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 import type {

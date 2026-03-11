@@ -1,6 +1,6 @@
 import { EgonLog } from "egonlog";
 import { z } from "zod";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import { FunctionCall } from "@google/genai";
 import { ResponseInputItem } from "openai/resources/responses/responses.js";
 
@@ -38,7 +38,10 @@ export class ToolCall {
           e,
           args,
         );
-        this.logger.debug("Falling back to empty arguments object for ToolCall", { name, id, rawArgs: args });
+        this.logger.debug(
+          "Falling back to empty arguments object for ToolCall",
+          { name, id, rawArgs: args },
+        );
         this._arguments = {};
       }
     } else {

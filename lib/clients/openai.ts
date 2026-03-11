@@ -15,8 +15,8 @@ import {
   ChatCompletionMessageToolCall,
 } from "openai/resources";
 import { ToolCall } from "../classes/ToolCall.js";
-import { isFunctionToolCall, sanitizeAttributes } from "../util.js";
-import { getLogger } from "../logger.js";
+import { isFunctionToolCall, sanitizeAttributes } from "../util/util.js";
+import { getLogger } from "../util/logger.js";
 import { BaseClient } from "./baseClient.js";
 import {
   SmolContentPolicyError,
@@ -167,7 +167,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
           this.logger.warn(
             `Unsupported tool call type: ${tc.type} for tool call ID: ${tc.id}`,
           );
-          this.statelogClient?.debug(`Unsupported tool call type: ${tc.type}`, { toolCallId: tc.id });
+          this.statelogClient?.debug(`Unsupported tool call type: ${tc.type}`, {
+            toolCallId: tc.id,
+          });
         }
       }
     }

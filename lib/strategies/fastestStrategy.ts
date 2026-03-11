@@ -1,5 +1,5 @@
 import { latencyTracker } from "../latencyTracker.js";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import { Model } from "../model.js";
 import {
   getModel,

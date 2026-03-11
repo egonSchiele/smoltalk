@@ -19,7 +19,7 @@ import {
   Optimization,
 } from "./strategies/types.js";
 import { ModelLike } from "./types.js";
-import { round } from "./util.js";
+import { round } from "./util/util.js";
 
 const WEIGHTS: Record<number, number[]> = {
   1: [1],

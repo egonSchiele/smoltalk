@@ -6,7 +6,7 @@ import type {
 import { EgonLog } from "egonlog";
 import { ToolCall } from "../classes/ToolCall.js";
 import { SystemMessage, DeveloperMessage } from "../classes/message/index.js";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import {
   BaseClientConfig,
   CostEstimate,
@@ -246,7 +246,10 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       tools,
       thinking,
     };
-    this.logger.debug("Sending streaming request to Anthropic:", streamDebugData);
+    this.logger.debug(
+      "Sending streaming request to Anthropic:",
+      streamDebugData,
+    );
     this.statelogClient?.promptRequest(streamDebugData);
 
     const signal = this.getAbortSignal(config);
@@ -335,7 +338,10 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     }
 
     this.logger.debug("Streaming response completed from Anthropic");
-    this.statelogClient?.promptResponse({ content, usage: { inputTokens, outputTokens } });
+    this.statelogClient?.promptResponse({
+      content,
+      usage: { inputTokens, outputTokens },
+    });
 
     const toolCalls: ToolCall[] = [];
     for (const block of toolBlocks.values()) {

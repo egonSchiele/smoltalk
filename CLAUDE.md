@@ -86,3 +86,10 @@ const result = await textSync("Solve this step by step", {
 ## Dependencies
 
 - **Package manager**: pnpm
+
+## Testing
+Put test files alongside implementation with `.test.ts` suffix. Use `vitest` for testing.
+
+```bash
+pnpm test
+```

@@ -2,7 +2,7 @@ import { EgonLog } from "egonlog";
 import { ChatRequest, Message, Ollama } from "ollama";
 import { ToolCall as OllamaToolCall } from "ollama";
 import { ToolCall } from "../classes/ToolCall.js";
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import {
   BaseClientConfig,
   PromptConfig,
@@ -13,7 +13,7 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
-import { sanitizeAttributes } from "../util.js";
+import { sanitizeAttributes } from "../util/util.js";
 import { BaseClient } from "./baseClient.js";
 import { SmolContextWindowExceededError } from "../smolError.js";
 import { ModelName } from "../models.js";
@@ -182,81 +182,81 @@ export class SmolOllama extends BaseClient implements SmolClient {
       signal.addEventListener("abort", abortHandler, { once: true });
     }
     try {
-    // @ts-ignore
-    const stream = await this.client.chat(request);
+      // @ts-ignore
+      const stream = await this.client.chat(request);
 
-    let content = "";
-    const toolCallsMap = new Map<
-      string,
-      { id: string; name: string; arguments: any }
-    >();
-    let usage: TokenUsage | undefined;
-    let cost: CostEstimate | undefined;
-    let lastChunk: any;
+      let content = "";
+      const toolCallsMap = new Map<
+        string,
+        { id: string; name: string; arguments: any }
+      >();
+      let usage: TokenUsage | undefined;
+      let cost: CostEstimate | undefined;
+      let lastChunk: any;
 
-    for await (const chunk of stream) {
-      lastChunk = chunk;
-      // Handle text content
-      if (chunk.message?.content) {
-        content += chunk.message.content;
-        yield { type: "text", text: chunk.message.content };
-      }
+      for await (const chunk of stream) {
+        lastChunk = chunk;
+        // Handle text content
+        if (chunk.message?.content) {
+          content += chunk.message.content;
+          yield { type: "text", text: chunk.message.content };
+        }
 
-      // Handle tool calls
-      if (chunk.message?.tool_calls) {
-        for (const tc of chunk.message.tool_calls) {
-          const tool_call = tc as OllamaToolCall & { id: string };
-          const id = tool_call.id || tool_call.function.name || "";
-          const name = tool_call.function.name || "";
+        // Handle tool calls
+        if (chunk.message?.tool_calls) {
+          for (const tc of chunk.message.tool_calls) {
+            const tool_call = tc as OllamaToolCall & { id: string };
+            const id = tool_call.id || tool_call.function.name || "";
+            const name = tool_call.function.name || "";
 
-          if (!toolCallsMap.has(id)) {
-            toolCallsMap.set(id, {
-              id: id,
-              name: name,
-              arguments: tool_call.function.arguments || {},
-            });
-          } else {
-            // Merge arguments if tool call is split across chunks
-            const existing = toolCallsMap.get(id)!;
-            if (tool_call.function.arguments) {
-              existing.arguments = {
-                ...existing.arguments,
-                ...tool_call.function.arguments,
-              };
+            if (!toolCallsMap.has(id)) {
+              toolCallsMap.set(id, {
+                id: id,
+                name: name,
+                arguments: tool_call.function.arguments || {},
+              });
+            } else {
+              // Merge arguments if tool call is split across chunks
+              const existing = toolCallsMap.get(id)!;
+              if (tool_call.function.arguments) {
+                existing.arguments = {
+                  ...existing.arguments,
+                  ...tool_call.function.arguments,
+                };
+              }
             }
           }
         }
       }
-    }
 
-    this.logger.debug("Streaming response completed from Ollama");
+      this.logger.debug("Streaming response completed from Ollama");
 
-    // Extract usage from the last chunk
-    if (lastChunk) {
-      const usageAndCost = this.calculateUsageAndCost(lastChunk);
-      usage = usageAndCost.usage;
-      cost = usageAndCost.cost;
-    }
-    this.statelogClient?.promptResponse({ content, usage, cost });
+      // Extract usage from the last chunk
+      if (lastChunk) {
+        const usageAndCost = this.calculateUsageAndCost(lastChunk);
+        usage = usageAndCost.usage;
+        cost = usageAndCost.cost;
+      }
+      this.statelogClient?.promptResponse({ content, usage, cost });
 
-    // Yield tool calls
-    const toolCalls: ToolCall[] = [];
-    for (const tc of toolCallsMap.values()) {
-      const toolCall = new ToolCall(tc.id, tc.name, tc.arguments);
-      toolCalls.push(toolCall);
-      yield { type: "tool_call", toolCall };
-    }
+      // Yield tool calls
+      const toolCalls: ToolCall[] = [];
+      for (const tc of toolCallsMap.values()) {
+        const toolCall = new ToolCall(tc.id, tc.name, tc.arguments);
+        toolCalls.push(toolCall);
+        yield { type: "tool_call", toolCall };
+      }
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        usage,
-        cost,
-        model: this.getModel(),
-      },
-    };
+      yield {
+        type: "done",
+        result: {
+          output: content || null,
+          toolCalls,
+          usage,
+          cost,
+          model: this.getModel(),
+        },
+      };
     } finally {
       if (signal && abortHandler) {
         signal.removeEventListener("abort", abortHandler);

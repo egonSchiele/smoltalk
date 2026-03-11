@@ -1,0 +1,30 @@
+import { z } from "zod";
+export type TokenUsage = {
+  inputTokens: number;
+  outputTokens: number;
+  cachedInputTokens?: number;
+  totalTokens?: number;
+};
+
+export const TokenUsageSchema = z.object({
+  inputTokens: z.number(),
+  outputTokens: z.number(),
+  cachedInputTokens: z.number().optional(),
+  totalTokens: z.number().optional(),
+});
+
+export function addTokenUsage(_a?: TokenUsage, _b?: TokenUsage): TokenUsage {
+  let a = _a;
+  let b = _b;
+  if (a && !b) return a;
+  if (b && !a) return b;
+  if (!a && !b) return { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+  a = _a as TokenUsage;
+  b = _b as TokenUsage;
+  return {
+    inputTokens: a.inputTokens + b.inputTokens,
+    outputTokens: a.outputTokens + b.outputTokens,
+    cachedInputTokens: (a.cachedInputTokens || 0) + (b.cachedInputTokens || 0),
+    totalTokens: (a.totalTokens || 0) + (b.totalTokens || 0),
+  };
+}

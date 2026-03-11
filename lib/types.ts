@@ -12,6 +12,10 @@ import {
   StrategyJSON,
 } from "./strategies/types.js";
 import { Result } from "./types/result.js";
+import { TokenUsage } from "./types/tokenUsage.js";
+import { CostEstimate } from "./types/costEstimate.js";
+export * from "./types/costEstimate.js";
+export * from "./types/tokenUsage.js";
 
 export type ThinkingBlock = {
   text: string;
@@ -286,75 +290,6 @@ export type ResolvedSmolConfig = Omit<SmolConfig, "model"> & {
 };
 
 export type BaseClientConfig = ResolvedSmolConfig;
-
-export type TokenUsage = {
-  inputTokens: number;
-  outputTokens: number;
-  cachedInputTokens?: number;
-  totalTokens?: number;
-};
-
-export const TokenUsageSchema = z.object({
-  inputTokens: z.number(),
-  outputTokens: z.number(),
-  cachedInputTokens: z.number().optional(),
-  totalTokens: z.number().optional(),
-});
-
-export type CostEstimate = {
-  inputCost: number;
-  outputCost: number;
-  cachedInputCost?: number;
-  totalCost: number;
-  currency: string;
-};
-
-export const CostEstimateSchema = z.object({
-  inputCost: z.number(),
-  outputCost: z.number(),
-  cachedInputCost: z.number().optional(),
-  totalCost: z.number(),
-  currency: z.string(),
-});
-
-export function addTokenUsage(_a?: TokenUsage, _b?: TokenUsage): TokenUsage {
-  let a = _a;
-  let b = _b;
-  if (a && !b) return a;
-  if (b && !a) return b;
-  if (!a && !b) return { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
-  a = _a as TokenUsage;
-  b = _b as TokenUsage;
-  return {
-    inputTokens: a.inputTokens + b.inputTokens,
-    outputTokens: a.outputTokens + b.outputTokens,
-    cachedInputTokens: (a.cachedInputTokens || 0) + (b.cachedInputTokens || 0),
-    totalTokens: (a.totalTokens || 0) + (b.totalTokens || 0),
-  };
-}
-
-export function addCosts(_a?: CostEstimate, _b?: CostEstimate): CostEstimate {
-  let a = _a;
-  let b = _b;
-  if (a && !b) return a;
-  if (b && !a) return b;
-  if (!a && !b)
-    return { inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" };
-  a = _a as CostEstimate;
-  b = _b as CostEstimate;
-  if (a.currency !== b.currency) {
-    throw new Error(
-      `Cannot add costs with different currencies: ${a.currency} and ${b.currency}`,
-    );
-  }
-  return {
-    inputCost: a.inputCost + b.inputCost,
-    outputCost: a.outputCost + b.outputCost,
-    cachedInputCost: (a.cachedInputCost || 0) + (b.cachedInputCost || 0),
-    totalCost: a.totalCost + b.totalCost,
-    currency: a.currency,
-  };
-}
 
 export type PromptResult = {
   output: string | null;

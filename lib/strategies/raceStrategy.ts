@@ -1,4 +1,4 @@
-import { getLogger } from "../logger.js";
+import { getLogger } from "../util/logger.js";
 import { ModelLike, ModelParam, SmolPromptConfig } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { fromJSON, IDStrategy } from "./index.js";
