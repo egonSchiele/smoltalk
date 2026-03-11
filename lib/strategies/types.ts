@@ -38,7 +38,8 @@ export type StrategyJSON =
   | IDStrategyJSON
   | RaceStrategyJSON
   | FallbackStrategyJSON
-  | RandomStrategyJSON;
+  | RandomStrategyJSON
+  | FastestStrategyJSON;
 
 export const IDStrategyJSONSchema = z.object({
   type: z.literal("id"),
@@ -91,6 +92,21 @@ export type RandomStrategyJSON = {
   params: { strategies: StrategyJSON[] };
 };
 
+export const FastestStrategyJSONSchema: z.ZodType<FastestStrategyJSON> = z.lazy(
+  () =>
+    z.object({
+      type: z.literal("fastest"),
+      params: z.object({
+        models: z.array(z.union([ModelNameAndProviderSchema, z.string()])),
+      }),
+    }),
+);
+
+export type FastestStrategyJSON = {
+  type: "fastest";
+  params: { models: (ModelNameAndProvider | string)[] };
+};
+
 export type ModelNameAndProvider = {
   model: string;
   provider: string;
@@ -137,6 +153,7 @@ export const StrategyJSONSchema: z.ZodType<StrategyJSON> = z.lazy(() =>
     RaceStrategyJSONSchema,
     FallbackStrategyJSONSchema,
     RandomStrategyJSONSchema,
+    FastestStrategyJSONSchema,
   ]),
 );
 

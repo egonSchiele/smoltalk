@@ -3,6 +3,7 @@ import { ModelName } from "../models.js";
 import { ModelLike, ModelParam } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
+import { FastestStrategy } from "./fastestStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
 import { RandomStrategy } from "./randomStrategy.js";
@@ -10,8 +11,11 @@ import {
   FallbackStrategyConfig,
   FallbackStrategyJSON,
   FallbackStrategyJSONSchema,
+  FastestStrategyJSON,
+  FastestStrategyJSONSchema,
   IDStrategyJSON,
   IDStrategyJSONSchema,
+  ModelNameAndProvider,
   ModelNameAndProviderSchema,
   RaceStrategyJSON,
   RaceStrategyJSONSchema,
@@ -31,8 +35,16 @@ export * from "./types.js";
 export function race(...strategies: ModelParam[]): Strategy {
   return new RaceStrategy(strategies);
 }
+
 export function random(...strategies: ModelParam[]): Strategy {
   return new RandomStrategy(...strategies);
+}
+
+export function fastest(
+  models: (string | ModelNameAndProvider | Model)[],
+  epsilon?: number,
+): Strategy {
+  return new FastestStrategy(models, epsilon);
 }
 
 export function id(model: ModelLike): Strategy {
@@ -65,6 +77,8 @@ export function fromJSON(json: StrategyJSON): Strategy {
     return FallbackStrategy.fromJSON(json as FallbackStrategyJSON);
   } else if (RandomStrategyJSONSchema.safeParse(json).success) {
     return RandomStrategy.fromJSON(json as RandomStrategyJSON);
+  } else if (FastestStrategyJSONSchema.safeParse(json).success) {
+    return FastestStrategy.fromJSON(json as FastestStrategyJSON);
   } else if (typeof json === "string") {
     return id(json as ModelName);
   } else {

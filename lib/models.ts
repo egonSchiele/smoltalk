@@ -836,7 +836,7 @@ export type SpeechToTextModelName =
   (typeof speechToTextModels)[number]["modelName"];
 export type EmbeddingsModelName =
   (typeof embeddingsModels)[number]["modelName"];
-export type ModelName = TextModelName | ImageModelName | SpeechToTextModelName;
+export type ModelName = string; // TextModelName | ImageModelName | SpeechToTextModelName;
 
 export const registeredTextModels: TextModel[] = [];
 

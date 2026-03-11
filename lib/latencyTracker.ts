@@ -42,9 +42,12 @@ class LatencyTracker {
 
   /**
    * Get estimated output tokens per second for a model based on tracked latency.
-   * Returns null if no samples exist.
+   * Returns null if no samples exist or if the number of samples is below the minimum required.
    */
-  getTokensPerSecond(model: string): number | null {
+  getTokensPerSecond(model: string, minSamples: number = 1): number | null {
+    const sampleCount = this.getSampleCount(model);
+    if (sampleCount < minSamples) return null;
+
     const msPerToken = this.getMeanMsPerToken(model);
     if (msPerToken === null || msPerToken === 0) return null;
     return 1000 / msPerToken;

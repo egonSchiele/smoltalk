@@ -231,6 +231,13 @@ export class Model {
     return `Model(${JSON.stringify(this.model)})`;
   }
 
+  toJSON(): ModelName | ModelNameAndProvider {
+    if (ModelNameAndProviderSchema.safeParse(this.model).success) {
+      return this.model as ModelNameAndProvider;
+    }
+    return this.getResolvedModel();
+  }
+
   static create(model: ModelLike, provider?: Provider): Model {
     if (model instanceof Model) {
       return model;
