@@ -1,3 +1,4 @@
+import { latencyTracker } from "./latencyTracker.js";
 import {
   ModelName,
   getModel,
@@ -164,7 +165,12 @@ export class Model {
       case "cost":
         return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
       case "speed":
-        return m.outputTokensPerSecond ?? 0;
+        // Prefer tracked latency over static estimates
+        return (
+          latencyTracker.getTokensPerSecond(m.modelName) ??
+          m.outputTokensPerSecond ??
+          0
+        );
       case "reasoning":
         return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
       case "large-context":

@@ -3,6 +3,7 @@ import {
   userMessage,
   assistantMessage,
 } from "../classes/message/index.js";
+import { latencyTracker } from "../latencyTracker.js";
 import { getLogger } from "../logger.js";
 import { getModel, isTextModel, ModelName } from "../models.js";
 import { SmolStructuredOutputError } from "../smolError.js";
@@ -217,12 +218,14 @@ export class BaseClient implements SmolClient {
         value: { output: null, toolCalls: [], model: this.config.model },
       };
     }
+    const startTime = performance.now();
     try {
       const result = await this.textWithRetry(
         newPromptConfig,
         newPromptConfig.responseFormatOptions?.numRetries ||
           DEFAULT_NUM_RETRIES,
       );
+      this.recordLatency(startTime, result);
       return result;
     } catch (err) {
       if (this.isAbortError(err)) {
@@ -299,6 +302,14 @@ export class BaseClient implements SmolClient {
       }
     }
     return { continue: true, newPromptConfig: promptConfig };
+  }
+
+  private recordLatency(startTime: number, result: Result<PromptResult>): void {
+    if (!result.success) return;
+    const outputTokens = result.value.usage?.outputTokens;
+    if (!outputTokens || outputTokens <= 0) return;
+    const elapsedMs = performance.now() - startTime;
+    latencyTracker.record(this.config.model, elapsedMs, outputTokens);
   }
 
   extractResponse(
@@ -528,8 +539,18 @@ export class BaseClient implements SmolClient {
       };
       return;
     }
+    const startTime = performance.now();
     try {
-      yield* this._textStream(newPromptConfig);
+      for await (const chunk of this._textStream(newPromptConfig)) {
+        if (chunk.type === "done") {
+          const outputTokens = chunk.result.usage?.outputTokens;
+          if (outputTokens && outputTokens > 0) {
+            const elapsedMs = performance.now() - startTime;
+            latencyTracker.record(this.config.model, elapsedMs, outputTokens);
+          }
+        }
+        yield chunk;
+      }
     } catch (err) {
       if (this.isAbortError(err)) {
         const timeBudgetMs = config.budget?.timeBudgetMs;
