@@ -5,6 +5,7 @@ import { BaseStrategy } from "./baseStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
+import { RandomStrategy } from "./randomStrategy.js";
 import {
   FallbackStrategyConfig,
   FallbackStrategyJSON,
@@ -14,6 +15,8 @@ import {
   ModelNameAndProviderSchema,
   RaceStrategyJSON,
   RaceStrategyJSONSchema,
+  RandomStrategyJSON,
+  RandomStrategyJSONSchema,
   Strategy,
   StrategyJSON,
 } from "./types.js";
@@ -22,10 +25,14 @@ export * from "./baseStrategy.js";
 export * from "./fallbackStrategy.js";
 export * from "./idStrategy.js";
 export * from "./raceStrategy.js";
+export * from "./randomStrategy.js";
 export * from "./types.js";
 
 export function race(...strategies: ModelParam[]): Strategy {
   return new RaceStrategy(strategies);
+}
+export function random(...strategies: ModelParam[]): Strategy {
+  return new RandomStrategy(...strategies);
 }
 
 export function id(model: ModelLike): Strategy {
@@ -56,6 +63,8 @@ export function fromJSON(json: StrategyJSON): Strategy {
     return RaceStrategy.fromJSON(json as RaceStrategyJSON);
   } else if (FallbackStrategyJSONSchema.safeParse(json).success) {
     return FallbackStrategy.fromJSON(json as FallbackStrategyJSON);
+  } else if (RandomStrategyJSONSchema.safeParse(json).success) {
+    return RandomStrategy.fromJSON(json as RandomStrategyJSON);
   } else if (typeof json === "string") {
     return id(json as ModelName);
   } else {

@@ -37,7 +37,8 @@ export type StrategyJSON =
   | ModelNameAndProvider
   | IDStrategyJSON
   | RaceStrategyJSON
-  | FallbackStrategyJSON;
+  | FallbackStrategyJSON
+  | RandomStrategyJSON;
 
 export const IDStrategyJSONSchema = z.object({
   type: z.literal("id"),
@@ -75,6 +76,19 @@ export type FallbackStrategyJSON = {
     primaryStrategy: StrategyJSON;
     config: FallbackStrategyConfig;
   };
+};
+
+export const RandomStrategyJSONSchema: z.ZodType<RandomStrategyJSON> = z.lazy(
+  () =>
+    z.object({
+      type: z.literal("random"),
+      params: z.object({ strategies: z.array(StrategyJSONSchema) }),
+    }),
+);
+
+export type RandomStrategyJSON = {
+  type: "random";
+  params: { strategies: StrategyJSON[] };
 };
 
 export type ModelNameAndProvider = {
@@ -122,6 +136,7 @@ export const StrategyJSONSchema: z.ZodType<StrategyJSON> = z.lazy(() =>
     IDStrategyJSONSchema,
     RaceStrategyJSONSchema,
     FallbackStrategyJSONSchema,
+    RandomStrategyJSONSchema,
   ]),
 );
 
