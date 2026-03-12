@@ -1,4 +1,4 @@
-import { getLlama, LlamaChat } from "node-llama-cpp";
+import { getLlama, LlamaChat, LlamaLogLevel } from "node-llama-cpp";
 import type {
   ChatHistoryItem,
   ChatModelFunctions,
@@ -50,7 +50,7 @@ export class LlamaCPP extends BaseClient {
   }
 
   async setup() {
-    this.llama = await getLlama();
+    this.llama = await getLlama({ logLevel: LlamaLogLevel.error });
     this.llamaModel = await this.llama.loadModel({
       modelPath: path.join(this.modelDir, this.config.model),
     });
