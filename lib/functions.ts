@@ -32,6 +32,7 @@ export function splitConfig(config: SmolPromptConfig): {
     statelog,
     metadata,
     hooks,
+    llamaCppModelDir,
     ...promptConfig
   } = config;
 
@@ -51,6 +52,7 @@ export function splitConfig(config: SmolPromptConfig): {
       statelog,
       metadata,
       hooks,
+      llamaCppModelDir,
     },
     promptConfig,
   };

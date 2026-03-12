@@ -45,6 +45,13 @@ registerTextModel({
   maxOutputTokens: 1000,
 });
 
+registerTextModel({
+  modelName: "qwen2.5-0.5b-instruct-fp16.gguf",
+  provider: "llama-cpp",
+  maxInputTokens: 2048,
+  maxOutputTokens: 2048,
+});
+
 const strategy: StrategyJSON = {
   type: "race",
   params: {
@@ -80,8 +87,9 @@ async function main() {
     openAiApiKey: process.env.OPENAI_API_KEY || "",
     googleApiKey: process.env.GEMINI_API_KEY || "",
     anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+    llamaCppModelDir: "/tmp/smoltest/models",
     logLevel: "debug",
-    model: race("gemini-2.5-flash-lite", "foo"),
+    model: "qwen2.5-0.5b-instruct-fp16.gguf",
     hooks: {
       onStrategyStart: (strategy, config) => {
         console.log(

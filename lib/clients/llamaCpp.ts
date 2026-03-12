@@ -214,15 +214,16 @@ export class LlamaCPP extends BaseClient {
 
     // Create context and LlamaChat
     const context = await setupModel.createContext();
+    const sequence = context.getSequence();
     const chat = new LlamaChat({
-      contextSequence: context.getSequence(),
+      contextSequence: sequence,
     });
 
     // Build tools if provided
     const functions = this.buildFunctions(config.tools);
 
     // Track token usage
-    const meterBefore = context.getSequence().tokenMeter.getState();
+    const meterBefore = sequence.tokenMeter.getState();
 
     // Build options
     const options: Record<string, any> = {};
@@ -253,14 +254,14 @@ export class LlamaCPP extends BaseClient {
     } as any);
 
     let result;
+    let meterAfter: TokenMeterState;
     try {
       result = await chat.generateResponse(chatHistory, options);
+      meterAfter = sequence.tokenMeter.getState();
     } finally {
       chat.dispose();
       await context.dispose();
     }
-
-    const meterAfter = context.getSequence().tokenMeter.getState();
 
     // Extract text output
     const output = result.response || null;
@@ -314,15 +315,14 @@ export class LlamaCPP extends BaseClient {
 
     // Create context and LlamaChat
     const context = await setupModel.createContext();
+    const sequence = context.getSequence();
     const chat = new LlamaChat({
-      contextSequence: context.getSequence(),
+      contextSequence: sequence,
     });
 
-    const functions = config.tools?.length
-      ? this.buildFunctions(config.tools)
-      : undefined;
+    const functions = this.buildFunctions(config.tools);
 
-    const meterBefore = context.getSequence().tokenMeter.getState();
+    const meterBefore = sequence.tokenMeter.getState();
 
     // Bridge callback-based streaming to async generator using a queue
     const chunks: StreamChunk[] = [];
@@ -371,7 +371,7 @@ export class LlamaCPP extends BaseClient {
     const promptPromise = chat
       .generateResponse(chatHistory, options)
       .then((result) => {
-        const meterAfter = context.getSequence().tokenMeter.getState();
+        const meterAfter = sequence.tokenMeter.getState();
 
         const toolCalls = this.extractToolCalls(
           result.functionCalls as
