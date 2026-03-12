@@ -5,30 +5,12 @@ import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { Model } from "./model.js";
 import { ModelName } from "./models.js";
-import {
-  Strategy,
-  StrategyJSON,
-} from "./strategies/types.js";
+import { Strategy, StrategyJSON } from "./strategies/types.js";
 import { Result } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
 export * from "./types/costEstimate.js";
 export * from "./types/tokenUsage.js";
-
-export type ThinkingBlock = {
-  text: string;
-  signature: string;
-};
-
-export const TextPartSchema = z.object({
-  type: z.literal("text"),
-  text: z.string(),
-});
-
-export const ThinkingBlockSchema = z.object({
-  text: z.string(),
-  signature: z.string(),
-});
 
 export type PromptConfig = {
   /** The conversation messages to send to the model. */
@@ -126,6 +108,9 @@ export type SmolConfig = {
 
   /** Base URL for the Ollama server. Defaults to localhost if not set. (Ollama only) */
   ollamaHost?: string;
+
+  /** Directory path for Llama.cpp models. Required when using the Llama.cpp client. */
+  llamaCppModelDir?: string;
 
   /**
   The given model determines both
@@ -312,8 +297,19 @@ export type TextPart = {
 };
 
 export type ModelLike = ModelName | Model;
+export type ModelParam = ModelName | Strategy | StrategyJSON;
 
-export type ModelParam =
-  | ModelName
-  | Strategy
-  | StrategyJSON;
+export type ThinkingBlock = {
+  text: string;
+  signature: string;
+};
+
+export const TextPartSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+});
+
+export const ThinkingBlockSchema = z.object({
+  text: z.string(),
+  signature: z.string(),
+});
