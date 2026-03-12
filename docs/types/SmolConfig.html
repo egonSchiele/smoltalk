@@ -106,10 +106,114 @@
           <span class="tsd-signature-type">string</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
+            href="#hooks"
+            >hooks</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">Partial</span
+          ><span class="tsd-signature-symbol">&lt;</span><br />        <span
+            class="tsd-signature-symbol"
+            >{</span
+          ><br />            <span class="tsd-kind-property">onEnd</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-symbol">(</span
+          ><span class="tsd-kind-parameter">result</span
+          ><span class="tsd-signature-symbol">:</span>
+          <a
+            href="PromptResult.html"
+            class="tsd-signature-type tsd-kind-type-alias"
+            >PromptResult</a
+          ><span class="tsd-signature-symbol">)</span>
+          <span class="tsd-signature-symbol">=&gt;</span>
+          <span class="tsd-signature-type">void</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >onError</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-symbol">(</span
+          ><span class="tsd-kind-parameter">error</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">Error</span
+          ><span class="tsd-signature-symbol">)</span>
+          <span class="tsd-signature-symbol">=&gt;</span>
+          <span class="tsd-signature-type">void</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >onStart</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-symbol">(</span
+          ><span class="tsd-kind-parameter">config</span
+          ><span class="tsd-signature-symbol">:</span>
+          <a
+            href="PromptConfig.html"
+            class="tsd-signature-type tsd-kind-type-alias"
+            >PromptConfig</a
+          ><span class="tsd-signature-symbol">)</span>
+          <span class="tsd-signature-symbol">=&gt;</span>
+          <span class="tsd-signature-type">void</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >onStrategyStart</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-symbol">(</span
+          ><span class="tsd-kind-parameter">strategy</span
+          ><span class="tsd-signature-symbol">:</span>
+          <a
+            href="../interfaces/Strategy.html"
+            class="tsd-signature-type tsd-kind-interface"
+            >Strategy</a
+          ><span class="tsd-signature-symbol">,</span>
+          <span class="tsd-kind-parameter">config</span
+          ><span class="tsd-signature-symbol">:</span>
+          <a
+            href="SmolPromptConfig.html"
+            class="tsd-signature-type tsd-kind-type-alias"
+            >SmolPromptConfig</a
+          ><span class="tsd-signature-symbol">)</span>
+          <span class="tsd-signature-symbol">=&gt;</span>
+          <span class="tsd-signature-type">void</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >onToolCall</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-symbol">(</span
+          ><span class="tsd-kind-parameter">toolCall</span
+          ><span class="tsd-signature-symbol">:</span>
+          <a
+            href="../classes/ToolCall.html"
+            class="tsd-signature-type tsd-kind-class"
+            >ToolCall</a
+          ><span class="tsd-signature-symbol">)</span>
+          <span class="tsd-signature-symbol">=&gt;</span>
+          <span class="tsd-signature-type">void</span
+          ><span class="tsd-signature-symbol">;</span><br />        <span
+            class="tsd-signature-symbol"
+            >}</span
+          ><span class="tsd-signature-symbol">,</span><br />    <span
+            class="tsd-signature-symbol"
+            >&gt;</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#llamacppmodeldir"
+            >llamaCppModelDir</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
             href="#loglevel"
             >logLevel</a
           ><span class="tsd-signature-symbol">?:</span>
           <span class="tsd-signature-type">LogLevel</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#metadata"
+            >metadata</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">Record</span
+          ><span class="tsd-signature-symbol">&lt;</span
+          ><span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">,</span>
+          <span class="tsd-signature-type">any</span
+          ><span class="tsd-signature-symbol">&gt;</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
             href="#model"
@@ -223,6 +327,24 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>google<wbr />Api<wbr />Key?</span></a
                     >
+                    <a href="#hooks" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>hooks?</span></a
+                    >
+                    <a href="#llamacppmodeldir" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>llama<wbr />Cpp<wbr />Model<wbr />Dir?</span></a
+                    >
                     <a href="#loglevel" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -231,6 +353,15 @@
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>log<wbr />Level?</span></a
+                    >
+                    <a href="#metadata" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>metadata?</span></a
                     >
                     <a href="#model" class="tsd-index-link"
                       ><svg
@@ -323,6 +454,12 @@
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
               </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  API key for Anthropic. Required when using Anthropic/Claude
+                  models.
+                </p>
+              </div>
             </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="googleapikey">
@@ -341,6 +478,136 @@
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
               </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  API key for Google Gemini. Required when using Google models.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="hooks">
+                <code class="tsd-tag">Optional</code><span>hooks</span
+                ><a href="#hooks" aria-label="Permalink" class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">hooks</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">Partial</span
+                ><span class="tsd-signature-symbol">&lt;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >{</span
+                ><br />        <span class="tsd-kind-property">onEnd</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-symbol">(</span
+                ><span class="tsd-kind-parameter">result</span
+                ><span class="tsd-signature-symbol">:</span>
+                <a
+                  href="PromptResult.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >PromptResult</a
+                ><span class="tsd-signature-symbol">)</span>
+                <span class="tsd-signature-symbol">=&gt;</span>
+                <span class="tsd-signature-type">void</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >onError</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-symbol">(</span
+                ><span class="tsd-kind-parameter">error</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">Error</span
+                ><span class="tsd-signature-symbol">)</span>
+                <span class="tsd-signature-symbol">=&gt;</span>
+                <span class="tsd-signature-type">void</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >onStart</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-symbol">(</span
+                ><span class="tsd-kind-parameter">config</span
+                ><span class="tsd-signature-symbol">:</span>
+                <a
+                  href="PromptConfig.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >PromptConfig</a
+                ><span class="tsd-signature-symbol">)</span>
+                <span class="tsd-signature-symbol">=&gt;</span>
+                <span class="tsd-signature-type">void</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >onStrategyStart</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-symbol">(</span
+                ><span class="tsd-kind-parameter">strategy</span
+                ><span class="tsd-signature-symbol">:</span>
+                <a
+                  href="../interfaces/Strategy.html"
+                  class="tsd-signature-type tsd-kind-interface"
+                  >Strategy</a
+                ><span class="tsd-signature-symbol">,</span>
+                <span class="tsd-kind-parameter">config</span
+                ><span class="tsd-signature-symbol">:</span>
+                <a
+                  href="SmolPromptConfig.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >SmolPromptConfig</a
+                ><span class="tsd-signature-symbol">)</span>
+                <span class="tsd-signature-symbol">=&gt;</span>
+                <span class="tsd-signature-type">void</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >onToolCall</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-symbol">(</span
+                ><span class="tsd-kind-parameter">toolCall</span
+                ><span class="tsd-signature-symbol">:</span>
+                <a
+                  href="../classes/ToolCall.html"
+                  class="tsd-signature-type tsd-kind-class"
+                  >ToolCall</a
+                ><span class="tsd-signature-symbol">)</span>
+                <span class="tsd-signature-symbol">=&gt;</span>
+                <span class="tsd-signature-type">void</span
+                ><span class="tsd-signature-symbol">;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >}</span
+                ><span class="tsd-signature-symbol">,</span><br /><span
+                  class="tsd-signature-symbol"
+                  >&gt;</span
+                >
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Lifecycle hooks called at various points during execution.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="llamacppmodeldir">
+                <code class="tsd-tag">Optional</code
+                ><span>llama<wbr />Cpp<wbr />Model<wbr />Dir</span
+                ><a
+                  href="#llamacppmodeldir"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">llamaCppModelDir</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">string</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Directory path for Llama.cpp models. Required when using the
+                  Llama.cpp client.
+                </p>
+              </div>
             </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="loglevel">
@@ -357,6 +624,34 @@
                 <span class="tsd-kind-property">logLevel</span
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">LogLevel</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>Log level for internal debug logging.</p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="metadata">
+                <code class="tsd-tag">Optional</code><span>metadata</span
+                ><a
+                  href="#metadata"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">metadata</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">Record</span
+                ><span class="tsd-signature-symbol">&lt;</span
+                ><span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">,</span>
+                <span class="tsd-signature-type">any</span
+                ><span class="tsd-signature-symbol">&gt;</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>Arbitrary metadata passed to custom model providers.</p>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -398,13 +693,9 @@
                 <pre><code><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: </span><span class="hl-2">&quot;claude-sonnet-4-6&quot;</span>
 </code><button>Copy</button></pre>
 
-                <h2
-                  id="2-specifying-a-model-config-letting-smoltalk-pick-the-model"
-                  class="tsd-anchor-link"
-                >
-                  2. Specifying a model config (letting Smoltalk pick the
-                  model)<a
-                    href="#2-specifying-a-model-config-letting-smoltalk-pick-the-model"
+                <h2 id="2-specifying-a-strategy" class="tsd-anchor-link">
+                  2. Specifying a strategy<a
+                    href="#2-specifying-a-strategy"
                     aria-label="Permalink"
                     class="tsd-anchor-icon"
                     ><svg viewBox="0 0 24 24" aria-hidden="true">
@@ -412,30 +703,7 @@
                   ></a>
                 </h2>
                 <p>
-                  You can instead also choose to let Smoltalk pick the model
-                  that it thinks will be best for certain parameters. For
-                  example:
-                </p>
-                <pre><code><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-9">// find the fastest model</span><br/><span class="hl-1">    </span><span class="hl-7">optimizeFor</span><span class="hl-1">: [</span><span class="hl-2">&quot;speed&quot;</span><span class="hl-1">],</span><br/><br/><span class="hl-1">    </span><span class="hl-9">// from either Anthropic or Google, whichever is faster</span><br/><span class="hl-1">    </span><span class="hl-7">providers</span><span class="hl-1">: [</span><span class="hl-2">&quot;anthropic&quot;</span><span class="hl-1">, </span><span class="hl-2">&quot;google&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">    </span><span class="hl-7">limit</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-9">// 1 mil input tokens + 1 mil output tokens together</span><br/><span class="hl-1">      </span><span class="hl-9">// should cost less than $10 for the models being considered</span><br/><span class="hl-1">      </span><span class="hl-7">cost</span><span class="hl-1">: </span><span class="hl-8">10</span><span class="hl-1">,</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
-</code><button>Copy</button></pre>
-
-                <p>
-                  This can be a good option because as better models come out,
-                  you won't need to update your code. You can just update
-                  Smoltalk and it will pick the best model automatically.
-                </p>
-                <h2 id="3-specifying-a-strategy" class="tsd-anchor-link">
-                  3. Specifying a strategy<a
-                    href="#3-specifying-a-strategy"
-                    aria-label="Permalink"
-                    class="tsd-anchor-icon"
-                    ><svg viewBox="0 0 24 24" aria-hidden="true">
-                      <use href="../assets/icons.svg#icon-anchor"></use></svg
-                  ></a>
-                </h2>
-                <p>
-                  Finally, you can instead specify a strategy to execute. For
-                  example:
+                  You can instead specify a strategy to execute. For example:
                 </p>
                 <pre><code><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-7">type</span><span class="hl-1">: </span><span class="hl-2">&quot;race&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-7">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-7">strategies</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">, </span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
 </code><button>Copy</button></pre>
@@ -479,6 +747,12 @@
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
               </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  API key for Ollama. Only needed when connecting to a
+                  cloud-hosted Ollama instance.
+                </p>
+              </div>
             </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="ollamahost">
@@ -496,6 +770,12 @@
                 <span class="tsd-kind-property">ollamaHost</span
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Base URL for the Ollama server. Defaults to localhost if not
+                  set. (Ollama only)
+                </p>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -515,6 +795,9 @@
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
               </div>
+              <div class="tsd-comment tsd-typography">
+                <p>API key for OpenAI. Required when using OpenAI models.</p>
+              </div>
             </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="provider">
@@ -531,6 +814,12 @@
                 <span class="tsd-kind-property">provider</span
                 ><span class="tsd-signature-symbol">?:</span>
                 <span class="tsd-signature-type">string</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Override the provider for the given model (e.g., use a custom
+                  endpoint for an OpenAI-compatible model).
+                </p>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -581,6 +870,11 @@
                   class="tsd-signature-symbol"
                   >&gt;</span
                 >
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Configuration for Statelog observability/tracing integration.
+                </p>
               </div>
             </section>
           </section>
@@ -762,6 +1056,22 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>google<wbr />Api<wbr />Key</span></a
+                  ><a href="#hooks"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>hooks</span></a
+                  ><a href="#llamacppmodeldir"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>llama<wbr />Cpp<wbr />Model<wbr />Dir</span></a
                   ><a href="#loglevel"
                     ><svg
                       class="tsd-kind-icon"
@@ -770,6 +1080,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>log<wbr />Level</span></a
+                  ><a href="#metadata"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>metadata</span></a
                   ><a href="#model"
                     ><svg
                       class="tsd-kind-icon"
@@ -790,17 +1108,8 @@
                           >
                         </li>
                         <li>
-                          <a
-                            href="#2-specifying-a-model-config-letting-smoltalk-pick-the-model"
-                            ><span
-                              >2. <wbr />Specifying a model config (letting
-                              <wbr />Smoltalk pick the model)</span
-                            ></a
-                          >
-                        </li>
-                        <li>
-                          <a href="#3-specifying-a-strategy"
-                            ><span>3. <wbr />Specifying a strategy</span></a
+                          <a href="#2-specifying-a-strategy"
+                            ><span>2. <wbr />Specifying a strategy</span></a
                           >
                         </li>
                       </ul>

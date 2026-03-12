@@ -247,88 +247,16 @@
                     ><span class="tsd-signature-symbol">(</span><br />    <span
                       class="tsd-kind-parameter"
                       >model</span
-                    ><span class="tsd-signature-symbol">:</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">string</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <a
-                      href="../types/ModelNameAndProvider.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >ModelNameAndProvider</a
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-symbol">{</span
-                    ><br />            <span class="tsd-kind-property"
-                      >limit</span
-                    ><span class="tsd-signature-symbol">?:</span>
-                    <span class="tsd-signature-symbol">{</span>
-                    <span class="tsd-kind-property">cost</span
-                    ><span class="tsd-signature-symbol">?:</span>
-                    <span class="tsd-signature-type">number</span>
-                    <span class="tsd-signature-symbol">}</span
-                    ><span class="tsd-signature-symbol">;</span
-                    ><br />            <span class="tsd-kind-property"
-                      >optimizeFor</span
-                    ><span class="tsd-signature-symbol">:</span> (<span
-                      class="tsd-signature-type"
-                      >&quot;reasoning&quot;</span
-                    >
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;speed&quot;</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;cost&quot;</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type"
-                      >&quot;large-context&quot;</span
-                    >)<span class="tsd-signature-symbol">[]</span
-                    ><span class="tsd-signature-symbol">;</span
-                    ><br />            <span class="tsd-kind-property"
-                      >providers</span
                     ><span class="tsd-signature-symbol">:</span>
-                    (<br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;local&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;ollama&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;openai&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type"
-                      >&quot;openai-responses&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;anthropic&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;google&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;replicate&quot;</span
-                    ><br />                <span class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <span class="tsd-signature-type">&quot;modal&quot;</span
-                    ><br />            )<span class="tsd-signature-symbol"
-                      >[]</span
-                    ><span class="tsd-signature-symbol">;</span
-                    ><br />        <span class="tsd-signature-symbol">}</span
+                    <span class="tsd-signature-type">string</span
                     ><span class="tsd-signature-symbol">,</span><br />    <span
                       class="tsd-kind-parameter"
                       >provider</span
                     ><span class="tsd-signature-symbol">?:</span
                     ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;local&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;ollama&quot;</span
+                    ><br />        <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">&quot;llama-cpp&quot;</span
                     ><br />        <span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;openai&quot;</span
                     ><br />        <span class="tsd-signature-symbol">|</span>
@@ -363,106 +291,7 @@
                         <li>
                           <span
                             ><span class="tsd-kind-parameter">model</span>:
-                            <br />    <span class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type">string</span
-                            ><br />    <span class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <a
-                              href="../types/ModelNameAndProvider.html"
-                              class="tsd-signature-type tsd-kind-type-alias"
-                              >ModelNameAndProvider</a
-                            ><br />    <span class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-symbol">{</span
-                            ><br />        <span class="tsd-kind-property"
-                              >limit</span
-                            ><span class="tsd-signature-symbol">?:</span>
-                            <span class="tsd-signature-symbol">{</span>
-                            <span class="tsd-kind-property">cost</span
-                            ><span class="tsd-signature-symbol">?:</span>
-                            <span class="tsd-signature-type">number</span>
-                            <span class="tsd-signature-symbol">}</span
-                            ><span class="tsd-signature-symbol">;</span
-                            ><br />        <span class="tsd-kind-property"
-                              >optimizeFor</span
-                            ><span class="tsd-signature-symbol">:</span> (<span
-                              class="tsd-signature-type"
-                              >&quot;reasoning&quot;</span
-                            >
-                            <span class="tsd-signature-symbol">|</span>
-                            <span class="tsd-signature-type"
-                              >&quot;speed&quot;</span
-                            >
-                            <span class="tsd-signature-symbol">|</span>
-                            <span class="tsd-signature-type"
-                              >&quot;cost&quot;</span
-                            >
-                            <span class="tsd-signature-symbol">|</span>
-                            <span class="tsd-signature-type"
-                              >&quot;large-context&quot;</span
-                            >)<span class="tsd-signature-symbol">[]</span
-                            ><span class="tsd-signature-symbol">;</span
-                            ><br />        <span class="tsd-kind-property"
-                              >providers</span
-                            ><span class="tsd-signature-symbol">:</span>
-                            (<br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;local&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;ollama&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;openai&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;openai-responses&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;anthropic&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;google&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;replicate&quot;</span
-                            ><br />            <span
-                              class="tsd-signature-symbol"
-                              >|</span
-                            >
-                            <span class="tsd-signature-type"
-                              >&quot;modal&quot;</span
-                            ><br />        )<span class="tsd-signature-symbol"
-                              >[]</span
-                            ><span class="tsd-signature-symbol">;</span
-                            ><br />    <span class="tsd-signature-symbol"
-                              >}</span
-                            ></span
+                            <span class="tsd-signature-type">string</span></span
                           >
                         </li>
                         <li>
@@ -473,12 +302,12 @@
                               >|</span
                             >
                             <span class="tsd-signature-type"
-                              >&quot;local&quot;</span
+                              >&quot;ollama&quot;</span
                             ><br />    <span class="tsd-signature-symbol"
                               >|</span
                             >
                             <span class="tsd-signature-type"
-                              >&quot;ollama&quot;</span
+                              >&quot;llama-cpp&quot;</span
                             ><br />    <span class="tsd-signature-symbol"
                               >|</span
                             >
@@ -703,65 +532,7 @@
                     <span class="tsd-kind-call-signature">getModel</span
                     ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">string</span><br /><span
-                      class="tsd-signature-symbol"
-                      >|</span
-                    >
-                    <a
-                      href="../types/ModelNameAndProvider.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >ModelNameAndProvider</a
-                    ><br /><span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-symbol">{</span><br />    <span
-                      class="tsd-kind-property"
-                      >limit</span
-                    ><span class="tsd-signature-symbol">?:</span>
-                    <span class="tsd-signature-symbol">{</span>
-                    <span class="tsd-kind-property">cost</span
-                    ><span class="tsd-signature-symbol">?:</span>
-                    <span class="tsd-signature-type">number</span>
-                    <span class="tsd-signature-symbol">}</span
-                    ><span class="tsd-signature-symbol">;</span><br />    <span
-                      class="tsd-kind-property"
-                      >optimizeFor</span
-                    ><span class="tsd-signature-symbol">:</span> (<span
-                      class="tsd-signature-type"
-                      >&quot;reasoning&quot;</span
-                    >
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;speed&quot;</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;cost&quot;</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type"
-                      >&quot;large-context&quot;</span
-                    >)<span class="tsd-signature-symbol">[]</span
-                    ><span class="tsd-signature-symbol">;</span><br />    <span
-                      class="tsd-kind-property"
-                      >providers</span
-                    ><span class="tsd-signature-symbol">:</span>
-                    (<br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;local&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;ollama&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;openai&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type"
-                      >&quot;openai-responses&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;anthropic&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;google&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;replicate&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;modal&quot;</span
-                    ><br />    )<span class="tsd-signature-symbol">[]</span
-                    ><span class="tsd-signature-symbol">;</span><br /><span
-                      class="tsd-signature-symbol"
-                      >}</span
+                    <span class="tsd-signature-type">string</span
                     ><a
                       href="#getmodel-1"
                       aria-label="Permalink"
@@ -772,82 +543,7 @@
                   </div>
                   <div class="tsd-description">
                     <h4 class="tsd-returns-title">
-                      Returns <br />    <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type">string</span
-                      ><br />    <span class="tsd-signature-symbol">|</span>
-                      <a
-                        href="../types/ModelNameAndProvider.html"
-                        class="tsd-signature-type tsd-kind-type-alias"
-                        >ModelNameAndProvider</a
-                      ><br />    <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-symbol">{</span
-                      ><br />        <span class="tsd-kind-property">limit</span
-                      ><span class="tsd-signature-symbol">?:</span>
-                      <span class="tsd-signature-symbol">{</span>
-                      <span class="tsd-kind-property">cost</span
-                      ><span class="tsd-signature-symbol">?:</span>
-                      <span class="tsd-signature-type">number</span>
-                      <span class="tsd-signature-symbol">}</span
-                      ><span class="tsd-signature-symbol">;</span
-                      ><br />        <span class="tsd-kind-property"
-                        >optimizeFor</span
-                      ><span class="tsd-signature-symbol">:</span> (<span
-                        class="tsd-signature-type"
-                        >&quot;reasoning&quot;</span
-                      >
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">&quot;speed&quot;</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type">&quot;cost&quot;</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <span class="tsd-signature-type"
-                        >&quot;large-context&quot;</span
-                      >)<span class="tsd-signature-symbol">[]</span
-                      ><span class="tsd-signature-symbol">;</span
-                      ><br />        <span class="tsd-kind-property"
-                        >providers</span
-                      ><span class="tsd-signature-symbol">:</span>
-                      (<br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type">&quot;local&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type">&quot;ollama&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type">&quot;openai&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type"
-                        >&quot;openai-responses&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type"
-                        >&quot;anthropic&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type">&quot;google&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type"
-                        >&quot;replicate&quot;</span
-                      ><br />            <span class="tsd-signature-symbol"
-                        >|</span
-                      >
-                      <span class="tsd-signature-type">&quot;modal&quot;</span
-                      ><br />        )<span class="tsd-signature-symbol"
-                        >[]</span
-                      ><span class="tsd-signature-symbol">;</span
-                      ><br />    <span class="tsd-signature-symbol">}</span>
+                      Returns <span class="tsd-signature-type">string</span>
                     </h4>
                   </div>
                 </li>
@@ -871,9 +567,9 @@
                     ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;local&quot;</span
-                    ><br /><span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;ollama&quot;</span
+                    ><br /><span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">&quot;llama-cpp&quot;</span
                     ><br /><span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;openai&quot;</span
                     ><br /><span class="tsd-signature-symbol">|</span>
@@ -902,9 +598,10 @@
                       Returns <br />    <span class="tsd-signature-symbol"
                         >|</span
                       >
-                      <span class="tsd-signature-type">&quot;local&quot;</span
-                      ><br />    <span class="tsd-signature-symbol">|</span>
                       <span class="tsd-signature-type">&quot;ollama&quot;</span
+                      ><br />    <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type"
+                        >&quot;llama-cpp&quot;</span
                       ><br />    <span class="tsd-signature-symbol">|</span>
                       <span class="tsd-signature-type">&quot;openai&quot;</span
                       ><br />    <span class="tsd-signature-symbol">|</span>
@@ -982,16 +679,7 @@
                     id="resolvemodel-1"
                   >
                     <span class="tsd-kind-call-signature">resolveModel</span
-                    ><span class="tsd-signature-symbol">(</span
-                    ><span class="tsd-kind-parameter">models</span
-                    ><span class="tsd-signature-symbol">?:</span>
-                    <span class="tsd-signature-keyword">readonly</span>
-                    <a
-                      href="../types/TextModel.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >TextModel</a
-                    ><span class="tsd-signature-symbol">[]</span
-                    ><span class="tsd-signature-symbol">)</span
+                    ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-type">string</span
                     ><a
@@ -1003,25 +691,6 @@
                     ></a>
                   </div>
                   <div class="tsd-description">
-                    <div class="tsd-parameters">
-                      <h4 class="tsd-parameters-title">Parameters</h4>
-                      <ul class="tsd-parameter-list">
-                        <li>
-                          <span
-                            ><span class="tsd-kind-parameter">models</span>:
-                            <span class="tsd-signature-keyword">readonly</span>
-                            <a
-                              href="../types/TextModel.html"
-                              class="tsd-signature-type tsd-kind-type-alias"
-                              >TextModel</a
-                            ><span class="tsd-signature-symbol">[]</span
-                            ><span class="tsd-signature-symbol">
-                              = ...</span
-                            ></span
-                          >
-                        </li>
-                      </ul>
-                    </div>
                     <h4 class="tsd-returns-title">
                       Returns <span class="tsd-signature-type">string</span>
                     </h4>
@@ -1047,9 +716,9 @@
                     ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
                     <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;local&quot;</span
-                    ><br /><span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;ollama&quot;</span
+                    ><br /><span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">&quot;llama-cpp&quot;</span
                     ><br /><span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;openai&quot;</span
                     ><br /><span class="tsd-signature-symbol">|</span>
@@ -1078,9 +747,10 @@
                       Returns <br />    <span class="tsd-signature-symbol"
                         >|</span
                       >
-                      <span class="tsd-signature-type">&quot;local&quot;</span
-                      ><br />    <span class="tsd-signature-symbol">|</span>
                       <span class="tsd-signature-type">&quot;ollama&quot;</span
+                      ><br />    <span class="tsd-signature-symbol">|</span>
+                      <span class="tsd-signature-type"
+                        >&quot;llama-cpp&quot;</span
                       ><br />    <span class="tsd-signature-symbol">|</span>
                       <span class="tsd-signature-type">&quot;openai&quot;</span
                       ><br />    <span class="tsd-signature-symbol">|</span>
@@ -1120,12 +790,7 @@
                     <span class="tsd-kind-call-signature">toJSON</span
                     ><span class="tsd-signature-symbol">()</span
                     ><span class="tsd-signature-symbol">:</span>
-                    <span class="tsd-signature-type">string</span>
-                    <span class="tsd-signature-symbol">|</span>
-                    <a
-                      href="../types/ModelNameAndProvider.html"
-                      class="tsd-signature-type tsd-kind-type-alias"
-                      >ModelNameAndProvider</a
+                    <span class="tsd-signature-type">string</span
                     ><a
                       href="#tojson-1"
                       aria-label="Permalink"
@@ -1137,12 +802,6 @@
                   <div class="tsd-description">
                     <h4 class="tsd-returns-title">
                       Returns <span class="tsd-signature-type">string</span>
-                      <span class="tsd-signature-symbol">|</span>
-                      <a
-                        href="../types/ModelNameAndProvider.html"
-                        class="tsd-signature-type tsd-kind-type-alias"
-                        >ModelNameAndProvider</a
-                      >
                     </h4>
                   </div>
                 </li>
@@ -1210,9 +869,9 @@
                       >provider</span
                     ><span class="tsd-signature-symbol">?:</span
                     ><br />        <span class="tsd-signature-symbol">|</span>
-                    <span class="tsd-signature-type">&quot;local&quot;</span
-                    ><br />        <span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;ollama&quot;</span
+                    ><br />        <span class="tsd-signature-symbol">|</span>
+                    <span class="tsd-signature-type">&quot;llama-cpp&quot;</span
                     ><br />        <span class="tsd-signature-symbol">|</span>
                     <span class="tsd-signature-type">&quot;openai&quot;</span
                     ><br />        <span class="tsd-signature-symbol">|</span>
@@ -1262,12 +921,12 @@
                               >|</span
                             >
                             <span class="tsd-signature-type"
-                              >&quot;local&quot;</span
+                              >&quot;ollama&quot;</span
                             ><br />    <span class="tsd-signature-symbol"
                               >|</span
                             >
                             <span class="tsd-signature-type"
-                              >&quot;ollama&quot;</span
+                              >&quot;llama-cpp&quot;</span
                             ><br />    <span class="tsd-signature-symbol"
                               >|</span
                             >

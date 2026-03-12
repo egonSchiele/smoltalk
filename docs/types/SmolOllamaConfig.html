@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="x-ua-compatible" content="IE=edge" />
-    <title>ModelConfigSchema | smoltalk</title>
+    <title>SmolOllamaConfig | smoltalk</title>
     <meta name="description" content="Documentation for smoltalk" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="../assets/style.css" />
@@ -84,135 +84,18 @@
       <div class="col-content">
         <div class="tsd-page-title">
           <ul class="tsd-breadcrumb" aria-label="Breadcrumb">
-            <li><a href="" aria-current="page">ModelConfigSchema</a></li>
+            <li><a href="" aria-current="page">SmolOllamaConfig</a></li>
           </ul>
-          <h1>Variable ModelConfigSchema<code class="tsd-tag">Const</code></h1>
+          <h1>Type Alias SmolOllamaConfig</h1>
         </div>
         <div class="tsd-signature">
-          <span class="tsd-kind-variable">ModelConfigSchema</span
+          <span class="tsd-kind-type-alias">SmolOllamaConfig</span
           ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">ZodObject</span
-          ><span class="tsd-signature-symbol">&lt;</span><br />    <span
-            class="tsd-signature-symbol"
-            >{</span
-          ><br />        <span class="tsd-kind-property">limit</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">ZodOptional</span
-          ><span class="tsd-signature-symbol">&lt;</span
-          ><span class="tsd-signature-type">ZodObject</span
-          ><span class="tsd-signature-symbol">&lt;</span
-          ><span class="tsd-signature-symbol">{</span>
-          <span class="tsd-kind-property">cost</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">ZodOptional</span
-          ><span class="tsd-signature-symbol">&lt;</span
-          ><span class="tsd-signature-type">ZodNumber</span
-          ><span class="tsd-signature-symbol">&gt;</span>
-          <span class="tsd-signature-symbol">}</span
-          ><span class="tsd-signature-symbol">,</span>
-          <span class="tsd-signature-type">$strip</span
-          ><span class="tsd-signature-symbol">&gt;</span
-          ><span class="tsd-signature-symbol">&gt;</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >optimizeFor</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">ZodArray</span
-          ><span class="tsd-signature-symbol">&lt;</span><br />            <span
-            class="tsd-signature-type"
-            >ZodEnum</span
-          ><span class="tsd-signature-symbol">&lt;</span
-          ><br />                <span class="tsd-signature-symbol">{</span
-          ><br />                    <span class="tsd-kind-property">cost</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;cost&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >&quot;large-context&quot;</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;large-context&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >reasoning</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;reasoning&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property">speed</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;speed&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                <span class="tsd-signature-symbol">}</span
-          ><span class="tsd-signature-symbol">,</span><br />            <span
-            class="tsd-signature-symbol"
-            >&gt;</span
-          ><span class="tsd-signature-symbol">,</span><br />        <span
-            class="tsd-signature-symbol"
-            >&gt;</span
-          ><span class="tsd-signature-symbol">;</span><br />        <span
-            class="tsd-kind-property"
-            >providers</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">ZodArray</span
-          ><span class="tsd-signature-symbol">&lt;</span><br />            <span
-            class="tsd-signature-type"
-            >ZodEnum</span
-          ><span class="tsd-signature-symbol">&lt;</span
-          ><br />                <span class="tsd-signature-symbol">{</span
-          ><br />                    <span class="tsd-kind-property"
-            >anthropic</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;anthropic&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >google</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;google&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property">local</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;local&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property">modal</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;modal&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >ollama</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;ollama&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >openai</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;openai&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >&quot;openai-responses&quot;</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;openai-responses&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                    <span class="tsd-kind-property"
-            >replicate</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-type">&quot;replicate&quot;</span
-          ><span class="tsd-signature-symbol">;</span
-          ><br />                <span class="tsd-signature-symbol">}</span
-          ><span class="tsd-signature-symbol">,</span><br />            <span
-            class="tsd-signature-symbol"
-            >&gt;</span
-          ><span class="tsd-signature-symbol">,</span><br />        <span
-            class="tsd-signature-symbol"
-            >&gt;</span
-          ><span class="tsd-signature-symbol">;</span><br />    <span
-            class="tsd-signature-symbol"
-            >}</span
-          ><span class="tsd-signature-symbol">,</span><br />    <span
-            class="tsd-signature-type"
-            >$strip</span
-          ><span class="tsd-signature-symbol">,</span><br /><span
-            class="tsd-signature-symbol"
-            >&gt;</span
-          ><span class="tsd-signature-symbol"> = ...</span>
+          <a
+            href="BaseClientConfig.html"
+            class="tsd-signature-type tsd-kind-type-alias"
+            >BaseClientConfig</a
+          >
         </div>
       </div>
       <div class="col-sidebar">
