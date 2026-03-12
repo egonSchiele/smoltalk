@@ -3,6 +3,7 @@ import { BaseStrategy } from "./baseStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
+import { TimeoutStrategy } from "./timeoutStrategy.js";
 import * as strategyIndex from "./index.js";
 import { Strategy, StrategyJSON } from "./types.js";
 import { Model } from "../model.js";
@@ -327,6 +328,90 @@ describe("RaceStrategy", () => {
   });
 });
 
+describe("TimeoutStrategy", () => {
+  it("returns result if inner strategy completes in time", async () => {
+    const result = makeResult("fast");
+    const s1 = mockStrategy(result);
+
+    const strategy = new TimeoutStrategy(s1, 1000);
+    const out = await strategy.text(dummyConfig);
+    expect(out).toEqual(result);
+  });
+
+  it("throws SmolTimeoutError if inner strategy exceeds timeout", async () => {
+    const s1 = new MockStrategy();
+    s1.text = vi.fn(
+      () =>
+        new Promise<Result<PromptResult>>((resolve) =>
+          setTimeout(() => resolve(makeResult("slow")), 500),
+        ),
+    );
+
+    const strategy = new TimeoutStrategy(s1, 50);
+    await expect(strategy.text(dummyConfig)).rejects.toThrow(SmolTimeoutError);
+    await expect(strategy.text(dummyConfig)).rejects.toThrow(/timed out/);
+  });
+
+  it("aborts inner strategy on timeout", async () => {
+    let receivedSignal: AbortSignal | undefined;
+    const s1 = new MockStrategy();
+    s1.text = vi.fn((config: SmolPromptConfig) => {
+      receivedSignal = config.abortSignal;
+      return new Promise<Result<PromptResult>>((resolve) =>
+        setTimeout(() => resolve(makeResult("slow")), 500),
+      );
+    });
+
+    const strategy = new TimeoutStrategy(s1, 50);
+    await expect(strategy.text(dummyConfig)).rejects.toThrow(SmolTimeoutError);
+    expect(receivedSignal?.aborted).toBe(true);
+  });
+
+  it("propagates external abort signal", async () => {
+    const externalController = new AbortController();
+    let receivedSignal: AbortSignal | undefined;
+    const s1 = new MockStrategy();
+    s1.text = vi.fn((config: SmolPromptConfig) => {
+      receivedSignal = config.abortSignal;
+      return new Promise<Result<PromptResult>>((resolve) =>
+        setTimeout(() => resolve(makeResult("slow")), 500),
+      );
+    });
+
+    const strategy = new TimeoutStrategy(s1, 5000);
+    const promise = strategy.text({
+      ...dummyConfig,
+      abortSignal: externalController.signal,
+    });
+
+    externalController.abort();
+    expect(receivedSignal?.aborted).toBe(true);
+  });
+
+  it("composes with fallback strategy (timeout triggers fallback)", async () => {
+    const slowStrategy = new MockStrategy();
+    slowStrategy.text = vi.fn(
+      () =>
+        new Promise<Result<PromptResult>>((resolve) =>
+          setTimeout(() => resolve(makeResult("slow")), 500),
+        ),
+    );
+
+    const timeoutStrategy = new TimeoutStrategy(slowStrategy, 50);
+    const fallbackResult = makeResult("fallback-model");
+    const fallbackMock = mockStrategy(fallbackResult);
+
+    vi.spyOn(strategyIndex, "fromJSON").mockReturnValueOnce(fallbackMock);
+    const fb = new FallbackStrategy(timeoutStrategy, {
+      timeout: [{ type: "id", params: { model: "gpt-4o-mini" } }],
+    });
+
+    const out = await fb.text(dummyConfig);
+    expect(out).toEqual(fallbackResult);
+    vi.restoreAllMocks();
+  });
+});
+
 describe("IDStrategy", () => {
   it("stores the model and exposes it", async () => {
     const { Model } = await import("../model.js");
@@ -400,6 +485,22 @@ describe("factory functions", () => {
     });
   });
 
+  describe("timeout()", () => {
+    it("creates a TimeoutStrategy from a model name and timeout", () => {
+      const strategy = strategyIndex.timeout("gpt-4o", 5000);
+      expect(strategy).toBeInstanceOf(TimeoutStrategy);
+      const ts = strategy as TimeoutStrategy;
+      expect(ts.timeoutMs).toBe(5000);
+      expect(ts.strategy).toBeInstanceOf(IDStrategy);
+    });
+
+    it("passes through existing Strategy instances", () => {
+      const idStrat = strategyIndex.id("gpt-4o");
+      const strategy = strategyIndex.timeout(idStrat, 3000);
+      expect((strategy as TimeoutStrategy).strategy).toBe(idStrat);
+    });
+  });
+
   describe("fallback()", () => {
     it("creates a FallbackStrategy from a primary strategy and config", () => {
       const strategy = strategyIndex.fallback("gpt-4o", {
@@ -470,6 +571,17 @@ describe("JSON serialization", () => {
       });
     });
 
+    it("TimeoutStrategy serializes with strategy and timeoutMs", () => {
+      const strategy = strategyIndex.timeout("gpt-4o", 5000);
+      expect(strategy.toJSON()).toEqual({
+        type: "timeout",
+        params: {
+          strategy: { type: "id", params: { model: "gpt-4o", provider: "openai" } },
+          timeoutMs: 5000,
+        },
+      });
+    });
+
     it("BaseStrategy toJSON throws", () => {
       const strategy = new BaseStrategy();
       expect(() => strategy.toJSON()).toThrow(/not implemented/);
@@ -525,6 +637,19 @@ describe("JSON serialization", () => {
       const fb = strategy as FallbackStrategy;
       expect(fb.primaryStrategy).toBeInstanceOf(IDStrategy);
       expect(fb.config.error).toHaveLength(1);
+    });
+
+    it("parses timeout JSON", () => {
+      const strategy = strategyIndex.fromJSON({
+        type: "timeout",
+        params: {
+          strategy: { type: "id", params: { model: "gpt-4o" } },
+          timeoutMs: 3000,
+        },
+      });
+      expect(strategy).toBeInstanceOf(TimeoutStrategy);
+      const ts = strategy as TimeoutStrategy;
+      expect(ts.timeoutMs).toBe(3000);
     });
 
     it("throws on unknown type", () => {
@@ -606,6 +731,23 @@ describe("JSON serialization", () => {
           timeout: [{ type: "id", params: { model: "gemini-2.0-flash" } }],
         }),
         "claude-sonnet-4-6",
+      );
+      roundTrip(original);
+    });
+
+    it("TimeoutStrategy survives toJSON → fromJSON", () => {
+      const original = strategyIndex.timeout("gpt-4o", 5000);
+      const restored = strategyIndex.fromJSON(original.toJSON());
+      expect(restored).toBeInstanceOf(TimeoutStrategy);
+      roundTrip(original);
+    });
+
+    it("TimeoutStrategy wrapping fallback survives round-trip", () => {
+      const original = strategyIndex.timeout(
+        strategyIndex.fallback("gpt-4o", {
+          error: [{ type: "id", params: { model: "gpt-4o-mini" } }],
+        }),
+        10000,
       );
       roundTrip(original);
     });

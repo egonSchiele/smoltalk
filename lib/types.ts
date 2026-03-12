@@ -229,7 +229,7 @@ export type SmolConfig = {
     onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
 
-  /** Arbitrary metadata passed to custom/registered model providers. */
+  /** Arbitrary metadata passed to custom model providers. */
   metadata?: Record<string, any>;
 };
 

@@ -7,6 +7,7 @@ import { FastestStrategy } from "./fastestStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import { RaceStrategy } from "./raceStrategy.js";
 import { RandomStrategy } from "./randomStrategy.js";
+import { TimeoutStrategy } from "./timeoutStrategy.js";
 import {
   FallbackStrategyConfig,
   FallbackStrategyJSON,
@@ -23,6 +24,8 @@ import {
   RandomStrategyJSONSchema,
   Strategy,
   StrategyJSON,
+  TimeoutStrategyJSON,
+  TimeoutStrategyJSONSchema,
 } from "./types.js";
 
 export * from "./baseStrategy.js";
@@ -30,6 +33,7 @@ export * from "./fallbackStrategy.js";
 export * from "./idStrategy.js";
 export * from "./raceStrategy.js";
 export * from "./randomStrategy.js";
+export * from "./timeoutStrategy.js";
 export * from "./types.js";
 
 export function race(...strategies: ModelParam[]): Strategy {
@@ -49,6 +53,10 @@ export function fastest(
 
 export function id(model: ModelLike): Strategy {
   return new IDStrategy(model);
+}
+
+export function timeout(strategy: ModelParam, timeoutMs: number): Strategy {
+  return new TimeoutStrategy(strategy, timeoutMs);
 }
 
 export function fallback(
@@ -79,6 +87,8 @@ export function fromJSON(json: StrategyJSON): Strategy {
     return RandomStrategy.fromJSON(json as RandomStrategyJSON);
   } else if (FastestStrategyJSONSchema.safeParse(json).success) {
     return FastestStrategy.fromJSON(json as FastestStrategyJSON);
+  } else if (TimeoutStrategyJSONSchema.safeParse(json).success) {
+    return TimeoutStrategy.fromJSON(json as TimeoutStrategyJSON);
   } else if (typeof json === "string") {
     return id(json as ModelName);
   } else {
