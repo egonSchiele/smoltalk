@@ -67,8 +67,8 @@ describe("Model", () => {
       expect(result.getResolvedModel()).toBe("gpt-4o");
     });
 
-    it("creates a new Model from a ModelNameAndProvider", () => {
-      const result = Model.create({ model: "my-custom-model", provider: "ollama" });
+    it("creates a new Model from a model string with explicit provider", () => {
+      const result = Model.create("my-custom-model" as any, "ollama" as any);
       expect(result).toBeInstanceOf(Model);
       expect(result.getResolvedModel()).toBe("my-custom-model");
       expect(result.getProvider()).toBe("ollama");
@@ -86,8 +86,8 @@ describe("Model", () => {
       expect(model.getProvider()).toBe("openai");
     });
 
-    it("returns the provider from ModelNameAndProvider", () => {
-      const model = new Model({ model: "custom-model", provider: "ollama" });
+    it("returns the explicit provider when passed", () => {
+      const model = new Model("custom-model" as any, "ollama" as any);
       expect(model.getProvider()).toBe("ollama");
     });
 
@@ -103,8 +103,8 @@ describe("Model", () => {
       expect(model.toString()).toContain("gpt-4o");
     });
 
-    it("returns a human-readable string for a ModelNameAndProvider", () => {
-      const model = new Model({ model: "my-model", provider: "ollama" });
+    it("returns a human-readable string for a model with provider", () => {
+      const model = new Model("my-model" as any, "ollama" as any);
       expect(model.toString()).toContain("my-model");
     });
   });

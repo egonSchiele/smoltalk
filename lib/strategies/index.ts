@@ -16,8 +16,6 @@ import {
   FastestStrategyJSONSchema,
   IDStrategyJSON,
   IDStrategyJSONSchema,
-  ModelNameAndProvider,
-  ModelNameAndProviderSchema,
   RaceStrategyJSON,
   RaceStrategyJSONSchema,
   RandomStrategyJSON,
@@ -45,7 +43,7 @@ export function random(...strategies: ModelParam[]): Strategy {
 }
 
 export function fastest(
-  models: (string | ModelNameAndProvider | Model)[],
+  models: (string | Model)[],
   epsilon?: number,
 ): Strategy {
   return new FastestStrategy(models, epsilon);
@@ -76,8 +74,6 @@ export function fallback(
 
 export function fromJSON(json: StrategyJSON): Strategy {
   if (IDStrategyJSONSchema.safeParse(json).success) {
-    return IDStrategy.fromJSON(json as IDStrategyJSON);
-  } else if (ModelNameAndProviderSchema.safeParse(json).success) {
     return IDStrategy.fromJSON(json as IDStrategyJSON);
   } else if (RaceStrategyJSONSchema.safeParse(json).success) {
     return RaceStrategy.fromJSON(json as RaceStrategyJSON);

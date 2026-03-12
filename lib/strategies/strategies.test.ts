@@ -438,16 +438,18 @@ describe("factory functions", () => {
     });
   });
 
-  describe("id() with ModelNameAndProvider", () => {
-    it("creates an IDStrategy from a ModelNameAndProvider object", () => {
-      const strategy = strategyIndex.id({ model: "my-model", provider: "ollama" });
+  describe("id() with model string and provider", () => {
+    it("creates an IDStrategy from a Model with explicit provider", () => {
+      const model = new Model("my-model" as any, "ollama" as any);
+      const strategy = strategyIndex.id(model);
       expect(strategy).toBeInstanceOf(IDStrategy);
       expect((strategy as IDStrategy).model.getResolvedModel()).toBe("my-model");
       expect((strategy as IDStrategy).model.getProvider()).toBe("ollama");
     });
 
-    it("serializes ModelNameAndProvider to id JSON with provider", () => {
-      const strategy = strategyIndex.id({ model: "my-model", provider: "ollama" });
+    it("serializes model with provider to id JSON", () => {
+      const model = new Model("my-model" as any, "ollama" as any);
+      const strategy = strategyIndex.id(model);
       expect(strategy.toJSON()).toEqual({
         type: "id",
         params: { model: "my-model", provider: "ollama" },

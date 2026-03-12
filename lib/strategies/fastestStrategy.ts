@@ -13,7 +13,6 @@ import { BaseStrategy } from "./baseStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import {
   FastestStrategyJSONSchema,
-  ModelNameAndProvider,
   StrategyJSON,
 } from "./types.js";
 
@@ -21,11 +20,11 @@ import {
 const DEFAULT_EPSILON = 0.1;
 
 export class FastestStrategy extends BaseStrategy {
-  public models: (string | ModelNameAndProvider | Model)[];
+  public models: (string | Model)[];
   public epsilon: number;
 
   constructor(
-    models: (string | ModelNameAndProvider | Model)[],
+    models: (string | Model)[],
     epsilon: number = DEFAULT_EPSILON,
   ) {
     super();

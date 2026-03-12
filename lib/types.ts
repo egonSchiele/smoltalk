@@ -6,7 +6,6 @@ import { ToolCall } from "./classes/ToolCall.js";
 import { Model } from "./model.js";
 import { ModelName } from "./models.js";
 import {
-  ModelNameAndProvider,
   Strategy,
   StrategyJSON,
 } from "./strategies/types.js";
@@ -312,10 +311,9 @@ export type TextPart = {
   text: string;
 };
 
-export type ModelLike = ModelName | Model | ModelNameAndProvider;
+export type ModelLike = ModelName | Model;
 
 export type ModelParam =
   | ModelName
-  | ModelNameAndProvider
   | Strategy
   | StrategyJSON;

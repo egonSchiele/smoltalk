@@ -7,7 +7,6 @@ import { BaseStrategy } from "./baseStrategy.js";
 import {
   IDStrategyJSON,
   IDStrategyJSONSchema,
-  ModelNameAndProviderSchema,
   StrategyJSON,
 } from "./types.js";
 
@@ -65,12 +64,6 @@ export class IDStrategy extends BaseStrategy {
         parsed.data.params.model as ModelName,
         parsed.data.params.provider,
       );
-    }
-
-    const parsedNameAndProvider = ModelNameAndProviderSchema.safeParse(json);
-    if (parsedNameAndProvider.success) {
-      const { model, provider } = parsedNameAndProvider.data;
-      return new IDStrategy(model as ModelName, provider);
     }
 
     throw new Error(`Invalid IDStrategy JSON: ${JSON.stringify(json)}`);

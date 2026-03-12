@@ -34,7 +34,6 @@ export type FallbackStrategyConfig = z.infer<
 
 export type StrategyJSON =
   | string // model name
-  | ModelNameAndProvider
   | IDStrategyJSON
   | RaceStrategyJSON
   | FallbackStrategyJSON
@@ -98,19 +97,14 @@ export const FastestStrategyJSONSchema: z.ZodType<FastestStrategyJSON> = z.lazy(
     z.object({
       type: z.literal("fastest"),
       params: z.object({
-        models: z.array(z.union([ModelNameAndProviderSchema, z.string()])),
+        models: z.array(z.string()),
       }),
     }),
 );
 
 export type FastestStrategyJSON = {
   type: "fastest";
-  params: { models: (ModelNameAndProvider | string)[] };
-};
-
-export type ModelNameAndProvider = {
-  model: string;
-  provider: string;
+  params: { models: string[] };
 };
 
 export const TimeoutStrategyJSONSchema: z.ZodType<TimeoutStrategyJSON> = z.lazy(
@@ -129,11 +123,6 @@ export type TimeoutStrategyJSON = {
   params: { strategy: StrategyJSON; timeoutMs: number };
 };
 
-export const ModelNameAndProviderSchema = z.object({
-  model: z.string(),
-  provider: z.string(),
-});
-
 export const ModelNameSchema = z
   .string()
   .regex(
@@ -144,7 +133,6 @@ export const ModelNameSchema = z
 export const StrategyJSONSchema: z.ZodType<StrategyJSON> = z.lazy(() =>
   z.union([
     ModelNameSchema,
-    ModelNameAndProviderSchema,
     IDStrategyJSONSchema,
     RaceStrategyJSONSchema,
     FallbackStrategyJSONSchema,

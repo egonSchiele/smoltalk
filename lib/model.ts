@@ -1,18 +1,14 @@
 import { ModelName, getModel, isTextModel, Provider } from "./models.js";
 import { SmolError } from "./smolError.js";
-import {
-  ModelNameAndProvider,
-  ModelNameAndProviderSchema,
-  ModelNameSchema,
-} from "./strategies/types.js";
+import { ModelNameSchema } from "./strategies/types.js";
 import { ModelLike } from "./types.js";
 import { round } from "./util/util.js";
 
 export class Model {
-  private model: ModelName | ModelNameAndProvider;
+  private model: ModelName;
   private resolvedModel: ModelName;
   private provider?: Provider;
-  constructor(model: ModelName | ModelNameAndProvider, provider?: Provider) {
+  constructor(model: ModelName, provider?: Provider) {
     this.model = model;
     this.resolvedModel = this.resolveModel();
     this.provider = provider || this.setProvider();
@@ -34,10 +30,6 @@ export class Model {
   }
 
   setProvider(): Provider | undefined {
-    if (ModelNameAndProviderSchema.safeParse(this.model).success) {
-      const { model, provider } = this.model as ModelNameAndProvider;
-      return provider as Provider;
-    }
     const resolved = this.getResolvedModel();
     const modelInfo = getModel(resolved);
     if (modelInfo) {
@@ -50,13 +42,9 @@ export class Model {
     if (ModelNameSchema.safeParse(this.model).success) {
       return this.model as ModelName;
     }
-    if (ModelNameAndProviderSchema.safeParse(this.model).success) {
-      const { model } = this.model as ModelNameAndProvider;
-      return model as ModelName;
-    }
 
     throw new SmolError(
-      `Model ${JSON.stringify(this.model)} is not recognized. Please specify a known model name or a ModelNameAndProvider.`,
+      `Model ${JSON.stringify(this.model)} is not recognized. Please specify a known model name.`,
     );
   }
 
@@ -107,10 +95,7 @@ export class Model {
     return `Model(${JSON.stringify(this.model)})`;
   }
 
-  toJSON(): ModelName | ModelNameAndProvider {
-    if (ModelNameAndProviderSchema.safeParse(this.model).success) {
-      return this.model as ModelNameAndProvider;
-    }
+  toJSON(): ModelName {
     return this.getResolvedModel();
   }
 
