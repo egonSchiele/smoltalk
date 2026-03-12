@@ -1,7 +1,7 @@
 import { z } from "zod";
 export const providers = [
-  "local",
   "ollama",
+  "llama-cpp",
   "openai",
   "openai-responses",
   "anthropic",
@@ -69,7 +69,6 @@ export type ModelType =
   | ImageModel;
 
 export const speechToTextModels = [
-  { type: "speech-to-text", modelName: "whisper-local", provider: "local" },
   {
     type: "speech-to-text",
     modelName: "whisper-web",
@@ -717,91 +716,9 @@ export const textModels = [
     disabled: true,
     provider: "anthropic",
   },
-  /*  {
-    type: "text",
-    modelName: "llama.cpp",
-    maxInputTokens: 4000,
-    maxOutputTokens: 4000,
-  }, */
-  /*  {
-    type: "text",
-    modelName: "claude-3-opus-20240229",
-    maxInputTokens: 4096,
-    maxOutputTokens: 4096,
-  },
-  {
-    type: "text",
-    modelName: "claude-3-sonnet-20240229",
-    maxInputTokens: 4096,
-    maxOutputTokens: 4096,
-  },
-  {
-    type: "text",
-    modelName: "gemini-pro",
-    maxInputTokens: 4096,
-    maxOutputTokens: 4096,
-  },
-  {
-    type: "text",
-    modelName: "gemini-pro-vision",
-    maxInputTokens: 4096,
-    maxOutputTokens: 4096,
-  }, */
-  {
-    type: "text",
-    modelName: "deepseek-r1:8b",
-    description: "Runs via ollama",
-    provider: "ollama",
-    maxInputTokens: 128000,
-    maxOutputTokens: 128000,
-  },
-  {
-    type: "text",
-    modelName: "mistral:latest",
-    description: "Runs via ollama",
-    provider: "ollama",
-    maxInputTokens: 128000,
-    maxOutputTokens: 128000,
-  },
-  {
-    type: "text",
-    modelName: "mistral-adapters-chunk50-iters100",
-    description:
-      "Fine tuned Mistral 7B model, chunked into parts of 50 chars each, 100 iterations.",
-    provider: "local",
-    // https://huggingface.co/mistralai/Mistral-7B-v0.1/discussions/104
-    maxInputTokens: 8192,
-    maxOutputTokens: 8192,
-  },
-  {
-    type: "text",
-    modelName: "llama-7b",
-    provider: "replicate",
-    maxInputTokens: 256,
-    maxOutputTokens: 256,
-  },
 ] as const;
 
 export const imageModels = [
-  {
-    type: "image",
-    modelName: "google/imagen-3",
-    provider: "replicate",
-    costPerImage: 0.05,
-  },
-  {
-    type: "image",
-    modelName: "minimax/image-01",
-    provider: "replicate",
-    costPerImage: 0.01,
-    outputType: "Array",
-  },
-  {
-    type: "image",
-    modelName: "flux-modal",
-    provider: "modal",
-    costPerImage: 0.03,
-  },
   {
     type: "image",
     modelName: "gpt-image-1",
