@@ -53,9 +53,6 @@ export type PromptConfig = {
     schema: ZodType;
   }[];
 
-  /** System-level instructions prepended to the conversation. (OpenAI Responses API only) */
-  instructions?: string;
-
   /** Maximum number of tokens the model can generate in its response. */
   maxTokens?: number;
 
@@ -95,11 +92,15 @@ export type PromptConfig = {
    */
   reasoningEffort?: "low" | "medium" | "high";
 
-  /**
-   * Additional options for structured output validation and retries. (OpenAI only)
-   */
   responseFormatOptions?: Partial<{
-    /** Name for the response format schema. */
+    /**
+     * Identifier for the JSON schema sent to OpenAI's structured output API
+     * (e.g. "math_response"). Defaults to "response".
+     * OpenAI's json_schema response format *requires* a name field. The name helps
+     * OpenAI identify and cache the schema. Smoltalk defaults it to "response"
+     * so users don't have to think about it, but the option is there if someone
+     * wants to set a more descriptive name (OpenAI recommends it for clarity in their docs).
+     */
     name: string;
     /** Whether to enforce strict schema adherence. */
     strict: boolean;
@@ -123,20 +124,6 @@ export type PromptConfig = {
 
   /** Define behavior if too many repeated tool calls are detected (loop prevention). */
   toolLoopDetection?: ToolLoopDetection;
-
-  /** Lifecycle hooks called at various points during execution. */
-  hooks?: Partial<{
-    /** Called when the prompt execution starts. */
-    onStart: (config: PromptConfig) => void;
-    /** Called each time the model invokes a tool. */
-    onToolCall: (toolCall: ToolCall) => void;
-    /** Called when the prompt execution completes successfully. */
-    onEnd: (result: PromptResult) => void;
-    /** Called when an error occurs during execution. */
-    onError: (error: Error) => void;
-    /** Called when a strategy begins execution. */
-    onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
-  }>;
 };
 
 export type SmolConfig = {
@@ -262,6 +249,20 @@ export type SmolConfig = {
     debugMode: boolean;
     /** API key for authenticating with the Statelog server. */
     apiKey: string;
+  }>;
+
+  /** Lifecycle hooks called at various points during execution. */
+  hooks?: Partial<{
+    /** Called when the prompt execution starts. */
+    onStart: (config: PromptConfig) => void;
+    /** Called each time the model invokes a tool. */
+    onToolCall: (toolCall: ToolCall) => void;
+    /** Called when the prompt execution completes successfully. */
+    onEnd: (result: PromptResult) => void;
+    /** Called when an error occurs during execution. */
+    onError: (error: Error) => void;
+    /** Called when a strategy begins execution. */
+    onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
 
   /** Arbitrary metadata passed to custom/registered model providers. */

@@ -57,17 +57,14 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     instructions: string | undefined;
     input: ResponseInputItem[];
   } {
-    let instructions: string | undefined = config.instructions;
+    const systemParts: string[] = [];
     const input: ResponseInputItem[] = [];
 
-    config.messages.forEach((msg, i) => {
-      if (
-        (msg.role === "system" || msg.role === "developer") &&
-        !instructions
-      ) {
-        // First system/developer message becomes instructions
-        instructions = msg.content;
-        return; // Don't include this message in the input
+    config.messages.forEach((msg) => {
+      if (msg.role === "system" || msg.role === "developer") {
+        // Collect all system/developer messages as instructions
+        systemParts.push(msg.content);
+        return;
       }
 
       // Use the message's toOpenAIResponseInputItem method
@@ -78,6 +75,9 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
         input.push(items);
       }
     });
+
+    const instructions =
+      systemParts.length > 0 ? systemParts.join("\n\n") : undefined;
 
     return { instructions, input };
   }
