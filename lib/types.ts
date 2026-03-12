@@ -32,16 +32,6 @@ export const ThinkingBlockSchema = z.object({
   signature: z.string(),
 });
 
-export type Budget = {
-  timeBudgetMs?: number;
-  tokenBudget?: number;
-  tokensUsed?: number;
-  costBudget?: number;
-  costUsed?: number;
-  requestBudget?: number;
-  requestsUsed?: number;
-};
-
 export type PromptConfig = {
   /** The conversation messages to send to the model. */
   messages: Message[];
@@ -115,9 +105,6 @@ export type PromptConfig = {
 
   /** If set, returns a failure when the number of messages exceeds this limit. */
   maxMessages?: number;
-
-  /** Resource budget (time, tokens, cost, requests) for this call. */
-  budget?: Budget;
 
   /** An AbortSignal for cancelling the request. */
   abortSignal?: AbortSignal;
@@ -349,6 +336,7 @@ export type TextPart = {
 };
 
 export type ModelLike = ModelName | ModelConfig | Model | ModelNameAndProvider;
+
 export type ModelParam =
   | ModelName
   | ModelConfig

@@ -1,11 +1,10 @@
 import {
-  AssistantMessage,
   userMessage,
   assistantMessage,
 } from "../classes/message/index.js";
 import { latencyTracker } from "../latencyTracker.js";
 import { getLogger } from "../util/logger.js";
-import { getModel, isTextModel, ModelName } from "../models.js";
+import { ModelName } from "../models.js";
 import { SmolStructuredOutputError } from "../smolError.js";
 import { getStatelogClient, StatelogClient } from "../statelogClient.js";
 import {
@@ -39,17 +38,7 @@ export class BaseClient implements SmolClient {
   protected getAbortSignal(
     promptConfig: PromptConfig,
   ): AbortSignal | undefined {
-    const signals: AbortSignal[] = [];
-    if (promptConfig.abortSignal) {
-      signals.push(promptConfig.abortSignal);
-    }
-    const timeBudgetMs = promptConfig.budget?.timeBudgetMs;
-    if (timeBudgetMs !== undefined) {
-      signals.push(AbortSignal.timeout(timeBudgetMs));
-    }
-    if (signals.length === 0) return undefined;
-    if (signals.length === 1) return signals[0];
-    return AbortSignal.any(signals);
+    return promptConfig.abortSignal;
   }
 
   protected isAbortError(err: unknown): boolean {
@@ -107,111 +96,12 @@ export class BaseClient implements SmolClient {
     return null;
   }
 
-  applyBudget(promptConfig: PromptConfig): {
-    config: PromptConfig;
-    failure?: Result<PromptResult>;
-  } {
-    const budget = promptConfig.budget;
-    if (!budget) return { config: promptConfig };
-
-    let config = { ...promptConfig };
-
-    // Auto-compute used values from message history when not explicitly provided
-    const assistantMessages = config.messages.filter(
-      (m): m is AssistantMessage => m instanceof AssistantMessage,
-    );
-
-    const tokensUsed =
-      budget.tokensUsed ??
-      assistantMessages.reduce(
-        (sum, m) => sum + (m.usage?.outputTokens ?? 0),
-        0,
-      );
-
-    const costUsed =
-      budget.costUsed ??
-      assistantMessages.reduce((sum, m) => sum + (m.cost?.totalCost ?? 0), 0);
-
-    const requestsUsed = budget.requestsUsed ?? assistantMessages.length;
-
-    // Request budget check
-    if (
-      budget.requestBudget !== undefined &&
-      requestsUsed >= budget.requestBudget
-    ) {
-      this.statelogClient?.debug("Request budget exhausted", {
-        requestsUsed,
-        requestBudget: budget.requestBudget,
-      });
-      return {
-        config,
-        failure: {
-          success: false,
-          error: `Request budget exhausted: ${requestsUsed} requests used, budget is ${budget.requestBudget}`,
-        },
-      };
-    }
-
-    // Token budget check
-    if (budget.tokenBudget !== undefined) {
-      const remaining = budget.tokenBudget - tokensUsed;
-      if (remaining <= 0) {
-        this.statelogClient?.debug("Token budget exhausted", {
-          tokensUsed,
-          tokenBudget: budget.tokenBudget,
-        });
-        return {
-          config,
-          failure: {
-            success: false,
-            error: `Token budget exhausted: ${tokensUsed} output tokens used, budget is ${budget.tokenBudget}`,
-          },
-        };
-      }
-      config.maxTokens = Math.min(config.maxTokens ?? Infinity, remaining);
-    }
-
-    // Cost budget check
-    if (budget.costBudget !== undefined) {
-      const remainingUSD = budget.costBudget - costUsed;
-      if (remainingUSD <= 0) {
-        this.statelogClient?.debug("Cost budget exhausted", {
-          costUsed,
-          costBudget: budget.costBudget,
-        });
-        return {
-          config,
-          failure: {
-            success: false,
-            error: `Cost budget exhausted: $${costUsed.toFixed(4)} spent, budget is $${budget.costBudget.toFixed(4)}`,
-          },
-        };
-      }
-      const model = getModel(this.config.model as ModelName);
-      if (model && isTextModel(model) && model.outputTokenCost) {
-        const remainingTokens = Math.floor(
-          (remainingUSD / model.outputTokenCost) * 1_000_000,
-        );
-        config.maxTokens = Math.min(
-          config.maxTokens ?? Infinity,
-          remainingTokens,
-        );
-      }
-    }
-
-    return { config };
-  }
-
   async textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
 
-    const { config: budgetedConfig, failure: budgetFailure } =
-      this.applyBudget(promptConfig);
-    if (budgetFailure) return budgetFailure;
-
     const { continue: shouldContinue, newPromptConfig } =
-      this.checkForToolLoops(budgetedConfig);
+      this.checkForToolLoops(promptConfig);
     if (!shouldContinue) {
       return {
         success: true,
@@ -229,16 +119,11 @@ export class BaseClient implements SmolClient {
       return result;
     } catch (err) {
       if (this.isAbortError(err)) {
-        const timeBudgetMs = promptConfig.budget?.timeBudgetMs;
-        const message = timeBudgetMs
-          ? `Request timed out after ${timeBudgetMs}ms`
-          : "Request was aborted";
         this.statelogClient?.debug("Request aborted or timed out", {
-          reason: message,
-          timeBudgetMs,
+          reason: "Request was aborted",
           promptConfig,
         });
-        return { success: false, error: message };
+        return { success: false, error: "Request was aborted" };
       }
       throw err;
     }
@@ -513,21 +398,8 @@ export class BaseClient implements SmolClient {
       return;
     }
 
-    const { config: budgetedConfig, failure: budgetFailure } =
-      this.applyBudget(config);
-    if (budgetFailure) {
-      yield {
-        type: "error",
-        error:
-          budgetFailure.success === false
-            ? budgetFailure.error
-            : "Budget exceeded",
-      };
-      return;
-    }
-
     const { continue: shouldContinue, newPromptConfig } =
-      this.checkForToolLoops(budgetedConfig);
+      this.checkForToolLoops(config);
     if (!shouldContinue) {
       yield {
         type: "done",
@@ -553,16 +425,11 @@ export class BaseClient implements SmolClient {
       }
     } catch (err) {
       if (this.isAbortError(err)) {
-        const timeBudgetMs = config.budget?.timeBudgetMs;
-        const message = timeBudgetMs
-          ? `Request timed out after ${timeBudgetMs}ms`
-          : "Request was aborted";
         this.statelogClient?.debug("Streaming request aborted or timed out", {
-          reason: message,
-          timeBudgetMs,
+          reason: "Request was aborted",
           newPromptConfig,
         });
-        yield { type: "timeout", error: message };
+        yield { type: "timeout", error: "Request was aborted" };
       } else {
         throw err;
       }
