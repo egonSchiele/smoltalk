@@ -1,41 +1,18 @@
-import { latencyTracker } from "./latencyTracker.js";
-import {
-  ModelName,
-  getModel,
-  isTextModel,
-  Provider,
-  TextModel,
-  TextModelName,
-  textModels,
-  registeredTextModels,
-} from "./models.js";
+import { ModelName, getModel, isTextModel, Provider } from "./models.js";
 import { SmolError } from "./smolError.js";
 import {
-  ModelConfig,
-  ModelConfigSchema,
   ModelNameAndProvider,
   ModelNameAndProviderSchema,
   ModelNameSchema,
-  Optimization,
 } from "./strategies/types.js";
 import { ModelLike } from "./types.js";
 import { round } from "./util/util.js";
 
-const WEIGHTS: Record<number, number[]> = {
-  1: [1],
-  2: [0.6, 0.4],
-  3: [0.5, 0.3, 0.2],
-  4: [0.4, 0.3, 0.2, 0.1],
-};
-
 export class Model {
-  private model: ModelName | ModelConfig | ModelNameAndProvider;
+  private model: ModelName | ModelNameAndProvider;
   private resolvedModel: ModelName;
   private provider?: Provider;
-  constructor(
-    model: ModelName | ModelConfig | ModelNameAndProvider,
-    provider?: Provider,
-  ) {
+  constructor(model: ModelName | ModelNameAndProvider, provider?: Provider) {
     this.model = model;
     this.resolvedModel = this.resolveModel();
     this.provider = provider || this.setProvider();
@@ -69,119 +46,18 @@ export class Model {
     return undefined;
   }
 
-  resolveModel(
-    models: readonly TextModel[] = [...registeredTextModels, ...textModels],
-  ): ModelName {
+  resolveModel(): ModelName {
     if (ModelNameSchema.safeParse(this.model).success) {
       return this.model as ModelName;
     }
     if (ModelNameAndProviderSchema.safeParse(this.model).success) {
-      const { model, provider } = this.model as ModelNameAndProvider;
+      const { model } = this.model as ModelNameAndProvider;
       return model as ModelName;
     }
 
-    const isModelConfig = ModelConfigSchema.safeParse(this.model).success;
-
-    if (!isModelConfig) {
-      throw new SmolError(
-        `Model ${JSON.stringify(this.model)} is not recognized. Please specify a known model or a valid ModelConfig.`,
-      );
-    }
-    const model = this.model as ModelConfig;
-    let candidates = models.filter(
-      (m) =>
-        model.providers.includes(m.provider as Provider) &&
-        !("disabled" in m && m.disabled),
+    throw new SmolError(
+      `Model ${JSON.stringify(this.model)} is not recognized. Please specify a known model name or a ModelNameAndProvider.`,
     );
-
-    if (model.limit?.cost !== undefined) {
-      candidates = candidates.filter((m) => {
-        const cost = (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
-        return cost <= model.limit!.cost!;
-      });
-    }
-
-    if (candidates.length === 0) {
-      throw new SmolError(
-        "No models available for providers: " +
-          model.providers.join(", ") +
-          ". Check that the providers have non-disabled models.",
-      );
-    }
-
-    if (candidates.length === 1) {
-      return candidates[0].modelName as ModelName;
-    }
-
-    const optimizations = model.optimizeFor;
-    const weights = WEIGHTS[optimizations.length] ?? WEIGHTS[4]!;
-
-    const scores = new Map<string, number>();
-    for (const c of candidates) {
-      scores.set(c.modelName, 0);
-    }
-
-    for (let i = 0; i < optimizations.length; i++) {
-      const opt = optimizations[i];
-      const weight = weights[i];
-      const rawValues = candidates.map((c) => this.getRawMetric(c, opt));
-      const min = Math.min(...rawValues);
-      const max = Math.max(...rawValues);
-      const range = max - min;
-
-      for (let j = 0; j < candidates.length; j++) {
-        const raw = rawValues[j];
-        let normalized: number;
-        if (range === 0) {
-          normalized = 0;
-        } else if (this.isLowerBetter(opt)) {
-          normalized = (raw - min) / range;
-        } else {
-          normalized = (max - raw) / range;
-        }
-        scores.set(
-          candidates[j].modelName,
-          scores.get(candidates[j].modelName)! + weight * normalized,
-        );
-      }
-    }
-
-    let bestModel = candidates[0];
-    let bestScore = scores.get(candidates[0].modelName)!;
-    for (let i = 1; i < candidates.length; i++) {
-      const score = scores.get(candidates[i].modelName)!;
-      if (score < bestScore) {
-        bestScore = score;
-        bestModel = candidates[i];
-      }
-    }
-
-    return bestModel.modelName as TextModelName;
-  }
-
-  private getRawMetric(model: TextModel, optimization: Optimization): number {
-    const m = model as TextModel;
-    switch (optimization) {
-      case "cost":
-        return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
-      case "speed":
-        // Prefer tracked latency over static estimates
-        return (
-          latencyTracker.getTokensPerSecond(m.modelName) ??
-          m.outputTokensPerSecond ??
-          0
-        );
-      case "reasoning":
-        return (m.inputTokenCost ?? 0) + (m.outputTokenCost ?? 0);
-      case "large-context":
-        return m.maxInputTokens;
-      default:
-        throw new SmolError(`Unknown optimization: ${optimization}`);
-    }
-  }
-
-  private isLowerBetter(optimization: Optimization): boolean {
-    return optimization === "cost";
   }
 
   calculateCost(usage: {

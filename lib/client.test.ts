@@ -86,16 +86,6 @@ describe("getClient", () => {
     );
   });
 
-  /*   it("resolves a ModelConfig to a concrete model", () => {
-    // Should not throw "not recognized" - proves ModelConfig resolution works
-    expect(() =>
-      getClient({
-        model: { optimizeFor: ["cost"], providers: ["openai"] },
-        openAiApiKey: "test-key",
-      }),
-    ).not.toThrow();
-  }); */
-
   it("creates a client with a valid openai config", () => {
     const client = getClient({
       model: "gpt-4o",

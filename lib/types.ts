@@ -6,7 +6,6 @@ import { ToolCall } from "./classes/ToolCall.js";
 import { Model } from "./model.js";
 import { ModelName } from "./models.js";
 import {
-  ModelConfig,
   ModelNameAndProvider,
   Strategy,
   StrategyJSON,
@@ -142,30 +141,8 @@ export type SmolConfig = {
     model: "claude-sonnet-4-6"
   ```
 
-  ## 2. Specifying a model config (letting Smoltalk pick the model)
-  You can instead also choose to let Smoltalk pick the model that it thinks
-  will be best for certain parameters. For example:
-  ```
-    model: {
-      // find the fastest model
-      optimizeFor: ["speed"],
-
-      // from either Anthropic or Google, whichever is faster
-      providers: ["anthropic", "google"],
-      limit: {
-        // 1 mil input tokens + 1 mil output tokens together
-        // should cost less than $10 for the models being considered
-        cost: 10,
-      },
-    }
-  ```
-
-  This can be a good option because as better models come out,
-  you won't need to update your code. You can just update Smoltalk
-  and it will pick the best model automatically.
-
-  ## 3. Specifying a strategy
-  Finally, you can instead specify a strategy to execute. For example:
+  ## 2. Specifying a strategy
+  You can instead specify a strategy to execute. For example:
 
   ```
     model: {
@@ -285,7 +262,7 @@ export type PromptResult = {
   thinkingBlocks?: ThinkingBlock[];
   usage?: TokenUsage;
   cost?: CostEstimate;
-  model?: ModelName | ModelConfig;
+  model?: ModelName;
 };
 
 export function promptResult({
@@ -335,11 +312,10 @@ export type TextPart = {
   text: string;
 };
 
-export type ModelLike = ModelName | ModelConfig | Model | ModelNameAndProvider;
+export type ModelLike = ModelName | Model | ModelNameAndProvider;
 
 export type ModelParam =
   | ModelName
-  | ModelConfig
   | ModelNameAndProvider
   | Strategy
   | StrategyJSON;
