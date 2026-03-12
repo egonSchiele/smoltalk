@@ -105,6 +105,7 @@ describe("getClient", () => {
   it("creates an ollama client without API keys", () => {
     const client = getClient({
       model: "deepseek-r1:8b",
+      provider: "ollama",
     });
     expect(client).toBeDefined();
   });

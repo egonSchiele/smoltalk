@@ -7,3 +7,5 @@
 
 Does it make sense to get rid of the ModelConfig idea? The idea was to let Smoltalk pick the model best suited to a use case, but it's adding complexity and I'm not sure if it's a good fit with the new strategies approach.
 If modelconfig should be kept, we probably need to update the fastest strategy as well as other strategies to accept it, which means modelconfig needs to be parsable as a strategy.
+
+Update the llama.cpp client to support tool calls and response format at the same time.
