@@ -71,7 +71,7 @@ export class TimeoutStrategy extends BaseStrategy {
     const resultPromise = this.strategy.text({
       ...config,
       abortSignal: controller.signal,
-    });
+    }) as Promise<Result<PromptResult>>;
 
     return Promise.race([resultPromise, timeoutPromise]);
   }

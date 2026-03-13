@@ -81,7 +81,6 @@ export function textSync(
 export function textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
-  const { smolConfig, promptConfig } = splitConfig(config);
-  const client = getClient(smolConfig);
-  return client.textStream(promptConfig);
+  const strategy = getStrategy(config.model);
+  return strategy.textStream(config);
 }

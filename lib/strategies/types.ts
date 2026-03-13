@@ -1,15 +1,14 @@
 import { z } from "zod";
-import { SmolPromptConfig, Result, PromptResult } from "../types.js";
+import { SmolPromptConfig, Result, PromptResult, StreamChunk } from "../types.js";
 import { ModelName } from "../models.js";
 
 export interface Strategy {
-  text(config: SmolPromptConfig): Promise<Result<PromptResult>>;
+  text(config: SmolPromptConfig): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
   _text(config: SmolPromptConfig): Promise<Result<PromptResult>>;
   textSync(config: SmolPromptConfig): Promise<Result<PromptResult>>;
   _textSync(config: SmolPromptConfig): Promise<Result<PromptResult>>;
-  textStream(
-    config: SmolPromptConfig,
-  ): Promise<Result<AsyncIterable<PromptResult>>>;
+  textStream(config: SmolPromptConfig): AsyncGenerator<StreamChunk>;
+  _textStream(config: SmolPromptConfig): AsyncGenerator<StreamChunk>;
   toJSON(): StrategyJSON;
   toString(): string;
   toShortString(): string;

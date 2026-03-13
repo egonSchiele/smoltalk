@@ -4,6 +4,7 @@ import {
   PromptResult,
   Result,
   SmolPromptConfig,
+  StreamChunk,
 } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
@@ -33,8 +34,17 @@ export class RandomStrategy extends BaseStrategy {
     this.statelogClient?.debug("random strategy chosen", {
       strategy,
     });
-    const result = await strategy.text(config);
+    const result = await (strategy.text(config) as Promise<Result<PromptResult>>);
     return result;
+  }
+
+  async *_textStream(config: SmolPromptConfig): AsyncGenerator<StreamChunk> {
+    const randomIndex = Math.floor(Math.random() * this.strategies.length);
+    const strategy = this.strategies[randomIndex];
+    this.statelogClient?.debug("random strategy chosen (stream)", {
+      strategy,
+    });
+    yield* strategy.textStream(config);
   }
 
   toJSON(): StrategyJSON {

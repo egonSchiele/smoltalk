@@ -76,7 +76,8 @@ describe("BaseStrategy", () => {
 
   it("throws on unimplemented textStream", async () => {
     const strategy = new BaseStrategy();
-    await expect(strategy.textStream(dummyConfig)).rejects.toThrow(
+    const gen = strategy.textStream(dummyConfig);
+    await expect(gen.next()).rejects.toThrow(
       /not implemented/,
     );
   });

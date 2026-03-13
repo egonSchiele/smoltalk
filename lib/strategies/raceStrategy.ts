@@ -1,5 +1,6 @@
 import { getLogger } from "../util/logger.js";
-import { ModelLike, ModelParam, SmolPromptConfig } from "../types.js";
+import { ModelLike, ModelParam, PromptResult, SmolPromptConfig } from "../types.js";
+import { Result } from "../types/result.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { fromJSON, IDStrategy } from "./index.js";
 import {
@@ -45,7 +46,7 @@ export class RaceStrategy extends BaseStrategy {
       return strategy.text({
         ...config,
         abortSignal: controllers[i].signal,
-      });
+      }) as Promise<Result<PromptResult>>;
     });
 
     let winnerIndex: number | null = null;

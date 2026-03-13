@@ -8,7 +8,7 @@ import {
   Provider,
   TextModel,
 } from "../models.js";
-import { ModelLike, PromptResult, Result, SmolPromptConfig } from "../types.js";
+import { ModelLike, PromptResult, Result, SmolPromptConfig, StreamChunk } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import { IDStrategy } from "./idStrategy.js";
 import {
@@ -40,52 +40,63 @@ export class FastestStrategy extends BaseStrategy {
     return `fastest([${this.models.map((s) => s.toString()).join(", ")}])`;
   }
 
-  async _text(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+  private chooseModel(config: SmolPromptConfig): Model {
     const resolved = this.models.map((model) => Model.create(model));
-
-    let chosen: Model | null = null;
     const logger = getLogger(config.logLevel);
+
     if (Math.random() < this.epsilon) {
       // Explore: pick a random model
-      chosen = resolved[Math.floor(Math.random() * resolved.length)];
+      const chosen = resolved[Math.floor(Math.random() * resolved.length)];
       logger.debug("fastest strategy - exploring random model", {
         model: chosen.getResolvedModel(),
       });
       this.statelogClient?.debug("fastest strategy - picking random model", {
         model: chosen.getResolvedModel(),
       });
-    } else {
-      // Exploit: pick the fastest model by tracked latency
-      chosen = this.pickFastest(resolved);
-      if (chosen) {
-        logger.debug("fastest strategy - exploiting fastest model", {
-          model: chosen.getResolvedModel(),
-        });
-        this.statelogClient?.debug("fastest strategy - using fastest model", {
-          model: chosen.getResolvedModel(),
-        });
-      } else {
-        // we don't have latency data for any model, so just pick randomly
-        chosen = resolved[Math.floor(Math.random() * resolved.length)];
-        logger.debug(
-          "fastest strategy - no latency data, picking random model",
-          {
-            models: resolved.map((m) => m.getResolvedModel()),
-            chosen: chosen.getResolvedModel(),
-          },
-        );
-        this.statelogClient?.debug(
-          "fastest strategy - no latency data, picking random model",
-          {
-            models: resolved.map((m) => m.getResolvedModel()),
-            chosen,
-          },
-        );
-      }
+      return chosen;
     }
 
+    // Exploit: pick the fastest model by tracked latency
+    const fastest = this.pickFastest(resolved);
+    if (fastest) {
+      logger.debug("fastest strategy - exploiting fastest model", {
+        model: fastest.getResolvedModel(),
+      });
+      this.statelogClient?.debug("fastest strategy - using fastest model", {
+        model: fastest.getResolvedModel(),
+      });
+      return fastest;
+    }
+
+    // we don't have latency data for any model, so just pick randomly
+    const chosen = resolved[Math.floor(Math.random() * resolved.length)];
+    logger.debug(
+      "fastest strategy - no latency data, picking random model",
+      {
+        models: resolved.map((m) => m.getResolvedModel()),
+        chosen: chosen.getResolvedModel(),
+      },
+    );
+    this.statelogClient?.debug(
+      "fastest strategy - no latency data, picking random model",
+      {
+        models: resolved.map((m) => m.getResolvedModel()),
+        chosen,
+      },
+    );
+    return chosen;
+  }
+
+  async _text(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    const chosen = this.chooseModel(config);
     const strategy = new IDStrategy(chosen);
-    return strategy.text(config);
+    return strategy.text(config) as Promise<Result<PromptResult>>;
+  }
+
+  async *_textStream(config: SmolPromptConfig): AsyncGenerator<StreamChunk> {
+    const chosen = this.chooseModel(config);
+    const strategy = new IDStrategy(chosen);
+    yield* strategy.textStream(config);
   }
 
   private pickFastest(models: Model[]): Model | null {

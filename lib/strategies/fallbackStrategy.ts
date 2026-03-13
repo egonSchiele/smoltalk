@@ -51,7 +51,7 @@ export class FallbackStrategy extends BaseStrategy {
     fallbackStrategies: FallbackStrategyConfig,
   ): Promise<Result<PromptResult>> {
     try {
-      const result = await strategy.text(config);
+      const result = await (strategy.text(config) as Promise<Result<PromptResult>>);
       return result;
     } catch (error) {
       // If the abort signal was triggered (e.g. by a race strategy winner

@@ -2,7 +2,7 @@ import { getClient } from "../client.js";
 import { splitConfig } from "../functions.js";
 import { Model } from "../model.js";
 import { ModelName, Provider } from "../models.js";
-import { ModelLike, PromptResult, Result, SmolPromptConfig } from "../types.js";
+import { ModelLike, PromptResult, Result, SmolPromptConfig, StreamChunk } from "../types.js";
 import { BaseStrategy } from "./baseStrategy.js";
 import {
   IDStrategyJSON,
@@ -25,11 +25,7 @@ export class IDStrategy extends BaseStrategy {
     return `id(${this.model.toString()})`;
   }
 
-  async _text(config: SmolPromptConfig) {
-    return this._textSync(config);
-  }
-
-  async _textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+  private _getClientAndConfig(config: SmolPromptConfig) {
     const configOverrides = {
       model: this.model.getResolvedModel(),
       provider: this.model.getProvider(),
@@ -42,7 +38,21 @@ export class IDStrategy extends BaseStrategy {
       ...smolConfig,
       ...configOverrides,
     });
+    return { client, promptConfig };
+  }
+
+  async _text(config: SmolPromptConfig) {
+    return this._textSync(config);
+  }
+
+  async _textSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
+    const { client, promptConfig } = this._getClientAndConfig(config);
     return client.textSync(promptConfig);
+  }
+
+  async *_textStream(config: SmolPromptConfig): AsyncGenerator<StreamChunk> {
+    const { client, promptConfig } = this._getClientAndConfig(config);
+    yield* client.textStream(promptConfig);
   }
 
   // todo: this toJSON isn't fully accurate as it resolves the model,
