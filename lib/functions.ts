@@ -1,3 +1,8 @@
+import {
+  BaseMessage,
+  Message,
+  messageFromJSON,
+} from "./classes/message/index.js";
 import { getClient } from "./client.js";
 import { Model } from "./model.js";
 import { BaseStrategy } from "./strategies/baseStrategy.js";
@@ -10,6 +15,7 @@ import {
   StreamChunk,
 } from "./types.js";
 import { Result } from "./types/result.js";
+import { getLogger } from "./util/logger.js";
 
 function getStrategy(model: ModelParam): Strategy {
   if (model instanceof BaseStrategy) return model;
@@ -58,6 +64,16 @@ export function splitConfig(config: SmolPromptConfig): {
   };
 }
 
+function fixMessagesIfNecessary(messages: any[]): Message[] {
+  if (messages && messages.length > 0) {
+    if (!(messages[0] instanceof BaseMessage)) {
+      getLogger().warn("Messages are not instances of smoltalk.BaseMessage");
+      return messages.map((m) => messageFromJSON(m));
+    }
+  }
+  return messages;
+}
+
 export function text(
   config: SmolPromptConfig & { stream: true },
 ): AsyncGenerator<StreamChunk>;
@@ -68,6 +84,7 @@ export function text(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
   const strategy = getStrategy(config.model);
+  config.messages = fixMessagesIfNecessary(config.messages);
   return strategy.text(config);
 }
 
@@ -75,6 +92,7 @@ export function textSync(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> {
   const strategy = getStrategy(config.model);
+  config.messages = fixMessagesIfNecessary(config.messages);
   return strategy.textSync(config);
 }
 
@@ -82,5 +100,6 @@ export function textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
   const strategy = getStrategy(config.model);
+  config.messages = fixMessagesIfNecessary(config.messages);
   return strategy.textStream(config);
 }
