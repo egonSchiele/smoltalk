@@ -221,7 +221,7 @@ export class BaseClient implements SmolClient {
     }
 
     // 1.5 Look for { type: "object", properties: { response: { ... } } } pattern
-    if (rawValue.type === "object" && rawValue.properties) {
+    if (rawValue && typeof rawValue === "object" && rawValue.type === "object" && rawValue.properties) {
       return this.extractResponse(
         promptConfig,
         rawValue.properties,
