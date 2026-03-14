@@ -1,7 +1,4 @@
-import {
-  userMessage,
-  assistantMessage,
-} from "../classes/message/index.js";
+import { userMessage, assistantMessage } from "../classes/message/index.js";
 import { latencyTracker } from "../latencyTracker.js";
 import { getLogger } from "../util/logger.js";
 import { ModelName } from "../models.js";
@@ -221,6 +218,16 @@ export class BaseClient implements SmolClient {
         // Only extra key errors — allow it through
         return rawValue;
       }
+    }
+
+    // 1.5 Look for { type: "object", properties: { response: { ... } } } pattern
+    if (rawValue.type === "object" && rawValue.properties) {
+      return this.extractResponse(
+        promptConfig,
+        rawValue.properties,
+        schema,
+        depth + 1,
+      );
     }
 
     // 2. String → try JSON.parse, then recurse
