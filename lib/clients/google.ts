@@ -155,7 +155,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       {
         contents: request.contents,
         tools: config.tools,
-        responseFormat: config.responseFormat,
+        responseFormat: config.responseFormat?.toJSONSchema(),
       },
     );
     const toolRequest = {

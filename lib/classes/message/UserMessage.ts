@@ -58,10 +58,16 @@ export class UserMessage extends BaseMessage implements MessageClass {
   }
 
   static fromJSON(json: unknown): UserMessage {
-    const parsed = UserMessageJSONSchema.parse(json);
-    return new UserMessage(parsed.content, {
-      name: parsed.name,
-      rawData: parsed.rawData,
+    const result = UserMessageJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse UserMessage");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse UserMessage");
+    }
+    return new UserMessage(result.data.content, {
+      name: result.data.name,
+      rawData: result.data.rawData,
     });
   }
 

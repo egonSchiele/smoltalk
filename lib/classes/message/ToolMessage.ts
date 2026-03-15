@@ -5,16 +5,24 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import { getLogger } from "../../util/logger.js";
 
 export const ToolMessageJSONSchema = z.object({
   role: z.literal("tool"),
-  content: z.union([z.string(), z.array(TextPartSchema)]),
+  //content: z.union([z.string(), z.array(TextPartSchema)]),
+  content: z.any(),
   name: z.string(),
   tool_call_id: z.string().default(""),
   rawData: z.any().optional(),
 });
 
-export type ToolMessageJSON = z.infer<typeof ToolMessageJSONSchema>;
+export type ToolMessageJSON = {
+  role: "tool";
+  content: any;
+  name: string;
+  tool_call_id: string;
+  rawData?: any;
+};
 
 export class ToolMessage extends BaseMessage implements MessageClass {
   public _role = "tool" as const;
@@ -68,11 +76,34 @@ export class ToolMessage extends BaseMessage implements MessageClass {
   }
 
   static fromJSON(json: unknown): ToolMessage {
-    const parsed = ToolMessageJSONSchema.parse(json);
-    return new ToolMessage(parsed.content, {
-      tool_call_id: parsed.tool_call_id,
-      name: parsed.name,
-      rawData: parsed.rawData,
+    const result = ToolMessageJSONSchema.safeParse(json);
+
+    if (!result.success) {
+      console.error("Failed to parse ToolMessage");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse ToolMessage");
+    }
+    const TextPartArraySchema = z.array(TextPartSchema);
+
+    const textPartArrayResult = TextPartArraySchema.safeParse(
+      result.data.content,
+    );
+    if (textPartArrayResult.success) {
+      result.data.content = textPartArrayResult.data;
+    } else if (typeof result.data.content === "string") {
+      // do nothing, it's already a string
+    } else {
+      getLogger().warn(
+        "ToolMessage content is neither a string nor an array of TextParts. Converting to string using JSON.stringify.",
+      );
+      result.data.content = JSON.stringify(result.data.content);
+    }
+
+    return new ToolMessage(result.data.content, {
+      tool_call_id: result.data.tool_call_id,
+      name: result.data.name,
+      rawData: result.data.rawData,
     });
   }
 
@@ -119,11 +150,21 @@ export class ToolMessage extends BaseMessage implements MessageClass {
   // In Anthropic's API, tool results are user-role messages containing tool_result blocks.
   toAnthropicMessage(): {
     role: "user";
-    content: Array<{ type: "tool_result"; tool_use_id: string; content: string }>;
+    content: Array<{
+      type: "tool_result";
+      tool_use_id: string;
+      content: string;
+    }>;
   } {
     return {
       role: "user",
-      content: [{ type: "tool_result", tool_use_id: this.tool_call_id, content: this.content }],
+      content: [
+        {
+          type: "tool_result",
+          tool_use_id: this.tool_call_id,
+          content: this.content,
+        },
+      ],
     };
   }
 }

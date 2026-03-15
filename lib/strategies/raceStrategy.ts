@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { getLogger } from "../util/logger.js";
 import { ModelLike, ModelParam, PromptResult, SmolPromptConfig } from "../types.js";
 import { Result } from "../types/result.js";
@@ -90,8 +91,14 @@ export class RaceStrategy extends BaseStrategy {
   }
 
   static fromJSON(json: unknown): RaceStrategy {
-    const parsed = RaceStrategyJSONSchema.parse(json);
-    const strategies = parsed.params.strategies.map((s) => fromJSON(s));
+    const result = RaceStrategyJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse RaceStrategy");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse RaceStrategy");
+    }
+    const strategies = result.data.params.strategies.map((s) => fromJSON(s));
     return new RaceStrategy(strategies);
   }
 }

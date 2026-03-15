@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   ModelLike,
   ModelParam,
@@ -57,8 +58,14 @@ export class RandomStrategy extends BaseStrategy {
   }
 
   static fromJSON(json: unknown): RandomStrategy {
-    const parsed = RandomStrategyJSONSchema.parse(json);
-    const strategies = parsed.params.strategies.map(
+    const result = RandomStrategyJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse RandomStrategy");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse RandomStrategy");
+    }
+    const strategies = result.data.params.strategies.map(
       (s) => fromJSON(s) as Strategy,
     );
     return new RandomStrategy(...strategies);

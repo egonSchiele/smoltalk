@@ -60,10 +60,16 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
   }
 
   static fromJSON(json: unknown): DeveloperMessage {
-    const parsed = DeveloperMessageJSONSchema.parse(json);
-    return new DeveloperMessage(parsed.content, {
-      name: parsed.name,
-      rawData: parsed.rawData,
+    const result = DeveloperMessageJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse DeveloperMessage");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse DeveloperMessage");
+    }
+    return new DeveloperMessage(result.data.content, {
+      name: result.data.name,
+      rawData: result.data.rawData,
     });
   }
 

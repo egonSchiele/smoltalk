@@ -1,3 +1,4 @@
+import { z } from "zod";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -179,8 +180,14 @@ export class FallbackStrategy extends BaseStrategy {
   }
 
   static fromJSON(json: unknown): FallbackStrategy {
-    const parsed = FallbackStrategyJSONSchema.parse(json);
-    const primaryStrategy = fromJSON(parsed.params.primaryStrategy) as Strategy;
-    return new FallbackStrategy(primaryStrategy, parsed.params.config);
+    const result = FallbackStrategyJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse FallbackStrategy");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse FallbackStrategy");
+    }
+    const primaryStrategy = fromJSON(result.data.params.primaryStrategy) as Strategy;
+    return new FallbackStrategy(primaryStrategy, result.data.params.config);
   }
 }

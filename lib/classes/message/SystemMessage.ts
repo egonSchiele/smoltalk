@@ -60,10 +60,16 @@ export class SystemMessage extends BaseMessage implements MessageClass {
   }
 
   static fromJSON(json: unknown): SystemMessage {
-    const parsed = SystemMessageJSONSchema.parse(json);
-    return new SystemMessage(parsed.content, {
-      name: parsed.name,
-      rawData: parsed.rawData,
+    const result = SystemMessageJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse SystemMessage");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse SystemMessage");
+    }
+    return new SystemMessage(result.data.content, {
+      name: result.data.name,
+      rawData: result.data.rawData,
     });
   }
 

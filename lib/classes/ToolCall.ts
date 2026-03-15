@@ -70,8 +70,14 @@ export class ToolCall {
   }
 
   static fromJSON(json: unknown): ToolCall {
-    const parsed = ToolCallJSONSchema.parse(json);
-    return new ToolCall(parsed.id, parsed.name, parsed.arguments);
+    const result = ToolCallJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse ToolCall");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse ToolCall");
+    }
+    return new ToolCall(result.data.id, result.data.name, result.data.arguments);
   }
 
   toOpenAI(): any {

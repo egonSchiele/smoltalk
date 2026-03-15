@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { SmolTimeoutError } from "../smolError.js";
 import {
   ModelLike,
@@ -87,8 +88,14 @@ export class TimeoutStrategy extends BaseStrategy {
   }
 
   static fromJSON(json: unknown): TimeoutStrategy {
-    const parsed = TimeoutStrategyJSONSchema.parse(json);
-    const strategy = fromJSON(parsed.params.strategy) as Strategy;
-    return new TimeoutStrategy(strategy, parsed.params.timeoutMs);
+    const result = TimeoutStrategyJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse TimeoutStrategy");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse TimeoutStrategy");
+    }
+    const strategy = fromJSON(result.data.params.strategy) as Strategy;
+    return new TimeoutStrategy(strategy, result.data.params.timeoutMs);
   }
 }

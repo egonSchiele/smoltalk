@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { latencyTracker } from "../latencyTracker.js";
 import { getLogger } from "../util/logger.js";
 import { Model } from "../model.js";
@@ -133,8 +134,14 @@ export class FastestStrategy extends BaseStrategy {
   }
 
   static fromJSON(json: unknown): FastestStrategy {
-    const parsed = FastestStrategyJSONSchema.parse(json);
-    const models = parsed.params.models;
+    const result = FastestStrategyJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse FastestStrategy");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse FastestStrategy");
+    }
+    const models = result.data.params.models;
     return new FastestStrategy(models);
   }
 }

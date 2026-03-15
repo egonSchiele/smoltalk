@@ -127,16 +127,22 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   }
 
   static fromJSON(json: unknown): AssistantMessage {
-    const parsed = AssistantMessageJSONSchema.parse(json);
-    return new AssistantMessage(parsed.content, {
-      name: parsed.name,
-      audio: parsed.audio,
-      refusal: parsed.refusal,
-      toolCalls: parsed.toolCalls?.map((tc) => ToolCall.fromJSON(tc)),
-      thinkingBlocks: parsed.thinkingBlocks,
-      rawData: parsed.rawData,
-      usage: parsed.usage,
-      cost: parsed.cost,
+    const result = AssistantMessageJSONSchema.safeParse(json);
+    if (!result.success) {
+      console.error("Failed to parse AssistantMessage");
+      console.error(JSON.stringify(json, null, 2));
+      console.error(z.prettifyError(result.error));
+      throw new Error("Failed to parse AssistantMessage");
+    }
+    return new AssistantMessage(result.data.content, {
+      name: result.data.name,
+      audio: result.data.audio,
+      refusal: result.data.refusal,
+      toolCalls: result.data.toolCalls?.map((tc) => ToolCall.fromJSON(tc)),
+      thinkingBlocks: result.data.thinkingBlocks,
+      rawData: result.data.rawData,
+      usage: result.data.usage,
+      cost: result.data.cost,
     });
   }
 
