@@ -117,6 +117,27 @@ describe("runMiddlewareCheck", () => {
     expect(calledConfig.messages[1].role).toBe("user");
   });
 
+  it("forwards responseFormat and responseFormatOptions to middleware call", async () => {
+    const { z } = await import("zod");
+    const schema = z.object({ safe: z.boolean() });
+    const formatOptions = { strict: true, name: "safety" };
+    const textSyncFn = mockTextSync(
+      success({ output: '{"safe": true}', toolCalls: [] }),
+    );
+    const check = {
+      messages: [systemMessage("Check safety")],
+      responseFormat: schema,
+      responseFormatOptions: formatOptions,
+      decide: () => null,
+    };
+
+    await runMiddlewareCheck(check, baseConfig, textSyncFn);
+
+    const calledConfig = textSyncFn.mock.calls[0][0] as SmolPromptConfig;
+    expect(calledConfig.responseFormat).toBe(schema);
+    expect(calledConfig.responseFormatOptions).toBe(formatOptions);
+  });
+
   it("strips middleware from the check config (prevents recursion)", async () => {
     const textSyncFn = mockTextSync(
       success({ output: "ok", toolCalls: [] }),
@@ -254,7 +275,32 @@ describe("runMiddlewareChecks", () => {
     expect(result.blocked).toBe(false);
   });
 
-  it("aggregates usage across checks", async () => {
+  it("parallel mode: aggregates usage across all checks", async () => {
+    const textSyncFn = vi.fn().mockResolvedValue(
+      success({
+        output: "ok",
+        toolCalls: [],
+        usage: { inputTokens: 100, outputTokens: 50 },
+        cost: { inputCost: 0.01, outputCost: 0.005, totalCost: 0.015, currency: "USD" },
+      }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => null },
+      { messages: [systemMessage("Check 2")], decide: () => "Blocked" },
+      { messages: [systemMessage("Check 3")], decide: () => null },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "parallel", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(true);
+    // All 3 checks ran in parallel, so usage is summed across all
+    expect(result.usage?.inputTokens).toBe(300);
+    expect(result.cost?.totalCost).toBeCloseTo(0.045);
+  });
+
+  it("sequential mode: aggregates usage across checks", async () => {
     const textSyncFn = vi.fn().mockResolvedValue(
       success({
         output: "ok",
@@ -371,6 +417,43 @@ describe("executeMiddlewareSync", () => {
     if (result!.success) {
       expect(result!.value.output).toBe("main response");
     }
+  });
+
+  it("parallel timing: parent abortSignal propagates to both main and middleware", async () => {
+    const parentAbort = new AbortController();
+    let mainAbortSignal: AbortSignal | undefined;
+    let middlewareAbortSignal: AbortSignal | undefined;
+
+    const textSyncFn = vi.fn().mockImplementation(async (cfg: SmolPromptConfig) => {
+      middlewareAbortSignal = cfg.abortSignal;
+      return success({ output: "ok", toolCalls: [] });
+    });
+    const mainFn = vi.fn().mockImplementation(async (cfg: SmolPromptConfig) => {
+      mainAbortSignal = cfg.abortSignal;
+      // Wait so middleware finishes first and we can test abort after
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      return success({ output: "main", toolCalls: [] });
+    });
+    const config = {
+      ...baseConfig,
+      abortSignal: parentAbort.signal,
+      middleware: {
+        timing: "parallel" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    const resultPromise = executeMiddlewareSync(config, mainFn, textSyncFn);
+
+    // Abort parent while main is still running
+    parentAbort.abort();
+
+    await resultPromise;
+
+    // Both child signals should be aborted because parent was aborted
+    expect(mainAbortSignal?.aborted).toBe(true);
+    expect(middlewareAbortSignal?.aborted).toBe(true);
   });
 
   it("parallel timing: strips middleware from config passed to main prompt", async () => {

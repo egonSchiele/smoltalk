@@ -153,7 +153,7 @@ async function runSequential(
   for (const check of checks) {
     const checkResult = await runMiddlewareCheck(check, parentConfig, textSyncFn);
     aggregatedUsage = addTokenUsage(aggregatedUsage, checkResult.usage);
-    aggregatedCost = addCosts(aggregatedCost, checkResult.cost);
+    aggregatedCost = safeAddCosts(aggregatedCost, checkResult.cost);
 
     if (checkResult.blocked) {
       if (checkResult.result.success) {
@@ -164,6 +164,7 @@ async function runSequential(
     }
   }
 
+  // When all checks pass, result is a placeholder — callers check `blocked` first
   return {
     blocked: false,
     result: success({ output: null, toolCalls: [] }),
@@ -186,7 +187,7 @@ async function runParallel(
 
   for (const r of results) {
     aggregatedUsage = addTokenUsage(aggregatedUsage, r.usage);
-    aggregatedCost = addCosts(aggregatedCost, r.cost);
+    aggregatedCost = safeAddCosts(aggregatedCost, r.cost);
   }
 
   const firstBlocked = results.find((r) => r.blocked);
@@ -198,12 +199,26 @@ async function runParallel(
     return { ...firstBlocked, usage: aggregatedUsage, cost: aggregatedCost };
   }
 
+  // When all checks pass, result is a placeholder — callers check `blocked` first
   return {
     blocked: false,
     result: success({ output: null, toolCalls: [] }),
     usage: aggregatedUsage,
     cost: aggregatedCost,
   };
+}
+
+/**
+ * Wrapper around addCosts that handles currency mismatch gracefully.
+ * If currencies differ, returns the first non-undefined cost (best effort).
+ */
+function safeAddCosts(a?: CostEstimate, b?: CostEstimate): CostEstimate | undefined {
+  try {
+    return addCosts(a, b);
+  } catch {
+    // addCosts throws on currency mismatch — return whichever is available
+    return a ?? b;
+  }
 }
 
 function stripMiddleware(config: SmolPromptConfig): SmolPromptConfig {
@@ -338,7 +353,12 @@ export async function* executeMiddlewareStream(
       return r;
     });
 
-    // Manually iterate so that `break` does not close the generator
+    // Manually iterate so that `break` does not close the generator.
+    // Note: the loop only checks `middlewareSettled` after each chunk arrives,
+    // so if middleware settles while we're blocked on `iterator.next()`, we buffer
+    // one extra chunk before reacting. This is bounded by the inter-chunk latency
+    // (typically sub-second for LLM streaming) and is safe — it just means we may
+    // buffer slightly more than strictly necessary.
     const iterator = stream[Symbol.asyncIterator]();
     while (true) {
       const { value: chunk, done } = await iterator.next();
