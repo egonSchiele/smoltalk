@@ -1,6 +1,6 @@
 import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
-import { PromptConfig, PromptResult, SmolPromptConfig, success } from "./types.js";
+import { PromptConfig, PromptResult, SmolPromptConfig, StreamChunk, success } from "./types.js";
 import { Result } from "./types/result.js";
 import { addTokenUsage, TokenUsage } from "./types/tokenUsage.js";
 import { addCosts, CostEstimate } from "./types/costEstimate.js";
@@ -204,4 +204,179 @@ async function runParallel(
     usage: aggregatedUsage,
     cost: aggregatedCost,
   };
+}
+
+function stripMiddleware(config: SmolPromptConfig): SmolPromptConfig {
+  const { middleware, ...rest } = config;
+  return rest as SmolPromptConfig;
+}
+
+/**
+ * High-level middleware orchestration for sync calls.
+ * Returns the blocked result if middleware blocks, the main prompt result for parallel timing,
+ * or null to indicate "proceed normally" (no middleware or middleware passed with "before" timing).
+ */
+export async function executeMiddlewareSync(
+  config: SmolPromptConfig,
+  runMainPrompt: (config: SmolPromptConfig) => Promise<Result<PromptResult>>,
+  textSyncFn: (config: SmolPromptConfig) => Promise<Result<PromptResult>>,
+): Promise<Result<PromptResult> | null> {
+  const middleware = config.middleware;
+  if (!middleware || middleware.checks.length === 0) return null;
+
+  const configWithoutMiddleware = stripMiddleware(config);
+
+  if (middleware.timing === "before") {
+    const middlewareResult = await runMiddlewareChecks(
+      middleware.checks,
+      middleware.mode,
+      configWithoutMiddleware,
+      textSyncFn,
+    );
+    return middlewareResult.blocked ? middlewareResult.result : null;
+  }
+
+  if (middleware.timing === "parallel") {
+    const mainAbort = new AbortController();
+    const middlewareAbort = new AbortController();
+
+    if (configWithoutMiddleware.abortSignal) {
+      configWithoutMiddleware.abortSignal.addEventListener("abort", () => {
+        mainAbort.abort();
+        middlewareAbort.abort();
+      });
+    }
+
+    const mainPromise = runMainPrompt({
+      ...configWithoutMiddleware,
+      abortSignal: mainAbort.signal,
+    });
+
+    const middlewareResult = await runMiddlewareChecks(
+      middleware.checks,
+      middleware.mode,
+      { ...configWithoutMiddleware, abortSignal: middlewareAbort.signal },
+      textSyncFn,
+    );
+
+    if (middlewareResult.blocked) {
+      mainAbort.abort();
+      return middlewareResult.result;
+    }
+
+    return await mainPromise;
+  }
+
+  return null;
+}
+
+/**
+ * High-level middleware orchestration for streaming calls.
+ * Yields stream chunks, handling middleware checks according to timing config.
+ * Only call this when middleware is configured — the caller should check first.
+ */
+export async function* executeMiddlewareStream(
+  config: SmolPromptConfig,
+  getStream: (config: SmolPromptConfig) => AsyncGenerator<StreamChunk>,
+  textSyncFn: (config: SmolPromptConfig) => Promise<Result<PromptResult>>,
+): AsyncGenerator<StreamChunk> {
+  const middleware = config.middleware!;
+  const configWithoutMiddleware = stripMiddleware(config);
+
+  if (middleware.timing === "before") {
+    const middlewareResult = await runMiddlewareChecks(
+      middleware.checks,
+      middleware.mode,
+      configWithoutMiddleware,
+      textSyncFn,
+    );
+
+    if (middlewareResult.blocked) {
+      if (middlewareResult.result.success) {
+        yield { type: "done", result: middlewareResult.result.value };
+      } else {
+        yield { type: "error", error: middlewareResult.result.error };
+      }
+      return;
+    }
+
+    yield* getStream(configWithoutMiddleware);
+    return;
+  }
+
+  if (middleware.timing === "parallel") {
+    const mainAbort = new AbortController();
+    const middlewareAbort = new AbortController();
+
+    if (configWithoutMiddleware.abortSignal) {
+      configWithoutMiddleware.abortSignal.addEventListener("abort", () => {
+        mainAbort.abort();
+        middlewareAbort.abort();
+      });
+    }
+
+    const stream = getStream({
+      ...configWithoutMiddleware,
+      abortSignal: mainAbort.signal,
+    });
+
+    const middlewarePromise = runMiddlewareChecks(
+      middleware.checks,
+      middleware.mode,
+      { ...configWithoutMiddleware, abortSignal: middlewareAbort.signal },
+      textSyncFn,
+    );
+
+    const buffer: StreamChunk[] = [];
+    let streamDone = false;
+    let middlewareSettled = false;
+    let middlewareResult!: MiddlewareResult;
+
+    const middlewareFinished = middlewarePromise.then((r) => {
+      middlewareSettled = true;
+      middlewareResult = r;
+      return r;
+    });
+
+    // Manually iterate so that `break` does not close the generator
+    const iterator = stream[Symbol.asyncIterator]();
+    while (true) {
+      const { value: chunk, done } = await iterator.next();
+      if (done) {
+        streamDone = true;
+        break;
+      }
+      buffer.push(chunk);
+      if (chunk.type === "done" || chunk.type === "error") {
+        streamDone = true;
+      }
+      if (middlewareSettled) break;
+    }
+
+    if (!middlewareSettled) {
+      middlewareResult = await middlewareFinished;
+    }
+
+    if (middlewareResult.blocked) {
+      mainAbort.abort();
+      if (middlewareResult.result.success) {
+        yield { type: "done", result: middlewareResult.result.value };
+      } else {
+        yield { type: "error", error: middlewareResult.result.error };
+      }
+      return;
+    }
+
+    for (const chunk of buffer) {
+      yield chunk;
+    }
+    if (!streamDone) {
+      while (true) {
+        const { value: chunk, done } = await iterator.next();
+        if (done) break;
+        yield chunk;
+      }
+    }
+    return;
+  }
 }

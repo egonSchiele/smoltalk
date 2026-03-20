@@ -1,8 +1,13 @@
 import { describe, it, expect, vi } from "vitest";
 import { userMessage, systemMessage } from "./classes/message/index.js";
-import { PromptResult, SmolPromptConfig } from "./types.js";
+import { PromptResult, SmolPromptConfig, StreamChunk } from "./types.js";
 import { Result, success, failure } from "./types/result.js";
-import { runMiddlewareCheck, runMiddlewareChecks } from "./middleware.js";
+import {
+  runMiddlewareCheck,
+  runMiddlewareChecks,
+  executeMiddlewareSync,
+  executeMiddlewareStream,
+} from "./middleware.js";
 
 const baseConfig = {
   model: "gpt-4o",
@@ -270,5 +275,271 @@ describe("runMiddlewareChecks", () => {
     expect(result.blocked).toBe(true);
     expect(result.usage?.inputTokens).toBe(100);
     expect(result.cost?.totalCost).toBe(0.015);
+  });
+});
+
+describe("executeMiddlewareSync", () => {
+  const mainResult = success({ output: "main response", toolCalls: [] });
+  const runMainPrompt = vi.fn().mockResolvedValue(mainResult);
+
+  it("returns null when no middleware configured", async () => {
+    const result = await executeMiddlewareSync(baseConfig, runMainPrompt, mockTextSync(mainResult));
+    expect(result).toBeNull();
+  });
+
+  it("returns null when checks array is empty", async () => {
+    const config = {
+      ...baseConfig,
+      middleware: { timing: "before" as const, mode: "sequential" as const, checks: [] },
+    };
+    const result = await executeMiddlewareSync(config, runMainPrompt, mockTextSync(mainResult));
+    expect(result).toBeNull();
+  });
+
+  it("before timing: returns blocked result when middleware blocks", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "before" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => "Blocked!" }],
+      },
+    };
+
+    const result = await executeMiddlewareSync(config, runMainPrompt, textSyncFn);
+
+    expect(result).not.toBeNull();
+    expect(result!.success).toBe(true);
+    if (result!.success) {
+      expect(result!.value.output).toBe("Blocked!");
+    }
+  });
+
+  it("before timing: returns null when middleware passes", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "before" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    const result = await executeMiddlewareSync(config, runMainPrompt, textSyncFn);
+    expect(result).toBeNull();
+  });
+
+  it("parallel timing: returns blocked result when middleware blocks", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const mainFn = vi.fn().mockResolvedValue(mainResult);
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "parallel" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => "Blocked!" }],
+      },
+    };
+
+    const result = await executeMiddlewareSync(config, mainFn, textSyncFn);
+
+    expect(result).not.toBeNull();
+    expect(result!.success).toBe(true);
+    if (result!.success) {
+      expect(result!.value.output).toBe("Blocked!");
+    }
+  });
+
+  it("parallel timing: returns main prompt result when middleware passes", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const mainFn = vi.fn().mockResolvedValue(mainResult);
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "parallel" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    const result = await executeMiddlewareSync(config, mainFn, textSyncFn);
+
+    expect(result).not.toBeNull();
+    expect(result!.success).toBe(true);
+    if (result!.success) {
+      expect(result!.value.output).toBe("main response");
+    }
+  });
+
+  it("parallel timing: strips middleware from config passed to main prompt", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const mainFn = vi.fn().mockResolvedValue(mainResult);
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "parallel" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    await executeMiddlewareSync(config, mainFn, textSyncFn);
+
+    const calledConfig = mainFn.mock.calls[0][0] as SmolPromptConfig;
+    expect(calledConfig.middleware).toBeUndefined();
+  });
+});
+
+describe("executeMiddlewareStream", () => {
+  async function* mockStream(chunks: StreamChunk[]): AsyncGenerator<StreamChunk> {
+    for (const chunk of chunks) {
+      yield chunk;
+    }
+  }
+
+  async function collectChunks(gen: AsyncGenerator<StreamChunk>): Promise<StreamChunk[]> {
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of gen) {
+      chunks.push(chunk);
+    }
+    return chunks;
+  }
+
+  const streamChunks: StreamChunk[] = [
+    { type: "text", text: "Hello" },
+    { type: "text", text: " world" },
+    { type: "done", result: { output: "Hello world", toolCalls: [] } },
+  ];
+
+  it("before timing: yields done chunk with blocked output when middleware blocks", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "before" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => "Blocked!" }],
+      },
+    };
+
+    const chunks = await collectChunks(
+      executeMiddlewareStream(config, () => mockStream(streamChunks), textSyncFn),
+    );
+
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].type).toBe("done");
+    if (chunks[0].type === "done") {
+      expect(chunks[0].result.output).toBe("Blocked!");
+    }
+  });
+
+  it("before timing: yields error chunk when middleware returns failure", async () => {
+    const textSyncFn = mockTextSync(failure("API error"));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "before" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    const chunks = await collectChunks(
+      executeMiddlewareStream(config, () => mockStream(streamChunks), textSyncFn),
+    );
+
+    // LLM failure causes fail-closed block with a success result containing error message
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].type).toBe("done");
+  });
+
+  it("before timing: yields stream chunks when middleware passes", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "before" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    const chunks = await collectChunks(
+      executeMiddlewareStream(config, () => mockStream(streamChunks), textSyncFn),
+    );
+
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toEqual({ type: "text", text: "Hello" });
+    expect(chunks[1]).toEqual({ type: "text", text: " world" });
+    expect(chunks[2].type).toBe("done");
+  });
+
+  it("parallel timing: yields done chunk when middleware blocks (discards buffer)", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "parallel" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => "Blocked!" }],
+      },
+    };
+
+    const chunks = await collectChunks(
+      executeMiddlewareStream(config, () => mockStream(streamChunks), textSyncFn),
+    );
+
+    expect(chunks).toHaveLength(1);
+    expect(chunks[0].type).toBe("done");
+    if (chunks[0].type === "done") {
+      expect(chunks[0].result.output).toBe("Blocked!");
+    }
+  });
+
+  it("parallel timing: yields all stream chunks when middleware passes", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "parallel" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    const chunks = await collectChunks(
+      executeMiddlewareStream(config, () => mockStream(streamChunks), textSyncFn),
+    );
+
+    expect(chunks).toHaveLength(3);
+    expect(chunks[0]).toEqual({ type: "text", text: "Hello" });
+    expect(chunks[1]).toEqual({ type: "text", text: " world" });
+    expect(chunks[2].type).toBe("done");
+  });
+
+  it("before timing: strips middleware from config passed to stream", async () => {
+    const textSyncFn = mockTextSync(success({ output: "ok", toolCalls: [] }));
+    let capturedConfig: SmolPromptConfig | undefined;
+    const config = {
+      ...baseConfig,
+      middleware: {
+        timing: "before" as const,
+        mode: "sequential" as const,
+        checks: [{ messages: [systemMessage("Check")], decide: () => null }],
+      },
+    };
+
+    await collectChunks(
+      executeMiddlewareStream(
+        config,
+        (cfg) => { capturedConfig = cfg; return mockStream(streamChunks); },
+        textSyncFn,
+      ),
+    );
+
+    expect(capturedConfig).toBeDefined();
+    expect(capturedConfig!.middleware).toBeUndefined();
   });
 });
