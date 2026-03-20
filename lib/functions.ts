@@ -97,9 +97,11 @@ export async function textSync(
 ): Promise<Result<PromptResult>> {
   config.messages = fixMessagesIfNecessary(config.messages);
 
-  const runMain = (cfg: SmolPromptConfig) => { const s = getStrategy(cfg.model); return s.textSync(cfg); };
-  const middlewareResult = await executeMiddlewareSync(config, runMain, runMain);
-  if (middlewareResult) return middlewareResult;
+  if (config.middleware && config.middleware.checks.length > 0) {
+    const runMain = (cfg: SmolPromptConfig) => { const s = getStrategy(cfg.model); return s.textSync(cfg); };
+    const middlewareResult = await executeMiddlewareSync(config, runMain, runMain);
+    if (middlewareResult) return middlewareResult;
+  }
 
   const strategy = getStrategy(config.model);
   return strategy.textSync(config);
