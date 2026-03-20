@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { userMessage, systemMessage } from "./classes/message/index.js";
 import { PromptResult, SmolPromptConfig } from "./types.js";
 import { Result, success, failure } from "./types/result.js";
-import { runMiddlewareCheck } from "./middleware.js";
+import { runMiddlewareCheck, runMiddlewareChecks } from "./middleware.js";
 
 const baseConfig = {
   model: "gpt-4o",
@@ -133,5 +133,142 @@ describe("runMiddlewareCheck", () => {
 
     const calledConfig = textSyncFn.mock.calls[0][0] as SmolPromptConfig;
     expect(calledConfig.middleware).toBeUndefined();
+  });
+});
+
+describe("runMiddlewareChecks", () => {
+  it("sequential mode: returns pass when all checks pass", async () => {
+    const textSyncFn = mockTextSync(
+      success({ output: "ok", toolCalls: [] }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => null },
+      { messages: [systemMessage("Check 2")], decide: () => null },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "sequential", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(false);
+  });
+
+  it("sequential mode: short-circuits on first block", async () => {
+    const textSyncFn = mockTextSync(
+      success({ output: "ok", toolCalls: [] }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => "Blocked by check 1" },
+      { messages: [systemMessage("Check 2")], decide: () => null },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "sequential", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(true);
+    expect(textSyncFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("parallel mode: returns pass when all checks pass", async () => {
+    const textSyncFn = mockTextSync(
+      success({ output: "ok", toolCalls: [] }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => null },
+      { messages: [systemMessage("Check 2")], decide: () => null },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "parallel", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(false);
+  });
+
+  it("parallel mode: blocks if any check blocks, uses first in array order", async () => {
+    const textSyncFn = mockTextSync(
+      success({ output: "ok", toolCalls: [] }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => null },
+      { messages: [systemMessage("Check 2")], decide: () => "Blocked by 2" },
+      { messages: [systemMessage("Check 3")], decide: () => "Blocked by 3" },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "parallel", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(true);
+    if (result.result.success) {
+      expect(result.result.value.output).toBe("Blocked by 2");
+    }
+  });
+
+  it("parallel mode: runs all checks concurrently", async () => {
+    const textSyncFn = vi.fn().mockImplementation(async () => {
+      return success({ output: "ok", toolCalls: [] });
+    });
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => null },
+      { messages: [systemMessage("Check 2")], decide: () => null },
+      { messages: [systemMessage("Check 3")], decide: () => null },
+    ];
+
+    await runMiddlewareChecks(checks, "parallel", baseConfig, textSyncFn);
+
+    expect(textSyncFn).toHaveBeenCalledTimes(3);
+  });
+
+  it("returns pass immediately for empty checks array", async () => {
+    const textSyncFn = mockTextSync(
+      success({ output: "ok", toolCalls: [] }),
+    );
+
+    const result = await runMiddlewareChecks(
+      [], "sequential", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(false);
+    expect(textSyncFn).not.toHaveBeenCalled();
+  });
+
+  it("treats decide() returning undefined as pass", async () => {
+    const textSyncFn = mockTextSync(
+      success({ output: "ok", toolCalls: [] }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check")], decide: () => undefined as any },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "sequential", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(false);
+  });
+
+  it("aggregates usage across checks", async () => {
+    const textSyncFn = vi.fn().mockResolvedValue(
+      success({
+        output: "ok",
+        toolCalls: [],
+        usage: { inputTokens: 100, outputTokens: 50 },
+        cost: { inputCost: 0.01, outputCost: 0.005, totalCost: 0.015, currency: "USD" },
+      }),
+    );
+    const checks = [
+      { messages: [systemMessage("Check 1")], decide: () => "Blocked" },
+      { messages: [systemMessage("Check 2")], decide: () => null },
+    ];
+
+    const result = await runMiddlewareChecks(
+      checks, "sequential", baseConfig, textSyncFn,
+    );
+
+    expect(result.blocked).toBe(true);
+    expect(result.usage?.inputTokens).toBe(100);
+    expect(result.cost?.totalCost).toBe(0.015);
   });
 });

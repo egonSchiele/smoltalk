@@ -2,8 +2,8 @@ import { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { PromptConfig, PromptResult, SmolPromptConfig, success } from "./types.js";
 import { Result } from "./types/result.js";
-import { TokenUsage } from "./types/tokenUsage.js";
-import { CostEstimate } from "./types/costEstimate.js";
+import { addTokenUsage, TokenUsage } from "./types/tokenUsage.js";
+import { addCosts, CostEstimate } from "./types/costEstimate.js";
 
 export type MiddlewareCheck = {
   /** Messages for the middleware LLM call (original prompt messages are appended automatically). */
@@ -122,5 +122,86 @@ export async function runMiddlewareCheck(
     result: llmResult,
     usage: middlewareUsage,
     cost: middlewareCost,
+  };
+}
+
+/**
+ * Run multiple middleware checks in sequential or parallel mode.
+ * Returns a combined MiddlewareResult.
+ */
+export async function runMiddlewareChecks(
+  checks: MiddlewareCheck[],
+  mode: "sequential" | "parallel",
+  parentConfig: SmolPromptConfig,
+  textSyncFn: (config: SmolPromptConfig) => Promise<Result<PromptResult>>,
+): Promise<MiddlewareResult> {
+  if (mode === "sequential") {
+    return runSequential(checks, parentConfig, textSyncFn);
+  } else {
+    return runParallel(checks, parentConfig, textSyncFn);
+  }
+}
+
+async function runSequential(
+  checks: MiddlewareCheck[],
+  parentConfig: SmolPromptConfig,
+  textSyncFn: (config: SmolPromptConfig) => Promise<Result<PromptResult>>,
+): Promise<MiddlewareResult> {
+  let aggregatedUsage: TokenUsage | undefined;
+  let aggregatedCost: CostEstimate | undefined;
+
+  for (const check of checks) {
+    const checkResult = await runMiddlewareCheck(check, parentConfig, textSyncFn);
+    aggregatedUsage = addTokenUsage(aggregatedUsage, checkResult.usage);
+    aggregatedCost = addCosts(aggregatedCost, checkResult.cost);
+
+    if (checkResult.blocked) {
+      if (checkResult.result.success) {
+        checkResult.result.value.usage = aggregatedUsage;
+        checkResult.result.value.cost = aggregatedCost;
+      }
+      return { ...checkResult, usage: aggregatedUsage, cost: aggregatedCost };
+    }
+  }
+
+  return {
+    blocked: false,
+    result: success({ output: null, toolCalls: [] }),
+    usage: aggregatedUsage,
+    cost: aggregatedCost,
+  };
+}
+
+async function runParallel(
+  checks: MiddlewareCheck[],
+  parentConfig: SmolPromptConfig,
+  textSyncFn: (config: SmolPromptConfig) => Promise<Result<PromptResult>>,
+): Promise<MiddlewareResult> {
+  const results = await Promise.all(
+    checks.map((check) => runMiddlewareCheck(check, parentConfig, textSyncFn)),
+  );
+
+  let aggregatedUsage: TokenUsage | undefined;
+  let aggregatedCost: CostEstimate | undefined;
+
+  for (const r of results) {
+    aggregatedUsage = addTokenUsage(aggregatedUsage, r.usage);
+    aggregatedCost = addCosts(aggregatedCost, r.cost);
+  }
+
+  const firstBlocked = results.find((r) => r.blocked);
+  if (firstBlocked) {
+    if (firstBlocked.result.success) {
+      firstBlocked.result.value.usage = aggregatedUsage;
+      firstBlocked.result.value.cost = aggregatedCost;
+    }
+    return { ...firstBlocked, usage: aggregatedUsage, cost: aggregatedCost };
+  }
+
+  return {
+    blocked: false,
+    result: success({ output: null, toolCalls: [] }),
+    usage: aggregatedUsage,
+    cost: aggregatedCost,
   };
 }
