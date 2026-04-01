@@ -1,6 +1,6 @@
 export * from "./types/result.js";
 import { LogLevel } from "egonlog";
-import { MiddlewareConfig } from "./middleware.js";
+import type { MiddlewareConfig } from "./middleware.js";
 import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";

@@ -101,7 +101,8 @@ success({
 
 When middleware blocks a request:
 - **"before" timing**: Usage/cost is the sum of all middleware checks that ran (for sequential mode, only the checks that executed before the block).
-- **"parallel" timing**: Usage/cost is the sum of all middleware checks that ran, plus any partial usage from the aborted main prompt (if the provider reports it). If the main prompt was aborted and reports no usage, only middleware costs are included.
+- **"parallel" timing (sync)**: Usage/cost is the sum of all middleware checks that ran, plus any partial usage from the aborted main prompt (captured by awaiting the aborted promise). If the main prompt was aborted and reports no usage, only middleware costs are included.
+- **"parallel" timing (stream)**: Usage/cost is the sum of all middleware checks that ran. If the main stream produced a `done` chunk before being aborted (containing partial usage), those costs are merged in. Otherwise only middleware costs are included.
 
 When middleware passes, the returned `Result<PromptResult>` is the main prompt's result with its own usage/cost (middleware costs are not added to the main result).
 
@@ -145,7 +146,7 @@ External cancellation (via the parent's `abortSignal`) propagates to both the ma
 
 ### Before timing
 
-Middleware calls also respect the parent's `abortSignal`. If the user cancels during middleware execution, checks are aborted and the call returns a failure Result.
+Middleware calls also respect the parent's `abortSignal`. If the user cancels during middleware execution, the middleware LLM call is treated as a failure (fail-closed), so the overall call returns a successful `Result<PromptResult>` whose output is the middleware failure message — consistent with other middleware failure modes.
 
 ## Error Handling
 

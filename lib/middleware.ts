@@ -255,31 +255,47 @@ export async function executeMiddlewareSync(
     const mainAbort = new AbortController();
     const middlewareAbort = new AbortController();
 
-    if (configWithoutMiddleware.abortSignal) {
-      configWithoutMiddleware.abortSignal.addEventListener("abort", () => {
-        mainAbort.abort();
-        middlewareAbort.abort();
+    const parentAbortSignal = configWithoutMiddleware.abortSignal;
+    const parentAbortHandler = parentAbortSignal
+      ? () => { mainAbort.abort(); middlewareAbort.abort(); }
+      : undefined;
+
+    if (parentAbortSignal && parentAbortHandler) {
+      parentAbortSignal.addEventListener("abort", parentAbortHandler, { once: true });
+    }
+
+    try {
+      const mainPromise = runMainPrompt({
+        ...configWithoutMiddleware,
+        abortSignal: mainAbort.signal,
       });
+
+      const middlewareResult = await runMiddlewareChecks(
+        middleware.checks,
+        middleware.mode,
+        { ...configWithoutMiddleware, abortSignal: middlewareAbort.signal },
+        textSyncFn,
+      );
+
+      if (middlewareResult.blocked) {
+        mainAbort.abort();
+        // Await the aborted main promise to capture any partial usage/cost
+        const mainPartialResult = await mainPromise.catch(() => undefined);
+        if (mainPartialResult?.success && middlewareResult.result.success) {
+          const mainUsage = mainPartialResult.value.usage;
+          const mainCost = mainPartialResult.value.cost;
+          middlewareResult.result.value.usage = addTokenUsage(middlewareResult.result.value.usage, mainUsage);
+          middlewareResult.result.value.cost = safeAddCosts(middlewareResult.result.value.cost, mainCost);
+        }
+        return middlewareResult.result;
+      }
+
+      return await mainPromise;
+    } finally {
+      if (parentAbortSignal && parentAbortHandler) {
+        parentAbortSignal.removeEventListener("abort", parentAbortHandler);
+      }
     }
-
-    const mainPromise = runMainPrompt({
-      ...configWithoutMiddleware,
-      abortSignal: mainAbort.signal,
-    });
-
-    const middlewareResult = await runMiddlewareChecks(
-      middleware.checks,
-      middleware.mode,
-      { ...configWithoutMiddleware, abortSignal: middlewareAbort.signal },
-      textSyncFn,
-    );
-
-    if (middlewareResult.blocked) {
-      mainAbort.abort();
-      return middlewareResult.result;
-    }
-
-    return await mainPromise;
   }
 
   return null;
@@ -323,80 +339,103 @@ export async function* executeMiddlewareStream(
     const mainAbort = new AbortController();
     const middlewareAbort = new AbortController();
 
-    if (configWithoutMiddleware.abortSignal) {
-      configWithoutMiddleware.abortSignal.addEventListener("abort", () => {
-        mainAbort.abort();
-        middlewareAbort.abort();
+    const parentAbortSignal = configWithoutMiddleware.abortSignal;
+    const parentAbortHandler = parentAbortSignal
+      ? () => { mainAbort.abort(); middlewareAbort.abort(); }
+      : undefined;
+
+    if (parentAbortSignal && parentAbortHandler) {
+      parentAbortSignal.addEventListener("abort", parentAbortHandler, { once: true });
+    }
+
+    try {
+      const stream = getStream({
+        ...configWithoutMiddleware,
+        abortSignal: mainAbort.signal,
       });
-    }
 
-    const stream = getStream({
-      ...configWithoutMiddleware,
-      abortSignal: mainAbort.signal,
-    });
+      const middlewarePromise = runMiddlewareChecks(
+        middleware.checks,
+        middleware.mode,
+        { ...configWithoutMiddleware, abortSignal: middlewareAbort.signal },
+        textSyncFn,
+      );
 
-    const middlewarePromise = runMiddlewareChecks(
-      middleware.checks,
-      middleware.mode,
-      { ...configWithoutMiddleware, abortSignal: middlewareAbort.signal },
-      textSyncFn,
-    );
+      const buffer: StreamChunk[] = [];
+      let streamDone = false;
+      let middlewareSettled = false;
+      let middlewareResult!: MiddlewareResult;
 
-    const buffer: StreamChunk[] = [];
-    let streamDone = false;
-    let middlewareSettled = false;
-    let middlewareResult!: MiddlewareResult;
+      const middlewareFinished = middlewarePromise.then((r) => {
+        middlewareSettled = true;
+        middlewareResult = r;
+        return r;
+      });
 
-    const middlewareFinished = middlewarePromise.then((r) => {
-      middlewareSettled = true;
-      middlewareResult = r;
-      return r;
-    });
-
-    // Manually iterate so that `break` does not close the generator.
-    // Note: the loop only checks `middlewareSettled` after each chunk arrives,
-    // so if middleware settles while we're blocked on `iterator.next()`, we buffer
-    // one extra chunk before reacting. This is bounded by the inter-chunk latency
-    // (typically sub-second for LLM streaming) and is safe — it just means we may
-    // buffer slightly more than strictly necessary.
-    const iterator = stream[Symbol.asyncIterator]();
-    while (true) {
-      const { value: chunk, done } = await iterator.next();
-      if (done) {
-        streamDone = true;
-        break;
-      }
-      buffer.push(chunk);
-      if (chunk.type === "done" || chunk.type === "error") {
-        streamDone = true;
-      }
-      if (middlewareSettled) break;
-    }
-
-    if (!middlewareSettled) {
-      middlewareResult = await middlewareFinished;
-    }
-
-    if (middlewareResult.blocked) {
-      mainAbort.abort();
-      if (middlewareResult.result.success) {
-        yield { type: "done", result: middlewareResult.result.value };
-      } else {
-        yield { type: "error", error: middlewareResult.result.error };
-      }
-      return;
-    }
-
-    for (const chunk of buffer) {
-      yield chunk;
-    }
-    if (!streamDone) {
+      const iterator = stream[Symbol.asyncIterator]();
       while (true) {
-        const { value: chunk, done } = await iterator.next();
-        if (done) break;
+        // Race the next chunk against middleware completion so we can
+        // abort the main stream promptly when middleware blocks.
+        const next = iterator.next();
+        const raceResult = await Promise.race([
+          next.then((v) => ({ source: "stream" as const, ...v })),
+          middlewareFinished.then(() => ({ source: "middleware" as const, done: false, value: undefined })),
+        ]);
+
+        if (raceResult.source === "middleware") {
+          // Middleware settled before the next chunk arrived.
+          // The stream iterator is still pending — we'll handle it below.
+          break;
+        }
+
+        if (raceResult.done) {
+          streamDone = true;
+          break;
+        }
+
+        const chunk = raceResult.value as StreamChunk;
+        buffer.push(chunk);
+        if (chunk.type === "done" || chunk.type === "error") {
+          streamDone = true;
+        }
+        if (middlewareSettled) break;
+      }
+
+      if (!middlewareSettled) {
+        middlewareResult = await middlewareFinished;
+      }
+
+      if (middlewareResult.blocked) {
+        mainAbort.abort();
+        // Check buffer for a done chunk that may contain partial usage/cost
+        const doneChunk = buffer.find((c): c is Extract<StreamChunk, { type: "done" }> => c.type === "done");
+        if (doneChunk && middlewareResult.result.success) {
+          middlewareResult.result.value.usage = addTokenUsage(middlewareResult.result.value.usage, doneChunk.result.usage);
+          middlewareResult.result.value.cost = safeAddCosts(middlewareResult.result.value.cost, doneChunk.result.cost);
+        }
+        if (middlewareResult.result.success) {
+          yield { type: "done", result: middlewareResult.result.value };
+        } else {
+          yield { type: "error", error: middlewareResult.result.error };
+        }
+        return;
+      }
+
+      for (const chunk of buffer) {
         yield chunk;
       }
+      if (!streamDone) {
+        while (true) {
+          const { value: chunk, done } = await iterator.next();
+          if (done) break;
+          yield chunk;
+        }
+      }
+      return;
+    } finally {
+      if (parentAbortSignal && parentAbortHandler) {
+        parentAbortSignal.removeEventListener("abort", parentAbortHandler);
+      }
     }
-    return;
   }
 }
