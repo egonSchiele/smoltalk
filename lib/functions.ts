@@ -4,6 +4,7 @@ import {
   messageFromJSON,
 } from "./classes/message/index.js";
 import { getClient } from "./client.js";
+import { executeMiddlewareSync, executeMiddlewareStream } from "./middleware.js";
 import { Model } from "./model.js";
 import { BaseStrategy } from "./strategies/baseStrategy.js";
 import { fromJSON, Strategy, StrategyJSON } from "./strategies/index.js";
@@ -19,6 +20,12 @@ import { getLogger } from "./util/logger.js";
 
 function getStrategy(model: ModelParam): Strategy {
   if (model instanceof BaseStrategy) return model;
+  return fromJSON(model as StrategyJSON);
+}
+
+/** Always creates a fresh strategy instance (safe for concurrent use). */
+function getFreshStrategy(model: ModelParam): Strategy {
+  if (model instanceof BaseStrategy) return fromJSON(model.toJSON());
   return fromJSON(model as StrategyJSON);
 }
 
@@ -39,6 +46,7 @@ export function splitConfig(config: SmolPromptConfig): {
     metadata,
     hooks,
     llamaCppModelDir,
+    middleware,
     ...promptConfig
   } = config;
 
@@ -83,23 +91,43 @@ export function text(
 export function text(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
-  const strategy = getStrategy(config.model);
-  config.messages = fixMessagesIfNecessary(config.messages);
-  return strategy.text(config);
+  if (config.stream) {
+    return textStream(config);
+  }
+  return textSync(config);
 }
 
-export function textSync(
+export async function textSync(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> {
-  const strategy = getStrategy(config.model);
   config.messages = fixMessagesIfNecessary(config.messages);
-  return strategy.textSync(config);
+
+  if (config.middleware && config.middleware.checks.length > 0) {
+    const runMain = (cfg: SmolPromptConfig) => { const s = getFreshStrategy(cfg.model); return s.textSync(cfg); };
+    const middlewareResult = await executeMiddlewareSync(config, runMain, runMain);
+    if (middlewareResult) return middlewareResult;
+  }
+
+  const strategy = getStrategy(config.model);
+  const { middleware: _, ...configWithoutMiddleware } = config;
+  return strategy.textSync(configWithoutMiddleware as SmolPromptConfig);
 }
 
-export function textStream(
+export async function* textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
-  const strategy = getStrategy(config.model);
   config.messages = fixMessagesIfNecessary(config.messages);
-  return strategy.textStream(config);
+
+  if (config.middleware && config.middleware.checks.length > 0) {
+    yield* executeMiddlewareStream(
+      config,
+      (cfg) => { const s = getFreshStrategy(cfg.model); return s.textStream(cfg); },
+      (cfg) => { const s = getFreshStrategy(cfg.model); return s.textSync(cfg); },
+    );
+    return;
+  }
+
+  const strategy = getStrategy(config.model);
+  const { middleware: _, ...configWithoutMiddleware } = config;
+  yield* strategy.textStream(configWithoutMiddleware as SmolPromptConfig);
 }
