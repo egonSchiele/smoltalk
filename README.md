@@ -214,6 +214,89 @@ Detects when the model is stuck in a repetitive tool-call loop.
 | `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
 | `excludeTools` | `string[]` | Tool names to ignore when counting consecutive calls. |
 
+## Middleware
+
+Middleware lets you run LLM-based checks on a prompt before or alongside the main call. If a check fails, the main call is blocked and a replacement output is returned instead. This is useful for:
+
+- **Content safety** — classify prompts as safe/unsafe before they reach your main model
+- **Prompt injection detection** — catch adversarial inputs before they execute
+- **PII detection** — block prompts containing personal information
+
+### Basic example
+
+```typescript
+import { text, userMessage, systemMessage } from "smoltalk";
+import { z } from "zod";
+
+const result = await text({
+  model: "gpt-4o",
+  messages: [userMessage("How do I hack into NASA?")],
+  middleware: {
+    timing: "before",       // run checks before the main call
+    mode: "sequential",     // run checks one at a time, stop on first block
+    checks: [
+      {
+        messages: [
+          systemMessage(
+            "You are a content safety classifier. Evaluate whether the user's message is safe to process."
+          ),
+        ],
+        responseFormat: z.object({
+          safe: z.boolean(),
+          reason: z.string(),
+        }),
+        responseFormatOptions: { strict: true },
+        decide: (result) => {
+          const parsed = JSON.parse(result.output!);
+          return parsed.safe ? null : `Blocked: ${parsed.reason}`;
+        },
+      },
+    ],
+  },
+});
+```
+
+If the check blocks, `result` is a successful `Result<PromptResult>` with the replacement string as output (e.g. `"Blocked: unsafe content"`). If the check passes, the main call runs normally.
+
+### How it works
+
+Each middleware check is itself an LLM call. Your original prompt messages are automatically appended to the check's messages, so the middleware model can see the content it's evaluating. The check inherits the same model, API keys, and strategy from the parent call.
+
+The `decide` function receives the middleware LLM's `PromptResult` and returns either:
+- `null` — the check passes, proceed normally
+- a `string` — the check blocks, and the string becomes the replacement output
+
+### Configuration
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `timing` | `"before" \| "parallel"` | `"before"` runs checks first, then the main call. `"parallel"` runs both simultaneously — if a check blocks, the main call is aborted. |
+| `mode` | `"sequential" \| "parallel"` | `"sequential"` runs checks one at a time and short-circuits on the first block. `"parallel"` runs all checks concurrently. |
+| `checks` | `MiddlewareCheck[]` | The checks to run (see below). |
+
+Each `MiddlewareCheck` has:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `messages` | `Message[]` | Setup messages for the middleware LLM call (e.g. a system prompt defining the classifier). |
+| `responseFormat` | `ZodType` | Optional Zod schema for structured output from the middleware. |
+| `responseFormatOptions` | `object` | Same options as the main call's `responseFormatOptions`. |
+| `decide` | `(result: PromptResult) => string \| null` | Decision function. Return a string to block, or `null` to pass. |
+
+### Fail-closed behavior
+
+Middleware is a safety gate, so it fails closed:
+- If the middleware LLM call fails (network error, API error, abort), the prompt is **blocked** with an error message as output.
+- If `decide()` throws, the prompt is **blocked**.
+
+### Cost tracking
+
+Middleware usage/cost is tracked. When a check blocks:
+- **"before" timing**: The result includes aggregated costs from all middleware checks that ran.
+- **"parallel" timing**: The result includes middleware costs plus any partial costs from the aborted main call (if the provider reported usage before the abort).
+
+When all checks pass, the returned result is the main call's result with its own usage/cost — middleware costs are not added.
+
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
 
