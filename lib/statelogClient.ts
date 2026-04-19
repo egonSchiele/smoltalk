@@ -37,6 +37,7 @@ export class StatelogClient {
   private traceId: string;
   private apiKey: string;
   private projectId: string;
+  private enabled: boolean = true;
 
   constructor(config: StatelogConfig) {
     const { host, apiKey, projectId, traceId, debugMode } = config;
@@ -53,7 +54,12 @@ export class StatelogClient {
     }
 
     if (!this.apiKey || this.apiKey.trim() === "") {
-      throw new Error("API key is required for StatelogClient");
+      this.enabled = false;
+      if (this.debugMode) {
+        console.warn(
+          "API key is required for StatelogClient. Client will be disabled.",
+        );
+      }
     }
   }
 
@@ -418,6 +424,12 @@ export class StatelogClient {
 
   async post(body: Record<string, any>): Promise<void> {
     if (!this.host) {
+      return;
+    }
+    if (!this.enabled) {
+      if (this.debugMode) {
+        console.warn("StatelogClient is disabled. Skipping log post.");
+      }
       return;
     }
 

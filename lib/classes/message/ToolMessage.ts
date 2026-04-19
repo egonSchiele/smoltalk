@@ -94,7 +94,7 @@ export class ToolMessage extends BaseMessage implements MessageClass {
     } else if (typeof result.data.content === "string") {
       // do nothing, it's already a string
     } else {
-      getLogger().warn(
+      getLogger().debug(
         "ToolMessage content is neither a string nor an array of TextParts. Converting to string using JSON.stringify.",
       );
       result.data.content = JSON.stringify(result.data.content);
