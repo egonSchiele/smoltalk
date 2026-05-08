@@ -4,7 +4,6 @@ import {
   messageFromJSON,
 } from "./classes/message/index.js";
 import { getClient } from "./client.js";
-import { executeMiddlewareSync, executeMiddlewareStream } from "./middleware.js";
 import { Model } from "./model.js";
 import {
   PromptConfig,
@@ -32,7 +31,6 @@ export function splitConfig(config: SmolPromptConfig): {
     metadata,
     hooks,
     llamaCppModelDir,
-    middleware,
     ...promptConfig
   } = config;
 
@@ -68,16 +66,6 @@ function fixMessagesIfNecessary(messages: any[]): Message[] {
   return messages;
 }
 
-function runSync(config: SmolPromptConfig): Promise<Result<PromptResult>> {
-  const { smolConfig, promptConfig } = splitConfig(config);
-  return getClient(smolConfig).textSync(promptConfig);
-}
-
-function runStream(config: SmolPromptConfig): AsyncGenerator<StreamChunk> {
-  const { smolConfig, promptConfig } = splitConfig(config);
-  return getClient(smolConfig).textStream(promptConfig);
-}
-
 export function text(
   config: SmolPromptConfig & { stream: true },
 ): AsyncGenerator<StreamChunk>;
@@ -95,26 +83,14 @@ export async function textSync(
   config: SmolPromptConfig,
 ): Promise<Result<PromptResult>> {
   config.messages = fixMessagesIfNecessary(config.messages);
-
-  if (config.middleware && config.middleware.checks.length > 0) {
-    const middlewareResult = await executeMiddlewareSync(config, runSync, runSync);
-    if (middlewareResult) return middlewareResult;
-  }
-
-  const { middleware: _, ...rest } = config;
-  return runSync(rest as SmolPromptConfig);
+  const { smolConfig, promptConfig } = splitConfig(config);
+  return getClient(smolConfig).textSync(promptConfig);
 }
 
 export async function* textStream(
   config: SmolPromptConfig,
 ): AsyncGenerator<StreamChunk> {
   config.messages = fixMessagesIfNecessary(config.messages);
-
-  if (config.middleware && config.middleware.checks.length > 0) {
-    yield* executeMiddlewareStream(config, runStream, runSync);
-    return;
-  }
-
-  const { middleware: _, ...rest } = config;
-  yield* runStream(rest as SmolPromptConfig);
+  const { smolConfig, promptConfig } = splitConfig(config);
+  yield* getClient(smolConfig).textStream(promptConfig);
 }

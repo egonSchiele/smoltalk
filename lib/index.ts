@@ -9,4 +9,3 @@ export * from "./functions.js";
 export * from "./classes/ToolCall.js";
 export { latencyTracker } from "./latencyTracker.js";
 export type { LatencySample } from "./latencyTracker.js";
-export type { MiddlewareCheck, MiddlewareConfig, MiddlewareResult } from "./middleware.js";

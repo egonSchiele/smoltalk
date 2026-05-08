@@ -1,6 +1,5 @@
 export * from "./types/result.js";
 import { LogLevel } from "egonlog";
-import type { MiddlewareConfig } from "./middleware.js";
 import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
@@ -213,9 +212,6 @@ export type SmolConfig = {
 
   /** Arbitrary metadata passed to custom model providers. */
   metadata?: Record<string, any>;
-
-  /** Middleware checks that run LLM-based validation on the prompt before or alongside the main call. */
-  middleware?: MiddlewareConfig;
 };
 
 export type ToolLoopDetection = {
