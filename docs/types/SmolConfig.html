@@ -94,6 +94,12 @@
           <span class="tsd-signature-symbol">=</span>
           <span class="tsd-signature-symbol">{</span><br />    <a
             class="tsd-kind-property"
+            href="#abortsignal"
+            >abortSignal</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">AbortSignal</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
             href="#anthropicapikey"
             >anthropicApiKey</a
           ><span class="tsd-signature-symbol">?:</span>
@@ -143,31 +149,8 @@
           <span class="tsd-signature-symbol">(</span
           ><span class="tsd-kind-parameter">config</span
           ><span class="tsd-signature-symbol">:</span>
-          <a
-            href="PromptConfig.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >PromptConfig</a
-          ><span class="tsd-signature-symbol">)</span>
-          <span class="tsd-signature-symbol">=&gt;</span>
-          <span class="tsd-signature-type">void</span
-          ><span class="tsd-signature-symbol">;</span><br />            <span
-            class="tsd-kind-property"
-            >onStrategyStart</span
-          ><span class="tsd-signature-symbol">:</span>
-          <span class="tsd-signature-symbol">(</span
-          ><span class="tsd-kind-parameter">strategy</span
-          ><span class="tsd-signature-symbol">:</span>
-          <a
-            href="../interfaces/Strategy.html"
-            class="tsd-signature-type tsd-kind-interface"
-            >Strategy</a
-          ><span class="tsd-signature-symbol">,</span>
-          <span class="tsd-kind-parameter">config</span
-          ><span class="tsd-signature-symbol">:</span>
-          <a
-            href="SmolPromptConfig.html"
-            class="tsd-signature-type tsd-kind-type-alias"
-            >SmolPromptConfig</a
+          <a href="" class="tsd-signature-type tsd-kind-type-alias"
+            >SmolConfig</a
           ><span class="tsd-signature-symbol">)</span>
           <span class="tsd-signature-symbol">=&gt;</span>
           <span class="tsd-signature-type">void</span
@@ -205,6 +188,26 @@
           <span class="tsd-signature-type">LogLevel</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
+            href="#maxmessages"
+            >maxMessages</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#maxtokens"
+            >maxTokens</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#messages"
+            >messages</a
+          ><span class="tsd-signature-symbol">:</span>
+          <a href="Message.html" class="tsd-signature-type tsd-kind-type-alias"
+            >Message</a
+          ><span class="tsd-signature-symbol">[]</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
             href="#metadata"
             >metadata</a
           ><span class="tsd-signature-symbol">?:</span>
@@ -220,9 +223,15 @@
             >model</a
           ><span class="tsd-signature-symbol">:</span>
           <a
-            href="ModelParam.html"
+            href="ModelName.html"
             class="tsd-signature-type tsd-kind-type-alias"
-            >ModelParam</a
+            >ModelName</a
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#numsuggestions"
+            >numSuggestions</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">number</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
             href="#ollamaapikey"
@@ -243,10 +252,77 @@
           <span class="tsd-signature-type">string</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
+            href="#paralleltoolcalls"
+            >parallelToolCalls</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
             href="#provider"
             >provider</a
           ><span class="tsd-signature-symbol">?:</span>
           <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#rawattributes"
+            >rawAttributes</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">Record</span
+          ><span class="tsd-signature-symbol">&lt;</span
+          ><span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">,</span>
+          <span class="tsd-signature-type">any</span
+          ><span class="tsd-signature-symbol">&gt;</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#reasoningeffort"
+            >reasoningEffort</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">&quot;low&quot;</span>
+          <span class="tsd-signature-symbol">|</span>
+          <span class="tsd-signature-type">&quot;medium&quot;</span>
+          <span class="tsd-signature-symbol">|</span>
+          <span class="tsd-signature-type">&quot;high&quot;</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#responseformat"
+            >responseFormat</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">ZodType</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#responseformatoptions"
+            >responseFormatOptions</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">Partial</span
+          ><span class="tsd-signature-symbol">&lt;</span><br />        <span
+            class="tsd-signature-symbol"
+            >{</span
+          ><br />            <span class="tsd-kind-property"
+            >allowExtraKeys</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >name</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >numRetries</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span><br />            <span
+            class="tsd-kind-property"
+            >strict</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />        <span
+            class="tsd-signature-symbol"
+            >}</span
+          ><span class="tsd-signature-symbol">,</span><br />    <span
+            class="tsd-signature-symbol"
+            >&gt;</span
           ><span class="tsd-signature-symbol">;</span><br />    <a
             class="tsd-kind-property"
             href="#statelog"
@@ -285,6 +361,60 @@
           ><span class="tsd-signature-symbol">,</span><br />    <span
             class="tsd-signature-symbol"
             >&gt;</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#stream"
+            >stream</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">boolean</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#temperature"
+            >temperature</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#thinking"
+            >thinking</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-symbol">{</span>
+          <span class="tsd-kind-property">budgetTokens</span
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">number</span
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">enabled</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">boolean</span>
+          <span class="tsd-signature-symbol">}</span
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#toolloopdetection"
+            >toolLoopDetection</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <a
+            href="ToolLoopDetection.html"
+            class="tsd-signature-type tsd-kind-type-alias"
+            >ToolLoopDetection</a
+          ><span class="tsd-signature-symbol">;</span><br />    <a
+            class="tsd-kind-property"
+            href="#tools"
+            >tools</a
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-symbol">{</span>
+          <span class="tsd-kind-property">description</span
+          ><span class="tsd-signature-symbol">?:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">name</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">string</span
+          ><span class="tsd-signature-symbol">;</span>
+          <span class="tsd-kind-property">schema</span
+          ><span class="tsd-signature-symbol">:</span>
+          <span class="tsd-signature-type">ZodType</span>
+          <span class="tsd-signature-symbol">}</span
+          ><span class="tsd-signature-symbol">[]</span
           ><span class="tsd-signature-symbol">;</span><br /><span
             class="tsd-signature-symbol"
             >}</span
@@ -309,6 +439,15 @@
                 <section class="tsd-index-section">
                   <h3 class="tsd-index-heading">Properties</h3>
                   <div class="tsd-index-list">
+                    <a href="#abortsignal" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>abort<wbr />Signal?</span></a
+                    >
                     <a href="#anthropicapikey" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -354,6 +493,33 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>log<wbr />Level?</span></a
                     >
+                    <a href="#maxmessages" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>max<wbr />Messages?</span></a
+                    >
+                    <a href="#maxtokens" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>max<wbr />Tokens?</span></a
+                    >
+                    <a href="#messages" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>messages</span></a
+                    >
                     <a href="#metadata" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -371,6 +537,15 @@
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>model</span></a
+                    >
+                    <a href="#numsuggestions" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>num<wbr />Suggestions?</span></a
                     >
                     <a href="#ollamaapikey" class="tsd-index-link"
                       ><svg
@@ -399,6 +574,15 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>open<wbr />Ai<wbr />Api<wbr />Key?</span></a
                     >
+                    <a href="#paralleltoolcalls" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>parallel<wbr />Tool<wbr />Calls?</span></a
+                    >
                     <a href="#provider" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -408,6 +592,42 @@
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>provider?</span></a
                     >
+                    <a href="#rawattributes" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>raw<wbr />Attributes?</span></a
+                    >
+                    <a href="#reasoningeffort" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>reasoning<wbr />Effort?</span></a
+                    >
+                    <a href="#responseformat" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>response<wbr />Format?</span></a
+                    >
+                    <a href="#responseformatoptions" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>response<wbr />Format<wbr />Options?</span></a
+                    >
                     <a href="#statelog" class="tsd-index-link"
                       ><svg
                         class="tsd-kind-icon"
@@ -416,6 +636,51 @@
                       >
                         <use href="../assets/icons.svg#icon-1024"></use></svg
                       ><span>statelog?</span></a
+                    >
+                    <a href="#stream" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>stream?</span></a
+                    >
+                    <a href="#temperature" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>temperature?</span></a
+                    >
+                    <a href="#thinking" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>thinking?</span></a
+                    >
+                    <a href="#toolloopdetection" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>tool<wbr />Loop<wbr />Detection?</span></a
+                    >
+                    <a href="#tools" class="tsd-index-link"
+                      ><svg
+                        class="tsd-kind-icon"
+                        viewBox="0 0 24 24"
+                        aria-label="Property"
+                      >
+                        <use href="../assets/icons.svg#icon-1024"></use></svg
+                      ><span>tools?</span></a
                     >
                   </div>
                 </section>
@@ -437,6 +702,27 @@
             <h2>Properties</h2>
           </summary>
           <section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="abortsignal">
+                <code class="tsd-tag">Optional</code
+                ><span>abort<wbr />Signal</span
+                ><a
+                  href="#abortsignal"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">abortSignal</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">AbortSignal</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>An AbortSignal for cancelling the request.</p>
+              </div>
+            </section>
             <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="anthropicapikey">
                 <code class="tsd-tag">Optional</code
@@ -529,31 +815,8 @@
                 <span class="tsd-signature-symbol">(</span
                 ><span class="tsd-kind-parameter">config</span
                 ><span class="tsd-signature-symbol">:</span>
-                <a
-                  href="PromptConfig.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >PromptConfig</a
-                ><span class="tsd-signature-symbol">)</span>
-                <span class="tsd-signature-symbol">=&gt;</span>
-                <span class="tsd-signature-type">void</span
-                ><span class="tsd-signature-symbol">;</span><br />        <span
-                  class="tsd-kind-property"
-                  >onStrategyStart</span
-                ><span class="tsd-signature-symbol">:</span>
-                <span class="tsd-signature-symbol">(</span
-                ><span class="tsd-kind-parameter">strategy</span
-                ><span class="tsd-signature-symbol">:</span>
-                <a
-                  href="../interfaces/Strategy.html"
-                  class="tsd-signature-type tsd-kind-interface"
-                  >Strategy</a
-                ><span class="tsd-signature-symbol">,</span>
-                <span class="tsd-kind-parameter">config</span
-                ><span class="tsd-signature-symbol">:</span>
-                <a
-                  href="SmolPromptConfig.html"
-                  class="tsd-signature-type tsd-kind-type-alias"
-                  >SmolPromptConfig</a
+                <a href="" class="tsd-signature-type tsd-kind-type-alias"
+                  >SmolConfig</a
                 ><span class="tsd-signature-symbol">)</span>
                 <span class="tsd-signature-symbol">=&gt;</span>
                 <span class="tsd-signature-type">void</span
@@ -630,6 +893,78 @@
               </div>
             </section>
             <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="maxmessages">
+                <code class="tsd-tag">Optional</code
+                ><span>max<wbr />Messages</span
+                ><a
+                  href="#maxmessages"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">maxMessages</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">number</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  If set, returns a failure when the number of messages exceeds
+                  this limit.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="maxtokens">
+                <code class="tsd-tag">Optional</code
+                ><span>max<wbr />Tokens</span
+                ><a
+                  href="#maxtokens"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">maxTokens</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">number</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Maximum number of tokens the model can generate in its
+                  response.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="messages">
+                <span>messages</span
+                ><a
+                  href="#messages"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">messages</span
+                ><span class="tsd-signature-symbol">:</span>
+                <a
+                  href="Message.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >Message</a
+                ><span class="tsd-signature-symbol">[]</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>The conversation messages to send to the model.</p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="metadata">
                 <code class="tsd-tag">Optional</code><span>metadata</span
                 ><a
@@ -666,68 +1001,34 @@
                 <span class="tsd-kind-property">model</span
                 ><span class="tsd-signature-symbol">:</span>
                 <a
-                  href="ModelParam.html"
+                  href="ModelName.html"
                   class="tsd-signature-type tsd-kind-type-alias"
-                  >ModelParam</a
+                  >ModelName</a
                 >
               </div>
               <div class="tsd-comment tsd-typography">
-                <p>The given model determines both</p>
-                <ul>
-                  <li>what client is used</li>
-                  <li>what strategy is executed.</li>
-                </ul>
-                <h2 id="1-specifying-a-model-directly" class="tsd-anchor-link">
-                  1. Specifying a model directly<a
-                    href="#1-specifying-a-model-directly"
-                    aria-label="Permalink"
-                    class="tsd-anchor-icon"
-                    ><svg viewBox="0 0 24 24" aria-hidden="true">
-                      <use href="../assets/icons.svg#icon-anchor"></use></svg
-                  ></a>
-                </h2>
-                <p>
-                  The simplest case is to specify the name of a model from
-                  lib/models.ts. Example:
-                </p>
-                <pre><code><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: </span><span class="hl-2">&quot;claude-sonnet-4-6&quot;</span>
-</code><button>Copy</button></pre>
-
-                <h2 id="2-specifying-a-strategy" class="tsd-anchor-link">
-                  2. Specifying a strategy<a
-                    href="#2-specifying-a-strategy"
-                    aria-label="Permalink"
-                    class="tsd-anchor-icon"
-                    ><svg viewBox="0 0 24 24" aria-hidden="true">
-                      <use href="../assets/icons.svg#icon-anchor"></use></svg
-                  ></a>
-                </h2>
-                <p>
-                  You can instead specify a strategy to execute. For example:
-                </p>
-                <pre><code><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-7">type</span><span class="hl-1">: </span><span class="hl-2">&quot;race&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-7">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-7">strategies</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">, </span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
-</code><button>Copy</button></pre>
-
-                <p>
-                  In this case, Smoltalk will run your request over using both
-                  LLMs simultaneously, and take the response that finishes
-                  first.
-                </p>
-                <p>
-                  You can also choose to specify fallbacks in case the first
-                  model returns an error for some reason. This can be a good way
-                  to try something with a fast model and then use a slower but
-                  more powerful model if the first one fails.
-                </p>
-                <pre><code><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-7">type</span><span class="hl-1">: </span><span class="hl-2">&quot;fallback&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-7">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-7">primaryStrategy</span><span class="hl-1">: </span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-7">config</span><span class="hl-1">: {</span><br/><span class="hl-1">        </span><span class="hl-7">error</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">      },</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
-</code><button>Copy</button></pre>
-
-                <p>
-                  You can of course combine strategies together to create more
-                  complex behavior:
-                </p>
-                <pre><code><span class="hl-1">  </span><span class="hl-5">const</span><span class="hl-1"> </span><span class="hl-6">geminiLiteWithFallback</span><span class="hl-1"> = {</span><br/><span class="hl-1">    </span><span class="hl-4">type:</span><span class="hl-1"> </span><span class="hl-2">&quot;fallback&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-4">params:</span><span class="hl-1"> {</span><br/><span class="hl-1">      </span><span class="hl-4">primaryStrategy:</span><span class="hl-1"> </span><span class="hl-2">&quot;gemini-2.5-flash-lite&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">      </span><span class="hl-4">config:</span><span class="hl-1"> {</span><br/><span class="hl-1">        </span><span class="hl-4">error:</span><span class="hl-1"> [</span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">],</span><br/><span class="hl-1">      },</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  };</span><br/><br/><span class="hl-1">  </span><span class="hl-7">model</span><span class="hl-1">: {</span><br/><span class="hl-1">    </span><span class="hl-7">type</span><span class="hl-1">: </span><span class="hl-2">&quot;race&quot;</span><span class="hl-1">,</span><br/><span class="hl-1">    </span><span class="hl-7">params</span><span class="hl-1">: {</span><br/><span class="hl-1">      </span><span class="hl-7">strategies</span><span class="hl-1">: [</span><span class="hl-2">&quot;gemini-2.5-pro&quot;</span><span class="hl-1">, </span><span class="hl-4">geminiLiteWithFallback</span><span class="hl-1">],</span><br/><span class="hl-1">    },</span><br/><span class="hl-1">  }</span>
-</code><button>Copy</button></pre>
+                <p>The model to use.</p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="numsuggestions">
+                <code class="tsd-tag">Optional</code
+                ><span>num<wbr />Suggestions</span
+                ><a
+                  href="#numsuggestions"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">numSuggestions</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">number</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>Number of alternative completions to generate.</p>
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -800,6 +1101,30 @@
               </div>
             </section>
             <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="paralleltoolcalls">
+                <code class="tsd-tag">Optional</code
+                ><span>parallel<wbr />Tool<wbr />Calls</span
+                ><a
+                  href="#paralleltoolcalls"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">parallelToolCalls</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">boolean</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Whether the model can call multiple tools in a single turn.
+                  (OpenAI Responses API only)
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
               <h3 class="tsd-anchor-link" id="provider">
                 <code class="tsd-tag">Optional</code><span>provider</span
                 ><a
@@ -820,6 +1145,131 @@
                   Override the provider for the given model (e.g., use a custom
                   endpoint for an OpenAI-compatible model).
                 </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="rawattributes">
+                <code class="tsd-tag">Optional</code
+                ><span>raw<wbr />Attributes</span
+                ><a
+                  href="#rawattributes"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">rawAttributes</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">Record</span
+                ><span class="tsd-signature-symbol">&lt;</span
+                ><span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">,</span>
+                <span class="tsd-signature-type">any</span
+                ><span class="tsd-signature-symbol">&gt;</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Arbitrary provider-specific attributes passed directly to the
+                  underlying API call.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="reasoningeffort">
+                <code class="tsd-tag">Optional</code
+                ><span>reasoning<wbr />Effort</span
+                ><a
+                  href="#reasoningeffort"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">reasoningEffort</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">&quot;low&quot;</span>
+                <span class="tsd-signature-symbol">|</span>
+                <span class="tsd-signature-type">&quot;medium&quot;</span>
+                <span class="tsd-signature-symbol">|</span>
+                <span class="tsd-signature-type">&quot;high&quot;</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>Provider-agnostic reasoning effort level.</p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="responseformat">
+                <code class="tsd-tag">Optional</code
+                ><span>response<wbr />Format</span
+                ><a
+                  href="#responseformat"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">responseFormat</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">ZodType</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  A Zod schema to constrain the model's output to structured
+                  JSON matching the schema.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="responseformatoptions">
+                <code class="tsd-tag">Optional</code
+                ><span>response<wbr />Format<wbr />Options</span
+                ><a
+                  href="#responseformatoptions"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">responseFormatOptions</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">Partial</span
+                ><span class="tsd-signature-symbol">&lt;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >{</span
+                ><br />        <span class="tsd-kind-property"
+                  >allowExtraKeys</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">boolean</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >name</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >numRetries</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">number</span
+                ><span class="tsd-signature-symbol">;</span><br />        <span
+                  class="tsd-kind-property"
+                  >strict</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">boolean</span
+                ><span class="tsd-signature-symbol">;</span><br />    <span
+                  class="tsd-signature-symbol"
+                  >}</span
+                ><span class="tsd-signature-symbol">,</span><br /><span
+                  class="tsd-signature-symbol"
+                  >&gt;</span
+                >
               </div>
             </section>
             <section class="tsd-panel tsd-member">
@@ -875,6 +1325,138 @@
                 <p>
                   Configuration for Statelog observability/tracing integration.
                 </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="stream">
+                <code class="tsd-tag">Optional</code><span>stream</span
+                ><a
+                  href="#stream"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">stream</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">boolean</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  If true, returns an AsyncGenerator of StreamChunks instead of
+                  a single result.
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="temperature">
+                <code class="tsd-tag">Optional</code><span>temperature</span
+                ><a
+                  href="#temperature"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">temperature</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">number</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>Sampling temperature (0-2). (OpenAI only)</p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="thinking">
+                <code class="tsd-tag">Optional</code><span>thinking</span
+                ><a
+                  href="#thinking"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">thinking</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-symbol">{</span>
+                <span class="tsd-kind-property">budgetTokens</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">number</span
+                ><span class="tsd-signature-symbol">;</span>
+                <span class="tsd-kind-property">enabled</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">boolean</span>
+                <span class="tsd-signature-symbol">}</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Enable extended thinking / thought signatures. (Anthropic and
+                  Google only)
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="toolloopdetection">
+                <code class="tsd-tag">Optional</code
+                ><span>tool<wbr />Loop<wbr />Detection</span
+                ><a
+                  href="#toolloopdetection"
+                  aria-label="Permalink"
+                  class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">toolLoopDetection</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <a
+                  href="ToolLoopDetection.html"
+                  class="tsd-signature-type tsd-kind-type-alias"
+                  >ToolLoopDetection</a
+                >
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>
+                  Define behavior if too many repeated tool calls are detected
+                  (loop prevention).
+                </p>
+              </div>
+            </section>
+            <section class="tsd-panel tsd-member">
+              <h3 class="tsd-anchor-link" id="tools">
+                <code class="tsd-tag">Optional</code><span>tools</span
+                ><a href="#tools" aria-label="Permalink" class="tsd-anchor-icon"
+                  ><svg viewBox="0 0 24 24" aria-hidden="true">
+                    <use href="../assets/icons.svg#icon-anchor"></use></svg
+                ></a>
+              </h3>
+              <div class="tsd-signature">
+                <span class="tsd-kind-property">tools</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-symbol">{</span>
+                <span class="tsd-kind-property">description</span
+                ><span class="tsd-signature-symbol">?:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span>
+                <span class="tsd-kind-property">name</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">string</span
+                ><span class="tsd-signature-symbol">;</span>
+                <span class="tsd-kind-property">schema</span
+                ><span class="tsd-signature-symbol">:</span>
+                <span class="tsd-signature-type">ZodType</span>
+                <span class="tsd-signature-symbol">}</span
+                ><span class="tsd-signature-symbol">[]</span>
+              </div>
+              <div class="tsd-comment tsd-typography">
+                <p>Tools (functions) the model can call.</p>
               </div>
             </section>
           </section>
@@ -1040,7 +1622,15 @@
                   >Properties
                 </summary>
                 <div>
-                  <a href="#anthropicapikey"
+                  <a href="#abortsignal"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>abort<wbr />Signal</span></a
+                  ><a href="#anthropicapikey"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
@@ -1080,6 +1670,30 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>log<wbr />Level</span></a
+                  ><a href="#maxmessages"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>max<wbr />Messages</span></a
+                  ><a href="#maxtokens"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>max<wbr />Tokens</span></a
+                  ><a href="#messages"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>messages</span></a
                   ><a href="#metadata"
                     ><svg
                       class="tsd-kind-icon"
@@ -1096,26 +1710,15 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>model</span></a
-                  >
-                  <ul>
-                    <li>
-                      <ul>
-                        <li>
-                          <a href="#1-specifying-a-model-directly"
-                            ><span
-                              >1. <wbr />Specifying a model directly</span
-                            ></a
-                          >
-                        </li>
-                        <li>
-                          <a href="#2-specifying-a-strategy"
-                            ><span>2. <wbr />Specifying a strategy</span></a
-                          >
-                        </li>
-                      </ul>
-                    </li>
-                  </ul>
-                  <a href="#ollamaapikey"
+                  ><a href="#numsuggestions"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>num<wbr />Suggestions</span></a
+                  ><a href="#ollamaapikey"
                     ><svg
                       class="tsd-kind-icon"
                       viewBox="0 0 24 24"
@@ -1139,6 +1742,14 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>open<wbr />Ai<wbr />Api<wbr />Key</span></a
+                  ><a href="#paralleltoolcalls"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>parallel<wbr />Tool<wbr />Calls</span></a
                   ><a href="#provider"
                     ><svg
                       class="tsd-kind-icon"
@@ -1147,6 +1758,38 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>provider</span></a
+                  ><a href="#rawattributes"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>raw<wbr />Attributes</span></a
+                  ><a href="#reasoningeffort"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>reasoning<wbr />Effort</span></a
+                  ><a href="#responseformat"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>response<wbr />Format</span></a
+                  ><a href="#responseformatoptions"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>response<wbr />Format<wbr />Options</span></a
                   ><a href="#statelog"
                     ><svg
                       class="tsd-kind-icon"
@@ -1155,6 +1798,46 @@
                     >
                       <use href="../assets/icons.svg#icon-1024"></use></svg
                     ><span>statelog</span></a
+                  ><a href="#stream"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>stream</span></a
+                  ><a href="#temperature"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>temperature</span></a
+                  ><a href="#thinking"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>thinking</span></a
+                  ><a href="#toolloopdetection"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>tool<wbr />Loop<wbr />Detection</span></a
+                  ><a href="#tools"
+                    ><svg
+                      class="tsd-kind-icon"
+                      viewBox="0 0 24 24"
+                      aria-label="Property"
+                    >
+                      <use href="../assets/icons.svg#icon-1024"></use></svg
+                    ><span>tools</span></a
                   >
                 </div>
               </details>
