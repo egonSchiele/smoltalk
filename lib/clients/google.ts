@@ -50,7 +50,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private calculateUsageAndCost(usageMetadata: any): {

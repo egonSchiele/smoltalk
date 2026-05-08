@@ -46,7 +46,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private calculateUsageAndCost(usageData: {

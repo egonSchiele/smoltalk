@@ -47,7 +47,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private calculateUsageAndCost(usageData: any): {

@@ -49,7 +49,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private convertMessages(config: SmolConfig): {

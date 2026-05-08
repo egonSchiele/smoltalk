@@ -5,46 +5,29 @@ import { round } from "./util/util.js";
 
 export class Model {
   private model: ModelName;
-  private resolvedModel: ModelName;
   private provider?: Provider;
+
   constructor(model: ModelName, provider?: Provider) {
+    if (!ModelNameSchema.safeParse(model).success) {
+      throw new SmolError(
+        `Model ${JSON.stringify(model)} is not recognized. Please specify a known model name.`,
+      );
+    }
     this.model = model;
-    this.resolvedModel = this.resolveModel();
-    this.provider = provider || this.setProvider();
+    this.provider = provider || this.lookupProvider();
   }
 
-  getModel() {
+  getModel(): ModelName {
     return this.model;
   }
 
-  getResolvedModel() {
-    return this.resolvedModel;
-  }
-
   getProvider(): Provider | undefined {
-    if (this.provider) {
-      return this.provider;
-    }
-    return undefined;
+    return this.provider;
   }
 
-  setProvider(): Provider | undefined {
-    const resolved = this.getResolvedModel();
-    const modelInfo = getModel(resolved);
-    if (modelInfo) {
-      return modelInfo.provider as Provider;
-    }
-    return undefined;
-  }
-
-  resolveModel(): ModelName {
-    if (ModelNameSchema.safeParse(this.model).success) {
-      return this.model as ModelName;
-    }
-
-    throw new SmolError(
-      `Model ${JSON.stringify(this.model)} is not recognized. Please specify a known model name.`,
-    );
+  private lookupProvider(): Provider | undefined {
+    const modelInfo = getModel(this.model);
+    return modelInfo ? (modelInfo.provider as Provider) : undefined;
   }
 
   calculateCost(usage: {
@@ -58,7 +41,7 @@ export class Model {
     totalCost: number;
     currency: string;
   } | null {
-    const model = getModel(this.getResolvedModel());
+    const model = getModel(this.model);
     if (!model || !isTextModel(model)) {
       return null;
     }
@@ -95,7 +78,7 @@ export class Model {
   }
 
   toJSON(): ModelName {
-    return this.getResolvedModel();
+    return this.model;
   }
 
   static create(model: ModelLike, provider?: Provider): Model {

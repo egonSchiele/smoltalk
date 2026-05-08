@@ -56,7 +56,7 @@ export class LlamaCPP extends BaseClient {
   }
 
   private getModelName(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   /**
