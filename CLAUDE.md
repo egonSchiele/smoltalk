@@ -26,7 +26,7 @@ lib/
 ├── classes/
 │   ├── ToolCall.ts    # Tool call representation
 │   └── message/       # Polymorphic message classes (User, Assistant, System, Developer, Tool)
-├── types.ts           # Core types (SmolConfig, PromptConfig, PromptResult, StreamChunk)
+├── types.ts           # Core types (SmolConfig, PromptResult, StreamChunk)
 ├── models.ts          # Model registry with pricing/token limits
 ├── functions.ts       # Public wrapper functions (text, prompt, textSync, textStream)
 ├── client.ts          # getClient() factory - routes to correct provider
@@ -57,7 +57,7 @@ lib/
 
 Two providers support returning encrypted reasoning state alongside responses:
 
-- **Anthropic** (`claude-opus-4-5`, `claude-sonnet-*`, etc.): Enable via `thinking: { enabled: true, budgetTokens: 5000 }` in `PromptConfig`. Returns `ThinkingBlock[]` in `PromptResult.thinkingBlocks`. Each block has `text` (the visible reasoning) and `signature` (encrypted verification token).
+- **Anthropic** (`claude-opus-4-5`, `claude-sonnet-*`, etc.): Enable via `thinking: { enabled: true, budgetTokens: 5000 }` in `SmolConfig`. Returns `ThinkingBlock[]` in `PromptResult.thinkingBlocks`. Each block has `text` (the visible reasoning) and `signature` (encrypted verification token).
 - **Google Gemini** (Gemini 3+ models): Thought signatures are returned automatically on thinking models. Parts with `thought: true` are captured into `PromptResult.thinkingBlocks`.
 - **OpenAI**: No equivalent — o1/o3 reasoning is fully hidden.
 
