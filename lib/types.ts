@@ -6,7 +6,6 @@ import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { Model } from "./model.js";
 import { ModelName } from "./models.js";
-import { Strategy, StrategyJSON } from "./strategies/types.js";
 import { Result } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
@@ -210,8 +209,6 @@ export type SmolConfig = {
     onEnd: (result: PromptResult) => void;
     /** Called when an error occurs during execution. */
     onError: (error: Error) => void;
-    /** Called when a strategy begins execution. */
-    onStrategyStart: (strategy: Strategy, config: SmolPromptConfig) => void;
   }>;
 
   /** Arbitrary metadata passed to custom model providers. */
@@ -301,7 +298,7 @@ export type TextPart = {
 };
 
 export type ModelLike = ModelName | Model;
-export type ModelParam = ModelName | Strategy | StrategyJSON;
+export type ModelParam = ModelName;
 
 export type ThinkingBlock = {
   text: string;

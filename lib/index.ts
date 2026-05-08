@@ -7,7 +7,6 @@ export * from "./util/util.js";
 export * from "./classes/message/index.js";
 export * from "./functions.js";
 export * from "./classes/ToolCall.js";
-export * from "./strategies/index.js";
 export { latencyTracker } from "./latencyTracker.js";
 export type { LatencySample } from "./latencyTracker.js";
 export type { MiddlewareCheck, MiddlewareConfig, MiddlewareResult } from "./middleware.js";

@@ -1,6 +1,5 @@
-import { ModelName, getModel, isTextModel, Provider } from "./models.js";
+import { ModelName, getModel, isTextModel, ModelNameSchema, Provider } from "./models.js";
 import { SmolError } from "./smolError.js";
-import { ModelNameSchema } from "./strategies/types.js";
 import { ModelLike } from "./types.js";
 import { round } from "./util/util.js";
 
