@@ -4,57 +4,13 @@ import {
   messageFromJSON,
 } from "./classes/message/index.js";
 import { getClient } from "./client.js";
-import { Model } from "./model.js";
 import {
-  PromptConfig,
   PromptResult,
-  SmolPromptConfig,
+  SmolConfig,
   StreamChunk,
 } from "./types.js";
 import { Result } from "./types/result.js";
 import { getLogger } from "./util/logger.js";
-
-export function splitConfig(config: SmolPromptConfig): {
-  smolConfig: Parameters<typeof getClient>[0];
-  promptConfig: PromptConfig;
-} {
-  const {
-    openAiApiKey,
-    googleApiKey,
-    ollamaApiKey,
-    anthropicApiKey,
-    ollamaHost,
-    model: rawModel,
-    provider,
-    logLevel,
-    statelog,
-    metadata,
-    hooks,
-    llamaCppModelDir,
-    ...promptConfig
-  } = config;
-
-  const _model = new Model(rawModel as any);
-  const model = _model.getResolvedModel();
-
-  return {
-    smolConfig: {
-      openAiApiKey,
-      googleApiKey,
-      ollamaApiKey,
-      anthropicApiKey,
-      ollamaHost,
-      model,
-      provider,
-      logLevel,
-      statelog,
-      metadata,
-      hooks,
-      llamaCppModelDir,
-    },
-    promptConfig,
-  };
-}
 
 function fixMessagesIfNecessary(messages: any[]): Message[] {
   if (messages && messages.length > 0) {
@@ -67,30 +23,28 @@ function fixMessagesIfNecessary(messages: any[]): Message[] {
 }
 
 export function text(
-  config: SmolPromptConfig & { stream: true },
+  config: SmolConfig & { stream: true },
 ): AsyncGenerator<StreamChunk>;
 export function text(
-  config: SmolPromptConfig & { stream?: false },
+  config: SmolConfig & { stream?: false },
 ): Promise<Result<PromptResult>>;
 export function text(
-  config: SmolPromptConfig,
+  config: SmolConfig,
 ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
   if (config.stream) return textStream(config);
   return textSync(config);
 }
 
 export async function textSync(
-  config: SmolPromptConfig,
+  config: SmolConfig,
 ): Promise<Result<PromptResult>> {
   config.messages = fixMessagesIfNecessary(config.messages);
-  const { smolConfig, promptConfig } = splitConfig(config);
-  return getClient(smolConfig).textSync(promptConfig);
+  return getClient(config).textSync(config);
 }
 
 export async function* textStream(
-  config: SmolPromptConfig,
+  config: SmolConfig,
 ): AsyncGenerator<StreamChunk> {
   config.messages = fixMessagesIfNecessary(config.messages);
-  const { smolConfig, promptConfig } = splitConfig(config);
-  yield* getClient(smolConfig).textStream(promptConfig);
+  yield* getClient(config).textStream(config);
 }

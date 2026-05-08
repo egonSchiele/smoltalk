@@ -3,11 +3,10 @@ import { EgonLog } from "egonlog";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
 import {
-  BaseClientConfig,
-  PromptConfig,
   PromptResult,
   Result,
   SmolClient,
+  SmolConfig,
   StreamChunk,
   ThinkingBlock,
   addCosts,
@@ -26,7 +25,7 @@ import { CostEstimate, TokenUsage } from "../types.js";
 import { Model } from "../model.js";
 import { userMessage } from "../classes/message/index.js";
 
-export type SmolGoogleConfig = BaseClientConfig;
+export type SmolGoogleConfig = SmolConfig;
 type GeneratedRequest = {
   contents: Content[];
   model: ModelName;
@@ -77,7 +76,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
-  private buildRequest(config: PromptConfig): GeneratedRequest {
+  private buildRequest(config: SmolConfig): GeneratedRequest {
     // Google Gemini only supports "user" and "model" roles in the contents
     // array. System and developer messages must be passed via systemInstruction.
     const systemParts: string[] = [];
@@ -126,7 +125,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     };
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const signal = this.getAbortSignal(config);
     const request = {
       ...this.buildRequest(config),
@@ -319,7 +318,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     });
   }
 
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const signal = this.getAbortSignal(config);
     const request = this.buildRequest(config);
     if (signal) {
