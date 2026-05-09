@@ -51,6 +51,15 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
 
+  packages/smoltalk-llama-cpp:
+    dependencies:
+      node-llama-cpp:
+        specifier: ^3.17.1
+        version: 3.17.1(typescript@5.9.3)
+      smoltalk:
+        specifier: workspace:^
+        version: link:../smoltalk
+
 packages:
 
   '@anthropic-ai/sdk@0.78.0':

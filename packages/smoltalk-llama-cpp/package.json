@@ -1,0 +1,28 @@
+{
+  "name": "smoltalk-llama-cpp",
+  "version": "0.1.0",
+  "description": "node-llama-cpp provider for smoltalk",
+  "type": "module",
+  "scripts": {
+    "build": "rm -rf dist && tsc",
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc --noEmit"
+  },
+  "files": ["./dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "keywords": ["smoltalk", "llm", "llama-cpp", "local"],
+  "license": "ISC",
+  "dependencies": {
+    "node-llama-cpp": "^3.17.1"
+  },
+  "peerDependencies": {
+    "smoltalk": "workspace:^"
+  }
+}
