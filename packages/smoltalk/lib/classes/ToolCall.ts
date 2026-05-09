@@ -1,4 +1,4 @@
-import { EgonLog } from "egonlog";
+import { EgonLog } from "../util/logger.js";
 import { z } from "zod";
 import { getLogger } from "../util/logger.js";
 import { FunctionCall } from "@google/genai";

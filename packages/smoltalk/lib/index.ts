@@ -7,3 +7,5 @@ export * from "./util/util.js";
 export * from "./classes/message/index.js";
 export * from "./functions.js";
 export * from "./classes/ToolCall.js";
+export { getLogger, EgonLog } from "./util/logger.js";
+export type { LogLevel, EgonLogConfig } from "./util/logger.js";

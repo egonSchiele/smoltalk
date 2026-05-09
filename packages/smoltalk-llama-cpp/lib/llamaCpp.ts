@@ -6,25 +6,24 @@ import type {
   TokenMeterState,
   LlamaChatResponseFunctionCall,
 } from "node-llama-cpp";
-import { EgonLog } from "egonlog";
-import { BaseClient } from "./baseClient.js";
-import { ToolCall } from "../classes/ToolCall.js";
-import { getLogger } from "../util/logger.js";
-import { Model } from "../model.js";
-import { ModelName } from "../models.js";
-import { sanitizeAttributes } from "../util/util.js";
 import {
+  AssistantMessage,
+  BaseClient,
   CostEstimate,
+  Model,
+  ModelName,
   PromptResult,
   Result,
   SmolConfig,
   StreamChunk,
-  success,
   TokenUsage,
-} from "../types.js";
-import type { Message } from "../classes/message/index.js";
-import type { AssistantMessage } from "../classes/message/AssistantMessage.js";
-import type { ToolMessage } from "../classes/message/ToolMessage.js";
+  ToolCall,
+  ToolMessage,
+  getLogger,
+  sanitizeAttributes,
+  success,
+} from "smoltalk";
+import type { Message } from "smoltalk";
 import path from "path";
 
 export class LlamaCPP extends BaseClient {
@@ -34,17 +33,18 @@ export class LlamaCPP extends BaseClient {
   > | null = null;
   private modelDir: string;
   private model: Model;
-  private logger: EgonLog;
+  private logger: ReturnType<typeof getLogger>;
 
   constructor(config: SmolConfig) {
     super(config);
-    if (!config.llamaCppModelDir) {
+    const modelDir = config.metadata?.llamaCppModelDir as string | undefined;
+    if (!modelDir) {
       throw new Error(
-        "llamaCppModelDir is required in the config when using the LlamaCPP client.",
+        "metadata.llamaCppModelDir is required when using the LlamaCPP client.",
       );
     }
     this.model = new Model(config.model);
-    this.modelDir = config.llamaCppModelDir;
+    this.modelDir = modelDir;
     this.logger = getLogger();
   }
 

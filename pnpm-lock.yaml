@@ -32,15 +32,9 @@ importers:
       '@google/genai':
         specifier: ^1.34.0
         version: 1.34.0
-      egonlog:
-        specifier: ^0.0.2
-        version: 0.0.2
       nanoid:
         specifier: ^5.1.6
         version: 5.1.6
-      node-llama-cpp:
-        specifier: ^3.17.1
-        version: 3.17.1(typescript@5.9.3)
       ollama:
         specifier: ^0.6.3
         version: 0.6.3
@@ -723,9 +717,6 @@ packages:
   ecdsa-sig-formatter@1.0.11:
     resolution: {integrity: sha512-nagl3RYrbNv6kQkeJIpt6NJZy8twLB/2vtz6yN9Z4vRKHN4/QZJIEbqohALSgwKdnksuY3k5Addp5lg8sVoVcQ==}
 
-  egonlog@0.0.2:
-    resolution: {integrity: sha512-usjNRcD2lfps5GJVxa/VRS8W+zW3eYEgAxH2a6vE/k7Ab4jBlT5ZJ2u78oxXfM/4X7F+lWmEHZgwFIxOGAVJFw==}
-
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
 
@@ -1199,10 +1190,6 @@ packages:
   tar@7.5.11:
     resolution: {integrity: sha512-ChjMH33/KetonMTAtpYdgUFr0tbz69Fp2v7zWxQfYZX4g5ZN2nOBXm1R2xyA+lMIKrLKIoKAwFj93jE/avX9cQ==}
     engines: {node: '>=18'}
-
-  termcolors@https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f:
-    resolution: {tarball: https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f}
-    version: 0.0.20
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -1862,10 +1849,6 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
-  egonlog@0.0.2:
-    dependencies:
-      termcolors: https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f
-
   emoji-regex@10.6.0: {}
 
   emoji-regex@8.0.0: {}
@@ -2421,8 +2404,6 @@ snapshots:
       minipass: 7.1.2
       minizlib: 3.1.0
       yallist: 5.0.0
-
-  termcolors@https://codeload.github.com/egonSchiele/termcolors/tar.gz/d5c1f497618398ce1440d2383d2aad2642e4051f: {}
 
   tinybench@2.9.0: {}
 

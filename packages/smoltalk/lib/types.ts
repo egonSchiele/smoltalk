@@ -1,5 +1,5 @@
 export * from "./types/result.js";
-import { LogLevel } from "egonlog";
+import { LogLevel } from "./util/logger.js";
 import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
@@ -32,9 +32,6 @@ export type SmolConfig = {
 
   /** Base URL for the Ollama server. Defaults to localhost if not set. (Ollama only) */
   ollamaHost?: string;
-
-  /** Directory path for Llama.cpp models. Required when using the Llama.cpp client. */
-  llamaCppModelDir?: string;
 
   /** Log level for internal debug logging. */
   logLevel?: LogLevel;
