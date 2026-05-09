@@ -7,13 +7,23 @@ Smoltalk is a TypeScript npm package providing a unified interface across multip
 ## Quick Reference
 
 ```bash
-pnpm build        # Clean build (rm -rf dist && tsc)
-pnpm test         # Run vitest
-pnpm typecheck    # tsc --noEmit
-pnpm start        # Run dist/index.js
+pnpm install      # Install all workspace deps
+pnpm build        # Build all workspace packages
+pnpm test         # Run vitest across packages
+pnpm typecheck    # tsc --noEmit across packages
+
+# Make shortcuts (recurse into each package)
+make              # Build all packages (alias for `make all`)
+make test         # Run tests in all packages
+make publish      # Build then `pnpm publish` in each package
 ```
 
-## Project Structure
+This repo is a pnpm workspace monorepo:
+
+- `packages/smoltalk/` — core library (cloud providers: OpenAI, Anthropic, Google, Ollama)
+- `packages/smoltalk-llama-cpp/` — `node-llama-cpp` plugin for local models
+
+## Project Structure (within `packages/smoltalk/`)
 
 ```
 lib/
@@ -28,11 +38,11 @@ lib/
 │   └── message/       # Polymorphic message classes (User, Assistant, System, Developer, Tool)
 ├── types.ts           # Core types (SmolConfig, PromptResult, StreamChunk)
 ├── models.ts          # Model registry with pricing/token limits
-├── functions.ts       # Public wrapper functions (text, prompt, textSync, textStream)
-├── client.ts          # getClient() factory - routes to correct provider
+├── functions.ts       # Public wrapper functions (text, textSync, textStream)
+├── client.ts          # getClient() factory + registerProvider() for plugins
 ├── types/result.ts    # Result<T> = Success<T> | Failure discriminated union
-├── util/tool.ts       # Zod-to-provider schema conversion (zodToOpenAITool, zodToGoogleTool, etc.)
-├── logger.ts          # Logging singleton (egonlog)
+├── util/tool.ts       # Zod-to-provider schema conversion
+├── util/logger.ts     # Logging (EgonLog class, inlined — no external dep)
 ├── smolError.ts       # Custom error class
 └── util.ts            # Small utilities (rounding)
 ```
@@ -76,12 +86,25 @@ const result = await textSync("Solve this step by step", {
 
 ## Adding a New Provider
 
+There are two paths: **in-tree** (built into smoltalk core, like OpenAI/Anthropic/Google/Ollama) or **external plugin** (a separate package, like `smoltalk-llama-cpp`).
+
+### In-tree (built-in providers only)
+
 1. Create `lib/clients/newprovider.ts` extending `BaseClient`
 2. Implement `_textSync()` and `_textStream()`
 3. Add conversion methods to each message class in `lib/classes/message/`
 4. Add conversion function in `lib/util/tool.ts` if tool format differs
 5. Add provider to `getClient()` switch in `lib/client.ts`
 6. Add models to the registry in `lib/models.ts`
+
+### External plugin
+
+1. Create a new package that depends on `smoltalk` as a peer dependency
+2. Implement a class that extends `BaseClient` (imported from `smoltalk`)
+3. Export the class from your package
+4. Users register it at runtime: `registerProvider("your-provider-name", YourClient)` before calling `text()`/etc.
+
+Plugins read provider-specific config via `config.metadata` rather than top-level `SmolConfig` fields. See `packages/smoltalk-llama-cpp/` for a worked example.
 
 ## Dependencies
 

@@ -3,7 +3,7 @@ import type {
   MessageParam,
   Tool,
 } from "@anthropic-ai/sdk/resources/messages.js";
-import { EgonLog } from "egonlog";
+import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { SystemMessage, DeveloperMessage } from "../classes/message/index.js";
 import { getLogger } from "../util/logger.js";

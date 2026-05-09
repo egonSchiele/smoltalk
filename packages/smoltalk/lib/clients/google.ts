@@ -1,5 +1,5 @@
 import { Content, GenerateContentConfig, GoogleGenAI } from "@google/genai";
-import { EgonLog } from "egonlog";
+import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
 import {

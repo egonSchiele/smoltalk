@@ -1,7 +1,6 @@
 import { z } from "zod";
 export const providers = [
   "ollama",
-  "llama-cpp",
   "openai",
   "openai-responses",
   "anthropic",

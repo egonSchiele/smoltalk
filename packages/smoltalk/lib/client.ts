@@ -4,11 +4,9 @@ export * from "./clients/openai.js";
 export * from "./clients/openaiResponses.js";
 export * from "./clients/baseClient.js";
 export * from "./clients/ollama.js";
-export * from "./clients/llamaCpp.js";
 import { SmolAnthropic } from "./clients/anthropic.js";
 import { BaseClient } from "./clients/baseClient.js";
 import { SmolGoogle } from "./clients/google.js";
-import { LlamaCPP } from "./clients/llamaCpp.js";
 import { SmolOllama } from "./clients/ollama.js";
 import { SmolOpenAi } from "./clients/openai.js";
 import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
@@ -88,13 +86,13 @@ export function getClient(config: SmolClientConfig) {
       return new SmolGoogle(clientConfig);
     case "ollama":
       return new SmolOllama(clientConfig);
-    case "llama-cpp":
-      return new LlamaCPP(clientConfig);
     default:
       if (provider in registeredProviders) {
         const ClientClass = registeredProviders[provider];
         return new ClientClass(clientConfig);
       }
-      throw new SmolError(`Model provider ${provider} is not supported.`);
+      throw new SmolError(
+        `Model provider ${provider} is not supported. To use a custom provider, register it first via registerProvider(name, ClientClass).`,
+      );
   }
 }

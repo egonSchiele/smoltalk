@@ -1,51 +1,19 @@
 {
-  "name": "smoltalk",
-  "version": "0.1.0",
-  "description": "A common interface for LLM APIs",
-  "homepage": "https://github.com/egonSchiele/smoltalk",
-  "scripts": {
-    "test": "vitest",
-    "test:tsc": "tsc -p tests/tsconfig.json",
-    "build": "rm -rf dist && tsc",
-    "start": "cd dist && node index.js",
-    "doc": "typedoc --disableSources --out docs lib && prettier docs/ --write",
-    "typecheck": "tsc --noEmit",
-    "pull": "node-llama-cpp pull --dir ./models"
-  },
-  "files": [
-    "./dist"
-  ],
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.js"
-    }
-  },
+  "name": "smoltalk-monorepo",
+  "private": true,
+  "version": "0.0.0",
   "type": "module",
-  "types": "./dist/index.d.ts",
-  "keywords": [
-    "smoltalk",
-    "llm",
-    "api"
-  ],
-  "author": "Aditya Bhargava",
-  "license": "ISC",
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "doc": "pnpm -r doc"
+  },
   "devDependencies": {
     "@types/node": "^25.0.3",
     "prettier": "^3.7.4",
     "typedoc": "^0.28.15",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
-    "@google/genai": "^1.34.0",
-    "egonlog": "^0.0.2",
-    "nanoid": "^5.1.6",
-    "node-llama-cpp": "^3.17.1",
-    "ollama": "^0.6.3",
-    "openai": "^6.15.0",
-    "zod": "^4.3.6"
   }
 }

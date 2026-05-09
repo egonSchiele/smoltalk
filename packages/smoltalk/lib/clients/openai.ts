@@ -7,7 +7,7 @@ import {
   StreamChunk,
   success,
 } from "../types.js";
-import { EgonLog } from "egonlog";
+import { EgonLog } from "../util/logger.js";
 import {
   ChatCompletionMessage,
   ChatCompletionMessageParam,

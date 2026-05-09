@@ -1,13 +1,10 @@
-.PHONY: all test publish
+PACKAGES := packages/smoltalk packages/smoltalk-llama-cpp
 
-all:
-	npm run build && npm run start
+.PHONY: all install test publish
 
-test:
-	npm run test
+# Default: recurse make into every package
+all test publish:
+	@for pkg in $(PACKAGES); do $(MAKE) -C $$pkg $@ || exit $$?; done
 
-publish:
-	npm run build && npm publish
-
-doc:
-	npm run doc
+install:
+	pnpm install
