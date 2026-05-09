@@ -1,10 +1,9 @@
 import OpenAI from "openai";
 import {
-  BaseClientConfig,
-  PromptConfig,
   PromptResult,
   Result,
   SmolClient,
+  SmolConfig,
   StreamChunk,
   success,
 } from "../types.js";
@@ -26,7 +25,7 @@ import {
   SmolContextWindowExceededError,
 } from "../smolError.js";
 
-export type SmolOpenAiResponsesConfig = BaseClientConfig;
+export type SmolOpenAiResponsesConfig = SmolConfig;
 
 export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   private client: OpenAI;
@@ -50,10 +49,10 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
-  private convertMessages(config: PromptConfig): {
+  private convertMessages(config: SmolConfig): {
     instructions: string | undefined;
     input: ResponseInputItem[];
   } {
@@ -82,7 +81,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     return { instructions, input };
   }
 
-  private buildRequest(config: PromptConfig) {
+  private buildRequest(config: SmolConfig) {
     const { instructions, input } = this.convertMessages(config);
 
     const request: {
@@ -179,7 +178,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     throw error;
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const request = this.buildRequest(config);
 
     this.logger.debug(
@@ -228,7 +227,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     });
   }
 
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const request = this.buildRequest(config);
 
     this.logger.debug(

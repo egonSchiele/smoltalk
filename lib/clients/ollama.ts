@@ -4,11 +4,10 @@ import { ToolCall as OllamaToolCall } from "ollama";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
 import {
-  BaseClientConfig,
-  PromptConfig,
   PromptResult,
   Result,
   SmolClient,
+  SmolConfig,
   StreamChunk,
   success,
 } from "../types.js";
@@ -21,7 +20,7 @@ import { CostEstimate, TokenUsage } from "../types.js";
 import { Model } from "../model.js";
 
 export const DEFAULT_OLLAMA_HOST = "http://localhost:11434";
-export type SmolOllamaConfig = BaseClientConfig;
+export type SmolOllamaConfig = SmolConfig;
 
 export class SmolOllama extends BaseClient implements SmolClient {
   private logger: EgonLog;
@@ -47,7 +46,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private calculateUsageAndCost(responseData: any): {
@@ -76,7 +75,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
 
     const tools = (config.tools || []).map((tool) => {
@@ -148,7 +147,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     return success({ output, toolCalls, usage, cost, model: this.getModel() });
   }
 
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
 
     const tools = (config.tools || []).map((tool) => {

@@ -1,10 +1,9 @@
 import OpenAI from "openai";
 import {
-  BaseClientConfig,
-  PromptConfig,
   PromptResult,
   Result,
   SmolClient,
+  SmolConfig,
   StreamChunk,
   success,
 } from "../types.js";
@@ -27,7 +26,7 @@ import { ModelName } from "../models.js";
 import { Model } from "../model.js";
 import { CostEstimate, TokenUsage } from "../types.js";
 
-export type SmolOpenAiConfig = BaseClientConfig;
+export type SmolOpenAiConfig = SmolConfig;
 
 export class SmolOpenAi extends BaseClient implements SmolClient {
   private client: OpenAI;
@@ -48,7 +47,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private calculateUsageAndCost(usageData: any): {
@@ -75,7 +74,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
-  private buildRequest(config: PromptConfig) {
+  private buildRequest(config: SmolConfig) {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
     const request = {
       model: this.getModel(),
@@ -115,7 +114,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     throw error;
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const request = this.buildRequest(config);
 
     this.logger.debug(
@@ -186,7 +185,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     });
   }
 
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const request = this.buildRequest(config);
 
     this.logger.debug(

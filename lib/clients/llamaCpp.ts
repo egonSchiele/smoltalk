@@ -14,11 +14,10 @@ import { Model } from "../model.js";
 import { ModelName } from "../models.js";
 import { sanitizeAttributes } from "../util/util.js";
 import {
-  BaseClientConfig,
   CostEstimate,
-  PromptConfig,
   PromptResult,
   Result,
+  SmolConfig,
   StreamChunk,
   success,
   TokenUsage,
@@ -37,7 +36,7 @@ export class LlamaCPP extends BaseClient {
   private model: Model;
   private logger: EgonLog;
 
-  constructor(config: BaseClientConfig) {
+  constructor(config: SmolConfig) {
     super(config);
     if (!config.llamaCppModelDir) {
       throw new Error(
@@ -57,7 +56,7 @@ export class LlamaCPP extends BaseClient {
   }
 
   private getModelName(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   /**
@@ -131,7 +130,7 @@ export class LlamaCPP extends BaseClient {
    * function calls without executing them, which matches smoltalk's tool loop model.
    */
   private buildFunctions(
-    tools: PromptConfig["tools"],
+    tools: SmolConfig["tools"],
   ): ChatModelFunctions | undefined {
     if (!tools) return undefined;
     const functions: Record<string, { description?: string; params?: any }> =
@@ -187,7 +186,7 @@ export class LlamaCPP extends BaseClient {
     );
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     if (!this.llama || !this.llamaModel) {
       await this.setup();
     }
@@ -288,7 +287,7 @@ export class LlamaCPP extends BaseClient {
     });
   }
 
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     if (!this.llama || !this.llamaModel) {
       await this.setup();
     }

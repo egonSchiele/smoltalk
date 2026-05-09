@@ -2,11 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { BaseClient } from "./baseClient.js";
 import { userMessage, assistantMessage, AssistantMessage } from "../classes/message/index.js";
-import { PromptConfig, PromptResult, Result, StreamChunk } from "../types.js";
+import { SmolConfig, PromptResult, Result, StreamChunk } from "../types.js";
 import { SmolStructuredOutputError } from "../smolError.js";
 
 class TestClient extends BaseClient {
-  async _textSync(config: PromptConfig) {
+  async _textSync(config: SmolConfig) {
     return {
       success: true as const,
       value: { output: "hello", toolCalls: [], model: this.config.model },
@@ -15,7 +15,7 @@ class TestClient extends BaseClient {
 }
 
 class SpyClient extends BaseClient {
-  calls: PromptConfig[] = [];
+  calls: SmolConfig[] = [];
   responses: Result<PromptResult>[];
   callIndex = 0;
 
@@ -24,7 +24,7 @@ class SpyClient extends BaseClient {
     this.responses = responses;
   }
 
-  async _textSync(config: PromptConfig) {
+  async _textSync(config: SmolConfig) {
     this.calls.push(config);
     return this.responses[this.callIndex++] ?? this.responses[this.responses.length - 1];
   }

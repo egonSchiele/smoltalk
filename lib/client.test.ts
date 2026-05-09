@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getClient, registerProvider } from "./client.js";
 import { BaseClient } from "./clients/baseClient.js";
-import { PromptConfig, PromptResult, promptResult, success } from "./types.js";
+import { SmolConfig, PromptResult, promptResult, success } from "./types.js";
 import { Result } from "./types/result.js";
 
 describe("getClient", () => {
@@ -86,7 +86,10 @@ describe("getClient", () => {
     );
   });
 
-  it("creates a client with a valid openai config", () => {
+  it("creates a client without requiring messages (SmolClientConfig contract)", () => {
+    // getClient is for constructing clients — messages are a per-call concern
+    // supplied later via client.text({ messages }). Tightening this back to
+    // SmolConfig would force callers to pass dummy messages.
     const client = getClient({
       model: "gpt-4o",
       openAiApiKey: "test-key",
@@ -113,7 +116,7 @@ describe("getClient", () => {
 
 describe("registerProvider", () => {
   class EchoClient extends BaseClient {
-    async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+    async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
       return success(promptResult({ output: "echo" }));
     }
   }

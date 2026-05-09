@@ -4,16 +4,25 @@ import { promptResult } from "../lib/types.js";
 
 describe("Model", () => {
   describe("with a direct model name", () => {
-    it("resolves a known model name directly", () => {
+    it("stores a known model name", () => {
       const model = new Model("gpt-4o");
-      expect(model.getResolvedModel()).toBe("gpt-4o");
       expect(model.getModel()).toBe("gpt-4o");
     });
 
-    it("accepts an unknown model name without throwing", () => {
+    it("accepts an unknown model name that matches the schema regex", () => {
       const model = new Model("nonexistent-model" as any);
-      expect(model.getResolvedModel()).toBe("nonexistent-model");
+      expect(model.getModel()).toBe("nonexistent-model");
       expect(model.getProvider()).toBeUndefined();
+    });
+
+    it("throws on a model name that doesn't match the schema regex", () => {
+      expect(() => new Model("bad name with spaces" as any)).toThrow(
+        /not recognized/,
+      );
+    });
+
+    it("throws on an empty model name", () => {
+      expect(() => new Model("" as any)).toThrow(/not recognized/);
     });
   });
 
@@ -64,13 +73,13 @@ describe("Model", () => {
     it("creates a new Model from a model name string", () => {
       const result = Model.create("gpt-4o");
       expect(result).toBeInstanceOf(Model);
-      expect(result.getResolvedModel()).toBe("gpt-4o");
+      expect(result.getModel()).toBe("gpt-4o");
     });
 
     it("creates a new Model from a model string with explicit provider", () => {
       const result = Model.create("my-custom-model" as any, "ollama" as any);
       expect(result).toBeInstanceOf(Model);
-      expect(result.getResolvedModel()).toBe("my-custom-model");
+      expect(result.getModel()).toBe("my-custom-model");
       expect(result.getProvider()).toBe("ollama");
     });
 

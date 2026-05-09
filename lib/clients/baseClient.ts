@@ -1,13 +1,10 @@
 import { userMessage, assistantMessage } from "../classes/message/index.js";
-import { latencyTracker } from "../latencyTracker.js";
 import { getLogger } from "../util/logger.js";
 import { ModelName } from "../models.js";
 import { SmolStructuredOutputError } from "../smolError.js";
 import { getStatelogClient, StatelogClient } from "../statelogClient.js";
 import {
-  PromptConfig,
   PromptResult,
-  ResolvedSmolConfig,
   Result,
   SmolClient,
   SmolConfig,
@@ -19,10 +16,10 @@ import { z } from "zod";
 const DEFAULT_NUM_RETRIES = 2;
 
 export class BaseClient implements SmolClient {
-  protected config: ResolvedSmolConfig;
+  protected config: SmolConfig;
   protected statelogClient?: StatelogClient;
 
-  constructor(config: ResolvedSmolConfig) {
+  constructor(config: SmolConfig) {
     this.config = config || {};
     if (this.config.logLevel) {
       getLogger(this.config.logLevel);
@@ -33,7 +30,7 @@ export class BaseClient implements SmolClient {
   }
 
   protected getAbortSignal(
-    promptConfig: PromptConfig,
+    promptConfig: SmolConfig,
   ): AbortSignal | undefined {
     return promptConfig.abortSignal;
   }
@@ -47,23 +44,13 @@ export class BaseClient implements SmolClient {
     );
   }
   text(
-    promptConfig: Omit<PromptConfig, "stream">,
-  ): Promise<Result<PromptResult>>;
-
-  text(
-    promptConfig: Omit<PromptConfig, "stream"> & { stream: false },
-  ): Promise<Result<PromptResult>>;
-
-  text(
-    promptConfig: Omit<PromptConfig, "stream"> & { stream: true },
+    promptConfig: SmolConfig & { stream: true },
   ): AsyncGenerator<StreamChunk>;
-
   text(
-    promptConfig: PromptConfig,
-  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
-
+    promptConfig: SmolConfig & { stream?: false },
+  ): Promise<Result<PromptResult>>;
   text(
-    promptConfig: PromptConfig,
+    promptConfig: SmolConfig,
   ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
     if (promptConfig.stream) {
       return this.textStream(promptConfig);
@@ -72,7 +59,7 @@ export class BaseClient implements SmolClient {
     }
   }
 
-  checkMessageLimit(promptConfig: PromptConfig): Result<PromptResult> | null {
+  checkMessageLimit(promptConfig: SmolConfig): Result<PromptResult> | null {
     if (
       promptConfig.maxMessages !== undefined &&
       promptConfig.messages.length > promptConfig.maxMessages
@@ -93,11 +80,11 @@ export class BaseClient implements SmolClient {
     return null;
   }
 
-  async textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
+  async textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
 
-    const { continue: shouldContinue, newPromptConfig } =
+    const { continue: shouldContinue, newSmolConfig } =
       this.checkForToolLoops(promptConfig);
     if (!shouldContinue) {
       return {
@@ -105,14 +92,12 @@ export class BaseClient implements SmolClient {
         value: { output: null, toolCalls: [], model: this.config.model },
       };
     }
-    const startTime = performance.now();
     try {
       const result = await this.textWithRetry(
-        newPromptConfig,
-        newPromptConfig.responseFormatOptions?.numRetries ||
+        newSmolConfig,
+        newSmolConfig.responseFormatOptions?.numRetries ||
           DEFAULT_NUM_RETRIES,
       );
-      this.recordLatency(startTime, result);
       return result;
     } catch (err) {
       if (this.isAbortError(err)) {
@@ -126,12 +111,12 @@ export class BaseClient implements SmolClient {
     }
   }
 
-  checkForToolLoops(promptConfig: PromptConfig): {
+  checkForToolLoops(promptConfig: SmolConfig): {
     continue: boolean;
-    newPromptConfig: PromptConfig;
+    newSmolConfig: SmolConfig;
   } {
     if (!promptConfig.toolLoopDetection?.enabled) {
-      return { continue: true, newPromptConfig: promptConfig };
+      return { continue: true, newSmolConfig: promptConfig };
     }
 
     const toolCallCounts: Record<string, number> = {};
@@ -164,38 +149,30 @@ export class BaseClient implements SmolClient {
             const newTools = promptConfig.tools?.filter(
               (t) => t.name !== toolName,
             );
-            const newPromptConfig = {
+            const newSmolConfig = {
               ...promptConfig,
               tools: newTools,
             };
-            return { continue: true, newPromptConfig };
+            return { continue: true, newSmolConfig };
           case "remove-all-tools":
             return {
               continue: true,
-              newPromptConfig: { ...promptConfig, tools: [] },
+              newSmolConfig: { ...promptConfig, tools: [] },
             };
           case "throw-error":
             throw new Error(
               `Tool loop detected for tool "${toolName}". Aborting request.`,
             );
           case "halt-execution":
-            return { continue: false, newPromptConfig: promptConfig };
+            return { continue: false, newSmolConfig: promptConfig };
         }
       }
     }
-    return { continue: true, newPromptConfig: promptConfig };
-  }
-
-  private recordLatency(startTime: number, result: Result<PromptResult>): void {
-    if (!result.success) return;
-    const outputTokens = result.value.usage?.outputTokens;
-    if (!outputTokens || outputTokens <= 0) return;
-    const elapsedMs = performance.now() - startTime;
-    latencyTracker.record(this.config.model, elapsedMs, outputTokens);
+    return { continue: true, newSmolConfig: promptConfig };
   }
 
   extractResponse(
-    promptConfig: PromptConfig,
+    promptConfig: SmolConfig,
     rawValue: any,
     schema: any,
     depth: number = 0,
@@ -297,7 +274,7 @@ export class BaseClient implements SmolClient {
   }
 
   async textWithRetry(
-    promptConfig: PromptConfig,
+    promptConfig: SmolConfig,
     retries: number,
   ): Promise<Result<PromptResult>> {
     const result = await this._textSync(promptConfig);
@@ -388,11 +365,11 @@ export class BaseClient implements SmolClient {
     );
   }
 
-  async _textSync(promptConfig: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     throw new Error("Method not implemented.");
   }
 
-  async *textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const messageLimitResult = this.checkMessageLimit(config);
     if (messageLimitResult) {
       yield {
@@ -405,7 +382,7 @@ export class BaseClient implements SmolClient {
       return;
     }
 
-    const { continue: shouldContinue, newPromptConfig } =
+    const { continue: shouldContinue, newSmolConfig } =
       this.checkForToolLoops(config);
     if (!shouldContinue) {
       yield {
@@ -418,23 +395,15 @@ export class BaseClient implements SmolClient {
       };
       return;
     }
-    const startTime = performance.now();
     try {
-      for await (const chunk of this._textStream(newPromptConfig)) {
-        if (chunk.type === "done") {
-          const outputTokens = chunk.result.usage?.outputTokens;
-          if (outputTokens && outputTokens > 0) {
-            const elapsedMs = performance.now() - startTime;
-            latencyTracker.record(this.config.model, elapsedMs, outputTokens);
-          }
-        }
+      for await (const chunk of this._textStream(newSmolConfig)) {
         yield chunk;
       }
     } catch (err) {
       if (this.isAbortError(err)) {
         this.statelogClient?.debug("Streaming request aborted or timed out", {
           reason: "Request was aborted",
-          newPromptConfig,
+          newSmolConfig,
         });
         yield { type: "timeout", error: "Request was aborted" };
       } else {
@@ -445,7 +414,7 @@ export class BaseClient implements SmolClient {
 
   // default implementation of text stream just calls the non-streaming version and yields the result
   // clients that support streaming can override this to provide a streaming implementation
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const result = await this._textSync(config);
     if (result.success) {
       if (result.value.output) {

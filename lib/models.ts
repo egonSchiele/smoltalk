@@ -789,3 +789,10 @@ export function isSpeechToTextModel(
 export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";
 }
+
+export const ModelNameSchema = z
+  .string()
+  .regex(
+    /^[a-zA-Z0-9._:-]+$/,
+    "Model name must only contain letters, numbers, dots, underscores, hyphens, and colons",
+  );

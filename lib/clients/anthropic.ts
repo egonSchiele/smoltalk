@@ -8,12 +8,11 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { SystemMessage, DeveloperMessage } from "../classes/message/index.js";
 import { getLogger } from "../util/logger.js";
 import {
-  BaseClientConfig,
   CostEstimate,
-  PromptConfig,
   PromptResult,
   Result,
   SmolClient,
+  SmolConfig,
   StreamChunk,
   ThinkingBlock,
   TokenUsage,
@@ -30,7 +29,7 @@ import { Model } from "../model.js";
 
 const DEFAULT_MAX_TOKENS = 4096;
 
-export type SmolAnthropicConfig = BaseClientConfig & {
+export type SmolAnthropicConfig = SmolConfig & {
   anthropicApiKey: string;
 };
 
@@ -47,7 +46,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   getModel(): ModelName {
-    return this.model.getResolvedModel();
+    return this.model.getModel();
   }
 
   private calculateUsageAndCost(usageData: {
@@ -63,7 +62,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
-  private buildRequest(config: PromptConfig): {
+  private buildRequest(config: SmolConfig): {
     system: string | undefined;
     messages: MessageParam[];
     tools: Tool[] | undefined;
@@ -162,7 +161,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     throw error;
   }
 
-  async _textSync(config: PromptConfig): Promise<Result<PromptResult>> {
+  async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const { system, messages, tools, thinking } = this.buildRequest(config);
 
     let debugData = {
@@ -235,7 +234,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     });
   }
 
-  async *_textStream(config: PromptConfig): AsyncGenerator<StreamChunk> {
+  async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
     const { system, messages, tools, thinking } = this.buildRequest(config);
 
     const streamDebugData = {
