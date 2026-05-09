@@ -40,7 +40,9 @@ export class LlamaCPP extends BaseClient {
     const modelDir = config.metadata?.llamaCppModelDir as string | undefined;
     if (!modelDir) {
       throw new Error(
-        "metadata.llamaCppModelDir is required when using the LlamaCPP client.",
+        "smoltalk-llama-cpp: metadata.llamaCppModelDir is required. " +
+          "Pass the directory containing your .gguf models in config.metadata, " +
+          'e.g. text({ ..., metadata: { llamaCppModelDir: "./models" } }).',
       );
     }
     this.model = new Model(config.model);

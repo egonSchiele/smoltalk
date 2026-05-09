@@ -91,6 +91,8 @@ export function getClient(config: SmolClientConfig) {
         const ClientClass = registeredProviders[provider];
         return new ClientClass(clientConfig);
       }
-      throw new SmolError(`Model provider ${provider} is not supported.`);
+      throw new SmolError(
+        `Model provider ${provider} is not supported. To use a custom provider, register it first via registerProvider(name, ClientClass).`,
+      );
   }
 }

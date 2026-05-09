@@ -18,7 +18,6 @@ export type EgonLogConfig = {
 
 export class EgonLog {
   private logLevel: LogLevel;
-  private timers: Record<string, number> = {};
 
   constructor(config: EgonLogConfig) {
     this.logLevel = config.logLevel;
@@ -76,35 +75,15 @@ export class EgonLog {
   getLogLevel(): LogLevel {
     return this.logLevel;
   }
-
-  startTimer(label: string): void {
-    this.timers[label] = performance.now();
-  }
-
-  endTimer(label: string): void {
-    if (this.timers[label]) {
-      const duration = performance.now() - this.timers[label];
-      this.info(`Timer [${label}]: ${duration.toFixed(2)} ms`);
-      delete this.timers[label];
-    } else {
-      this.warn(`No timer found for label: ${label}`);
-    }
-  }
-
-  async time<T>(label: string, fn: () => Promise<T>): Promise<T> {
-    this.startTimer(label);
-    try {
-      return await fn();
-    } finally {
-      this.endTimer(label);
-    }
-  }
 }
 
 let loggerInstance: EgonLog | null = null;
 
-export function getLogger(level: LogLevel = "error"): EgonLog {
-  if (loggerInstance) return loggerInstance;
-  loggerInstance = new EgonLog({ logLevel: level });
+export function getLogger(level?: LogLevel): EgonLog {
+  if (!loggerInstance) {
+    loggerInstance = new EgonLog({ logLevel: level ?? "error" });
+  } else if (level !== undefined) {
+    loggerInstance.setLogLevel(level);
+  }
   return loggerInstance;
 }
