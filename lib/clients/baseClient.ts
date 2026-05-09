@@ -44,21 +44,11 @@ export class BaseClient implements SmolClient {
     );
   }
   text(
-    promptConfig: Omit<SmolConfig, "stream">,
-  ): Promise<Result<PromptResult>>;
-
-  text(
-    promptConfig: Omit<SmolConfig, "stream"> & { stream: false },
-  ): Promise<Result<PromptResult>>;
-
-  text(
-    promptConfig: Omit<SmolConfig, "stream"> & { stream: true },
+    promptConfig: SmolConfig & { stream: true },
   ): AsyncGenerator<StreamChunk>;
-
   text(
-    promptConfig: SmolConfig,
-  ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk>;
-
+    promptConfig: SmolConfig & { stream?: false },
+  ): Promise<Result<PromptResult>>;
   text(
     promptConfig: SmolConfig,
   ): Promise<Result<PromptResult>> | AsyncGenerator<StreamChunk> {
