@@ -23,6 +23,9 @@
     "node-llama-cpp": "^3.17.1"
   },
   "peerDependencies": {
-    "smoltalk": "workspace:^"
+    "smoltalk": "^0.2.0"
+  },
+  "devDependencies": {
+    "smoltalk": "workspace:*"
   }
 }

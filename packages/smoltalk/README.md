@@ -141,8 +141,7 @@ A couple of design decisions to note:
 | `anthropicApiKey` | `string` | Anthropic API key. |
 | `ollamaApiKey` | `string` | Ollama API key (only needed for cloud Ollama). |
 | `ollamaHost` | `string` | Ollama host URL (for self-hosted or cloud Ollama). |
-| `llamaCppModelDir` | `string` | Directory path for Llama.cpp models. |
-| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, `"llama-cpp"`. |
+| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, or any provider registered via `registerProvider()`. |
 | `logLevel` | `LogLevel` | Logging verbosity: `"debug"`, `"info"`, `"warn"`, `"error"`. |
 | `tools` | `{ name, description?, schema }[]` | Tool definitions. `schema` is a Zod object schema. |
 | `responseFormat` | `ZodType` | Zod schema for structured output. The response is parsed and validated against this schema. |

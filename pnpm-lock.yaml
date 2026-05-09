@@ -50,8 +50,9 @@ importers:
       node-llama-cpp:
         specifier: ^3.17.1
         version: 3.17.1(typescript@5.9.3)
+    devDependencies:
       smoltalk:
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../smoltalk
 
 packages:
