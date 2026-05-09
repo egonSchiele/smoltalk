@@ -86,7 +86,10 @@ describe("getClient", () => {
     );
   });
 
-  it("creates a client with a valid openai config", () => {
+  it("creates a client without requiring messages (SmolClientConfig contract)", () => {
+    // getClient is for constructing clients — messages are a per-call concern
+    // supplied later via client.text({ messages }). Tightening this back to
+    // SmolConfig would force callers to pass dummy messages.
     const client = getClient({
       model: "gpt-4o",
       openAiApiKey: "test-key",

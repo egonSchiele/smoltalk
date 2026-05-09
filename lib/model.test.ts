@@ -4,16 +4,25 @@ import { promptResult } from "../lib/types.js";
 
 describe("Model", () => {
   describe("with a direct model name", () => {
-    it("resolves a known model name directly", () => {
+    it("stores a known model name", () => {
       const model = new Model("gpt-4o");
-      expect(model.getModel()).toBe("gpt-4o");
       expect(model.getModel()).toBe("gpt-4o");
     });
 
-    it("accepts an unknown model name without throwing", () => {
+    it("accepts an unknown model name that matches the schema regex", () => {
       const model = new Model("nonexistent-model" as any);
       expect(model.getModel()).toBe("nonexistent-model");
       expect(model.getProvider()).toBeUndefined();
+    });
+
+    it("throws on a model name that doesn't match the schema regex", () => {
+      expect(() => new Model("bad name with spaces" as any)).toThrow(
+        /not recognized/,
+      );
+    });
+
+    it("throws on an empty model name", () => {
+      expect(() => new Model("" as any)).toThrow(/not recognized/);
     });
   });
 
