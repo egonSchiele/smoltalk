@@ -14,7 +14,7 @@ import { SmolOpenAi } from "./clients/openai.js";
 import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
 import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
-import { SmolConfig } from "./types.js";
+import { SmolClientConfig, SmolConfig } from "./types.js";
 
 const registeredProviders: Record<string, typeof BaseClient> = {};
 
@@ -25,7 +25,7 @@ export function registerProvider(
   registeredProviders[providerName] = clientClass;
 }
 
-export function getClient(config: SmolConfig) {
+export function getClient(config: SmolClientConfig) {
   let provider = config.provider;
   const modelName = config.model;
   if (!provider) {
@@ -49,6 +49,7 @@ export function getClient(config: SmolConfig) {
     anthropicApiKey: config.anthropicApiKey || process.env.ANTHROPIC_API_KEY,
   };
   const clientConfig: SmolConfig = {
+    messages: [],
     ...config,
     ...resolvedKeys,
     model: modelName,

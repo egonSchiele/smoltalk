@@ -55,7 +55,26 @@ This is functionality that other packages allow.
 </details>
 
 ## Longer tutorial
-To use Smoltak, you first create a client:
+
+The top-level `text()` function is the recommended entry point — pass everything in a single config:
+
+```ts
+import { text, userMessage } from "smoltalk";
+
+const messages = [
+  userMessage("Please use the add function to add the following numbers: 3 and 5"),
+];
+
+const resp = await text({
+  messages,
+  model: "gemini-2.0-flash-lite",
+  openAiApiKey: process.env.OPENAI_API_KEY || "",
+  googleApiKey: process.env.GEMINI_API_KEY || "",
+  logLevel: "debug",
+});
+```
+
+If you want to construct a client once and reuse it across many calls, use `getClient()`:
 
 ```ts
 import { getClient } from "smoltalk";
@@ -63,29 +82,10 @@ import { getClient } from "smoltalk";
 const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
   googleApiKey: process.env.GEMINI_API_KEY || "",
-  logLevel: "debug",
   model: "gemini-2.0-flash-lite",
 });
-```
 
-Then you can call different methods on the client. The simplest is `prompt`:
-
-```ts
-const resp = await client.prompt("Hello, how are you?");
-```
-
-If you want tool calling, structured output, etc., `text` may be a cleaner option:
-
-```ts
-let messages: Message[] = [];
-  messages.push(
-    userMessage(
-      "Please use the add function to add the following numbers: 3 and 5"
-    )
-  );
-  const resp = await client.text({
-    messages,
-  });
+const resp = await client.text({ messages });
 ```
 
 Here is an example with tool calling:
@@ -104,21 +104,22 @@ const addTool = {
   }),
 };
 
-const resp = await client.text({
+const resp = await text({
   messages,
-  tools: [addTool]
+  model: "gemini-2.0-flash-lite",
+  tools: [addTool],
 });
-
 ```
 
 Here is an example with structured output:
 
 ```ts
-const resp = await client.text({
+const resp = await text({
   messages,
+  model: "gemini-2.0-flash-lite",
   responseFormat: z.object({
     result: z.number(),
-  });
+  }),
 });
 ```
 

@@ -39,7 +39,7 @@ lib/
 
 ## Architecture
 
-- **SmolClient interface** (`types.ts`): Contract all providers implement — `text()`, `textSync()`, `textStream()`, `prompt()`
+- **SmolClient interface** (`types.ts`): Contract all providers implement — `text()`, `textSync()`, `textStream()`
 - **BaseClient** (`baseClient.ts`): Abstract class with shared behavior — response format validation/retries, tool loop detection, stream/sync dispatching
 - **Provider clients**: Each extends BaseClient, overrides `_textSync()` and `_textStream()`
 - **Message classes**: Each message type (UserMessage, AssistantMessage, etc.) has `toOpenAIMessage()`, `toOpenAIResponseInputItem()`, `toGoogleMessage()`, `toOllamaMessage()` — format conversion is encapsulated in the message, not the client

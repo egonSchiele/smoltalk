@@ -179,6 +179,11 @@ export type TextPart = {
   text: string;
 };
 
+/** Loose variant of SmolConfig for `getClient()` — messages are not required at construction time. */
+export type SmolClientConfig = Omit<SmolConfig, "messages"> & {
+  messages?: Message[];
+};
+
 export type ModelLike = ModelName | Model;
 
 export type ThinkingBlock = {
