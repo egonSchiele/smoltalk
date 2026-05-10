@@ -94,7 +94,9 @@ jobs:
           npm install --save-dev typescript@5
       - name: compile fixture (ESM, supports top-level await)
         working-directory: /tmp/consumer
-        run: npx tsc --target esnext --module nodenext --moduleResolution nodenext index.ts
+        # --skipLibCheck because @google/genai's .d.ts references a transitive
+        # peer dep we don't install (@modelcontextprotocol/sdk).
+        run: npx tsc --target esnext --module nodenext --moduleResolution nodenext --skipLibCheck index.ts
       - name: run fixture
         working-directory: /tmp/consumer
         run: node index.js
@@ -120,8 +122,12 @@ jobs:
           cd /tmp/bundle
           npm install /tmp/smoltalk-*.tgz
           npm install --save-dev esbuild typescript@5
-          # ESM output so the fixture's top-level await works; package.json has type:module already
-          npx esbuild --bundle --platform=node --target=node20 --format=esm --metafile=meta.json --outfile=bundle.js index.ts
+          # ESM output so the fixture's top-level await works; package.json has type:module already.
+          # The --banner provides require() via createRequire so transitive CJS deps
+          # (e.g. google-auth-library, via @google/genai) that use dynamic require still work.
+          npx esbuild --bundle --platform=node --target=node20 --format=esm \
+            --banner:js='import{createRequire}from"module";const require=createRequire(import.meta.url);' \
+            --metafile=meta.json --outfile=bundle.js index.ts
       - name: assert no node-llama-cpp module in bundle
         working-directory: /tmp/bundle
         run: |
