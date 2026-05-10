@@ -1,0 +1,10 @@
+{
+  "extends": "../smoltalk/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./tmp-out",
+    "rootDir": "./tmp",
+    "noEmit": true
+  },
+  "include": ["tmp/**/*.ts"],
+  "exclude": ["node_modules", "tmp-out"]
+}
