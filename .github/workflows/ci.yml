@@ -25,11 +25,24 @@ jobs:
       - run: pnpm -r typecheck
       - run: pnpm -r test
       - run: pnpm -r build
+
+  readme-check:
+    name: readme code blocks typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
       - run: pnpm --filter readme-check check
 
-  install-simulation:
-    name: install simulation (npm)
-    needs: test
+  pack:
+    name: pack tarballs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,15 +59,35 @@ jobs:
         run: |
           cd packages/smoltalk && pnpm pack --pack-destination /tmp
           cd ../smoltalk-llama-cpp && pnpm pack --pack-destination /tmp
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tarballs
+          path: /tmp/*.tgz
+          retention-days: 1
+
+  install-simulation:
+    name: install simulation (npm)
+    needs: [test, pack]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarballs
+          path: /tmp
       - name: install via npm in fresh consumer
         run: |
           mkdir -p /tmp/consumer
           cp scripts/ci-fixture/index.ts /tmp/consumer/
           cp scripts/ci-fixture/package.json /tmp/consumer/
           cd /tmp/consumer
+          npm pkg set name=consumer >/dev/null
           npm install /tmp/smoltalk-*.tgz /tmp/smoltalk-llama-cpp-*.tgz
           npm install --save-dev typescript@5
-      - name: compile fixture
+      - name: compile fixture (ESM, supports top-level await)
         working-directory: /tmp/consumer
         run: npx tsc --target esnext --module nodenext --moduleResolution nodenext index.ts
       - name: run fixture
@@ -63,20 +96,17 @@ jobs:
 
   bundler-smoke:
     name: esbuild bundler smoke
-    needs: test
+    needs: [test, pack]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm -r build
-      - run: cd packages/smoltalk && pnpm pack --pack-destination /tmp
+      - uses: actions/download-artifact@v4
+        with:
+          name: tarballs
+          path: /tmp
       - name: bundle the smoltalk-only fixture
         run: |
           mkdir -p /tmp/bundle
@@ -85,12 +115,19 @@ jobs:
           cd /tmp/bundle
           npm install /tmp/smoltalk-*.tgz
           npm install --save-dev esbuild typescript@5
-          npx esbuild --bundle --platform=node --target=node20 --outfile=bundle.js index.ts
-      - name: assert bundle contains no node-llama-cpp
+          # ESM output so the fixture's top-level await works; package.json has type:module already
+          npx esbuild --bundle --platform=node --target=node20 --format=esm --metafile=meta.json --outfile=bundle.js index.ts
+      - name: assert no node-llama-cpp module in bundle
+        working-directory: /tmp/bundle
         run: |
-          if grep -q "node-llama-cpp" /tmp/bundle/bundle.js; then
-            echo "::error::bundle contains node-llama-cpp reference"
-            exit 1
-          fi
+          node -e "
+            const meta = require('./meta.json');
+            const offenders = Object.keys(meta.inputs).filter(k => k.includes('node-llama-cpp'));
+            if (offenders.length > 0) {
+              console.error('bundle includes node-llama-cpp modules:', offenders);
+              process.exit(1);
+            }
+            console.log('bundle is clean of node-llama-cpp');
+          "
       - name: run bundle
         run: node /tmp/bundle/bundle.js

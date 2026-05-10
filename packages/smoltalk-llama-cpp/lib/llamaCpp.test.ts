@@ -33,11 +33,8 @@ describe("LlamaCPP constructor", () => {
   });
 
   it("error message points users at the metadata key", () => {
-    try {
-      new LlamaCPP({ model: "any", messages: [], metadata: {} });
-    } catch (err) {
-      expect((err as Error).message).toContain("metadata.llamaCppModelDir");
-      expect((err as Error).message).toContain("smoltalk-llama-cpp");
-    }
+    expect(
+      () => new LlamaCPP({ model: "any", messages: [], metadata: {} }),
+    ).toThrow(/smoltalk-llama-cpp.*metadata\.llamaCppModelDir/s);
   });
 });
