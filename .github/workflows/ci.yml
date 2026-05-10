@@ -96,7 +96,8 @@ jobs:
         working-directory: /tmp/consumer
         # --skipLibCheck because @google/genai's .d.ts references a transitive
         # peer dep we don't install (@modelcontextprotocol/sdk).
-        run: npx tsc --target esnext --module nodenext --moduleResolution nodenext --skipLibCheck index.ts
+        # --strict so discriminated-union narrowing (Result<T>) works in the fixture.
+        run: npx tsc --target esnext --module nodenext --moduleResolution nodenext --skipLibCheck --strict index.ts
       - name: run fixture
         working-directory: /tmp/consumer
         run: node index.js
