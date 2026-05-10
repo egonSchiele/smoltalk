@@ -1,0 +1,14 @@
+{
+  "name": "readme-check",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "dependencies": {
+    "smoltalk": "workspace:*",
+    "smoltalk-llama-cpp": "workspace:*",
+    "zod": "^4.3.6"
+  }
+}

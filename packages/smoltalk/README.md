@@ -77,7 +77,7 @@ const resp = await text({
 If you want to construct a client once and reuse it across many calls, use `getClient()`:
 
 ```ts
-import { getClient } from "smoltalk";
+import { getClient, userMessage } from "smoltalk";
 
 const client = getClient({
   openAiApiKey: process.env.OPENAI_API_KEY || "",
@@ -85,12 +85,16 @@ const client = getClient({
   model: "gemini-2.0-flash-lite",
 });
 
-const resp = await client.text({ messages });
+const messages = [userMessage("hi")];
+const resp = await client.text({ messages, model: "gemini-2.0-flash-lite" });
 ```
 
 Here is an example with tool calling:
 
 ```ts
+import { text, userMessage } from "smoltalk";
+import { z } from "zod";
+
 function add({ a, b }: { a: number; b: number }): number {
   return a + b;
 }
@@ -104,6 +108,8 @@ const addTool = {
   }),
 };
 
+const messages = [userMessage("Add 3 and 5")];
+
 const resp = await text({
   messages,
   model: "gemini-2.0-flash-lite",
@@ -114,6 +120,11 @@ const resp = await text({
 Here is an example with structured output:
 
 ```ts
+import { text, userMessage } from "smoltalk";
+import { z } from "zod";
+
+const messages = [userMessage("How many planets are in the solar system?")];
+
 const resp = await text({
   messages,
   model: "gemini-2.0-flash-lite",
