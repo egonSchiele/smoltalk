@@ -23,6 +23,14 @@ export function registerProvider(
   registeredProviders[providerName] = clientClass;
 }
 
+export function unregisterProvider(providerName: string): boolean {
+  if (providerName in registeredProviders) {
+    delete registeredProviders[providerName];
+    return true;
+  }
+  return false;
+}
+
 export function getClient(config: SmolClientConfig) {
   let provider = config.provider;
   const modelName = config.model;

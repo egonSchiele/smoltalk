@@ -1,15 +1,23 @@
-import { describe, it, expect } from "vitest";
-import { registerProvider } from "./client.js";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { registerProvider, unregisterProvider } from "./client.js";
 import { text, textSync, textStream } from "./functions.js";
 import { TestProvider } from "./testing/index.js";
 import { userMessage, BaseMessage } from "./classes/message/index.js";
 import type { StreamChunk } from "./types.js";
 
-registerProvider("test", TestProvider);
+const PROVIDER = "test-functions";
+
+beforeAll(() => {
+  registerProvider(PROVIDER, TestProvider);
+});
+
+afterAll(() => {
+  unregisterProvider(PROVIDER);
+});
 
 const baseConfig = {
   model: "any-model",
-  provider: "test",
+  provider: PROVIDER,
   metadata: { testResponse: "hello" },
   messages: [userMessage("hi")],
 };
@@ -42,14 +50,13 @@ describe("textSync()", () => {
     const config = { ...baseConfig, messages: plainJson };
     const result = await textSync(config);
     expect(result.success).toBe(true);
-    // After fixMessagesIfNecessary, config.messages is reassigned to converted instances
     expect(config.messages[0] instanceof BaseMessage).toBe(true);
   });
 
   it("uses the first response from testResponses array", async () => {
     const cfg = {
       model: "any",
-      provider: "test",
+      provider: PROVIDER,
       metadata: { testResponses: ["first", "second", "third"] },
       messages: [userMessage("x")],
     };

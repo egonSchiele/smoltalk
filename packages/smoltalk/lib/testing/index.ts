@@ -5,6 +5,7 @@ import type {
   Result,
   SmolConfig,
   StreamChunk,
+  TokenUsage,
 } from "../types.js";
 
 const DEFAULT_RESPONSE = "test response";
@@ -23,6 +24,10 @@ export class TestProvider extends BaseClient {
     return single ?? DEFAULT_RESPONSE;
   }
 
+  private cannedUsage(config: SmolConfig): TokenUsage | undefined {
+    return config.metadata?.testUsage as TokenUsage | undefined;
+  }
+
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const output = this.nextResponse(config);
     return success(
@@ -30,6 +35,7 @@ export class TestProvider extends BaseClient {
         output,
         toolCalls: [],
         model: config.model,
+        usage: this.cannedUsage(config),
       }),
     );
   }
@@ -43,6 +49,7 @@ export class TestProvider extends BaseClient {
         output,
         toolCalls: [],
         model: config.model,
+        usage: this.cannedUsage(config),
       }),
     };
   }
