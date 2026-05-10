@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r typecheck
+      - run: pnpm -r test
+      - run: pnpm -r build
+      - run: pnpm --filter readme-check check
+
+  install-simulation:
+    name: install simulation (npm)
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - name: pack tarballs
+        run: |
+          cd packages/smoltalk && pnpm pack --pack-destination /tmp
+          cd ../smoltalk-llama-cpp && pnpm pack --pack-destination /tmp
+      - name: install via npm in fresh consumer
+        run: |
+          mkdir -p /tmp/consumer
+          cp scripts/ci-fixture/index.ts /tmp/consumer/
+          cp scripts/ci-fixture/package.json /tmp/consumer/
+          cd /tmp/consumer
+          npm install /tmp/smoltalk-*.tgz /tmp/smoltalk-llama-cpp-*.tgz
+          npm install --save-dev typescript@5
+      - name: compile fixture
+        working-directory: /tmp/consumer
+        run: npx tsc --target esnext --module nodenext --moduleResolution nodenext index.ts
+      - name: run fixture
+        working-directory: /tmp/consumer
+        run: node index.js
+
+  bundler-smoke:
+    name: esbuild bundler smoke
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -r build
+      - run: cd packages/smoltalk && pnpm pack --pack-destination /tmp
+      - name: bundle the smoltalk-only fixture
+        run: |
+          mkdir -p /tmp/bundle
+          cp scripts/ci-fixture/index.ts /tmp/bundle/
+          cp scripts/ci-fixture/package.json /tmp/bundle/
+          cd /tmp/bundle
+          npm install /tmp/smoltalk-*.tgz
+          npm install --save-dev esbuild typescript@5
+          npx esbuild --bundle --platform=node --target=node20 --outfile=bundle.js index.ts
+      - name: assert bundle contains no node-llama-cpp
+        run: |
+          if grep -q "node-llama-cpp" /tmp/bundle/bundle.js; then
+            echo "::error::bundle contains node-llama-cpp reference"
+            exit 1
+          fi
+      - name: run bundle
+        run: node /tmp/bundle/bundle.js
