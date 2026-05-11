@@ -126,8 +126,8 @@ export type ToolLoopDetection = {
   excludeTools?: string[];
 };
 
-export type PromptResult<T = string> = {
-  output: T | null;
+export type PromptResult = {
+  output: string | null;
   toolCalls: ToolCall[];
   thinkingBlocks?: ThinkingBlock[];
   usage?: TokenUsage;
@@ -135,16 +135,16 @@ export type PromptResult<T = string> = {
   model?: ModelName;
 };
 
-export function promptResult<T = string>({
+export function promptResult({
   output,
   toolCalls,
   thinkingBlocks,
   usage,
   cost,
   model,
-}: Partial<PromptResult<T>>): PromptResult<T> {
+}: Partial<PromptResult>): PromptResult {
   return {
-    output: (output ?? null) as T | null,
+    output: output || null,
     toolCalls: toolCalls || [],
     thinkingBlocks: thinkingBlocks,
     usage,
