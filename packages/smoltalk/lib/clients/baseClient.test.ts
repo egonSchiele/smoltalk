@@ -92,6 +92,56 @@ describe("maxMessages", () => {
   });
 });
 
+describe("responseFormat without strict", () => {
+  const schema = z.object({ name: z.string(), age: z.number().min(0) });
+
+  it("validates and normalizes output to a parsed object", async () => {
+    const goodOutput = JSON.stringify({ name: "Alice", age: 25 });
+    const spy = new SpyClient([
+      { success: true, value: { output: goodOutput, toolCalls: [], model: "gpt-4o" } },
+    ]);
+    const result = await spy.textSync({
+      messages: [userMessage("test")],
+      responseFormat: schema,
+      // no strict, no numRetries: validation should still run by default
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.output).toEqual({ name: "Alice", age: 25 });
+    }
+  });
+
+  it("retries on validation failure without strict", async () => {
+    const badOutput = JSON.stringify({ name: "Alice", age: -1 });
+    const goodOutput = JSON.stringify({ name: "Alice", age: 25 });
+    const spy = new SpyClient([
+      { success: true, value: { output: badOutput, toolCalls: [], model: "gpt-4o" } },
+      { success: true, value: { output: goodOutput, toolCalls: [], model: "gpt-4o" } },
+    ]);
+    const result = await spy.textSync({
+      messages: [userMessage("test")],
+      responseFormat: schema,
+    });
+    expect(result.success).toBe(true);
+    expect(spy.calls).toHaveLength(2);
+  });
+
+  it("strips markdown code fences without strict", async () => {
+    const fenced = "```json\n" + JSON.stringify({ name: "Alice", age: 25 }) + "\n```";
+    const spy = new SpyClient([
+      { success: true, value: { output: fenced, toolCalls: [], model: "gpt-4o" } },
+    ]);
+    const result = await spy.textSync({
+      messages: [userMessage("test")],
+      responseFormat: schema,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.output).toEqual({ name: "Alice", age: 25 });
+    }
+  });
+});
+
 describe("textWithRetry - validation error feedback", () => {
   const schema = z.object({ name: z.string(), age: z.number().min(0) });
 
@@ -233,9 +283,10 @@ describe("extractResponse", () => {
     expect(result).toEqual({ result: 42 });
   });
 
-  it("returns an unparseable string as-is", () => {
-    const result = client.extractResponse(config, "not json at all", schema);
-    expect(result).toBe("not json at all");
+  it("throws on an unparseable string", () => {
+    expect(() =>
+      client.extractResponse(config, "not json at all", schema),
+    ).toThrow();
   });
 
   it("returns null as-is", () => {
