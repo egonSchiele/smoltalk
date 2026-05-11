@@ -7,4 +7,4 @@ test:
 	pnpm run test
 
 publish: all
-	pnpm publish
+	pnpm publish --no-git-checks
