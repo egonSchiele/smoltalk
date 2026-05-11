@@ -1,18 +1,5 @@
 # Changelog
 
-## smoltalk 0.3.0 (2026-05-11)
-
-**Behavior change for `responseFormat`.** Validation, retry, and normalization now run whenever `responseFormat` is set on the config — `responseFormatOptions.strict` is no longer required to enable them. After the call, `output` is the parsed/validated object (matching what users with `strict: true` already received), not the raw model string. Markdown-fenced JSON (common from Anthropic) is stripped automatically.
-
-**What `strict: true` now means**, and only that: turn on the provider's native server-side strict mode. For OpenAI Chat and Responses APIs, `strict: true` is now passed to the `json_schema` config — when OpenAI rejects a schema that isn't strict-compatible (i.e., not all `additionalProperties: false` with all properties `required`), the call fails fast. For other providers, `strict` is a no-op.
-
-### Migration
-
-- If you set `responseFormat` without `strict` and were doing `JSON.parse(result.value.output)` yourself, drop the parse — `output` is already the parsed object.
-- If you set `responseFormat` without `strict` and relied on raw passthrough (no validation), add `numRetries: 0` to disable retries; you'll still get a validated/normalized object on success.
-- If you set `responseFormat` with `strict: true` against OpenAI and your Zod schema has optional properties or doesn't disallow additional properties, the call may now fail server-side. Either drop `strict`, adjust the schema, or set `responseFormatOptions.strict: false` explicitly.
-- `BaseClient.extractResponse` now throws `SmolStructuredOutputError` on strings that aren't valid JSON, instead of silently returning the raw string. Direct callers should handle the throw.
-
 ## smoltalk 0.2.0 (2026-05-08)
 
 **Breaking:** `node-llama-cpp` is no longer a dependency of `smoltalk`. Local-model users must install [`smoltalk-llama-cpp`](./packages/smoltalk-llama-cpp/) and register it manually.
