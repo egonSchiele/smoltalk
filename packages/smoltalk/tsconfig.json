@@ -109,6 +109,7 @@
     "vitest*",
     "test*",
     "dist",
-    "lib/**/*.test.ts"
+    "lib/**/*.test.ts",
+    "lib/clients/liveTestHelpers.ts"
   ] /* Specify an array of glob patterns to exclude files and directories from the project. */
 }
