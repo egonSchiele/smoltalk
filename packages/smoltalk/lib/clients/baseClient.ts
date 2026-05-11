@@ -207,17 +207,19 @@ export class BaseClient implements SmolClient {
       );
     }
 
-    // 2. String → try JSON.parse (after stripping markdown fences), then recurse.
-    // Throws SmolStructuredOutputError if the string isn't valid JSON; the
-    // textWithRetry caller catches this and retries with a validation hint.
+    // 2. String → try JSON.parse, then recurse
     if (typeof rawValue === "string") {
       const stripped = rawValue
         .trim()
         .replace(/^```json\s*/, "")
         .replace(/```\s*$/, "");
-      let parsed;
       try {
-        parsed = JSON.parse(stripped);
+        return this.extractResponse(
+          promptConfig,
+          JSON.parse(stripped),
+          schema,
+          depth + 1,
+        );
       } catch (err) {
         const logger = getLogger();
         logger.debug("extractResponse: failed to parse JSON from string", {
@@ -228,11 +230,8 @@ export class BaseClient implements SmolClient {
           "extractResponse: failed to parse JSON from string",
           { error: (err as Error).message },
         );
-        throw new SmolStructuredOutputError(
-          `Response did not parse as JSON: ${(err as Error).message}`,
-        );
       }
-      return this.extractResponse(promptConfig, parsed, schema, depth + 1);
+      return rawValue;
     }
 
     // 3. Null/undefined/primitive — nothing to unwrap
@@ -286,7 +285,10 @@ export class BaseClient implements SmolClient {
         return result;
       }
 
-      if (!promptConfig.responseFormat) {
+      if (
+        !promptConfig.responseFormat ||
+        !promptConfig.responseFormatOptions?.strict
+      ) {
         return result;
       }
 
@@ -305,11 +307,20 @@ export class BaseClient implements SmolClient {
       }
 
       const { output } = result.value;
-      if (output !== null && retries > 0) {
+      if (
+        output !== null &&
+        promptConfig.responseFormat &&
+        promptConfig.responseFormatOptions?.strict &&
+        retries > 0
+      ) {
+        const allowExtraKeys =
+          promptConfig.responseFormatOptions?.allowExtraKeys ?? false;
+
         try {
+          const parsed = JSON.parse(output);
           const parseResult = this.extractResponse(
             promptConfig,
-            output,
+            parsed,
             promptConfig.responseFormat,
           );
           return success({

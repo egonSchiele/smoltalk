@@ -129,7 +129,6 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
           type: "json_schema",
           name: config.responseFormatOptions?.name || "response",
           schema: config.responseFormat.toJSONSchema(),
-          strict: !!config.responseFormatOptions?.strict,
         },
       };
     }
