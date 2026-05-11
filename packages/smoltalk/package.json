@@ -4,7 +4,8 @@
   "description": "A common interface for LLM APIs",
   "homepage": "https://github.com/egonSchiele/smoltalk",
   "scripts": {
-    "test": "vitest",
+    "test": "vitest --exclude=**/*.live.test.ts",
+    "test:live": "vitest run lib/clients/*.live.test.ts",
     "test:tsc": "tsc -p tests/tsconfig.json",
     "build": "rm -rf dist && tsc",
     "start": "cd dist && node index.js",

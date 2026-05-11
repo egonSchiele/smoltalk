@@ -1,0 +1,66 @@
+name: Provider smoke tests (real API)
+
+# SECURITY:
+# This workflow uses paid API keys as secrets. It is *deliberately* triggered
+# only by pushes to main (which require a merge by someone with write access)
+# and by manual workflow_dispatch. PR contributors cannot trigger it from a
+# fork, so they cannot exfiltrate secrets.
+#
+# Other safeguards in effect here:
+#   - Third-party actions pinned by full commit SHA (immutable). If a SHA
+#     ever needs updating, do so deliberately and review the upstream diff.
+#   - Secrets are exported only on the specific step that needs them.
+#   - No caching of workspace state between runs.
+#   - permissions block limits the workflow to read-only repo access.
+#   - concurrency prevents two runs from racing and double-billing.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: provider-smoke
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: provider smoke (real API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+      - uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d # v4
+        with:
+          version: 10
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter smoltalk build
+      # Fail loudly if any required secret is missing — without this, every test's
+      # describe.runIf(haveKey) would silently skip and the workflow would go green
+      # while running zero paid calls.
+      - name: verify required secrets are set
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          missing=()
+          [ -z "$OPENAI_API_KEY" ] && missing+=(OPENAI_API_KEY)
+          [ -z "$ANTHROPIC_API_KEY" ] && missing+=(ANTHROPIC_API_KEY)
+          [ -z "$GEMINI_API_KEY" ] && missing+=(GEMINI_API_KEY)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::missing required secrets: ${missing[*]}"
+            exit 1
+          fi
+      - name: run provider smoke tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: pnpm --filter smoltalk test:live
