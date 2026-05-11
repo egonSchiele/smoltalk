@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-05-10-smoltalk-ci-testing-design.md`.
 
-**Working directory:** `/Users/adit/smoltalk`. Branch: create `ci-testing` off `main` before starting.
+**Working directory:** repo root. Branch: create `ci-testing` off `main` before starting.
 
 ---
 
@@ -116,8 +116,8 @@ Expected: both files exist.
 ```bash
 mkdir -p /tmp/smoltalk-test-smoke && cd /tmp/smoltalk-test-smoke
 cat > index.mjs <<'EOF'
-import { registerProvider, text, userMessage } from "/Users/adit/smoltalk/packages/smoltalk/dist/index.js";
-import { TestProvider } from "/Users/adit/smoltalk/packages/smoltalk/dist/testing/index.js";
+import { registerProvider, text, userMessage } from "$REPO_ROOT/packages/smoltalk/dist/index.js";
+import { TestProvider } from "$REPO_ROOT/packages/smoltalk/dist/testing/index.js";
 
 registerProvider("test", TestProvider);
 const r = await text({

@@ -143,11 +143,14 @@ The fixture script is a small TS file at `scripts/ci-fixture/index.ts` that impo
 
 20 LTS and 22 LTS, configured in the matrix above. 18 is end-of-life and isn't tested.
 
-## Out of scope
+## Out of scope (for this spec)
 
-- Real provider integration (#10 from the brainstorm) — gated by API keys, separate workflow, deferred
 - Type-level public API surface snapshot test (#5) — README compile check covers the most common case
 - Dep-tree regression check via `pnpm why` (#6) — implicitly covered by bundler smoke
+
+## Follow-ups landed separately
+
+- **Real provider integration (#10 from the brainstorm)** — landed in a separate PR as `.github/workflows/provider-smoke.yml` + `lib/clients/*.live.test.ts`. Triggered only on push:main; secrets gated; preflight checks fail loudly if any required secret is missing. See `docs/superpowers/specs/2026-05-10-smoltalk-ci-testing-design.md` (this file) for the original brainstorm context.
 
 ## Verification
 

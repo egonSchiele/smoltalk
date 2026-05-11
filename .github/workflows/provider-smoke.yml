@@ -41,6 +41,23 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter smoltalk build
+      # Fail loudly if any required secret is missing — without this, every test's
+      # describe.runIf(haveKey) would silently skip and the workflow would go green
+      # while running zero paid calls.
+      - name: verify required secrets are set
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          missing=()
+          [ -z "$OPENAI_API_KEY" ] && missing+=(OPENAI_API_KEY)
+          [ -z "$ANTHROPIC_API_KEY" ] && missing+=(ANTHROPIC_API_KEY)
+          [ -z "$GEMINI_API_KEY" ] && missing+=(GEMINI_API_KEY)
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::missing required secrets: ${missing[*]}"
+            exit 1
+          fi
       - name: run provider smoke tests
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
