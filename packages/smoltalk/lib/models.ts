@@ -420,6 +420,46 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "gpt-5.4-mini",
+    description:
+      "GPT-5.4 mini is the strongest mini model for coding, computer use, and subagents. 400K context window. Knowledge cutoff: August 2025.",
+    maxInputTokens: 400000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 0.75,
+    cachedInputTokenCost: 0.075,
+    outputTokenCost: 4.5,
+    outputTokensPerSecond: 180,
+    reasoning: {
+      levels: ["none", "low", "medium", "high", "xhigh"],
+      defaultLevel: "none",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gpt-5.4-nano",
+    description:
+      "GPT-5.4 nano is the fastest and most affordable GPT-5.4 variant for classification, data extraction, ranking, and sub-agents. 400K context window. Knowledge cutoff: August 2025.",
+    maxInputTokens: 400000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 0.2,
+    cachedInputTokenCost: 0.02,
+    outputTokenCost: 1.25,
+    outputTokensPerSecond: 160,
+    reasoning: {
+      levels: ["none", "low", "medium", "high", "xhigh"],
+      defaultLevel: "none",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    provider: "openai",
+  },
+  {
+    type: "text",
     modelName: "gpt-5.4-pro",
     description:
       "GPT-5.4 Pro uses more compute for complex reasoning tasks. 1M context window. Standard pricing for ≤272K tokens. Knowledge cutoff: August 2025.",
@@ -438,6 +478,44 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "gpt-5.5",
+    description:
+      "GPT-5.5 is a new class of intelligence for coding and professional work. 1M context window. Standard pricing for ≤272K tokens, 2x input/1.5x output for >272K. Knowledge cutoff: December 2025.",
+    maxInputTokens: 1_050_000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 5,
+    cachedInputTokenCost: 0.5,
+    outputTokenCost: 30,
+    outputTokensPerSecond: 66,
+    reasoning: {
+      levels: ["none", "low", "medium", "high", "xhigh"],
+      defaultLevel: "medium",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    provider: "openai",
+  },
+  {
+    type: "text",
+    modelName: "gpt-5.5-pro",
+    description:
+      "GPT-5.5 Pro uses more compute for complex reasoning tasks. 1M context window. Knowledge cutoff: December 2025.",
+    maxInputTokens: 1_050_000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 30,
+    outputTokenCost: 180,
+    reasoning: {
+      levels: ["none", "low", "medium", "high", "xhigh"],
+      defaultLevel: "medium",
+      canDisable: true,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    provider: "openai",
+  },
+  {
+    type: "text",
     modelName: "gemini-3.1-pro-preview",
     description:
       "Latest Gemini 3.1 Pro with 1M context window and 64K output. Standard pricing for ≤200k tokens ($2.00 input/$12.00 output), higher rates for >200k tokens ($4.00 input/$18.00 output). Released Feb 2026.",
@@ -445,7 +523,7 @@ export const textModels = [
     maxOutputTokens: 65536,
     inputTokenCost: 2.0,
     outputTokenCost: 12.0,
-    outputTokensPerSecond: 112,
+    outputTokensPerSecond: 133,
     reasoning: {
       levels: ["low", "medium", "high"],
       defaultLevel: "high",
@@ -476,7 +554,7 @@ export const textModels = [
     maxOutputTokens: 65536,
     inputTokenCost: 0.5,
     outputTokenCost: 3.0,
-    outputTokensPerSecond: 146,
+    outputTokensPerSecond: 184,
     reasoning: {
       levels: ["minimal", "low", "medium", "high"],
       defaultLevel: "high",
@@ -514,7 +592,7 @@ export const textModels = [
     maxOutputTokens: 65536,
     inputTokenCost: 1.25,
     outputTokenCost: 10.0,
-    outputTokensPerSecond: 134,
+    outputTokensPerSecond: 145,
     reasoning: {
       canDisable: false,
       outputsThinking: true,
@@ -633,11 +711,29 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "claude-opus-4-7",
+    description:
+      "The most capable Claude model for complex reasoning and agentic coding. Features Adaptive Thinking that auto-tunes reasoning compute per request. 1M context window, 128K max output. Knowledge cutoff: January 2026.",
+    maxInputTokens: 1_000_000,
+    maxOutputTokens: 128_000,
+    inputTokenCost: 5,
+    cachedInputTokenCost: 0.5,
+    outputTokenCost: 25,
+    outputTokensPerSecond: 72,
+    reasoning: {
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
+    provider: "anthropic",
+  },
+  {
+    type: "text",
     modelName: "claude-opus-4-6",
     description:
-      "The most intelligent Claude model for building agents and coding. 200K context window (1M in beta), 128K max output.",
-    maxInputTokens: 200_000,
-    maxOutputTokens: 131_072,
+      "Claude Opus 4.6 — legacy model. Use claude-opus-4-7 instead. 1M context window, 128K max output.",
+    maxInputTokens: 1_000_000,
+    maxOutputTokens: 128_000,
     inputTokenCost: 5,
     cachedInputTokenCost: 0.5,
     outputTokenCost: 25,
@@ -653,12 +749,13 @@ export const textModels = [
     type: "text",
     modelName: "claude-sonnet-4-6",
     description:
-      "The best combination of speed and intelligence. 200K context window (1M in beta), 64K max output.",
-    maxInputTokens: 200_000,
+      "The best combination of speed and intelligence. 1M context window, 64K max output.",
+    maxInputTokens: 1_000_000,
     maxOutputTokens: 64_000,
     inputTokenCost: 3,
     cachedInputTokenCost: 0.3,
     outputTokenCost: 15,
+    outputTokensPerSecond: 52,
     reasoning: {
       canDisable: true,
       outputsThinking: true,
@@ -739,6 +836,14 @@ export const imageModels = [
     description:
       "High-fidelity image generation with reasoning-enhanced composition. Supports legible text rendering, complex multi-turn editing, and character consistency using up to 14 reference inputs.",
     costPerImage: 0.05,
+  },
+  {
+    type: "image",
+    modelName: "gemini-3.1-flash-image-preview",
+    provider: "google",
+    description:
+      "Fast image generation with Gemini 3.1 Flash. Supports resolutions from 512px to 4096px. ~$0.067/image at 1K resolution.",
+    costPerImage: 0.067,
   },
 ] as const;
 
