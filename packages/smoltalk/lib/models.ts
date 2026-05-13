@@ -56,6 +56,7 @@ export type TextModel = BaseModel & {
 export type EmbeddingsModel = {
   type: "embeddings";
   modelName: string;
+  provider: string;
 
   // costs per 1M tokens, in dollars
   tokenCost?: number;
@@ -847,8 +848,31 @@ export const imageModels = [
   },
 ] as const;
 
-export const embeddingsModels = [
-  { type: "embeddings", modelName: "text-embedding-3-small", tokenCost: 0.02 },
+export const embeddingsModels: EmbeddingsModel[] = [
+  {
+    type: "embeddings",
+    modelName: "text-embedding-3-small",
+    provider: "openai",
+    tokenCost: 0.02,
+  },
+  {
+    type: "embeddings",
+    modelName: "text-embedding-3-large",
+    provider: "openai",
+    tokenCost: 0.13,
+  },
+  {
+    type: "embeddings",
+    modelName: "gemini-embedding-001",
+    provider: "google",
+    tokenCost: 0.15,
+  },
+  {
+    type: "embeddings",
+    modelName: "gemini-embedding-2-preview",
+    provider: "google",
+    tokenCost: 0.2,
+  },
 ];
 
 export type TextModelName = (typeof textModels)[number]["modelName"];
@@ -873,6 +897,7 @@ export function getModel(modelName: ModelName) {
     ...imageModels,
     ...speechToTextModels,
     ...registeredTextModels,
+    ...embeddingsModels,
   ];
   return allModels.find((model) => model.modelName === modelName);
 }

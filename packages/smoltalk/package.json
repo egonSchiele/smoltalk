@@ -5,7 +5,7 @@
   "homepage": "https://github.com/egonSchiele/smoltalk",
   "scripts": {
     "test": "vitest --exclude=**/*.live.test.ts",
-    "test:live": "vitest run lib/clients/*.live.test.ts",
+    "test:live": "vitest run lib/clients/*.live.test.ts lib/embed/*.live.test.ts",
     "test:tsc": "tsc -p tests/tsconfig.json",
     "build": "rm -rf dist && tsc",
     "start": "cd dist && node index.js",
