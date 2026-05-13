@@ -31,6 +31,11 @@ export type SpeechToTextModel = BaseModel & {
 export type ImageModel = BaseModel & {
   type: "image";
   costPerImage?: number;
+  // Token-based pricing (e.g. gpt-image-1).
+  // BaseModel already provides inputTokenCost / cachedInputTokenCost /
+  // outputTokenCost for text tokens.
+  inputImageTokenCost?: number; // cost per 1M image-input tokens
+  outputImageTokenCost?: number; // cost per 1M image-output tokens
   outputType?: "FileOutput" | "Array";
 };
 
@@ -820,7 +825,12 @@ export const imageModels = [
     type: "image",
     modelName: "gpt-image-1",
     provider: "openai",
-    // varies: https://platform.openai.com/docs/models/gpt-image-1
+    // Token-based pricing per https://platform.openai.com/docs/models/gpt-image-1
+    inputTokenCost: 5,
+    cachedInputTokenCost: 1.25,
+    inputImageTokenCost: 10,
+    outputImageTokenCost: 40,
+    // Rough per-image fallback estimate when usage is unavailable.
     costPerImage: 0.25,
   },
   {
