@@ -13,6 +13,7 @@ import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
 import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolClientConfig, SmolConfig } from "./types.js";
+import { resolveApiKey, resolveProvider } from "./util/provider.js";
 
 const registeredProviders: Record<string, typeof BaseClient> = {};
 
@@ -32,27 +33,24 @@ export function unregisterProvider(providerName: string): boolean {
 }
 
 export function getClient(config: SmolClientConfig) {
-  let provider = config.provider;
   const modelName = config.model;
-  if (!provider) {
+  const provider = resolveProvider(modelName, config.provider);
+
+  // For getClient, validate that the model is a text model when no explicit
+  // provider is given (since this factory only returns text-generation clients).
+  if (!config.provider) {
     const model = getModel(modelName);
-    if (model === undefined) {
-      throw new SmolError(
-        `Model ${modelName} is not recognized. Please specify a known model, or explicitly set the provider option in the config.`,
-      );
-    }
-    if (!isTextModel(model)) {
+    if (model && !isTextModel(model)) {
       throw new SmolError(
         `Only text models are supported currently. ${modelName} is a ${model?.type} model.`,
       );
     }
-    provider = model.provider;
   }
 
   const resolvedKeys = {
-    openAiApiKey: config.openAiApiKey || process.env.OPENAI_API_KEY,
-    googleApiKey: config.googleApiKey || process.env.GEMINI_API_KEY,
-    anthropicApiKey: config.anthropicApiKey || process.env.ANTHROPIC_API_KEY,
+    openAiApiKey: resolveApiKey("openai", config),
+    googleApiKey: resolveApiKey("google", config),
+    anthropicApiKey: resolveApiKey("anthropic", config),
   };
   const clientConfig: SmolConfig = {
     messages: [],
