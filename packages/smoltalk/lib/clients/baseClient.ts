@@ -3,6 +3,7 @@ import { getLogger } from "../util/logger.js";
 import { ModelName } from "../models.js";
 import { SmolStructuredOutputError } from "../smolError.js";
 import { getStatelogClient, StatelogClient } from "../statelogClient.js";
+import { stripCodeFence } from "../util/util.js";
 import {
   PromptResult,
   Result,
@@ -209,10 +210,7 @@ export class BaseClient implements SmolClient {
 
     // 2. String → try JSON.parse, then recurse
     if (typeof rawValue === "string") {
-      const stripped = rawValue
-        .trim()
-        .replace(/^```json\s*/, "")
-        .replace(/```\s*$/, "");
+      const stripped = stripCodeFence(rawValue);
       try {
         return this.extractResponse(
           promptConfig,

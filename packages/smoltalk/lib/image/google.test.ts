@@ -35,7 +35,7 @@ describe("googleImage", () => {
   it("returns generated image bytes for text-only prompt", async () => {
     const r = await googleImage(
       "a cat",
-      { model: "gemini-2.5-flash-image-preview" },
+      { model: "gemini-2.5-flash-image" },
       "test-key",
     );
     expect(r.success).toBe(true);
@@ -54,7 +54,7 @@ describe("googleImage", () => {
           { kind: "bytes", data: new Uint8Array([9]), mimeType: "image/jpeg" },
         ],
       },
-      { model: "gemini-2.5-flash-image-preview" },
+      { model: "gemini-2.5-flash-image" },
       "test-key",
     );
     const call = mockGenerateContent.mock.calls[0][0];
@@ -99,7 +99,7 @@ describe("googleImage", () => {
     });
     const r = await googleImage(
       "two cats",
-      { model: "gemini-2.5-flash-image-preview" },
+      { model: "gemini-2.5-flash-image" },
       "test-key",
     );
     expect(r.success).toBe(true);
@@ -114,7 +114,7 @@ describe("googleImage", () => {
     mockGenerateContent.mockRejectedValueOnce(new Error("quota exceeded"));
     const r = await googleImage(
       "a cat",
-      { model: "gemini-2.5-flash-image-preview" },
+      { model: "gemini-2.5-flash-image" },
       "test-key",
     );
     expect(r.success).toBe(false);

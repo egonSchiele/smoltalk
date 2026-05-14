@@ -30,13 +30,14 @@ describe.runIf(Boolean(process.env.GEMINI_API_KEY))(
   () => {
     it("text-to-image", { timeout: TIMEOUT }, async () => {
       const r = await image("a small red cube on a white background", {
-        model: "gemini-2.5-flash-image-preview",
+        model: "gemini-2.5-flash-image",
       });
-      expect(r.success).toBe(true);
-      if (r.success) {
-        expect(r.value.images.length).toBeGreaterThan(0);
-        expect(r.value.images[0].data.byteLength).toBeGreaterThan(1000);
+      if (!r.success) {
+        // Surface the API error in the test output for easier debugging.
+        throw new Error(`googleImage failed: ${r.error}`);
       }
+      expect(r.value.images.length).toBeGreaterThan(0);
+      expect(r.value.images[0].data.byteLength).toBeGreaterThan(1000);
     });
   },
 );

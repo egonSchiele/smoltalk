@@ -9,6 +9,7 @@ import { z } from "zod";
 import { text, textStream } from "../functions.js";
 import { userMessage } from "../classes/message/index.js";
 import type { StreamChunk } from "../types.js";
+import { stripCodeFence } from "../util/util.js";
 
 const DEFAULT_TIMEOUT = 60_000;
 
@@ -77,7 +78,16 @@ export function liveProviderSuite(config: LiveProviderTestConfig): void {
     it("structured output (responseFormat)", { timeout }, async () => {
       const r = await text({
         ...baseConfig,
-        messages: [userMessage("How many planets in our solar system? Respond as JSON only.")],
+        // Be explicit about the schema in the prompt itself. Some providers
+        // (notably Anthropic) don't send the schema natively unless strict
+        // mode is enabled, so without an explicit hint the model invents
+        // its own keys (e.g. "planets" instead of "count") and the test
+        // flakes.
+        messages: [
+          userMessage(
+            'How many planets in our solar system? Respond with raw JSON matching this exact schema: {"count": number}. Example: {"count": 5}',
+          ),
+        ],
         responseFormat: planetSchema,
         ...(config.strictResponseFormat
           ? { responseFormatOptions: { strict: true } }
@@ -85,9 +95,13 @@ export function liveProviderSuite(config: LiveProviderTestConfig): void {
       });
       expect(r.success).toBe(true);
       if (r.success) {
-        const parsed = typeof r.value.output === "string"
-          ? JSON.parse(r.value.output)
-          : r.value.output;
+        // Some providers (notably Anthropic without strict response-format
+        // mode) wrap JSON in markdown code fences despite the prompt asking
+        // for raw JSON. Strip them defensively before parsing.
+        const parsed =
+          typeof r.value.output === "string"
+            ? JSON.parse(stripCodeFence(r.value.output))
+            : r.value.output;
         expect(planetSchema.safeParse(parsed).success).toBe(true);
       }
     });

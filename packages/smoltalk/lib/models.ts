@@ -835,9 +835,18 @@ export const imageModels = [
   },
   {
     type: "image",
-    modelName: "gemini-2.5-flash-image-preview",
+    modelName: "gemini-2.5-flash-image",
     provider: "google",
-    description: "aka nano-banana",
+    description:
+      "aka nano-banana. Graduated from preview (was gemini-2.5-flash-image-preview).",
+    costPerImage: 0.04,
+  },
+  {
+    type: "image",
+    modelName: "nano-banana-pro-preview",
+    provider: "google",
+    description:
+      "Higher-tier nano-banana. Preview model.",
     costPerImage: 0.04,
   },
   {

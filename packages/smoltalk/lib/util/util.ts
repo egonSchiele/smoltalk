@@ -27,6 +27,20 @@ export function tokenCost(
 }
 
 /**
+ * Strip surrounding markdown code fences from a string. Returns the raw
+ * input unchanged if no fences are present. Handles both the leading
+ * ` ```json ` (case-insensitive, with optional trailing whitespace) and a
+ * trailing ` ``` ` on its own line. Useful when LLMs return JSON wrapped
+ * in markdown despite being asked for raw JSON.
+ */
+export function stripCodeFence(s: string): string {
+  return s
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```\s*$/, "");
+}
+
+/**
  * Return a shallow copy of `obj` with all `undefined` values stripped out.
  * Useful when building request payloads where optional fields should only
  * appear when explicitly set.
