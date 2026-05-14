@@ -44,7 +44,44 @@ export class WebLLMClient extends BaseClient {
     });
   }
 
-  async *_textStream(_promptConfig: SmolConfig): AsyncGenerator<StreamChunk> {
-    throw new Error("Not yet implemented — see Task 7");
+  async *_textStream(promptConfig: SmolConfig): AsyncGenerator<StreamChunk> {
+    const engine = getEngine(promptConfig.model);
+    const messages = promptConfig.messages.map((m) => m.toOpenAIMessage());
+
+    const stream: any = await engine.chat.completions.create({
+      messages: messages as any,
+      temperature: promptConfig.temperature,
+      max_tokens: promptConfig.maxTokens,
+      stream: true,
+    } as any);
+
+    let outputText = "";
+    let usage: { prompt_tokens: number; completion_tokens: number } | undefined;
+
+    for await (const chunk of stream as AsyncIterable<any>) {
+      const choice = chunk.choices?.[0];
+      const deltaText: string | undefined = choice?.delta?.content;
+      if (deltaText) {
+        outputText += deltaText;
+        yield { type: "text", text: deltaText };
+      }
+      if (chunk.usage) usage = chunk.usage;
+    }
+
+    yield {
+      type: "done",
+      result: {
+        output: outputText || null,
+        toolCalls: [],
+        model: promptConfig.model,
+        usage: usage
+          ? {
+              inputTokens: usage.prompt_tokens ?? 0,
+              outputTokens: usage.completion_tokens ?? 0,
+            }
+          : undefined,
+        cost: { ...ZERO_COST },
+      },
+    };
   }
 }

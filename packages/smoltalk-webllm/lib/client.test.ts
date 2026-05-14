@@ -97,3 +97,50 @@ describe("WebLLMClient.textSync — plain text", () => {
     expect(received.messages[0].content).toBe("hello");
   });
 });
+
+describe("WebLLMClient.textStream", () => {
+  beforeEach(() => __clearEnginesForTesting());
+
+  it("yields text chunks then a done chunk", async () => {
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: async (_args: any) => {
+            async function* gen() {
+              yield {
+                choices: [{ delta: { content: "Hel" }, finish_reason: null }],
+              };
+              yield {
+                choices: [{ delta: { content: "lo" }, finish_reason: null }],
+              };
+              yield {
+                choices: [{ delta: {}, finish_reason: "stop" }],
+                usage: { prompt_tokens: 2, completion_tokens: 2 },
+              };
+            }
+            return gen();
+          },
+        },
+      },
+      unload: async () => {},
+    } as any);
+
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+    };
+    const client = new WebLLMClient(config);
+    const chunks: any[] = [];
+    for await (const c of client.textStream(config)) {
+      chunks.push(c);
+    }
+    const text = chunks.filter((c) => c.type === "text").map((c) => c.text);
+    expect(text.join("")).toBe("Hello");
+    const last = chunks[chunks.length - 1];
+    expect(last.type).toBe("done");
+    expect(last.result.output).toBe("Hello");
+    expect(last.result.usage?.inputTokens).toBe(2);
+    expect(last.result.cost?.currency).toBe("USD");
+  });
+});
