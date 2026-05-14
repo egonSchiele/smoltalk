@@ -22,6 +22,7 @@ This repo is a pnpm workspace monorepo:
 
 - `packages/smoltalk/` — core library (cloud providers: OpenAI, Anthropic, Google, Ollama)
 - `packages/smoltalk-llama-cpp/` — `node-llama-cpp` plugin for local models
+- `packages/smoltalk-webllm/` — `@mlc-ai/web-llm` plugin for browser/WebGPU inference
 
 ## Project Structure (within `packages/smoltalk/`)
 
