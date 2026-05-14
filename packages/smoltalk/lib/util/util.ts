@@ -5,6 +5,41 @@ export function round(num: number, places: number): number {
   return Math.round(num * factor) / factor;
 }
 
+/** Token-cost prices in the model registry are quoted per 1M tokens. */
+export const TOKENS_PER_MILLION = 1_000_000;
+
+/** Round all dollar costs to 6 decimal places (1/100 of a cent). */
+export const COST_DECIMAL_PLACES = 6;
+
+/**
+ * Compute the dollar cost of `tokens` at `costPerMillion` (USD per 1M tokens).
+ * Returns 0 if either argument is missing or non-positive.
+ */
+export function tokenCost(
+  tokens: number | undefined,
+  costPerMillion: number | undefined,
+): number {
+  if (!tokens || !costPerMillion || tokens <= 0) return 0;
+  return round(
+    (tokens * costPerMillion) / TOKENS_PER_MILLION,
+    COST_DECIMAL_PLACES,
+  );
+}
+
+/**
+ * Return a shallow copy of `obj` with all `undefined` values stripped out.
+ * Useful when building request payloads where optional fields should only
+ * appear when explicitly set.
+ */
+export function omitUndefined<T extends Record<string, unknown>>(obj: T): T {
+  const result: Record<string, unknown> = {};
+  for (const key of Object.keys(obj)) {
+    const value = obj[key];
+    if (value !== undefined) result[key] = value;
+  }
+  return result as T;
+}
+
 const DANGEROUS_KEYS = new Set([
   "__proto__",
   "constructor",
