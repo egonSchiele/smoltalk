@@ -228,6 +228,86 @@ describe("WebLLMClient structured output", () => {
   });
 });
 
+describe("WebLLMClient — abortSignal forwarding", () => {
+  beforeEach(() => __clearEnginesForTesting());
+
+  it("calls engine.interruptGenerate() when config.abortSignal fires during _textSync", async () => {
+    let interrupted = 0;
+    let resolveCreate: (v: any) => void = () => {};
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: () =>
+            new Promise<any>((resolve) => {
+              resolveCreate = resolve;
+            }),
+        },
+      },
+      interruptGenerate: async () => {
+        interrupted++;
+        // Simulate web-llm's behavior: interrupt causes create() to resolve.
+        resolveCreate({
+          choices: [{ message: { content: null }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1, completion_tokens: 0 },
+        });
+      },
+      unload: async () => {},
+    } as any);
+
+    const ctrl = new AbortController();
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+      abortSignal: ctrl.signal,
+    };
+    const client = new WebLLMClient(config);
+    const p = client.textSync(config);
+    // Give the create() call a tick to start.
+    await new Promise((r) => setTimeout(r, 0));
+    ctrl.abort();
+    await p;
+    expect(interrupted).toBe(1);
+  });
+
+  it("calls engine.interruptGenerate() when config.abortSignal fires during _textStream", async () => {
+    let interrupted = 0;
+    // A finite stream of 3 chunks; we'll abort after consuming the first one.
+    const streamGen = async function* () {
+      yield { choices: [{ delta: { content: "a" }, finish_reason: null }] };
+      yield { choices: [{ delta: { content: "b" }, finish_reason: null }] };
+      yield {
+        choices: [{ delta: {}, finish_reason: "stop" }],
+        usage: { prompt_tokens: 1, completion_tokens: 2 },
+      };
+    };
+    __setEngineForTesting("m", {
+      chat: {
+        completions: { create: async () => streamGen() },
+      },
+      interruptGenerate: async () => {
+        interrupted++;
+      },
+      unload: async () => {},
+    } as any);
+
+    const ctrl = new AbortController();
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+      abortSignal: ctrl.signal,
+    };
+    const client = new WebLLMClient(config);
+    const chunks: any[] = [];
+    for await (const c of client.textStream(config)) {
+      chunks.push(c);
+      if (chunks.length === 1) ctrl.abort();
+    }
+    expect(interrupted).toBe(1);
+  });
+});
+
 describe("WebLLMClient.textStream", () => {
   beforeEach(() => __clearEnginesForTesting());
 
