@@ -1,5 +1,13 @@
 # Changelog
 
+## smoltalk 0.3.0 (2026-05-13)
+
+- Added `image()` function for image generation.
+- Added `embed()` function for embeddings.
+- Updated model registry.
+- Reverted experimental structured output retry/parsing and stricter structured output types from 0.2.1.
+- CI: handle code-fenced JSON in live tests; updated Gemini image model name.
+
 ## smoltalk 0.2.0 (2026-05-08)
 
 **Breaking:** `node-llama-cpp` is no longer a dependency of `smoltalk`. Local-model users must install [`smoltalk-llama-cpp`](./packages/smoltalk-llama-cpp/) and register it manually.
