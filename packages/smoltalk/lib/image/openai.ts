@@ -35,7 +35,12 @@ export async function openaiImage(
       ...(config.metadata ?? {}),
     };
 
-    const hasImages = normalized.images && normalized.images.length > 0;
+    const hasImages = !!(normalized.images && normalized.images.length > 0);
+    if (normalized.mask && !hasImages) {
+      return failure(
+        "A mask was provided without any input images. Masks are only valid for image edits — pass at least one entry in `images` alongside the mask.",
+      );
+    }
     let response: any;
 
     if (hasImages) {
@@ -110,6 +115,8 @@ function extractUsage(response: any) {
     inputTokens: u.input_tokens ?? 0,
     outputTokens: u.output_tokens ?? 0,
     cachedInputTokens: u.input_tokens_details?.cached_tokens,
+    inputImageTokens: u.input_tokens_details?.image_tokens,
+    inputTextTokens: u.input_tokens_details?.text_tokens,
     totalTokens: u.total_tokens,
   };
 }
@@ -118,18 +125,39 @@ type Usage = {
   inputTokens: number;
   outputTokens: number;
   cachedInputTokens?: number;
+  inputImageTokens?: number;
+  inputTextTokens?: number;
 };
 
 function calculateImageCost(modelName: string, usage: Usage) {
   const model = getModel(modelName);
   if (!model || !isImageModel(model)) return undefined;
 
+  const totalIn = usage.inputTokens ?? 0;
   const cachedIn = usage.cachedInputTokens ?? 0;
-  const textIn = Math.max(0, (usage.inputTokens ?? 0) - cachedIn);
   const imgOut = usage.outputTokens ?? 0;
 
-  const inputCost = round(
+  // Prefer the detailed breakdown if the API returned it; otherwise treat
+  // all non-cached input tokens as text input.
+  let textIn: number;
+  let imageIn: number;
+  if (
+    usage.inputTextTokens !== undefined ||
+    usage.inputImageTokens !== undefined
+  ) {
+    textIn = Math.max(0, (usage.inputTextTokens ?? 0) - cachedIn);
+    imageIn = usage.inputImageTokens ?? 0;
+  } else {
+    textIn = Math.max(0, totalIn - cachedIn);
+    imageIn = 0;
+  }
+
+  const textInputCost = round(
     (textIn * (model.inputTokenCost ?? 0)) / 1_000_000,
+    6,
+  );
+  const imageInputCost = round(
+    (imageIn * (model.inputImageTokenCost ?? 0)) / 1_000_000,
     6,
   );
   const cachedCost = round(
@@ -140,6 +168,7 @@ function calculateImageCost(modelName: string, usage: Usage) {
     (imgOut * (model.outputImageTokenCost ?? 0)) / 1_000_000,
     6,
   );
+  const inputCost = round(textInputCost + imageInputCost, 6);
   const totalCost = round(inputCost + cachedCost + outputCost, 6);
   return {
     inputCost,

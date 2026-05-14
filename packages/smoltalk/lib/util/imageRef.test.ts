@@ -53,6 +53,30 @@ describe("normalizeImageRef", () => {
     fetchSpy.mockRestore();
   });
 
+  it("throws when path has unrecognized extension and no explicit mimeType", async () => {
+    const path = join(tmpdir(), `smoltalk-test-${Date.now()}.bin`);
+    writeFileSync(path, Buffer.from([1]));
+    try {
+      await expect(
+        normalizeImageRef({ kind: "path", path }),
+      ).rejects.toThrow(/Could not determine image MIME type/);
+    } finally {
+      unlinkSync(path);
+    }
+  });
+
+  it("throws when URL response has no usable Content-Type and no explicit mimeType", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(new Uint8Array([7]), {
+        headers: { "content-type": "application/octet-stream" },
+      }),
+    );
+    await expect(
+      normalizeImageRef({ kind: "url", url: "https://example.com/x" }),
+    ).rejects.toThrow(/Could not determine image MIME type/);
+    fetchSpy.mockRestore();
+  });
+
   it("explicit mimeType on path/url overrides inferred", async () => {
     const path = join(tmpdir(), `smoltalk-test-${Date.now()}-2.png`);
     writeFileSync(path, Buffer.from([1]));

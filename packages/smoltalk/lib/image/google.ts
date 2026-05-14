@@ -20,9 +20,11 @@ export async function googleImage(
     const client = new GoogleGenAI({ apiKey });
 
     const parts: any[] = [{ text: normalized.prompt }];
-    if (normalized.images) {
-      for (const ref of normalized.images) {
-        const img = await normalizeImageRef(ref);
+    if (normalized.images && normalized.images.length > 0) {
+      const normalizedImages = await Promise.all(
+        normalized.images.map((ref) => normalizeImageRef(ref)),
+      );
+      for (const img of normalizedImages) {
         parts.push({
           inlineData: {
             mimeType: img.mimeType,
@@ -42,13 +44,14 @@ export async function googleImage(
     });
 
     const images: GeneratedImage[] = [];
-    const candidateParts = response.candidates?.[0]?.content?.parts ?? [];
-    for (const part of candidateParts) {
-      if (part.inlineData?.data && part.inlineData?.mimeType) {
-        images.push({
-          data: new Uint8Array(Buffer.from(part.inlineData.data, "base64")),
-          mimeType: part.inlineData.mimeType,
-        });
+    for (const candidate of response.candidates ?? []) {
+      for (const part of candidate.content?.parts ?? []) {
+        if (part.inlineData?.data && part.inlineData?.mimeType) {
+          images.push({
+            data: new Uint8Array(Buffer.from(part.inlineData.data, "base64")),
+            mimeType: part.inlineData.mimeType,
+          });
+        }
       }
     }
 

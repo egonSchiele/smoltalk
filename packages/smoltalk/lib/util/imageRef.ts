@@ -34,11 +34,15 @@ export async function normalizeImageRef(
     case "path": {
       const buf = await readFile(ref.path);
       const ext = extname(ref.path).toLowerCase();
-      const inferred = EXT_TO_MIME[ext] ?? "application/octet-stream";
-      return {
-        data: new Uint8Array(buf),
-        mimeType: ref.mimeType ?? inferred,
-      };
+      const inferred = EXT_TO_MIME[ext];
+      const mimeType = ref.mimeType ?? inferred;
+      if (!mimeType || !mimeType.startsWith("image/")) {
+        throw new Error(
+          `Could not determine image MIME type for path "${ref.path}". ` +
+            `Pass an explicit mimeType (e.g. "image/png") on the ImageRef.`,
+        );
+      }
+      return { data: new Uint8Array(buf), mimeType };
     }
     case "url": {
       const res = await fetch(ref.url);
@@ -49,10 +53,15 @@ export async function normalizeImageRef(
       }
       const buf = new Uint8Array(await res.arrayBuffer());
       const contentType = res.headers.get("content-type") ?? undefined;
-      return {
-        data: buf,
-        mimeType: ref.mimeType ?? contentType ?? "application/octet-stream",
-      };
+      const mimeType = ref.mimeType ?? contentType;
+      if (!mimeType || !mimeType.startsWith("image/")) {
+        throw new Error(
+          `Could not determine image MIME type for URL "${ref.url}". ` +
+            `Response Content-Type was "${contentType ?? "missing"}". ` +
+            `Pass an explicit mimeType (e.g. "image/png") on the ImageRef.`,
+        );
+      }
+      return { data: buf, mimeType };
     }
   }
 }

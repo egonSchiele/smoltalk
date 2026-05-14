@@ -67,6 +67,29 @@ describe("image", () => {
     }
   });
 
+  it("rejects mask for non-OpenAI providers", async () => {
+    const r = await image(
+      {
+        prompt: "edit",
+        images: [
+          { kind: "bytes", data: new Uint8Array([1]), mimeType: "image/png" },
+        ],
+        mask: {
+          kind: "bytes",
+          data: new Uint8Array([2]),
+          mimeType: "image/png",
+        },
+      },
+      { model: "gemini-2.5-flash-image-preview", googleApiKey: "k" },
+    );
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).toContain("mask");
+      expect(r.error).toContain("OpenAI");
+    }
+    expect(googleImage).not.toHaveBeenCalled();
+  });
+
   it("returns failure for missing API key", async () => {
     const orig = process.env.OPENAI_API_KEY;
     delete process.env.OPENAI_API_KEY;

@@ -68,6 +68,48 @@ describe("googleImage", () => {
     ).toBe(true);
   });
 
+  it("collects images from all candidates, not just the first", async () => {
+    mockGenerateContent.mockResolvedValueOnce({
+      candidates: [
+        {
+          content: {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "image/png",
+                  data: Buffer.from([1]).toString("base64"),
+                },
+              },
+            ],
+          },
+        },
+        {
+          content: {
+            parts: [
+              {
+                inlineData: {
+                  mimeType: "image/png",
+                  data: Buffer.from([2]).toString("base64"),
+                },
+              },
+            ],
+          },
+        },
+      ],
+    });
+    const r = await googleImage(
+      "two cats",
+      { model: "gemini-2.5-flash-image-preview" },
+      "test-key",
+    );
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.value.images).toHaveLength(2);
+      expect(Array.from(r.value.images[0].data)).toEqual([1]);
+      expect(Array.from(r.value.images[1].data)).toEqual([2]);
+    }
+  });
+
   it("returns failure on API error", async () => {
     mockGenerateContent.mockRejectedValueOnce(new Error("quota exceeded"));
     const r = await googleImage(

@@ -64,6 +64,15 @@ export async function image(
 
   const apiKey = resolveApiKey(provider, config);
 
+  // `mask` is only meaningful for OpenAI inpainting. Reject up front so
+  // other providers don't silently drop it.
+  const hasMask = typeof input !== "string" && !!input.mask;
+  if (hasMask && provider !== "openai" && provider !== "openai-responses") {
+    return failure(
+      `\`mask\` is only supported by the OpenAI image edit endpoint; provider "${provider}" cannot use it.`,
+    );
+  }
+
   switch (provider) {
     case "openai":
     case "openai-responses": {
