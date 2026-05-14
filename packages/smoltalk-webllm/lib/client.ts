@@ -24,6 +24,17 @@ function buildTools(promptConfig: SmolConfig) {
   );
 }
 
+function buildResponseFormat(promptConfig: SmolConfig): any | undefined {
+  if (!promptConfig.responseFormat) return undefined;
+  return {
+    type: "json_schema",
+    json_schema: {
+      name: promptConfig.responseFormatOptions?.name || "response",
+      schema: promptConfig.responseFormat.toJSONSchema(),
+    },
+  };
+}
+
 export class WebLLMClient extends BaseClient {
   async _textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     const engine = getEngine(promptConfig.model);
@@ -35,6 +46,7 @@ export class WebLLMClient extends BaseClient {
       tools: tools as any,
       temperature: promptConfig.temperature,
       max_tokens: promptConfig.maxTokens,
+      response_format: buildResponseFormat(promptConfig),
     } as any);
 
     const choice = response.choices?.[0];
@@ -70,6 +82,7 @@ export class WebLLMClient extends BaseClient {
       tools: tools as any,
       temperature: promptConfig.temperature,
       max_tokens: promptConfig.maxTokens,
+      response_format: buildResponseFormat(promptConfig),
       stream: true,
     } as any);
 

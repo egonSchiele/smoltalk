@@ -189,6 +189,45 @@ describe("WebLLMClient tool calls — sync", () => {
   });
 });
 
+describe("WebLLMClient structured output", () => {
+  beforeEach(() => __clearEnginesForTesting());
+
+  it("forwards response_format when responseFormat is a Zod schema", async () => {
+    let received: any = null;
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: async (args: any) => {
+            received = args;
+            return {
+              choices: [
+                {
+                  message: { content: JSON.stringify({ x: "hi" }) },
+                  finish_reason: "stop",
+                },
+              ],
+              usage: { prompt_tokens: 1, completion_tokens: 1 },
+            };
+          },
+        },
+      },
+      unload: async () => {},
+    } as any);
+
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+      responseFormat: z.object({ x: z.string() }),
+    };
+    const client = new WebLLMClient(config);
+    await client.textSync(config);
+    expect(received.response_format).toBeDefined();
+    expect(received.response_format.type).toBe("json_schema");
+    expect(received.response_format.json_schema.schema).toBeDefined();
+  });
+});
+
 describe("WebLLMClient.textStream", () => {
   beforeEach(() => __clearEnginesForTesting());
 
