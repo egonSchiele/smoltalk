@@ -7,6 +7,7 @@ const READMES = [
   "../../README.md",
   "../smoltalk/README.md",
   "../smoltalk-llama-cpp/README.md",
+  "../smoltalk-webllm/README.md",
 ];
 
 const SKIP_MARKER = "// example: skip-typecheck";

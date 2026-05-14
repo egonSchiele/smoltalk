@@ -55,6 +55,8 @@ console.log(await listModels()); // ["Llama-3.2-1B-Instruct-q4f32_1-MLC", ...]
 Pass a `CustomModel` object to `loadModel` to load a model not in the prebuilt list:
 
 ```ts
+import { loadModel } from "smoltalk-webllm";
+
 await loadModel({
   id: "MyLlama-3b",
   modelUrl: "https://huggingface.co/.../resolve/main/",

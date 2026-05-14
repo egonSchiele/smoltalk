@@ -192,6 +192,20 @@ describe("loadModel", () => {
     expect(unloaded).toBe(false);
   });
 
+  it("loads different model ids in parallel without falsely deduping across them", async () => {
+    const calls: string[] = [];
+    __setEngineFactoryForTesting(async (id) => {
+      calls.push(id);
+      await new Promise((r) => setTimeout(r, 5));
+      return { unload: async () => {} } as any;
+    });
+    await Promise.all([loadModel("a"), loadModel("b"), loadModel("c")]);
+    expect(calls.sort()).toEqual(["a", "b", "c"]);
+    expect(isLoaded("a")).toBe(true);
+    expect(isLoaded("b")).toBe(true);
+    expect(isLoaded("c")).toBe(true);
+  });
+
   it("rejects immediately if signal is already aborted", async () => {
     __setEngineFactoryForTesting(
       async () => ({ unload: async () => {} }) as any,

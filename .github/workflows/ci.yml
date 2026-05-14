@@ -64,6 +64,7 @@ jobs:
         run: |
           cd packages/smoltalk && pnpm pack --pack-destination /tmp
           cd ../smoltalk-llama-cpp && pnpm pack --pack-destination /tmp
+          cd ../smoltalk-webllm && pnpm pack --pack-destination /tmp
       - uses: actions/upload-artifact@v4
         with:
           name: tarballs
@@ -90,7 +91,12 @@ jobs:
           cp scripts/ci-fixture/package.json /tmp/consumer/
           cd /tmp/consumer
           npm pkg set name=consumer >/dev/null
-          npm install /tmp/smoltalk-*.tgz /tmp/smoltalk-llama-cpp-*.tgz
+          # Install all three workspace tarballs explicitly (the smoltalk-* glob
+          # matches them all but being explicit avoids any peer-resolution surprise).
+          npm install \
+            /tmp/smoltalk-0*.tgz \
+            /tmp/smoltalk-llama-cpp-*.tgz \
+            /tmp/smoltalk-webllm-*.tgz
           npm install --save-dev typescript@5
       - name: compile fixture (ESM, supports top-level await)
         working-directory: /tmp/consumer
@@ -101,6 +107,24 @@ jobs:
       - name: run fixture
         working-directory: /tmp/consumer
         run: node index.js
+      - name: smoltalk-webllm SSR import smoke (must not crash in Node)
+        working-directory: /tmp/consumer
+        # The whole point of the dynamic import inside engine.ts is that
+        # `import "smoltalk-webllm"` does not crash in a Node/SSR context
+        # even though @mlc-ai/web-llm references browser globals.
+        run: |
+          node --input-type=module -e "
+            const mod = await import('smoltalk-webllm');
+            if (typeof mod.WebLLMClient !== 'function') {
+              console.error('WebLLMClient not exported');
+              process.exit(1);
+            }
+            if (typeof mod.loadModel !== 'function') {
+              console.error('loadModel not exported');
+              process.exit(1);
+            }
+            console.log('OK: smoltalk-webllm imports cleanly in Node');
+          "
 
   bundler-smoke:
     name: esbuild bundler smoke

@@ -308,6 +308,75 @@ describe("WebLLMClient — abortSignal forwarding", () => {
   });
 });
 
+describe("WebLLMClient — error and edge-case handling", () => {
+  beforeEach(() => __clearEnginesForTesting());
+
+  it("propagates errors from engine.chat.completions.create in _textStream", async () => {
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: () => Promise.reject(new Error("engine boom")),
+        },
+      },
+      unload: async () => {},
+    } as any);
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+    };
+    const client = new WebLLMClient(config);
+    await expect(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      for await (const _chunk of client.textStream(config)) {
+        // drain
+      }
+    }).rejects.toThrow("engine boom");
+  });
+
+  it("uses empty string id when the engine omits tool_calls[].id", async () => {
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: async () => ({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    {
+                      // no id
+                      type: "function",
+                      function: { name: "f", arguments: "{}" },
+                    },
+                  ],
+                },
+                finish_reason: "tool_calls",
+              },
+            ],
+            usage: { prompt_tokens: 1, completion_tokens: 1 },
+          }),
+        },
+      },
+      unload: async () => {},
+    } as any);
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+      tools: [{ name: "f", schema: z.object({}) }],
+    };
+    const client = new WebLLMClient(config);
+    const result = await client.textSync(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.toolCalls).toHaveLength(1);
+      expect(result.value.toolCalls[0].id).toBe("");
+      expect(result.value.toolCalls[0].name).toBe("f");
+    }
+  });
+});
+
 describe("WebLLMClient.textStream", () => {
   beforeEach(() => __clearEnginesForTesting());
 

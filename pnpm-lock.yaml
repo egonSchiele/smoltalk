@@ -32,6 +32,9 @@ importers:
       smoltalk-llama-cpp:
         specifier: workspace:*
         version: link:../smoltalk-llama-cpp
+      smoltalk-webllm:
+        specifier: workspace:*
+        version: link:../smoltalk-webllm
       zod:
         specifier: ^4.3.6
         version: 4.3.6
