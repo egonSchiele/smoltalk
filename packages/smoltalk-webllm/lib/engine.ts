@@ -134,29 +134,28 @@ export async function loadModel(
   let op = loading.get(id);
   if (!op) {
     const factoryPromise = factory(id, opts, custom);
-    const operation: LoadOperation = {
-      waiters: 0,
-      done: (async () => {
-        try {
-          const engine = await factoryPromise;
-          if (operation.waiters > 0) {
-            // At least one caller is still waiting — register the engine so
-            // every waiter resolves with it.
-            engines.set(id, engine);
-          } else {
-            // Everyone aborted before the engine arrived. Free the GPU.
-            await engine.unload().catch(() => {});
-          }
-        } finally {
-          loading.delete(id);
+    // Pre-allocate so the inner async closure can read `operation.waiters`.
+    const operation: LoadOperation = { waiters: 0, done: Promise.resolve() };
+    operation.done = (async () => {
+      try {
+        const engine = await factoryPromise;
+        if (operation.waiters > 0) {
+          // At least one caller is still waiting — register the engine so
+          // every waiter resolves with it.
+          engines.set(id, engine);
+        } else {
+          // Everyone aborted before the engine arrived. Free the GPU.
+          await engine.unload().catch(() => {});
         }
-      })(),
-    };
-    op = operation;
-    loading.set(id, op);
+      } finally {
+        loading.delete(id);
+      }
+    })();
     // Don't let an unhandled rejection escape if every caller aborts before
     // the inner promise rejects.
-    op.done.catch(() => {});
+    operation.done.catch(() => {});
+    op = operation;
+    loading.set(id, op);
   }
 
   op.waiters++;

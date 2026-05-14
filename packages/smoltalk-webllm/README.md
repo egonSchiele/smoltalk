@@ -29,6 +29,20 @@ const result = await text({
 });
 ```
 
+## Run the example
+
+A single-file copy/paste-and-go example lives at [`examples/index.html`](./examples/index.html). It loads `smoltalk` and `smoltalk-webllm` from a CDN, downloads `Llama-3.2-1B-Instruct-q4f32_1-MLC` (~700MB, cached after first run), and streams a chat completion to the page.
+
+To try it locally:
+
+```bash
+# from the smoltalk repo root
+npx serve packages/smoltalk-webllm/examples
+# then open http://localhost:3000 in a WebGPU-capable browser
+```
+
+## Available models
+
 The model id must match a record in WebLLM's `prebuiltAppConfig.model_list`. To see all available models:
 
 ```ts
