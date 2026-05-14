@@ -1,8 +1,9 @@
 {
-  "name": "smoltalk-llama-cpp",
+  "name": "smoltalk-webllm",
   "version": "0.1.0",
-  "description": "node-llama-cpp provider for smoltalk",
+  "description": "WebLLM (WebGPU) browser provider for smoltalk",
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "build": "rm -rf dist && tsc",
     "test": "vitest run",
@@ -17,15 +18,19 @@
     }
   },
   "types": "./dist/index.d.ts",
-  "keywords": ["smoltalk", "llm", "llama-cpp", "local"],
+  "browser": "./dist/index.js",
+  "keywords": ["smoltalk", "llm", "webllm", "webgpu", "browser", "local"],
   "license": "ISC",
   "dependencies": {
-    "node-llama-cpp": "^3.17.1"
+    "@mlc-ai/web-llm": "^0.2.83"
   },
   "peerDependencies": {
-    "smoltalk": "^0.3.0"
+    "smoltalk": "^0.3.0",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
-    "smoltalk": "workspace:*"
+    "smoltalk": "workspace:*",
+    "zod": "^4.3.6",
+    "jsdom": "^25.0.0"
   }
 }

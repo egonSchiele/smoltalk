@@ -1,4 +1,4 @@
-PACKAGES := packages/smoltalk packages/smoltalk-llama-cpp
+PACKAGES := packages/smoltalk packages/smoltalk-llama-cpp packages/smoltalk-webllm
 
 .PHONY: all install test publish
 

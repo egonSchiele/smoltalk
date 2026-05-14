@@ -1,0 +1,9 @@
+{
+  "extends": "../smoltalk/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./lib"
+  },
+  "include": ["lib/**/*.ts"],
+  "exclude": ["node_modules", "dist", "lib/**/*.test.ts"]
+}

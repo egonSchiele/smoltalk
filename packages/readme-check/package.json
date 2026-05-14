@@ -9,6 +9,7 @@
   "dependencies": {
     "smoltalk": "workspace:*",
     "smoltalk-llama-cpp": "workspace:*",
+    "smoltalk-webllm": "workspace:*",
     "zod": "^4.3.6"
   }
 }

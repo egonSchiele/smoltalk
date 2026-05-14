@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>smoltalk-webllm — minimal example</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        max-width: 720px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.5;
+      }
+      textarea {
+        width: 100%;
+        font-family: inherit;
+        padding: 0.5rem;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+      }
+      progress {
+        width: 100%;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 1rem;
+        border-radius: 4px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>smoltalk-webllm minimal example</h1>
+    <p>
+      Loads a small Llama model into your browser via WebGPU, then runs a
+      streaming chat completion through smoltalk's <code>text()</code> API.
+    </p>
+    <p>Requires a browser with WebGPU (Chrome / Edge 113+, Safari 26+).</p>
+
+    <label for="prompt"><strong>Prompt</strong></label>
+    <textarea id="prompt" rows="3">Tell me a one-sentence joke.</textarea>
+
+    <p>
+      <button id="run">Load model & run</button>
+    </p>
+
+    <p id="status">Idle.</p>
+    <progress id="progress" value="0" max="100" hidden></progress>
+
+    <h2>Output</h2>
+    <pre id="output"></pre>
+
+    <!--
+      Both packages are loaded from a CDN as ESM. In a real app you would
+      install via `pnpm add smoltalk smoltalk-webllm` and use a bundler.
+    -->
+    <script type="module">
+      import {
+        registerProvider,
+        text,
+        userMessage,
+      } from "https://esm.sh/smoltalk@latest";
+      import {
+        WebLLMClient,
+        loadModel,
+      } from "https://esm.sh/smoltalk-webllm@latest";
+
+      registerProvider("webllm", WebLLMClient);
+
+      const MODEL = "Llama-3.2-1B-Instruct-q4f32_1-MLC"; // ~700MB on first run
+
+      const $ = (id) => document.getElementById(id);
+      const button = $("run");
+      const status = $("status");
+      const progressBar = $("progress");
+      const output = $("output");
+
+      let loaded = false;
+
+      button.addEventListener("click", async () => {
+        button.disabled = true;
+        output.textContent = "";
+        try {
+          if (!loaded) {
+            progressBar.hidden = false;
+            status.textContent = "Loading model (first run downloads ~700MB)…";
+            await loadModel(MODEL, {
+              onProgress: (p) => {
+                status.textContent = `${p.stage}: ${p.text}`;
+                progressBar.value = p.loaded;
+                progressBar.max = p.total;
+              },
+            });
+            loaded = true;
+            progressBar.hidden = true;
+          }
+
+          status.textContent = "Generating…";
+          const stream = text({
+            provider: "webllm",
+            model: MODEL,
+            messages: [userMessage($("prompt").value)],
+            stream: true,
+          });
+
+          for await (const chunk of stream) {
+            if (chunk.type === "text") {
+              output.textContent += chunk.text;
+            } else if (chunk.type === "done") {
+              const usage = chunk.result.usage;
+              status.textContent = usage
+                ? `Done. ${usage.inputTokens} in / ${usage.outputTokens} out`
+                : "Done.";
+            }
+          }
+        } catch (err) {
+          status.textContent = `Error: ${err.message}`;
+          console.error(err);
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
