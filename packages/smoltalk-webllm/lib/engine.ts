@@ -50,15 +50,38 @@ type EngineFactory = (
   custom: CustomModel | undefined,
 ) => Promise<MLCEngine>;
 
-// Lazy import of @mlc-ai/web-llm — keeps this package SSR-safe.
-// The browser-global references (navigator, WebGPU, etc.) inside web-llm
-// only get evaluated when loadModel() is actually called.
+// Lazy import of @mlc-ai/web-llm via dynamic `import()` — required for SSR safety.
+//
+// Why this matters:
+// `@mlc-ai/web-llm` references browser-only globals (`navigator`, `window`,
+// `navigator.gpu`, etc.) at module-evaluation time. With a static `import`,
+// those references would be evaluated as soon as ANY file in this package is
+// imported — including in Node/SSR contexts where they're undefined. That
+// would crash with `ReferenceError: navigator is not defined` even if the
+// caller never invokes `loadModel()`.
+//
+// Hybrid frameworks where this matters: Next.js (server components / API
+// routes), Remix loaders, SvelteKit `+page.server.ts`, Astro server islands,
+// any file shared between client and server bundles.
+//
+// Using `await import("@mlc-ai/web-llm")` inside the factory defers the
+// module's top-level evaluation until `loadModel()` is actually called — by
+// which point the caller has already chosen to opt in to the browser path
+// and the WebGPU check above has confirmed we're in a browser-like
+// environment.
 const defaultFactory: EngineFactory = async (id, opts, custom) => {
   const webllm = await import("@mlc-ai/web-llm");
   const initProgressCallback = (r: { progress?: number; text?: string }) => {
     opts?.onProgress?.(normalizeProgress(r));
   };
   if (custom) {
+    const overrides: Record<string, number> = {};
+    if (custom.contextWindow !== undefined) {
+      overrides.context_window_size = custom.contextWindow;
+    }
+    if (custom.maxOutputTokens !== undefined) {
+      overrides.max_tokens = custom.maxOutputTokens;
+    }
     return webllm.CreateMLCEngine(id, {
       initProgressCallback,
       appConfig: {
@@ -67,6 +90,7 @@ const defaultFactory: EngineFactory = async (id, opts, custom) => {
             model: custom.modelUrl,
             model_id: id,
             model_lib: custom.modelLibUrl,
+            ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
           },
         ],
       },
@@ -76,7 +100,16 @@ const defaultFactory: EngineFactory = async (id, opts, custom) => {
 };
 
 let factory: EngineFactory = defaultFactory;
-const loading = new Map<string, Promise<MLCEngine>>();
+
+// In-flight loads. Each entry holds a `done` promise that resolves once the
+// engine is registered (or rejects if the load itself failed) and a `waiters`
+// counter so we can decide whether to free GPU memory when every caller has
+// aborted before the engine arrives.
+type LoadOperation = {
+  done: Promise<void>;
+  waiters: number;
+};
+const loading = new Map<string, LoadOperation>();
 
 export async function loadModel(
   input: LoadInput,
@@ -93,53 +126,56 @@ export async function loadModel(
   const custom = typeof input === "string" ? undefined : input;
 
   if (engines.has(id)) return;
-  if (loading.has(id)) {
-    await loading.get(id);
-    return;
-  }
-
   if (opts?.signal?.aborted) {
     throw new SmolError("Model load aborted");
   }
 
-  const factoryPromise = factory(id, opts, custom);
-  loading.set(id, factoryPromise);
-
-  // Race the load against an abort; if abort wins, also unload the engine
-  // when it eventually arrives so we don't leak GPU memory.
-  if (opts?.signal) {
-    const signal = opts.signal;
-    const abortPromise = new Promise<never>((_resolve, reject) => {
-      signal.addEventListener(
-        "abort",
-        () => reject(new SmolError("Model load aborted")),
-        { once: true },
-      );
-    });
-
-    // Cleanup the engine if it arrives after abort.
-    factoryPromise
-      .then((engine) => {
-        if (signal.aborted && !engines.has(id)) {
-          engine.unload().catch(() => {});
+  // Start the load if no one else has, otherwise share the existing operation.
+  let op = loading.get(id);
+  if (!op) {
+    const factoryPromise = factory(id, opts, custom);
+    const operation: LoadOperation = {
+      waiters: 0,
+      done: (async () => {
+        try {
+          const engine = await factoryPromise;
+          if (operation.waiters > 0) {
+            // At least one caller is still waiting — register the engine so
+            // every waiter resolves with it.
+            engines.set(id, engine);
+          } else {
+            // Everyone aborted before the engine arrived. Free the GPU.
+            await engine.unload().catch(() => {});
+          }
+        } finally {
+          loading.delete(id);
         }
-      })
-      .catch(() => {});
-
-    try {
-      const engine = await Promise.race([factoryPromise, abortPromise]);
-      engines.set(id, engine);
-    } finally {
-      loading.delete(id);
-    }
-    return;
+      })(),
+    };
+    op = operation;
+    loading.set(id, op);
+    // Don't let an unhandled rejection escape if every caller aborts before
+    // the inner promise rejects.
+    op.done.catch(() => {});
   }
 
+  op.waiters++;
   try {
-    const engine = await factoryPromise;
-    engines.set(id, engine);
+    if (opts?.signal) {
+      const signal = opts.signal;
+      const abortPromise = new Promise<never>((_resolve, reject) => {
+        signal.addEventListener(
+          "abort",
+          () => reject(new SmolError("Model load aborted")),
+          { once: true },
+        );
+      });
+      await Promise.race([op.done, abortPromise]);
+    } else {
+      await op.done;
+    }
   } finally {
-    loading.delete(id);
+    op.waiters--;
   }
 }
 

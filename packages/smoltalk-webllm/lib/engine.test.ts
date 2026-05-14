@@ -164,6 +164,34 @@ describe("loadModel", () => {
     expect(unloaded).toBe(true);
   });
 
+  it("does not unload the engine when one waiter aborts but another is still waiting", async () => {
+    let resolveFactory: (e: any) => void = () => {};
+    let unloaded = false;
+    __setEngineFactoryForTesting(
+      () =>
+        new Promise<any>((resolve) => {
+          resolveFactory = resolve;
+        }),
+    );
+    const ctrlA = new AbortController();
+    const aborted = loadModel("a", { signal: ctrlA.signal });
+    // Caller B has no signal — must always succeed and see the engine.
+    const succeeded = loadModel("a");
+
+    ctrlA.abort();
+    await expect(aborted).rejects.toThrow(/aborted/i);
+
+    resolveFactory({
+      unload: async () => {
+        unloaded = true;
+      },
+    });
+
+    await expect(succeeded).resolves.toBeUndefined();
+    expect(isLoaded("a")).toBe(true);
+    expect(unloaded).toBe(false);
+  });
+
   it("rejects immediately if signal is already aborted", async () => {
     __setEngineFactoryForTesting(
       async () => ({ unload: async () => {} }) as any,
