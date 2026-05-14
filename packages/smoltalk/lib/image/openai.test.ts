@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { openaiImage } from "./openai.js";
 
+// Note: vi.mock calls are hoisted by vitest above any imports, so it is safe
+// for them to appear after the import of the module under test.
 const mockGenerate = vi.fn();
 const mockEdit = vi.fn();
 
@@ -19,8 +22,6 @@ vi.mock("openai/uploads", () => ({
       data,
     })),
 }));
-
-import { openaiImage } from "./openai.js";
 
 describe("openaiImage", () => {
   beforeEach(() => {

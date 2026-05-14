@@ -5,12 +5,24 @@ export type ImageRef =
   | { kind: "bytes"; data: Uint8Array; mimeType: string }
   | { kind: "base64"; base64: string; mimeType: string }
   | { kind: "path"; path: string; mimeType?: string }
-  | { kind: "url"; url: string; mimeType?: string };
+  | {
+      kind: "url";
+      url: string;
+      mimeType?: string;
+      /**
+       * Maximum time in milliseconds to wait for the URL to respond before
+       * aborting. Defaults to {@link DEFAULT_FETCH_TIMEOUT_MS} (60 seconds).
+       */
+      timeoutMs?: number;
+    };
 
 export type NormalizedImage = {
   data: Uint8Array;
   mimeType: string;
 };
+
+/** Default timeout for fetching image URLs during normalization (60 seconds). */
+export const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
 
 const EXT_TO_MIME: Record<string, string> = {
   ".png": "image/png",
@@ -45,7 +57,10 @@ export async function normalizeImageRef(
       return { data: new Uint8Array(buf), mimeType };
     }
     case "url": {
-      const res = await fetch(ref.url);
+      const timeoutMs = ref.timeoutMs ?? DEFAULT_FETCH_TIMEOUT_MS;
+      const res = await fetch(ref.url, {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
       if (!res.ok) {
         throw new Error(
           `Failed to fetch image from ${ref.url}: ${res.status}`,

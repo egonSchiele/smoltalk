@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { image } from "./image.js";
+import { openaiImage } from "./image/openai.js";
+import { googleImage } from "./image/google.js";
 
+// vi.mock calls are hoisted by vitest above any imports.
 vi.mock("./image/openai.js", () => ({
   openaiImage: vi.fn().mockResolvedValue({
     success: true,
@@ -19,10 +23,6 @@ vi.mock("./image/google.js", () => ({
     },
   }),
 }));
-
-import { image } from "./image.js";
-import { openaiImage } from "./image/openai.js";
-import { googleImage } from "./image/google.js";
 
 describe("image", () => {
   beforeEach(() => vi.clearAllMocks());

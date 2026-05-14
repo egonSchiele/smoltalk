@@ -77,6 +77,24 @@ describe("normalizeImageRef", () => {
     fetchSpy.mockRestore();
   });
 
+  it("passes the configured timeout to fetch via AbortSignal.timeout", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(new Uint8Array([1]), {
+        headers: { "content-type": "image/png" },
+      }),
+    );
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+    await normalizeImageRef({
+      kind: "url",
+      url: "https://example.com/x",
+      timeoutMs: 1234,
+    });
+    expect(timeoutSpy).toHaveBeenCalledWith(1234);
+    expect(fetchSpy).toHaveBeenCalled();
+    fetchSpy.mockRestore();
+    timeoutSpy.mockRestore();
+  });
+
   it("explicit mimeType on path/url overrides inferred", async () => {
     const path = join(tmpdir(), `smoltalk-test-${Date.now()}-2.png`);
     writeFileSync(path, Buffer.from([1]));

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { googleImage } from "./google.js";
 
+// vi.mock calls are hoisted by vitest above any imports.
 const mockGenerateContent = vi.fn();
 
 vi.mock("@google/genai", () => {
@@ -8,8 +10,6 @@ vi.mock("@google/genai", () => {
   }
   return { __esModule: true, GoogleGenAI: MockGoogleGenAI };
 });
-
-import { googleImage } from "./google.js";
 
 describe("googleImage", () => {
   beforeEach(() => {

@@ -8,8 +8,13 @@ import {
 } from "../image.js";
 import { Result, success, failure } from "../types/result.js";
 import { getModel, isImageModel } from "../models.js";
-import { normalizeImageRef } from "../util/imageRef.js";
-import { round } from "../util/util.js";
+import { normalizeImageRef, NormalizedImage } from "../util/imageRef.js";
+import {
+  COST_DECIMAL_PLACES,
+  omitUndefined,
+  round,
+  tokenCost,
+} from "../util/util.js";
 
 export async function openaiImage(
   input: ImageInput,
@@ -18,22 +23,6 @@ export async function openaiImage(
 ): Promise<Result<ImageGenResult>> {
   try {
     const normalized = typeof input === "string" ? { prompt: input } : input;
-    const client = new OpenAI({ apiKey });
-
-    const baseParams: Record<string, unknown> = {
-      model: config.model,
-      prompt: normalized.prompt,
-      ...(config.n !== undefined ? { n: config.n } : {}),
-      ...(config.size !== undefined ? { size: config.size } : {}),
-      ...(config.quality !== undefined ? { quality: config.quality } : {}),
-      ...(config.outputFormat !== undefined
-        ? { output_format: config.outputFormat }
-        : {}),
-      ...(config.background !== undefined
-        ? { background: config.background }
-        : {}),
-      ...(config.metadata ?? {}),
-    };
 
     const hasImages = !!(normalized.images && normalized.images.length > 0);
     if (normalized.mask && !hasImages) {
@@ -41,34 +30,13 @@ export async function openaiImage(
         "A mask was provided without any input images. Masks are only valid for image edits — pass at least one entry in `images` alongside the mask.",
       );
     }
-    let response: any;
 
-    if (hasImages) {
-      const imageFiles = await Promise.all(
-        (normalized.images ?? []).map(async (ref, i) => {
-          const n = await normalizeImageRef(ref);
-          return toFile(n.data, `image-${i}.${extFromMime(n.mimeType)}`, {
-            type: n.mimeType,
-          });
-        }),
-      );
-      const maskFile = normalized.mask
-        ? await (async () => {
-            const m = await normalizeImageRef(normalized.mask!);
-            return toFile(m.data, `mask.${extFromMime(m.mimeType)}`, {
-              type: m.mimeType,
-            });
-          })()
-        : undefined;
+    const client = new OpenAI({ apiKey });
+    const baseParams = buildBaseParams(config, normalized.prompt);
 
-      response = await (client.images.edit as any)({
-        ...baseParams,
-        image: imageFiles.length === 1 ? imageFiles[0] : imageFiles,
-        ...(maskFile ? { mask: maskFile } : {}),
-      });
-    } else {
-      response = await (client.images.generate as any)(baseParams);
-    }
+    const response = hasImages
+      ? await callEdit(client, baseParams, normalized)
+      : await (client.images.generate as any)(baseParams);
 
     const mimeType = mimeFromFormat(config.outputFormat) ?? "image/png";
     const images: GeneratedImage[] = (response.data ?? []).map((d: any) => ({
@@ -93,6 +61,52 @@ export async function openaiImage(
       err instanceof Error ? err.message : "OpenAI image request failed",
     );
   }
+}
+
+function buildBaseParams(
+  config: ImageConfig,
+  prompt: string,
+): Record<string, unknown> {
+  return omitUndefined({
+    model: config.model,
+    prompt,
+    n: config.n,
+    size: config.size,
+    quality: config.quality,
+    output_format: config.outputFormat,
+    background: config.background,
+    ...(config.metadata ?? {}),
+  });
+}
+
+async function callEdit(
+  client: OpenAI,
+  baseParams: Record<string, unknown>,
+  normalized: { prompt: string; images?: any[]; mask?: any },
+): Promise<any> {
+  const imageFiles = await Promise.all(
+    (normalized.images ?? []).map(async (ref, i) => {
+      const n = await normalizeImageRef(ref);
+      return toFileFor(n, `image-${i}`);
+    }),
+  );
+  const maskFile = normalized.mask
+    ? await toFileFor(await normalizeImageRef(normalized.mask), "mask")
+    : undefined;
+
+  return (client.images.edit as any)(
+    omitUndefined({
+      ...baseParams,
+      image: imageFiles.length === 1 ? imageFiles[0] : imageFiles,
+      mask: maskFile,
+    }),
+  );
+}
+
+async function toFileFor(img: NormalizedImage, baseName: string) {
+  return toFile(img.data, `${baseName}.${extFromMime(img.mimeType)}`, {
+    type: img.mimeType,
+  });
 }
 
 function extFromMime(mime: string): string {
@@ -152,24 +166,15 @@ function calculateImageCost(modelName: string, usage: Usage) {
     imageIn = 0;
   }
 
-  const textInputCost = round(
-    (textIn * (model.inputTokenCost ?? 0)) / 1_000_000,
-    6,
+  const textInputCost = tokenCost(textIn, model.inputTokenCost);
+  const imageInputCost = tokenCost(imageIn, model.inputImageTokenCost);
+  const cachedCost = tokenCost(cachedIn, model.cachedInputTokenCost);
+  const outputCost = tokenCost(imgOut, model.outputImageTokenCost);
+  const inputCost = round(textInputCost + imageInputCost, COST_DECIMAL_PLACES);
+  const totalCost = round(
+    inputCost + cachedCost + outputCost,
+    COST_DECIMAL_PLACES,
   );
-  const imageInputCost = round(
-    (imageIn * (model.inputImageTokenCost ?? 0)) / 1_000_000,
-    6,
-  );
-  const cachedCost = round(
-    (cachedIn * (model.cachedInputTokenCost ?? 0)) / 1_000_000,
-    6,
-  );
-  const outputCost = round(
-    (imgOut * (model.outputImageTokenCost ?? 0)) / 1_000_000,
-    6,
-  );
-  const inputCost = round(textInputCost + imageInputCost, 6);
-  const totalCost = round(inputCost + cachedCost + outputCost, 6);
   return {
     inputCost,
     outputCost,
@@ -182,6 +187,6 @@ function calculateImageCost(modelName: string, usage: Usage) {
 function calculatePerImageCost(modelName: string, imageCount: number) {
   const model = getModel(modelName);
   if (!model || !isImageModel(model) || !model.costPerImage) return undefined;
-  const totalCost = round(model.costPerImage * imageCount, 6);
+  const totalCost = round(model.costPerImage * imageCount, COST_DECIMAL_PLACES);
   return { inputCost: 0, outputCost: totalCost, totalCost, currency: "USD" };
 }
