@@ -4,7 +4,9 @@ import {
   Result,
   SmolConfig,
   StreamChunk,
+  ToolCall,
   success,
+  zodToOpenAITool,
 } from "smoltalk";
 import { getEngine } from "./engine.js";
 
@@ -15,24 +17,38 @@ const ZERO_COST = {
   currency: "USD",
 };
 
+function buildTools(promptConfig: SmolConfig) {
+  if (!promptConfig.tools?.length) return undefined;
+  return promptConfig.tools.map((t) =>
+    zodToOpenAITool(t.name, t.schema, { description: t.description }),
+  );
+}
+
 export class WebLLMClient extends BaseClient {
   async _textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     const engine = getEngine(promptConfig.model);
     const messages = promptConfig.messages.map((m) => m.toOpenAIMessage());
+    const tools = buildTools(promptConfig);
 
     const response: any = await engine.chat.completions.create({
       messages: messages as any,
+      tools: tools as any,
       temperature: promptConfig.temperature,
       max_tokens: promptConfig.maxTokens,
     } as any);
 
     const choice = response.choices?.[0];
     const content: string | null = choice?.message?.content ?? null;
+    const rawToolCalls = choice?.message?.tool_calls ?? [];
+    const toolCalls: ToolCall[] = rawToolCalls.map(
+      (tc: any) =>
+        new ToolCall(tc.id ?? "", tc.function.name, tc.function.arguments),
+    );
     const usage = response.usage;
 
     return success({
       output: content,
-      toolCalls: [],
+      toolCalls,
       model: promptConfig.model,
       usage: usage
         ? {
@@ -47,9 +63,11 @@ export class WebLLMClient extends BaseClient {
   async *_textStream(promptConfig: SmolConfig): AsyncGenerator<StreamChunk> {
     const engine = getEngine(promptConfig.model);
     const messages = promptConfig.messages.map((m) => m.toOpenAIMessage());
+    const tools = buildTools(promptConfig);
 
     const stream: any = await engine.chat.completions.create({
       messages: messages as any,
+      tools: tools as any,
       temperature: promptConfig.temperature,
       max_tokens: promptConfig.maxTokens,
       stream: true,
@@ -57,6 +75,10 @@ export class WebLLMClient extends BaseClient {
 
     let outputText = "";
     let usage: { prompt_tokens: number; completion_tokens: number } | undefined;
+    const toolCallBufs = new Map<
+      number,
+      { id?: string; name?: string; args: string }
+    >();
 
     for await (const chunk of stream as AsyncIterable<any>) {
       const choice = chunk.choices?.[0];
@@ -65,14 +87,33 @@ export class WebLLMClient extends BaseClient {
         outputText += deltaText;
         yield { type: "text", text: deltaText };
       }
+
+      const deltaTools = choice?.delta?.tool_calls ?? [];
+      for (const dt of deltaTools) {
+        const idx: number = dt.index ?? 0;
+        const buf = toolCallBufs.get(idx) ?? { args: "" };
+        if (dt.id) buf.id = dt.id;
+        if (dt.function?.name) buf.name = dt.function.name;
+        if (dt.function?.arguments) buf.args += dt.function.arguments;
+        toolCallBufs.set(idx, buf);
+      }
+
       if (chunk.usage) usage = chunk.usage;
+    }
+
+    const toolCalls: ToolCall[] = [];
+    for (const buf of toolCallBufs.values()) {
+      if (!buf.name) continue;
+      const tc = new ToolCall(buf.id ?? "", buf.name, buf.args || "{}");
+      toolCalls.push(tc);
+      yield { type: "tool_call", toolCall: tc };
     }
 
     yield {
       type: "done",
       result: {
         output: outputText || null,
-        toolCalls: [],
+        toolCalls,
         model: promptConfig.model,
         usage: usage
           ? {

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { z } from "zod";
 import {
   __setEngineForTesting,
   __clearEnginesForTesting,
@@ -95,6 +96,96 @@ describe("WebLLMClient.textSync — plain text", () => {
     expect(received.messages).toHaveLength(1);
     expect(received.messages[0].role).toBe("user");
     expect(received.messages[0].content).toBe("hello");
+  });
+});
+
+describe("WebLLMClient tool calls — sync", () => {
+  beforeEach(() => __clearEnginesForTesting());
+
+  it("returns toolCalls from the engine response", async () => {
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: async (_args: any) => ({
+            choices: [
+              {
+                message: {
+                  content: null,
+                  tool_calls: [
+                    {
+                      id: "call_1",
+                      type: "function",
+                      function: {
+                        name: "get_weather",
+                        arguments: JSON.stringify({ city: "Paris" }),
+                      },
+                    },
+                  ],
+                },
+                finish_reason: "tool_calls",
+              },
+            ],
+            usage: { prompt_tokens: 5, completion_tokens: 3 },
+          }),
+        },
+      },
+      unload: async () => {},
+    } as any);
+
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("weather?")],
+      tools: [
+        {
+          name: "get_weather",
+          description: "weather",
+          schema: z.object({ city: z.string() }),
+        },
+      ],
+    };
+    const client = new WebLLMClient(config);
+    const result = await client.textSync(config);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.toolCalls).toHaveLength(1);
+      expect(result.value.toolCalls[0].name).toBe("get_weather");
+      expect(result.value.toolCalls[0].arguments).toEqual({ city: "Paris" });
+    }
+  });
+
+  it("forwards tools to the engine in OpenAI shape", async () => {
+    let received: any = null;
+    __setEngineForTesting("m", {
+      chat: {
+        completions: {
+          create: async (args: any) => {
+            received = args;
+            return {
+              choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+              usage: { prompt_tokens: 1, completion_tokens: 1 },
+            };
+          },
+        },
+      },
+      unload: async () => {},
+    } as any);
+    const config = {
+      provider: "webllm" as const,
+      model: "m",
+      messages: [userMessage("hi")],
+      tools: [
+        {
+          name: "t",
+          description: "d",
+          schema: z.object({ x: z.string() }),
+        },
+      ],
+    };
+    const client = new WebLLMClient(config);
+    await client.textSync(config);
+    expect(received.tools).toBeDefined();
+    expect(received.tools[0].function.name).toBe("t");
   });
 });
 
