@@ -167,3 +167,18 @@ function normalizeProgress(r: {
 export function __setEngineFactoryForTesting(f: EngineFactory): void {
   factory = f;
 }
+
+/**
+ * Returns the model IDs available in the underlying @mlc-ai/web-llm prebuilt
+ * config. Lazily imports web-llm so this is SSR-safe.
+ */
+export async function listModels(): Promise<string[]> {
+  const webllm = await import("@mlc-ai/web-llm");
+  return webllm.prebuiltAppConfig.model_list.map((m: any) => m.model_id);
+}
+
+/** Returns true if the given id is in web-llm's prebuilt model list. */
+export async function isWebLLMModel(id: string): Promise<boolean> {
+  const ids = await listModels();
+  return ids.includes(id);
+}
