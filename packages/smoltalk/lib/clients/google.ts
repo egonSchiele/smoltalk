@@ -68,9 +68,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
           (usageMetadata.promptTokenCount || 0) - cached,
         ),
         outputTokens: usageMetadata.candidatesTokenCount || 0,
-        ...(cached > 0 && { cachedInputTokens: cached }),
         totalTokens: usageMetadata.totalTokenCount,
       };
+      if (cached > 0) {
+        usage.cachedInputTokens = cached;
+      }
       const calculatedCost = this.model.calculateCost(usage);
       if (calculatedCost) {
         cost = calculatedCost;

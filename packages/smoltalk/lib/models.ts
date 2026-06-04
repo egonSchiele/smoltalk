@@ -598,6 +598,7 @@ export const textModels = [
     maxInputTokens: 2_097_152,
     maxOutputTokens: 65536,
     inputTokenCost: 1.25,
+    cachedInputTokenCost: 0.31,
     outputTokenCost: 10.0,
     outputTokensPerSecond: 145,
     reasoning: {
@@ -615,6 +616,7 @@ export const textModels = [
     maxInputTokens: 1_048_576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.3,
+    cachedInputTokenCost: 0.075,
     outputTokenCost: 2.5,
     outputTokensPerSecond: 245,
     reasoning: {
@@ -632,6 +634,7 @@ export const textModels = [
     maxInputTokens: 1_048_576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.1,
+    cachedInputTokenCost: 0.025,
     outputTokenCost: 0.4,
     outputTokensPerSecond: 400,
     reasoning: {

@@ -54,40 +54,66 @@ function applyCacheBreakpoints(
 ): AnthropicRequestShape {
   const cc: EphemeralCacheControl = { type: "ephemeral" };
 
-  const tools =
-    req.tools && req.tools.length > 0
-      ? req.tools.map((t, i, arr) =>
-          i === arr.length - 1 ? ({ ...t, cache_control: cc } as Tool) : t,
-        )
-      : req.tools;
+  // Tools: mark the last tool.
+  let tools = req.tools;
+  if (tools && tools.length > 0) {
+    const lastIdx = tools.length - 1;
+    const marked: Tool[] = [];
+    for (let i = 0; i < tools.length; i++) {
+      if (i === lastIdx) {
+        marked.push({ ...tools[i], cache_control: cc } as Tool);
+      } else {
+        marked.push(tools[i]);
+      }
+    }
+    tools = marked;
+  }
 
+  // System: promote string to array form so the last block can be marked.
   let system: string | SystemBlock[] | undefined = req.system;
   if (typeof system === "string" && system.length > 0) {
     system = [{ type: "text", text: system, cache_control: cc }];
   } else if (Array.isArray(system) && system.length > 0) {
-    system = system.map((b, i, arr) =>
-      i === arr.length - 1 ? { ...b, cache_control: cc } : b,
-    );
+    const lastIdx = system.length - 1;
+    const marked: SystemBlock[] = [];
+    for (let i = 0; i < system.length; i++) {
+      if (i === lastIdx) {
+        marked.push({ ...system[i], cache_control: cc });
+      } else {
+        marked.push(system[i]);
+      }
+    }
+    system = marked;
   }
 
+  // Messages: mark the last block of the last user message.
   let messages = req.messages;
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
     if (m.role !== "user") continue;
-    const blocks: any[] =
-      typeof m.content === "string"
-        ? [{ type: "text", text: m.content }]
-        : [...(m.content as any[])];
+
+    let blocks: any[];
+    if (typeof m.content === "string") {
+      blocks = [{ type: "text", text: m.content }];
+    } else {
+      blocks = [...(m.content as any[])];
+    }
     if (blocks.length === 0) break;
+
     blocks[blocks.length - 1] = {
       ...blocks[blocks.length - 1],
       cache_control: cc,
     };
-    messages = [
-      ...messages.slice(0, i),
-      { ...m, content: blocks } as MessageParam,
-      ...messages.slice(i + 1),
-    ];
+
+    const rebuilt: MessageParam[] = [];
+    for (let j = 0; j < messages.length; j++) {
+      if (j === i) {
+        rebuilt.push({ ...m, content: blocks } as MessageParam);
+      } else {
+        rebuilt.push(messages[j]);
+      }
+    }
+    messages = rebuilt;
     break;
   }
 
@@ -125,14 +151,18 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     const usage: TokenUsage = {
       inputTokens: usageData.input_tokens,
       outputTokens: usageData.output_tokens,
-      ...(cacheRead > 0 && { cachedInputTokens: cacheRead }),
-      ...(cacheCreation > 0 && { cacheCreationInputTokens: cacheCreation }),
       totalTokens:
         usageData.input_tokens +
         cacheRead +
         cacheCreation +
         usageData.output_tokens,
     };
+    if (cacheRead > 0) {
+      usage.cachedInputTokens = cacheRead;
+    }
+    if (cacheCreation > 0) {
+      usage.cacheCreationInputTokens = cacheCreation;
+    }
     const cost = this.model.calculateCost(usage) ?? undefined;
     return { usage, cost };
   }
@@ -419,6 +449,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         }
       } else if (event.type === "message_delta") {
         outputTokens = event.usage.output_tokens;
+        // Defensive: in practice Anthropic only sends cache fields on
+        // message_start, but read them here too so we don't miss an
+        // update if the SDK changes.
         if (event.usage.cache_read_input_tokens != null) {
           cacheReadTokens = event.usage.cache_read_input_tokens;
         }
@@ -448,13 +481,15 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     const usage: TokenUsage = {
       inputTokens,
       outputTokens,
-      ...(cacheReadTokens > 0 && { cachedInputTokens: cacheReadTokens }),
-      ...(cacheCreationTokens > 0 && {
-        cacheCreationInputTokens: cacheCreationTokens,
-      }),
       totalTokens:
         inputTokens + cacheReadTokens + cacheCreationTokens + outputTokens,
     };
+    if (cacheReadTokens > 0) {
+      usage.cachedInputTokens = cacheReadTokens;
+    }
+    if (cacheCreationTokens > 0) {
+      usage.cacheCreationInputTokens = cacheCreationTokens;
+    }
     const cost = this.model.calculateCost(usage) ?? undefined;
 
     yield {
