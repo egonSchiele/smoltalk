@@ -40,16 +40,56 @@ describe("Model", () => {
       expect(cost!.totalCost).toBe(cost!.inputCost + cost!.outputCost);
     });
 
-    it("includes cached input cost when provided", () => {
+    it("computes disjoint-bucket cost for OpenAI with cached tokens", () => {
+      // gpt-4o: inputTokenCost=2.50, cachedInputTokenCost=1.25, outputTokenCost=10
+      // After client normalization, inputTokens is the uncached portion only.
       const model = new Model("gpt-4o");
       const cost = model.calculateCost({
-        inputTokens: 1_000_000,
-        outputTokens: 500_000,
+        inputTokens: 800_000,
+        outputTokens: 0,
         cachedInputTokens: 200_000,
       });
       expect(cost).not.toBeNull();
-      expect(cost!.cachedInputCost).toBeDefined();
-      expect(cost!.cachedInputCost).toBeGreaterThan(0);
+      // 800_000 @ $2.50/M = $2.00
+      // 200_000 @ $1.25/M = $0.25
+      expect(cost!.inputCost).toBeCloseTo(2.0, 6);
+      expect(cost!.cachedInputCost).toBeCloseTo(0.25, 6);
+      expect(cost!.totalCost).toBeCloseTo(2.25, 6);
+    });
+
+    it("computes disjoint-bucket cost for Anthropic with cache reads + cache creation", () => {
+      const model = new Model("claude-opus-4-7");
+      // inputTokenCost=5, cachedInputTokenCost=0.5, cacheCreationInputTokenCost=6.25, outputTokenCost=25
+      // All three buckets are disjoint; no subtraction needed.
+      const cost = model.calculateCost({
+        inputTokens: 500_000,
+        outputTokens: 0,
+        cachedInputTokens: 300_000,
+        cacheCreationInputTokens: 200_000,
+      });
+      expect(cost).not.toBeNull();
+      // 500_000 @ $5/M     = $2.50
+      // 300_000 @ $0.50/M  = $0.15
+      // 200_000 @ $6.25/M  = $1.25
+      expect(cost!.inputCost).toBeCloseTo(2.5, 6);
+      expect(cost!.cachedInputCost).toBeCloseTo(0.15, 6);
+      expect(cost!.cacheCreationInputCost).toBeCloseTo(1.25, 6);
+      expect(cost!.totalCost).toBeCloseTo(3.9, 6);
+    });
+
+    it("falls back to full input price when cache prices are missing", () => {
+      // Legacy/disabled model without cachedInputTokenCost in the registry.
+      // The provider still billed for those tokens, so we charge at the
+      // full input rate to keep totalCost honest.
+      const model = new Model("claude-3-5-haiku-latest");
+      const cost = model.calculateCost({
+        inputTokens: 800_000,
+        outputTokens: 0,
+        cachedInputTokens: 200_000,
+      });
+      expect(cost).not.toBeNull();
+      // 800_000 + 200_000 @ $0.80/M = $0.80
+      expect(cost!.totalCost).toBeCloseTo(0.8, 6);
     });
 
     it("returns null for non-text models", () => {

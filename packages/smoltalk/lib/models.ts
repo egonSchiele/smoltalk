@@ -18,6 +18,7 @@ export type BaseModel = {
   // costs per 1M tokens, in dollars
   inputTokenCost?: number;
   cachedInputTokenCost?: number;
+  cacheCreationInputTokenCost?: number;
   outputTokenCost?: number;
   disabled?: boolean;
   costUnit?: "tokens" | "characters" | "minutes";
@@ -724,6 +725,7 @@ export const textModels = [
     maxOutputTokens: 128_000,
     inputTokenCost: 5,
     cachedInputTokenCost: 0.5,
+    cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
     outputTokensPerSecond: 72,
     reasoning: {
@@ -742,6 +744,7 @@ export const textModels = [
     maxOutputTokens: 128_000,
     inputTokenCost: 5,
     cachedInputTokenCost: 0.5,
+    cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
     outputTokensPerSecond: 53,
     reasoning: {
@@ -760,6 +763,7 @@ export const textModels = [
     maxOutputTokens: 64_000,
     inputTokenCost: 3,
     cachedInputTokenCost: 0.3,
+    cacheCreationInputTokenCost: 3.75,
     outputTokenCost: 15,
     outputTokensPerSecond: 52,
     reasoning: {
@@ -778,6 +782,7 @@ export const textModels = [
     maxOutputTokens: 64_000,
     inputTokenCost: 1,
     cachedInputTokenCost: 0.1,
+    cacheCreationInputTokenCost: 1.25,
     outputTokenCost: 5,
     outputTokensPerSecond: 97,
     reasoning: {
