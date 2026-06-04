@@ -553,9 +553,28 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "gemini-3.5-flash",
+    description:
+      "Latest Gemini 3.5 Flash model (GA May 2026). Outperforms Gemini 3.1 Pro on coding and agentic suites at 4x the speed. 1M context window, 64K output. Context caching: $0.15/1M read.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 65536,
+    inputTokenCost: 1.5,
+    cachedInputTokenCost: 0.15,
+    outputTokenCost: 9.0,
+    reasoning: {
+      levels: ["minimal", "low", "medium", "high"],
+      defaultLevel: "high",
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
+    provider: "google",
+  },
+  {
+    type: "text",
     modelName: "gemini-3-flash-preview",
     description:
-      "Latest Gemini 3 flash model with 1M context window and 64K output. Outperforms 2.5 Pro while being 3x faster. Optimized for agentic workflows and coding. Includes context caching for 90% cost reductions.",
+      "Gemini 3 Flash preview. Superseded by gemini-3.5-flash. 1M context window and 64K output. Optimized for agentic workflows and coding.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.5,
@@ -572,9 +591,9 @@ export const textModels = [
   },
   {
     type: "text",
-    modelName: "gemini-3.1-flash-lite-preview",
+    modelName: "gemini-3.1-flash-lite",
     description:
-      "Most cost-effective Gemini 3.1 model with thinking support and 1M context window. 2.5x faster TTFA and 45% faster output than 2.5 Flash. Released March 2026.",
+      "Most cost-effective Gemini 3.1 model (GA). Thinking support, 1M context window, 64K output. 2.5x faster TTFA and 45% faster output than 2.5 Flash.",
     maxInputTokens: 1_048_576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.25,
@@ -587,6 +606,18 @@ export const textModels = [
       outputsThinking: true,
       outputsSignatures: true,
     },
+    provider: "google",
+  },
+  {
+    type: "text",
+    modelName: "gemini-3.1-flash-lite-preview",
+    description:
+      "DEPRECATED: Preview version, discontinued July 9, 2026. Use gemini-3.1-flash-lite instead.",
+    maxInputTokens: 1_048_576,
+    maxOutputTokens: 65536,
+    inputTokenCost: 0.25,
+    outputTokenCost: 1.5,
+    disabled: true,
     provider: "google",
   },
   {
@@ -717,9 +748,26 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "claude-opus-4-8",
+    description:
+      "The most capable Claude model for complex reasoning and agentic coding. Same per-token pricing as Opus 4.7 with improved tool-use efficiency (~290 tokens for tool-use system prompt vs 675 on 4.7). 1M context window, 128K max output.",
+    maxInputTokens: 1_000_000,
+    maxOutputTokens: 128_000,
+    inputTokenCost: 5,
+    cachedInputTokenCost: 0.5,
+    outputTokenCost: 25,
+    reasoning: {
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
+    provider: "anthropic",
+  },
+  {
+    type: "text",
     modelName: "claude-opus-4-7",
     description:
-      "The most capable Claude model for complex reasoning and agentic coding. Features Adaptive Thinking that auto-tunes reasoning compute per request. 1M context window, 128K max output. Knowledge cutoff: January 2026.",
+      "Claude Opus 4.7 for complex reasoning and agentic coding. Features Adaptive Thinking that auto-tunes reasoning compute per request. 1M context window, 128K max output. Knowledge cutoff: January 2026.",
     maxInputTokens: 1_000_000,
     maxOutputTokens: 128_000,
     inputTokenCost: 5,
@@ -862,7 +910,16 @@ export const imageModels = [
     modelName: "gemini-3.1-flash-image-preview",
     provider: "google",
     description:
-      "Fast image generation with Gemini 3.1 Flash. Supports resolutions from 512px to 4096px. ~$0.067/image at 1K resolution.",
+      "DEPRECATED: Preview version. Use gemini-3.1-flash-image instead.",
+    costPerImage: 0.067,
+    disabled: true,
+  },
+  {
+    type: "image",
+    modelName: "gemini-3.1-flash-image",
+    provider: "google",
+    description:
+      "Fast image generation with Gemini 3.1 Flash (GA). Supports resolutions from 512px to 4096px. ~$0.045/image at 512px, $0.067 at 1K, $0.101 at 2K, $0.151 at 4K.",
     costPerImage: 0.067,
   },
 ] as const;
