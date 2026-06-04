@@ -3,6 +3,7 @@ export type CostEstimate = {
   inputCost: number;
   outputCost: number;
   cachedInputCost?: number;
+  cacheCreationInputCost?: number;
   totalCost: number;
   currency: string;
 };
@@ -11,6 +12,7 @@ export const CostEstimateSchema = z.object({
   inputCost: z.number(),
   outputCost: z.number(),
   cachedInputCost: z.number().optional(),
+  cacheCreationInputCost: z.number().optional(),
   totalCost: z.number(),
   currency: z.string(),
 });
@@ -33,6 +35,8 @@ export function addCosts(_a?: CostEstimate, _b?: CostEstimate): CostEstimate {
     inputCost: a.inputCost + b.inputCost,
     outputCost: a.outputCost + b.outputCost,
     cachedInputCost: (a.cachedInputCost || 0) + (b.cachedInputCost || 0),
+    cacheCreationInputCost:
+      (a.cacheCreationInputCost || 0) + (b.cacheCreationInputCost || 0),
     totalCost: a.totalCost + b.totalCost,
     currency: a.currency,
   };

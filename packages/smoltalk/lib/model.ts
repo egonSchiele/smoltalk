@@ -34,10 +34,12 @@ export class Model {
     inputTokens: number;
     outputTokens: number;
     cachedInputTokens?: number;
+    cacheCreationInputTokens?: number;
   }): {
     inputCost: number;
     outputCost: number;
     cachedInputCost?: number;
+    cacheCreationInputCost?: number;
     totalCost: number;
     currency: string;
   } | null {
@@ -45,6 +47,16 @@ export class Model {
     if (!model || !isTextModel(model)) {
       return null;
     }
+
+    const cachedTokens = usage.cachedInputTokens ?? 0;
+    const cacheCreationTokens = usage.cacheCreationInputTokens ?? 0;
+
+    // Disjoint buckets. If a discount price isn't defined for this model,
+    // the tokens were still billed by the provider — charge them at the
+    // full input rate so totalCost stays honest.
+    const cachedRate = model.cachedInputTokenCost ?? model.inputTokenCost ?? 0;
+    const cacheCreationRate =
+      model.cacheCreationInputTokenCost ?? model.inputTokenCost ?? 0;
 
     const inputCost = round(
       (usage.inputTokens * (model.inputTokenCost || 0)) / 1_000_000,
@@ -54,20 +66,46 @@ export class Model {
       (usage.outputTokens * (model.outputTokenCost || 0)) / 1_000_000,
       6,
     );
-    const cachedInputCost =
-      usage.cachedInputTokens && model.cachedInputTokenCost
-        ? round(
-            (usage.cachedInputTokens * model.cachedInputTokenCost) / 1_000_000,
-            6,
-          )
-        : undefined;
 
-    const totalCost = round(inputCost + outputCost + (cachedInputCost || 0), 6);
+    // Only expose cachedInputCost / cacheCreationInputCost when the model
+    // actually has a distinct discount price. Otherwise, fold those dollars
+    // into inputCost so the user isn't misled by a $0 cached field.
+    let cachedInputCost: number | undefined;
+    let cacheCreationInputCost: number | undefined;
+    let foldedInputDollars = 0;
+
+    if (cachedTokens > 0) {
+      const dollars = (cachedTokens * cachedRate) / 1_000_000;
+      if (model.cachedInputTokenCost != null) {
+        cachedInputCost = round(dollars, 6);
+      } else {
+        foldedInputDollars += dollars;
+      }
+    }
+
+    if (cacheCreationTokens > 0) {
+      const dollars = (cacheCreationTokens * cacheCreationRate) / 1_000_000;
+      if (model.cacheCreationInputTokenCost != null) {
+        cacheCreationInputCost = round(dollars, 6);
+      } else {
+        foldedInputDollars += dollars;
+      }
+    }
+
+    const finalInputCost = round(inputCost + foldedInputDollars, 6);
+    const totalCost = round(
+      finalInputCost +
+        outputCost +
+        (cachedInputCost || 0) +
+        (cacheCreationInputCost || 0),
+      6,
+    );
 
     return {
-      inputCost,
+      inputCost: finalInputCost,
       outputCost,
       cachedInputCost,
+      cacheCreationInputCost,
       totalCost,
       currency: "USD",
     };

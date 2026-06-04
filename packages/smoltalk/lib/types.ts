@@ -92,6 +92,11 @@ export type SmolConfig = {
     budgetTokens?: number;
   };
 
+  /** Prompt caching. Currently used by Anthropic; OpenAI/Google cache automatically. Defaults to enabled. */
+  caching?: {
+    enabled?: boolean;
+  };
+
   /** Provider-agnostic reasoning effort level. */
   reasoningEffort?: "low" | "medium" | "high";
 

@@ -29,6 +29,97 @@ import { Model } from "../model.js";
 
 const DEFAULT_MAX_TOKENS = 4096;
 
+type EphemeralCacheControl = { type: "ephemeral" };
+type SystemBlock = {
+  type: "text";
+  text: string;
+  cache_control?: EphemeralCacheControl;
+};
+type AnthropicRequestShape = {
+  system: string | SystemBlock[] | undefined;
+  messages: MessageParam[];
+  tools: Tool[] | undefined;
+};
+
+/**
+ * Attach ephemeral cache_control breakpoints to (up to) three places:
+ *   1. the last tool definition
+ *   2. the last system block (promoting system from string to array form)
+ *   3. the last block of the last user message
+ *
+ * Anthropic enforces minimum prefix sizes; smaller prefixes silently no-op.
+ */
+function applyCacheBreakpoints(
+  req: AnthropicRequestShape,
+): AnthropicRequestShape {
+  const cc: EphemeralCacheControl = { type: "ephemeral" };
+
+  // Tools: mark the last tool.
+  let tools = req.tools;
+  if (tools && tools.length > 0) {
+    const lastIdx = tools.length - 1;
+    const marked: Tool[] = [];
+    for (let i = 0; i < tools.length; i++) {
+      if (i === lastIdx) {
+        marked.push({ ...tools[i], cache_control: cc } as Tool);
+      } else {
+        marked.push(tools[i]);
+      }
+    }
+    tools = marked;
+  }
+
+  // System: promote string to array form so the last block can be marked.
+  let system: string | SystemBlock[] | undefined = req.system;
+  if (typeof system === "string" && system.length > 0) {
+    system = [{ type: "text", text: system, cache_control: cc }];
+  } else if (Array.isArray(system) && system.length > 0) {
+    const lastIdx = system.length - 1;
+    const marked: SystemBlock[] = [];
+    for (let i = 0; i < system.length; i++) {
+      if (i === lastIdx) {
+        marked.push({ ...system[i], cache_control: cc });
+      } else {
+        marked.push(system[i]);
+      }
+    }
+    system = marked;
+  }
+
+  // Messages: mark the last block of the last user message.
+  let messages = req.messages;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i];
+    if (m.role !== "user") continue;
+
+    let blocks: any[];
+    if (typeof m.content === "string") {
+      blocks = [{ type: "text", text: m.content }];
+    } else {
+      blocks = [...(m.content as any[])];
+    }
+    if (blocks.length === 0) break;
+
+    blocks[blocks.length - 1] = {
+      ...blocks[blocks.length - 1],
+      cache_control: cc,
+    };
+
+    const rebuilt: MessageParam[] = [];
+    for (let j = 0; j < messages.length; j++) {
+      if (j === i) {
+        rebuilt.push({ ...m, content: blocks } as MessageParam);
+      } else {
+        rebuilt.push(messages[j]);
+      }
+    }
+    messages = rebuilt;
+    break;
+  }
+
+  return { system, messages, tools };
+}
+
 export type SmolAnthropicConfig = SmolConfig & {
   anthropicApiKey: string;
 };
@@ -52,18 +143,32 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   private calculateUsageAndCost(usageData: {
     input_tokens: number;
     output_tokens: number;
+    cache_read_input_tokens?: number | null;
+    cache_creation_input_tokens?: number | null;
   }): { usage?: TokenUsage; cost?: CostEstimate } {
+    const cacheRead = usageData.cache_read_input_tokens ?? 0;
+    const cacheCreation = usageData.cache_creation_input_tokens ?? 0;
     const usage: TokenUsage = {
       inputTokens: usageData.input_tokens,
       outputTokens: usageData.output_tokens,
-      totalTokens: usageData.input_tokens + usageData.output_tokens,
+      totalTokens:
+        usageData.input_tokens +
+        cacheRead +
+        cacheCreation +
+        usageData.output_tokens,
     };
+    if (cacheRead > 0) {
+      usage.cachedInputTokens = cacheRead;
+    }
+    if (cacheCreation > 0) {
+      usage.cacheCreationInputTokens = cacheCreation;
+    }
     const cost = this.model.calculateCost(usage) ?? undefined;
     return { usage, cost };
   }
 
   private buildRequest(config: SmolConfig): {
-    system: string | undefined;
+    system: string | SystemBlock[] | undefined;
     messages: MessageParam[];
     tools: Tool[] | undefined;
     thinking: { type: "enabled"; budget_tokens: number } | undefined;
@@ -135,7 +240,13 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           }
         : undefined;
 
-    return { system, messages: anthropicMessages, tools, thinking };
+    const cachingEnabled = config.caching?.enabled !== false;
+    const baseRequest = { system, messages: anthropicMessages, tools };
+    const finalRequest = cachingEnabled
+      ? applyCacheBreakpoints(baseRequest)
+      : baseRequest;
+
+    return { ...finalRequest, thinking };
   }
 
   private rethrowAsSmolError(error: unknown): never {
@@ -286,11 +397,16 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       { text: string; signature: string }
     >();
     let inputTokens = 0;
+    let cacheReadTokens = 0;
+    let cacheCreationTokens = 0;
     let outputTokens = 0;
 
     for await (const event of stream as any) {
       if (event.type === "message_start") {
-        inputTokens = event.message.usage.input_tokens;
+        const u = event.message.usage;
+        inputTokens = u.input_tokens;
+        cacheReadTokens = u.cache_read_input_tokens ?? 0;
+        cacheCreationTokens = u.cache_creation_input_tokens ?? 0;
       } else if (event.type === "content_block_start") {
         if (event.content_block.type === "tool_use") {
           toolBlocks.set(event.index, {
@@ -333,6 +449,15 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         }
       } else if (event.type === "message_delta") {
         outputTokens = event.usage.output_tokens;
+        // Defensive: in practice Anthropic only sends cache fields on
+        // message_start, but read them here too so we don't miss an
+        // update if the SDK changes.
+        if (event.usage.cache_read_input_tokens != null) {
+          cacheReadTokens = event.usage.cache_read_input_tokens;
+        }
+        if (event.usage.cache_creation_input_tokens != null) {
+          cacheCreationTokens = event.usage.cache_creation_input_tokens;
+        }
       }
     }
 
@@ -356,8 +481,15 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     const usage: TokenUsage = {
       inputTokens,
       outputTokens,
-      totalTokens: inputTokens + outputTokens,
+      totalTokens:
+        inputTokens + cacheReadTokens + cacheCreationTokens + outputTokens,
     };
+    if (cacheReadTokens > 0) {
+      usage.cachedInputTokens = cacheReadTokens;
+    }
+    if (cacheCreationTokens > 0) {
+      usage.cacheCreationInputTokens = cacheCreationTokens;
+    }
     const cost = this.model.calculateCost(usage) ?? undefined;
 
     yield {

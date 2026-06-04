@@ -58,12 +58,15 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     let cost: CostEstimate | undefined;
 
     if (usageData) {
+      const cached = usageData.prompt_tokens_details?.cached_tokens ?? 0;
       usage = {
-        inputTokens: usageData.prompt_tokens || 0,
+        inputTokens: Math.max(0, (usageData.prompt_tokens || 0) - cached),
         outputTokens: usageData.completion_tokens || 0,
-        cachedInputTokens: usageData.prompt_tokens_details?.cached_tokens,
         totalTokens: usageData.total_tokens,
       };
+      if (cached > 0) {
+        usage.cachedInputTokens = cached;
+      }
 
       const calculatedCost = this.model.calculateCost(usage);
       if (calculatedCost) {
