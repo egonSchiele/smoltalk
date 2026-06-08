@@ -309,7 +309,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -329,7 +329,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -349,7 +349,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -368,7 +368,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -388,7 +388,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -404,7 +404,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -423,7 +423,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -443,7 +443,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -463,7 +463,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -481,7 +481,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -501,7 +501,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -519,7 +519,7 @@ export const textModels = [
       outputsThinking: false,
       outputsSignatures: false,
     },
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
