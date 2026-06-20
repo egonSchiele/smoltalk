@@ -84,6 +84,73 @@ describe("SmolAnthropic.buildRequest cache_control", () => {
   });
 });
 
+describe("SmolAnthropic.buildRequest thinking normalization", () => {
+  function clientFor(model: string) {
+    return new SmolAnthropic({
+      model: model as any,
+      anthropicApiKey: "test-key",
+      messages: [],
+    });
+  }
+
+  it("sends adaptive thinking (no budget_tokens) for Opus 4.7", () => {
+    const client = clientFor("claude-opus-4-7");
+    const { thinking, outputConfig } = build(client, {
+      messages: [userMessage("hi")],
+      thinking: { enabled: true, budgetTokens: 8000 },
+    });
+    expect(thinking).toEqual({ type: "adaptive" });
+    expect(outputConfig).toBeUndefined();
+  });
+
+  it("maps reasoningEffort to output_config.effort for adaptive models", () => {
+    const client = clientFor("claude-opus-4-8");
+    const { thinking, outputConfig } = build(client, {
+      messages: [userMessage("hi")],
+      reasoningEffort: "high",
+    });
+    expect(thinking).toEqual({ type: "adaptive" });
+    expect(outputConfig).toEqual({ effort: "high" });
+  });
+
+  it("keeps budget_tokens thinking for Haiku 4.5", () => {
+    const client = clientFor("claude-haiku-4-5-20251001");
+    const { thinking, outputConfig } = build(client, {
+      messages: [userMessage("hi")],
+      thinking: { enabled: true, budgetTokens: 8000 },
+    });
+    expect(thinking).toEqual({ type: "enabled", budget_tokens: 8000 });
+    expect(outputConfig).toBeUndefined();
+  });
+
+  it("maps reasoningEffort to a budget for budget-style models", () => {
+    const client = clientFor("claude-haiku-4-5-20251001");
+    const { thinking } = build(client, {
+      messages: [userMessage("hi")],
+      reasoningEffort: "low",
+    });
+    expect(thinking).toEqual({ type: "enabled", budget_tokens: 2048 });
+  });
+
+  it("omits thinking entirely when neither thinking nor effort is set", () => {
+    const client = clientFor("claude-opus-4-8");
+    const { thinking, outputConfig } = build(client, {
+      messages: [userMessage("hi")],
+    });
+    expect(thinking).toBeUndefined();
+    expect(outputConfig).toBeUndefined();
+  });
+
+  it("defaults unknown models to adaptive thinking", () => {
+    const client = clientFor("claude-opus-9-preview");
+    const { thinking } = build(client, {
+      messages: [userMessage("hi")],
+      thinking: { enabled: true },
+    });
+    expect(thinking).toEqual({ type: "adaptive" });
+  });
+});
+
 describe("SmolAnthropic.calculateUsageAndCost", () => {
   const client = new SmolAnthropic({
     model: "claude-sonnet-4-6",

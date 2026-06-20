@@ -24,7 +24,7 @@ import {
   SmolContextWindowExceededError,
 } from "../smolError.js";
 import { BaseClient } from "./baseClient.js";
-import { ModelName, TextModelName } from "../models.js";
+import { ModelName, TextModelName, getModel, isTextModel } from "../models.js";
 import { Model } from "../model.js";
 
 const DEFAULT_MAX_TOKENS = 4096;
@@ -40,6 +40,28 @@ type AnthropicRequestShape = {
   messages: MessageParam[];
   tools: Tool[] | undefined;
 };
+
+/** Legacy thinking shape — `budget_tokens` (Haiku 4.5 and older models). */
+type BudgetThinking = { type: "enabled"; budget_tokens: number };
+/** Modern thinking shape — Opus 4.6/4.7/4.8, Sonnet 4.6. */
+type AdaptiveThinking = { type: "adaptive" };
+type ThinkingParam = BudgetThinking | AdaptiveThinking;
+/** Effort level for adaptive thinking, passed via Anthropic's `output_config`. */
+type OutputConfig = { effort: "low" | "medium" | "high" };
+
+/**
+ * Which thinking API a model speaks. New flagship Anthropic models (Opus 4.7+)
+ * reject the legacy `{type: "enabled", budget_tokens}` form with a 400, so we
+ * default unknown/unregistered models to "adaptive" (the forward-looking shape)
+ * rather than the form that's being phased out.
+ */
+function thinkingStyleFor(modelName: ModelName): "adaptive" | "budget" {
+  const model = getModel(modelName);
+  if (model && isTextModel(model) && model.reasoning?.thinkingStyle) {
+    return model.reasoning.thinkingStyle;
+  }
+  return "adaptive";
+}
 
 /**
  * Attach ephemeral cache_control breakpoints to (up to) three places:
@@ -171,7 +193,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     system: string | SystemBlock[] | undefined;
     messages: MessageParam[];
     tools: Tool[] | undefined;
-    thinking: { type: "enabled"; budget_tokens: number } | undefined;
+    thinking: ThinkingParam | undefined;
+    outputConfig: OutputConfig | undefined;
   } {
     // Split system/developer messages out into the top-level `system` param
     const systemParts = config.messages
@@ -222,23 +245,10 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ) as Tool[])
         : undefined;
 
-    const reasoningBudgetMap = {
-      low: 2048,
-      medium: 5000,
-      high: 10000,
-    } as const;
-
-    const thinking = config.thinking?.enabled
-      ? {
-          type: "enabled" as const,
-          budget_tokens: config.thinking.budgetTokens ?? 5000,
-        }
-      : config.reasoningEffort
-        ? {
-            type: "enabled" as const,
-            budget_tokens: reasoningBudgetMap[config.reasoningEffort],
-          }
-        : undefined;
+    // Normalize the user's provider-agnostic thinking/effort config into the
+    // shape this specific model accepts. Both `thinking.enabled` and
+    // `reasoningEffort` are treated as a request to think.
+    const { thinking, outputConfig } = this.resolveThinking(config);
 
     const cachingEnabled = config.caching?.enabled !== false;
     const baseRequest = { system, messages: anthropicMessages, tools };
@@ -246,7 +256,48 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       ? applyCacheBreakpoints(baseRequest)
       : baseRequest;
 
-    return { ...finalRequest, thinking };
+    return { ...finalRequest, thinking, outputConfig };
+  }
+
+  /**
+   * Translate `thinking` / `reasoningEffort` into the correct Anthropic
+   * parameters for this model. Callers shouldn't have to know whether a model
+   * speaks the legacy `budget_tokens` API or the newer adaptive + effort API —
+   * that's exactly the vendor difference this package smooths over.
+   */
+  private resolveThinking(config: SmolConfig): {
+    thinking: ThinkingParam | undefined;
+    outputConfig: OutputConfig | undefined;
+  } {
+    const wantsThinking = config.thinking?.enabled === true;
+    const effort = config.reasoningEffort;
+
+    if (!wantsThinking && !effort) {
+      return { thinking: undefined, outputConfig: undefined };
+    }
+
+    if (thinkingStyleFor(this.getModel()) === "adaptive") {
+      // `output_config.effort` controls depth; the budget is irrelevant here.
+      return {
+        thinking: { type: "adaptive" },
+        outputConfig: effort ? { effort } : undefined,
+      };
+    }
+
+    // Legacy budget-based thinking (Haiku 4.5 and older models).
+    const reasoningBudgetMap = {
+      low: 2048,
+      medium: 5000,
+      high: 10000,
+    } as const;
+    const budget_tokens = wantsThinking
+      ? (config.thinking?.budgetTokens ?? 5000)
+      : reasoningBudgetMap[effort!];
+
+    return {
+      thinking: { type: "enabled", budget_tokens },
+      outputConfig: undefined,
+    };
   }
 
   private rethrowAsSmolError(error: unknown): never {
@@ -273,7 +324,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
-    const { system, messages, tools, thinking } = this.buildRequest(config);
+    const { system, messages, tools, thinking, outputConfig } =
+      this.buildRequest(config);
 
     let debugData = {
       model: this.getModel(),
@@ -282,6 +334,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       system,
       tools,
       thinking,
+      output_config: outputConfig,
     };
     this.logger.debug("Sending request to Anthropic:", debugData);
     this.statelogClient?.promptRequest(debugData);
@@ -297,6 +350,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(system && { system }),
           ...(tools && { tools }),
           ...(thinking && { thinking }),
+          ...(outputConfig && { output_config: outputConfig }),
           ...(config.temperature !== undefined && {
             temperature: config.temperature,
           }),
@@ -346,7 +400,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
-    const { system, messages, tools, thinking } = this.buildRequest(config);
+    const { system, messages, tools, thinking, outputConfig } =
+      this.buildRequest(config);
 
     const streamDebugData = {
       model: this.model,
@@ -355,6 +410,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       system,
       tools,
       thinking,
+      output_config: outputConfig,
     };
     this.logger.debug(
       "Sending streaming request to Anthropic:",
@@ -373,6 +429,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(system && { system }),
           ...(tools && { tools }),
           ...(thinking && { thinking }),
+          ...(outputConfig && { output_config: outputConfig }),
           ...(config.temperature !== undefined && {
             temperature: config.temperature,
           }),

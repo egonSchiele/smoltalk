@@ -50,6 +50,16 @@ export type TextModel = BaseModel & {
     levels?: readonly string[];
     /** Default reasoning level */
     defaultLevel?: string;
+    /**
+     * Anthropic thinking API shape:
+     *   "adaptive" → `thinking: {type: "adaptive"}` + `output_config: {effort}`
+     *               (Opus 4.6/4.7/4.8, Sonnet 4.6). Required on 4.7+, where the
+     *               legacy `enabled` form returns a 400.
+     *   "budget"   → `thinking: {type: "enabled", budget_tokens: N}`
+     *               (Haiku 4.5 and older models).
+     * Omit for non-Anthropic models.
+     */
+    thinkingStyle?: "adaptive" | "budget";
     /** Whether reasoning/thinking can be fully disabled */
     canDisable?: boolean;
     /** Whether the response includes visible thinking content (thinking blocks/parts) */
@@ -761,6 +771,7 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     outputTokenCost: 25,
     reasoning: {
+      thinkingStyle: "adaptive",
       canDisable: false,
       outputsThinking: true,
       outputsSignatures: true,
@@ -780,6 +791,7 @@ export const textModels = [
     outputTokenCost: 25,
     outputTokensPerSecond: 72,
     reasoning: {
+      thinkingStyle: "adaptive",
       canDisable: false,
       outputsThinking: true,
       outputsSignatures: true,
@@ -799,6 +811,7 @@ export const textModels = [
     outputTokenCost: 25,
     outputTokensPerSecond: 53,
     reasoning: {
+      thinkingStyle: "adaptive",
       canDisable: true,
       outputsThinking: true,
       outputsSignatures: true,
@@ -818,6 +831,7 @@ export const textModels = [
     outputTokenCost: 15,
     outputTokensPerSecond: 52,
     reasoning: {
+      thinkingStyle: "adaptive",
       canDisable: true,
       outputsThinking: true,
       outputsSignatures: true,
@@ -837,6 +851,7 @@ export const textModels = [
     outputTokenCost: 5,
     outputTokensPerSecond: 97,
     reasoning: {
+      thinkingStyle: "budget",
       canDisable: true,
       outputsThinking: true,
       outputsSignatures: true,
@@ -854,6 +869,7 @@ export const textModels = [
     outputTokenCost: 15,
     outputTokensPerSecond: 78,
     reasoning: {
+      thinkingStyle: "budget",
       canDisable: true,
       outputsThinking: true,
       outputsSignatures: true,
