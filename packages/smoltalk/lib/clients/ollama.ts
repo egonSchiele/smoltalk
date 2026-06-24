@@ -76,6 +76,18 @@ export class SmolOllama extends BaseClient implements SmolClient {
     return { usage, cost };
   }
 
+  private rethrowAsSmolError(error: unknown): never {
+    const http = { ...extractHttpErrorFields(error), cause: error };
+    const msg = ((error as Error).message || "").toLowerCase();
+    if (msg.includes("context length") || msg.includes("context window")) {
+      throw new SmolContextWindowExceededError((error as Error).message, http);
+    }
+    if (http.status !== undefined) {
+      throw new SmolError((error as Error).message, http);
+    }
+    throw error;
+  }
+
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
 
@@ -112,15 +124,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
       // @ts-ignore
       result = await this.client.chat(request);
     } catch (error) {
-      const http = { ...extractHttpErrorFields(error), cause: error };
-      const msg = ((error as Error).message || "").toLowerCase();
-      if (msg.includes("context length") || msg.includes("context window")) {
-        throw new SmolContextWindowExceededError((error as Error).message, http);
-      }
-      if (http.status !== undefined) {
-        throw new SmolError((error as Error).message, http);
-      }
-      throw error;
+      this.rethrowAsSmolError(error);
     } finally {
       if (signal && abortHandler) {
         signal.removeEventListener("abort", abortHandler);
@@ -261,6 +265,8 @@ export class SmolOllama extends BaseClient implements SmolClient {
           model: this.getModel(),
         },
       };
+    } catch (error) {
+      this.rethrowAsSmolError(error);
     } finally {
       if (signal && abortHandler) {
         signal.removeEventListener("abort", abortHandler);
