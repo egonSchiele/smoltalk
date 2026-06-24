@@ -59,7 +59,7 @@ describe("extractHttpErrorFields", () => {
       });
     });
 
-    it("drops credential/session headers from a plain-object map (case-insensitively)", () => {
+    it("drops credential/session headers from a plain-object map (case-insensitively) and lowercases kept keys", () => {
       const { headers } = extractHttpErrorFields({
         headers: {
           Authorization: "Bearer sk-secret",
@@ -67,7 +67,23 @@ describe("extractHttpErrorFields", () => {
           "Content-Type": "application/json",
         },
       });
-      expect(headers).toEqual({ "Content-Type": "application/json" });
+      // Allowlisted keys are normalized to lowercase regardless of input case,
+      // so consumer code can always look up `headers["content-type"]`.
+      expect(headers).toEqual({ "content-type": "application/json" });
+    });
+
+    it("drops headers matching old prefix wildcards that are not in the explicit allowlist", () => {
+      // We deliberately stopped using `x-ratelimit-*` as a wildcard so that
+      // a future `x-ratelimit-organization` style header carrying an org id
+      // can't sneak through.
+      const headers = new Headers({
+        "x-ratelimit-organization": "org-secret",
+        "x-ratelimit-account-id": "acct-secret",
+        "anthropic-ratelimit-account": "secret",
+      });
+      expect(
+        extractHttpErrorFields({ status: 429, headers }).headers,
+      ).toBeUndefined();
     });
 
     it("returns no headers when nothing is allowlisted", () => {
@@ -157,6 +173,71 @@ describe("extractHttpErrorFields", () => {
         extractHttpErrorFields({ headers: { "Retry-After-Ms": "750" } })
           .retryAfterMs,
       ).toBe(750);
+    });
+
+    it("caps an absurdly far-future HTTP-date at the 5-minute ceiling", () => {
+      // A buggy proxy injecting a year-9999 date would otherwise produce a
+      // ~250-year sleep. We clamp to 5 minutes.
+      const farFuture = new Date("9999-01-01T00:00:00Z").toUTCString();
+      const headers = new Headers({ "retry-after": farFuture });
+      expect(extractHttpErrorFields({ headers }).retryAfterMs).toBe(
+        5 * 60 * 1000,
+      );
+    });
+
+    it("clamps a negative delta-seconds value to 0", () => {
+      const headers = new Headers({ "retry-after": "-3600" });
+      expect(extractHttpErrorFields({ headers }).retryAfterMs).toBe(0);
+    });
+
+    it("clamps a negative `retry-after-ms` value to 0", () => {
+      const headers = new Headers({ "retry-after-ms": "-1000" });
+      expect(extractHttpErrorFields({ headers }).retryAfterMs).toBe(0);
+    });
+
+    it("takes the first token of a comma-separated `retry-after`", () => {
+      const headers = new Headers({ "retry-after": "5, 10" });
+      expect(extractHttpErrorFields({ headers }).retryAfterMs).toBe(5000);
+    });
+
+    it("caps a huge `retry-after-ms` at the 5-minute ceiling", () => {
+      const headers = new Headers({ "retry-after-ms": "9999999999" });
+      expect(extractHttpErrorFields({ headers }).retryAfterMs).toBe(
+        5 * 60 * 1000,
+      );
+    });
+  });
+
+  describe("hardening against malicious inputs", () => {
+    it("survives a throwing getter on `status` (doesn't propagate)", () => {
+      const error = {
+        get status(): number {
+          throw new Error("boom");
+        },
+        get headers(): Headers {
+          throw new Error("boom");
+        },
+        get requestID(): string {
+          throw new Error("boom");
+        },
+      };
+      // Must not throw; returns an empty extraction.
+      expect(() => extractHttpErrorFields(error)).not.toThrow();
+      expect(extractHttpErrorFields(error)).toEqual({});
+    });
+
+    it("survives a Headers-shaped object whose forEach throws", () => {
+      const error = {
+        status: 500,
+        headers: {
+          forEach: () => {
+            throw new Error("hostile iterator");
+          },
+        },
+      };
+      expect(() => extractHttpErrorFields(error)).not.toThrow();
+      // Status still captured; headers dropped.
+      expect(extractHttpErrorFields(error)).toEqual({ status: 500 });
     });
   });
 });
