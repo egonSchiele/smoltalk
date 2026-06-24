@@ -16,16 +16,22 @@ describe("SmolError", () => {
     expect(err).toBeInstanceOf(Error);
   });
 
-  it("exposes status, headers, and cause", () => {
+  it("exposes status, headers, retryAfterMs, and cause", () => {
     const cause = new Error("underlying");
     const err = new SmolError("rate limited", {
       status: 429,
       headers: { "retry-after": "30" },
+      retryAfterMs: 30000,
       cause,
     });
     expect(err.status).toBe(429);
     expect(err.headers).toEqual({ "retry-after": "30" });
+    expect(err.retryAfterMs).toBe(30000);
     expect(err.cause).toBe(cause);
+  });
+
+  it("defaults retryAfterMs to undefined", () => {
+    expect(new SmolError("boom").retryAfterMs).toBeUndefined();
   });
 
   const subclasses = [
