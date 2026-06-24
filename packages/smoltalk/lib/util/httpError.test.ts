@@ -35,6 +35,26 @@ describe("extractHttpErrorFields", () => {
     ).toEqual({ headers: { "X-Foo": "bar" } });
   });
 
+  it("strips session/cookie headers (case-insensitively)", () => {
+    const headers = new Headers({
+      "set-cookie": "__cf_bm=secret; Path=/",
+      "x-request-id": "abc",
+    });
+    headers.append("Set-Cookie", "_cfuvid=token");
+    expect(extractHttpErrorFields({ status: 429, headers })).toEqual({
+      status: 429,
+      headers: { "x-request-id": "abc" },
+    });
+  });
+
+  it("strips cookie headers from a plain-object map", () => {
+    expect(
+      extractHttpErrorFields({
+        headers: { Cookie: "session=abc", "x-foo": "bar" },
+      }),
+    ).toEqual({ headers: { "x-foo": "bar" } });
+  });
+
   it("omits headers when empty", () => {
     expect(extractHttpErrorFields({ status: 500, headers: {} })).toEqual({
       status: 500,

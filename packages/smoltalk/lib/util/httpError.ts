@@ -90,6 +90,11 @@ function headerValue(
   return undefined;
 }
 
+// Response headers that carry session/cookie tokens rather than useful
+// diagnostics. They're not credentials, but exposing them invites consumers to
+// log session-correlatable tokens, so we strip them from the captured headers.
+const REDACTED_HEADERS = new Set(["set-cookie", "cookie"]);
+
 function normalizeHeaders(raw: unknown): Record<string, string> | undefined {
   if (!raw || typeof raw !== "object") {
     return undefined;
@@ -100,12 +105,14 @@ function normalizeHeaders(raw: unknown): Record<string, string> | undefined {
   // Web `Headers` (used by the OpenAI/Anthropic SDKs) is iterable via forEach.
   if (typeof (raw as Headers).forEach === "function") {
     (raw as Headers).forEach((value, key) => {
-      out[key] = value;
+      if (!REDACTED_HEADERS.has(key.toLowerCase())) {
+        out[key] = value;
+      }
     });
   } else {
     // Fall back to a plain object of header key/value pairs.
     for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
-      if (typeof value === "string") {
+      if (typeof value === "string" && !REDACTED_HEADERS.has(key.toLowerCase())) {
         out[key] = value;
       }
     }
