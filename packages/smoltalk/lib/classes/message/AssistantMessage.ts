@@ -15,6 +15,7 @@ import { Content, Part } from "@google/genai";
 import { ToolCall, ToolCallJSON, ToolCallJSONSchema } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import { getLogger } from "../../util/logger.js";
 
 export const AssistantMessageJSONSchema = z.object({
   role: z.literal("assistant"),
@@ -129,9 +130,10 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   static fromJSON(json: unknown): AssistantMessage {
     const result = AssistantMessageJSONSchema.safeParse(json);
     if (!result.success) {
-      console.error("Failed to parse AssistantMessage");
-      console.error(JSON.stringify(json, null, 2));
-      console.error(z.prettifyError(result.error));
+      const logger = getLogger();
+      logger.error("Failed to parse AssistantMessage:", z.prettifyError(result.error));
+      // Raw payload can contain assistant content / tool args — only at debug level.
+      logger.debug("AssistantMessage payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse AssistantMessage");
     }
     return new AssistantMessage(result.data.content, {

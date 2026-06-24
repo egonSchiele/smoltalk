@@ -5,6 +5,7 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import { getLogger } from "../../util/logger.js";
 
 export const SystemMessageJSONSchema = z.object({
   role: z.literal("system"),
@@ -62,9 +63,10 @@ export class SystemMessage extends BaseMessage implements MessageClass {
   static fromJSON(json: unknown): SystemMessage {
     const result = SystemMessageJSONSchema.safeParse(json);
     if (!result.success) {
-      console.error("Failed to parse SystemMessage");
-      console.error(JSON.stringify(json, null, 2));
-      console.error(z.prettifyError(result.error));
+      const logger = getLogger();
+      logger.error("Failed to parse SystemMessage:", z.prettifyError(result.error));
+      // Raw payload can contain system prompt content — only at debug level.
+      logger.debug("SystemMessage payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse SystemMessage");
     }
     return new SystemMessage(result.data.content, {

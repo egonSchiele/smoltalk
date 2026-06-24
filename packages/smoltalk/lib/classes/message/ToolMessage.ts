@@ -79,9 +79,10 @@ export class ToolMessage extends BaseMessage implements MessageClass {
     const result = ToolMessageJSONSchema.safeParse(json);
 
     if (!result.success) {
-      console.error("Failed to parse ToolMessage");
-      console.error(JSON.stringify(json, null, 2));
-      console.error(z.prettifyError(result.error));
+      const logger = getLogger();
+      logger.error("Failed to parse ToolMessage:", z.prettifyError(result.error));
+      // Raw payload can contain tool results (file paths, secrets) — only at debug level.
+      logger.debug("ToolMessage payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse ToolMessage");
     }
     const TextPartArraySchema = z.array(TextPartSchema);

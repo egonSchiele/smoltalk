@@ -6,6 +6,7 @@ import { Content } from "@google/genai";
 import { ToolCall } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import { getLogger } from "../../util/logger.js";
 
 export const UserMessageJSONSchema = z.object({
   role: z.literal("user"),
@@ -60,9 +61,10 @@ export class UserMessage extends BaseMessage implements MessageClass {
   static fromJSON(json: unknown): UserMessage {
     const result = UserMessageJSONSchema.safeParse(json);
     if (!result.success) {
-      console.error("Failed to parse UserMessage");
-      console.error(JSON.stringify(json, null, 2));
-      console.error(z.prettifyError(result.error));
+      const logger = getLogger();
+      logger.error("Failed to parse UserMessage:", z.prettifyError(result.error));
+      // Raw payload can contain user prompts / PII — only at debug level.
+      logger.debug("UserMessage payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse UserMessage");
     }
     return new UserMessage(result.data.content, {
