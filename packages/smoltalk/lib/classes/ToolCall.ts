@@ -72,9 +72,10 @@ export class ToolCall {
   static fromJSON(json: unknown): ToolCall {
     const result = ToolCallJSONSchema.safeParse(json);
     if (!result.success) {
-      console.error("Failed to parse ToolCall");
-      console.error(JSON.stringify(json, null, 2));
-      console.error(z.prettifyError(result.error));
+      const logger = getLogger();
+      logger.error("Failed to parse ToolCall:", z.prettifyError(result.error));
+      // Raw payload can contain tool-call arguments (often secrets) — only at debug level.
+      logger.debug("ToolCall payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse ToolCall");
     }
     return new ToolCall(result.data.id, result.data.name, result.data.arguments);

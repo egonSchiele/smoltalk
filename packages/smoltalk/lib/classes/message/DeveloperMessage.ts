@@ -5,6 +5,7 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import { getLogger } from "../../util/logger.js";
 
 export const DeveloperMessageJSONSchema = z.object({
   role: z.literal("developer"),
@@ -62,9 +63,10 @@ export class DeveloperMessage extends BaseMessage implements MessageClass {
   static fromJSON(json: unknown): DeveloperMessage {
     const result = DeveloperMessageJSONSchema.safeParse(json);
     if (!result.success) {
-      console.error("Failed to parse DeveloperMessage");
-      console.error(JSON.stringify(json, null, 2));
-      console.error(z.prettifyError(result.error));
+      const logger = getLogger();
+      logger.error("Failed to parse DeveloperMessage:", z.prettifyError(result.error));
+      // Raw payload can contain developer-message content — only at debug level.
+      logger.debug("DeveloperMessage payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse DeveloperMessage");
     }
     return new DeveloperMessage(result.data.content, {
