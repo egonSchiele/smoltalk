@@ -17,7 +17,7 @@ import { zodToGoogleTool } from "../util/tool.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
-  SmolError,
+  smolErrorForStatus,
 } from "../smolError.js";
 import { extractHttpErrorFields } from "../util/httpError.js";
 import { sanitizeAttributes } from "../util/util.js";
@@ -143,7 +143,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       throw new SmolContextWindowExceededError((error as Error).message, http);
     }
     if (http.status !== undefined) {
-      throw new SmolError((error as Error).message, http);
+      throw smolErrorForStatus((error as Error).message, http);
     }
     throw error;
   }

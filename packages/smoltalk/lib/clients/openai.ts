@@ -20,7 +20,7 @@ import { BaseClient } from "./baseClient.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
-  SmolError,
+  smolErrorForStatus,
 } from "../smolError.js";
 import { extractHttpErrorFields } from "../util/httpError.js";
 import { zodToOpenAITool } from "../util/tool.js";
@@ -116,7 +116,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       if (error.code === "content_policy_violation") {
         throw new SmolContentPolicyError(error.message, http);
       }
-      throw new SmolError(error.message, http);
+      throw smolErrorForStatus(error.message, http);
     }
     throw error;
   }

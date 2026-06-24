@@ -22,7 +22,7 @@ import { zodToAnthropicTool } from "../util/tool.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
-  SmolError,
+  smolErrorForStatus,
 } from "../smolError.js";
 import { extractHttpErrorFields } from "../util/httpError.js";
 import { BaseClient } from "./baseClient.js";
@@ -322,7 +322,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       ) {
         throw new SmolContentPolicyError(error.message, http);
       }
-      throw new SmolError(error.message, http);
+      throw smolErrorForStatus(error.message, http);
     }
     throw error;
   }

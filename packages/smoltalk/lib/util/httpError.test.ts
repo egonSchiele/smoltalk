@@ -22,42 +22,87 @@ describe("extractHttpErrorFields", () => {
   });
 
   it("normalizes a web `Headers` instance", () => {
-    const headers = new Headers({ "content-type": "application/json", "x-request-id": "abc" });
+    const headers = new Headers({ "content-type": "application/json" });
     expect(extractHttpErrorFields({ status: 429, headers })).toEqual({
       status: 429,
-      headers: { "content-type": "application/json", "x-request-id": "abc" },
+      headers: { "content-type": "application/json" },
     });
-  });
-
-  it("normalizes a plain-object headers map", () => {
-    expect(
-      extractHttpErrorFields({ headers: { "X-Foo": "bar", skip: 5 } }),
-    ).toEqual({ headers: { "X-Foo": "bar" } });
-  });
-
-  it("strips session/cookie headers (case-insensitively)", () => {
-    const headers = new Headers({
-      "set-cookie": "__cf_bm=secret; Path=/",
-      "x-request-id": "abc",
-    });
-    headers.append("Set-Cookie", "_cfuvid=token");
-    expect(extractHttpErrorFields({ status: 429, headers })).toEqual({
-      status: 429,
-      headers: { "x-request-id": "abc" },
-    });
-  });
-
-  it("strips cookie headers from a plain-object map", () => {
-    expect(
-      extractHttpErrorFields({
-        headers: { Cookie: "session=abc", "x-foo": "bar" },
-      }),
-    ).toEqual({ headers: { "x-foo": "bar" } });
   });
 
   it("omits headers when empty", () => {
     expect(extractHttpErrorFields({ status: 500, headers: {} })).toEqual({
       status: 500,
+    });
+  });
+
+  describe("header allowlist", () => {
+    it("keeps only allowlisted headers and the ratelimit/request-id families", () => {
+      const headers = new Headers({
+        "retry-after": "5",
+        "x-ratelimit-remaining-requests": "10",
+        "anthropic-ratelimit-tokens-remaining": "1000",
+        "x-request-id": "req_123",
+        "content-type": "application/json",
+        // Everything below must be dropped:
+        authorization: "Bearer sk-secret",
+        "x-api-key": "secret-key",
+        "set-cookie": "__cf_bm=token",
+        "llm_provider-x-upstream-secret": "leaked",
+        "openai-organization": "org-abc",
+      });
+      expect(extractHttpErrorFields({ status: 429, headers }).headers).toEqual({
+        "retry-after": "5",
+        "x-ratelimit-remaining-requests": "10",
+        "anthropic-ratelimit-tokens-remaining": "1000",
+        "x-request-id": "req_123",
+        "content-type": "application/json",
+      });
+    });
+
+    it("drops credential/session headers from a plain-object map (case-insensitively)", () => {
+      const { headers } = extractHttpErrorFields({
+        headers: {
+          Authorization: "Bearer sk-secret",
+          "Set-Cookie": "session=abc",
+          "Content-Type": "application/json",
+        },
+      });
+      expect(headers).toEqual({ "Content-Type": "application/json" });
+    });
+
+    it("returns no headers when nothing is allowlisted", () => {
+      const headers = new Headers({ "set-cookie": "__cf_bm=token" });
+      expect(extractHttpErrorFields({ status: 503, headers }).headers).toBeUndefined();
+    });
+  });
+
+  describe("requestId", () => {
+    it("reads the SDK's parsed `requestID` property first", () => {
+      const headers = new Headers({ "x-request-id": "from-header" });
+      expect(
+        extractHttpErrorFields({ requestID: "from-sdk", headers }).requestId,
+      ).toBe("from-sdk");
+    });
+
+    it("reads a snake_case `request_id` property", () => {
+      expect(extractHttpErrorFields({ request_id: "req_snake" }).requestId).toBe(
+        "req_snake",
+      );
+    });
+
+    it("falls back to the `x-request-id` header (OpenAI)", () => {
+      const headers = new Headers({ "x-request-id": "req_openai" });
+      expect(extractHttpErrorFields({ headers }).requestId).toBe("req_openai");
+    });
+
+    it("falls back to the `request-id` header (Anthropic)", () => {
+      const headers = new Headers({ "request-id": "req_anthropic" });
+      expect(extractHttpErrorFields({ headers }).requestId).toBe("req_anthropic");
+    });
+
+    it("is absent when no request id is available", () => {
+      const headers = new Headers({ "content-type": "application/json" });
+      expect(extractHttpErrorFields({ status: 500, headers }).requestId).toBeUndefined();
     });
   });
 
@@ -93,6 +138,11 @@ describe("extractHttpErrorFields", () => {
     it("falls through to `retry-after` when `retry-after-ms` is unparseable", () => {
       const headers = new Headers({ "retry-after-ms": "soon", "retry-after": "5" });
       expect(extractHttpErrorFields({ headers }).retryAfterMs).toBe(5000);
+    });
+
+    it("rejects values with trailing junk instead of parsing a prefix", () => {
+      const headers = new Headers({ "retry-after": "5xyz" });
+      expect(extractHttpErrorFields({ headers }).retryAfterMs).toBeUndefined();
     });
 
     it("is absent when no retry headers are present", () => {
