@@ -17,7 +17,9 @@ import { zodToGoogleTool } from "../util/tool.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
+  SmolError,
 } from "../smolError.js";
+import { extractHttpErrorFields } from "../util/httpError.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
@@ -129,6 +131,21 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       config: genConfig,
       ...sanitizeAttributes(config.rawAttributes),
     };
+  }
+
+  private rethrowAsSmolError(error: unknown): never {
+    const http = { ...extractHttpErrorFields(error), cause: error };
+    const msg = ((error as Error).message || "").toLowerCase();
+    if (
+      msg.includes("token") &&
+      (msg.includes("exceed") || msg.includes("too long") || msg.includes("limit"))
+    ) {
+      throw new SmolContextWindowExceededError((error as Error).message, http);
+    }
+    if (http.status !== undefined) {
+      throw new SmolError((error as Error).message, http);
+    }
+    throw error;
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
@@ -253,16 +270,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     try {
       result = await this.client.models.generateContent(request);
     } catch (error) {
-      const msg = ((error as Error).message || "").toLowerCase();
-      if (
-        msg.includes("token") &&
-        (msg.includes("exceed") ||
-          msg.includes("too long") ||
-          msg.includes("limit"))
-      ) {
-        throw new SmolContextWindowExceededError((error as Error).message);
-      }
-      throw error;
+      this.rethrowAsSmolError(error);
     }
 
     this.logger.debug(
@@ -355,16 +363,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     try {
       stream = await this.client.models.generateContentStream(request);
     } catch (error) {
-      const msg = ((error as Error).message || "").toLowerCase();
-      if (
-        msg.includes("token") &&
-        (msg.includes("exceed") ||
-          msg.includes("too long") ||
-          msg.includes("limit"))
-      ) {
-        throw new SmolContextWindowExceededError((error as Error).message);
-      }
-      throw error;
+      this.rethrowAsSmolError(error);
     }
 
     let content = "";

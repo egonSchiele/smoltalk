@@ -23,7 +23,9 @@ import { Model } from "../model.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
+  SmolError,
 } from "../smolError.js";
+import { extractHttpErrorFields } from "../util/httpError.js";
 
 export type SmolOpenAiResponsesConfig = SmolConfig;
 
@@ -171,12 +173,14 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
   private rethrowAsSmolError(error: unknown): never {
     if (error instanceof OpenAI.APIError) {
+      const http = { ...extractHttpErrorFields(error), cause: error };
       if (error.code === "context_length_exceeded") {
-        throw new SmolContextWindowExceededError(error.message);
+        throw new SmolContextWindowExceededError(error.message, http);
       }
       if (error.code === "content_policy_violation") {
-        throw new SmolContentPolicyError(error.message);
+        throw new SmolContentPolicyError(error.message, http);
       }
+      throw new SmolError(error.message, http);
     }
     throw error;
   }

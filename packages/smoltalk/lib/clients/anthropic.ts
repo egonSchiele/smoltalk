@@ -22,7 +22,9 @@ import { zodToAnthropicTool } from "../util/tool.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
+  SmolError,
 } from "../smolError.js";
+import { extractHttpErrorFields } from "../util/httpError.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName, TextModelName, getModel, isTextModel } from "../models.js";
 import { Model } from "../model.js";
@@ -302,6 +304,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
 
   private rethrowAsSmolError(error: unknown): never {
     if (error instanceof Anthropic.APIError) {
+      const http = { ...extractHttpErrorFields(error), cause: error };
       const msg = error.message.toLowerCase();
       if (
         msg.includes("prompt is too long") ||
@@ -309,7 +312,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         msg.includes("context window") ||
         msg.includes("too many tokens")
       ) {
-        throw new SmolContextWindowExceededError(error.message);
+        throw new SmolContextWindowExceededError(error.message, http);
       }
       if (
         msg.includes("content policy") ||
@@ -317,8 +320,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         msg.includes("content filtering") ||
         msg.includes("violates our")
       ) {
-        throw new SmolContentPolicyError(error.message);
+        throw new SmolContentPolicyError(error.message, http);
       }
+      throw new SmolError(error.message, http);
     }
     throw error;
   }
