@@ -8,7 +8,9 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
-  "files": ["./dist"],
+  "files": [
+    "./dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -17,13 +19,18 @@
     }
   },
   "types": "./dist/index.d.ts",
-  "keywords": ["smoltalk", "llm", "llama-cpp", "local"],
+  "keywords": [
+    "smoltalk",
+    "llm",
+    "llama-cpp",
+    "local"
+  ],
   "license": "ISC",
   "dependencies": {
     "node-llama-cpp": "^3.17.1"
   },
   "peerDependencies": {
-    "smoltalk": "^0.3.0"
+    "smoltalk": "^0.4.2"
   },
   "devDependencies": {
     "smoltalk": "workspace:*"

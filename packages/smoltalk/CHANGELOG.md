@@ -1,5 +1,28 @@
 # Changelog
 
+## smoltalk 0.4.2 (2026-06-24)
+
+### Added
+- Exposed HTTP status, an allowlisted subset of response headers, the provider request id, and a parsed `retryAfterMs` on `SmolError`, plus new `SmolRateLimitError`, `SmolOverloadedError`, and `SmolAuthError` subclasses so retry code can `instanceof`-dispatch instead of sniffing status numbers.
+
+### Security
+- The raw provider error on `SmolError.cause` is now non-enumerable, with `toJSON` and `util.inspect` overrides — `JSON.stringify(err)`, structured loggers, and `console.error(err)` no longer leak `set-cookie` / `authorization` / `x-api-key` from upstream responses.
+- Message `fromJSON` parse failures no longer dump the full payload (prompts, tool arguments, tool results) to `console.error` unconditionally; the raw JSON now prints only at debug log level.
+
+## smoltalk 0.4.1 (2026-06-20)
+
+### Changed
+- Anthropic models default to adaptive `thinking` budgets.
+- OpenAI models that only support the Responses API are now routed through it automatically.
+
+## smoltalk 0.4.0 (2026-06-03)
+
+### Added
+- Anthropic prompt-caching support, with corrected cost estimation that no longer double-counts cached input tokens.
+
+### Changed
+- Refreshed the model registry.
+
 ## smoltalk 0.3.0 (2026-05-13)
 
 - Added `image()` function for image generation.
