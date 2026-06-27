@@ -24,12 +24,14 @@ describe.runIf(haveKey).concurrent("Anthropic - prompt caching", () => {
     "writes a cache on first call and reads it on second call",
     { timeout: 60_000 },
     async () => {
-      // ~2400 tokens, safely above the 2048 Haiku minimum. A per-run nonce
+      // Haiku 4.5's minimum cacheable prefix is 4096 tokens — below that,
+      // Anthropic silently declines to cache (cache_creation stays 0, no error).
+      // 800 repeats is ~4800 tokens, comfortably over the floor. A per-run nonce
       // makes the cached prefix unique so a warm cache from a recent CI run
       // can't turn this first call into a read instead of a creation.
       const nonce = Math.random().toString(36).slice(2);
       const longSystem =
-        `Session ${nonce}. ` + "You are a helpful assistant. ".repeat(400);
+        `Session ${nonce}. ` + "You are a helpful assistant. ".repeat(800);
 
       const r1 = await text({
         model: "claude-haiku-4-5-20251001",
