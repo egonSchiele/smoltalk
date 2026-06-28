@@ -1,4 +1,6 @@
 import z from "zod";
+import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import type { ModelType } from "./models.js";
 import { Result, success, failure } from "./types/result.js";
 
@@ -161,4 +163,81 @@ export function mergeModelData(base: ModelType[], overlay: ModelType[]): ModelTy
 
 export function mergeHostedTools(base: HostedTool[], overlay: HostedTool[]): HostedTool[] {
   return mergeByKey(base, overlay, (t) => `${t.provider}:${t.name}`);
+}
+
+export const DEFAULT_MODEL_DATA_URL =
+  "https://raw.githubusercontent.com/egonSchiele/smoltalk/main/packages/smoltalk/data/model-data.json";
+
+const MAX_BYTES = 10_000_000;
+const TIMEOUT_MS = 15_000;
+
+export type Fetcher = (url: string, signal?: AbortSignal) => Promise<string>;
+
+export type RefreshOptions = {
+  url?: string;
+  fetcher?: Fetcher;
+  signal?: AbortSignal;
+};
+
+function enforceSizeCap(text: string): string {
+  if (text.length > MAX_BYTES) {
+    throw new Error(`Model data exceeds the ${MAX_BYTES}-byte cap`);
+  }
+  return text;
+}
+
+// The default fetcher supports remote https:// URLs and local file:// URLs.
+// file:// lets users point at a self-hosted on-disk catalog (and powers the
+// integration test). Any other scheme is rejected.
+async function defaultFetcher(url: string, signal?: AbortSignal): Promise<string> {
+  if (url.startsWith("file://")) {
+    const path = fileURLToPath(url);
+    const text = await readFile(path, "utf8");
+    return enforceSizeCap(text);
+  }
+  if (url.startsWith("https://")) {
+    const res = await fetch(url, { signal });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status} ${res.statusText}`);
+    }
+    return enforceSizeCap(await res.text());
+  }
+  throw new Error(
+    `Unsupported model-data URL scheme (expected https:// or file://): ${url}`,
+  );
+}
+
+export async function refreshModels(
+  opts: RefreshOptions = {},
+): Promise<Result<ModelDataBlob>> {
+  let url = DEFAULT_MODEL_DATA_URL;
+  if (process.env.SMOLTALK_MODEL_DATA_URL) {
+    url = process.env.SMOLTALK_MODEL_DATA_URL;
+  }
+  if (opts.url) {
+    url = opts.url;
+  }
+
+  let fetcher = defaultFetcher;
+  if (opts.fetcher) {
+    fetcher = opts.fetcher;
+  }
+
+  const controller = new AbortController();
+  let signal = controller.signal;
+  if (opts.signal) {
+    signal = opts.signal;
+  }
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  let raw: string;
+  try {
+    raw = await fetcher(url, signal);
+  } catch (err) {
+    return failure(`Could not fetch model data from ${url}: ${String(err)}`);
+  } finally {
+    clearTimeout(timer);
+  }
+
+  return parseModelDataBlob(raw);
 }
