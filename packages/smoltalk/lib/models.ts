@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  mergeModelData,
+  mergeHostedTools,
+  type ModelDataBlob,
+  type HostedTool,
+} from "./modelData.js";
 export const providers = [
   "ollama",
   "openai",
@@ -1001,6 +1007,15 @@ export type EmbeddingsModelName =
   (typeof embeddingsModels)[number]["modelName"];
 export type ModelName = string; // TextModelName | ImageModelName | SpeechToTextModelName;
 
+export const hostedTools: HostedTool[] = [
+  {
+    name: "web_search",
+    provider: "anthropic",
+    description: "Anthropic server-side web search tool.",
+    costPerCall: 0.01,
+  },
+];
+
 export const registeredTextModels: TextModel[] = [];
 
 export function registerTextModel(
@@ -1009,15 +1024,53 @@ export function registerTextModel(
   registeredTextModels.push({ ...model, type: "text" });
 }
 
-export function getModel(modelName: ModelName) {
-  const allModels = [
+let registeredModelData: ModelDataBlob | null = null;
+
+export function registerModelData(blob: ModelDataBlob): void {
+  registeredModelData = blob;
+}
+
+export function clearModelData(): void {
+  registeredModelData = null;
+}
+
+export function getRegisteredModelData(): ModelDataBlob | null {
+  return registeredModelData;
+}
+
+function baselineModels(): ModelType[] {
+  return [
     ...textModels,
     ...imageModels,
     ...speechToTextModels,
     ...registeredTextModels,
     ...embeddingsModels,
-  ];
-  return allModels.find((model) => model.modelName === modelName);
+  ] as ModelType[];
+}
+
+export function getModel(
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): ModelType | undefined {
+  let models = baselineModels();
+  if (registeredModelData) {
+    models = mergeModelData(models, registeredModelData.models);
+  }
+  if (requestData) {
+    models = mergeModelData(models, requestData.models);
+  }
+  return models.find((model) => model.modelName === modelName);
+}
+
+export function getHostedTools(requestData?: ModelDataBlob): HostedTool[] {
+  let tools = hostedTools;
+  if (registeredModelData) {
+    tools = mergeHostedTools(tools, registeredModelData.hostedTools);
+  }
+  if (requestData) {
+    tools = mergeHostedTools(tools, requestData.hostedTools);
+  }
+  return tools;
 }
 
 export function isImageModel(model: ModelType): model is ImageModel {
