@@ -107,6 +107,19 @@ export function translateModelsDevEntry(
 
 export function buildRefreshedBlob(apiJson: any, generatedAt: string): ModelDataBlob {
   const baseline = buildSeedBlob(generatedAt);
+
+  // smoltalk sometimes serves a model under a different provider than models.dev
+  // labels it (e.g. gpt-5 is `openai-responses` here but `openai` upstream).
+  // Reuse the baseline provider for any model we already know, so the merge
+  // overlays the existing entry instead of creating a cross-provider duplicate
+  // that getModel() (which matches by modelName) would never return.
+  const baselineProviderByName = new Map<string, string>();
+  for (const m of baseline.models) {
+    if (!baselineProviderByName.has(m.modelName)) {
+      baselineProviderByName.set(m.modelName, m.provider);
+    }
+  }
+
   const translated: ModelType[] = [];
   for (const providerId of Object.keys(SMOLTALK_PROVIDERS)) {
     const providerData = apiJson[providerId];
@@ -118,6 +131,10 @@ export function buildRefreshedBlob(apiJson: any, generatedAt: string): ModelData
       const entry = providerData.models[modelId];
       const model = translateModelsDevEntry(smoltalkProvider, entry);
       if (model) {
+        const baselineProvider = baselineProviderByName.get(model.modelName);
+        if (baselineProvider) {
+          model.provider = baselineProvider;
+        }
         translated.push(model);
       }
     }

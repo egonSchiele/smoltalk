@@ -59,18 +59,18 @@ export function parseModelDataBlob(raw: string): Result<ModelDataBlob> {
     return failure(`Model data is not valid JSON: ${String(err)}`);
   }
 
-  const env = EnvelopeSchema.safeParse(json);
-  if (!env.success) {
-    return failure(`Model data blob is malformed: ${z.prettifyError(env.error)}`);
+  const envelope = EnvelopeSchema.safeParse(json);
+  if (!envelope.success) {
+    return failure(`Model data blob is malformed: ${z.prettifyError(envelope.error)}`);
   }
-  if (env.data.schemaVersion > SUPPORTED_SCHEMA_VERSION) {
+  if (envelope.data.schemaVersion > SUPPORTED_SCHEMA_VERSION) {
     return failure(
-      `Model data schemaVersion ${env.data.schemaVersion} is newer than this smoltalk supports (${SUPPORTED_SCHEMA_VERSION}). Please upgrade smoltalk.`,
+      `Model data schemaVersion ${envelope.data.schemaVersion} is newer than this smoltalk supports (${SUPPORTED_SCHEMA_VERSION}). Please upgrade smoltalk.`,
     );
   }
 
   const models: ModelType[] = [];
-  for (const entry of env.data.models) {
+  for (const entry of envelope.data.models) {
     const parsed = ModelEntrySchema.safeParse(entry);
     if (!parsed.success) {
       console.warn(`Skipping invalid model entry: ${z.prettifyError(parsed.error)}`);
@@ -81,8 +81,8 @@ export function parseModelDataBlob(raw: string): Result<ModelDataBlob> {
 
   const hostedTools: HostedTool[] = [];
   let rawTools: unknown[] = [];
-  if (env.data.hostedTools) {
-    rawTools = env.data.hostedTools;
+  if (envelope.data.hostedTools) {
+    rawTools = envelope.data.hostedTools;
   }
   for (const entry of rawTools) {
     const parsed = HostedToolSchema.safeParse(entry);
@@ -94,8 +94,8 @@ export function parseModelDataBlob(raw: string): Result<ModelDataBlob> {
   }
 
   return success({
-    schemaVersion: env.data.schemaVersion,
-    generatedAt: env.data.generatedAt,
+    schemaVersion: envelope.data.schemaVersion,
+    generatedAt: envelope.data.generatedAt,
     models,
     hostedTools,
   });
@@ -180,7 +180,7 @@ export type RefreshOptions = {
 };
 
 function enforceSizeCap(text: string): string {
-  if (text.length > MAX_BYTES) {
+  if (Buffer.byteLength(text, "utf8") > MAX_BYTES) {
     throw new Error(`Model data exceeds the ${MAX_BYTES}-byte cap`);
   }
   return text;
@@ -223,16 +223,24 @@ export async function refreshModels(
     fetcher = opts.fetcher;
   }
 
+  // Always drive the fetcher off our own controller so the timeout can abort
+  // it. Forward an externally-supplied signal into the same controller so both
+  // the timeout and the caller can cancel.
   const controller = new AbortController();
-  let signal = controller.signal;
-  if (opts.signal) {
-    signal = opts.signal;
-  }
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  if (opts.signal) {
+    if (opts.signal.aborted) {
+      controller.abort();
+    } else {
+      opts.signal.addEventListener("abort", () => controller.abort(), {
+        once: true,
+      });
+    }
+  }
 
   let raw: string;
   try {
-    raw = await fetcher(url, signal);
+    raw = await fetcher(url, controller.signal);
   } catch (err) {
     return failure(`Could not fetch model data from ${url}: ${String(err)}`);
   } finally {

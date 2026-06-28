@@ -1063,7 +1063,8 @@ export function getModel(
 }
 
 export function getHostedTools(requestData?: ModelDataBlob): HostedTool[] {
-  let tools = hostedTools;
+  // Start from a copy so callers can never mutate the baseline registry.
+  let tools = [...hostedTools];
   if (registeredModelData) {
     tools = mergeHostedTools(tools, registeredModelData.hostedTools);
   }

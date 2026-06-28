@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Model } from "./model.js";
+import { resolveProvider } from "./util/provider.js";
 import type { ModelDataBlob } from "./modelData.js";
 
 const override: ModelDataBlob = {
@@ -26,5 +27,11 @@ describe("Model with per-request modelData", () => {
     const blob: ModelDataBlob = { schemaVersion: 1, generatedAt: "x", models: [{ type: "text", modelName: "new-x", provider: "google" } as any], hostedTools: [] };
     const m = new Model("new-x", undefined, blob);
     expect(m.getProvider()).toBe("google");
+  });
+
+  it("resolveProvider infers the provider of a model only present in modelData", () => {
+    const blob: ModelDataBlob = { schemaVersion: 1, generatedAt: "x", models: [{ type: "text", modelName: "brand-new-llm", provider: "anthropic" } as any], hostedTools: [] };
+    // No explicit provider, model not baked in → must come from modelData.
+    expect(resolveProvider("brand-new-llm", undefined, blob)).toBe("anthropic");
   });
 });
