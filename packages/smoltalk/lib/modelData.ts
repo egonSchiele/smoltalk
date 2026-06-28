@@ -98,3 +98,67 @@ export function parseModelDataBlob(raw: string): Result<ModelDataBlob> {
     hostedTools,
   });
 }
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null) {
+    return false;
+  }
+  if (typeof value !== "object") {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return false;
+  }
+  return true;
+}
+
+export function deepMergeEntry<T>(base: T, overlay: T): T {
+  if (!isPlainObject(base) || !isPlainObject(overlay)) {
+    return overlay;
+  }
+  const result: Record<string, unknown> = { ...base };
+  for (const key of Object.keys(overlay)) {
+    const overValue = overlay[key];
+    if (overValue === undefined) {
+      continue;
+    }
+    const currentValue = result[key];
+    if (isPlainObject(currentValue) && isPlainObject(overValue)) {
+      result[key] = deepMergeEntry(currentValue, overValue);
+    } else {
+      result[key] = overValue;
+    }
+  }
+  return result as T;
+}
+
+function mergeByKey<T>(base: T[], overlay: T[], keyOf: (item: T) => string): T[] {
+  const order: string[] = [];
+  const map = new Map<string, T>();
+  for (const item of base) {
+    const key = keyOf(item);
+    if (!map.has(key)) {
+      order.push(key);
+    }
+    map.set(key, item);
+  }
+  for (const item of overlay) {
+    const key = keyOf(item);
+    const existing = map.get(key);
+    if (existing === undefined) {
+      order.push(key);
+      map.set(key, item);
+    } else {
+      map.set(key, deepMergeEntry(existing, item));
+    }
+  }
+  return order.map((key) => map.get(key) as T);
+}
+
+export function mergeModelData(base: ModelType[], overlay: ModelType[]): ModelType[] {
+  return mergeByKey(base, overlay, (m) => `${m.provider}:${m.modelName}`);
+}
+
+export function mergeHostedTools(base: HostedTool[], overlay: HostedTool[]): HostedTool[] {
+  return mergeByKey(base, overlay, (t) => `${t.provider}:${t.name}`);
+}
