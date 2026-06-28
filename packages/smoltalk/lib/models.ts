@@ -22,6 +22,12 @@ export type BaseModel = {
   outputTokenCost?: number;
   disabled?: boolean;
   costUnit?: "tokens" | "characters" | "minutes";
+  // Commodity metadata (adopted from models.dev).
+  knowledge?: string; // knowledge-cutoff date, ISO
+  releaseDate?: string;
+  lastUpdated?: string;
+  family?: string;
+  openWeights?: boolean;
 };
 
 export type SpeechToTextModel = BaseModel & {
@@ -66,6 +72,18 @@ export type TextModel = BaseModel & {
     outputsThinking?: boolean;
     /** Whether cryptographic thinking signatures are returned for round-tripping */
     outputsSignatures?: boolean;
+  };
+  modalities?: { input: string[]; output: string[] };
+  structuredOutput?: boolean;
+  temperatureSupported?: boolean;
+  inputAudioTokenCost?: number; // per 1M audio-input tokens
+  outputAudioTokenCost?: number; // per 1M audio-output tokens
+  /** Pricing that applies above a context-size threshold (e.g. Gemini >200k). */
+  longContext?: {
+    thresholdTokens: number;
+    inputTokenCost?: number;
+    outputTokenCost?: number;
+    cachedInputTokenCost?: number;
   };
 };
 
