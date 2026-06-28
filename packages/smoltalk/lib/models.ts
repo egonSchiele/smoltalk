@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  mergeModelData,
+  mergeHostedTools,
+  type ModelDataBlob,
+  type HostedTool,
+} from "./modelData.js";
 export const providers = [
   "ollama",
   "openai",
@@ -22,6 +28,12 @@ export type BaseModel = {
   outputTokenCost?: number;
   disabled?: boolean;
   costUnit?: "tokens" | "characters" | "minutes";
+  // Commodity metadata (adopted from models.dev).
+  knowledge?: string; // knowledge-cutoff date, ISO
+  releaseDate?: string;
+  lastUpdated?: string;
+  family?: string;
+  openWeights?: boolean;
 };
 
 export type SpeechToTextModel = BaseModel & {
@@ -66,6 +78,18 @@ export type TextModel = BaseModel & {
     outputsThinking?: boolean;
     /** Whether cryptographic thinking signatures are returned for round-tripping */
     outputsSignatures?: boolean;
+  };
+  modalities?: { input: string[]; output: string[] };
+  structuredOutput?: boolean;
+  temperatureSupported?: boolean;
+  inputAudioTokenCost?: number; // per 1M audio-input tokens
+  outputAudioTokenCost?: number; // per 1M audio-output tokens
+  /** Pricing that applies above a context-size threshold (e.g. Gemini >200k). */
+  longContext?: {
+    thresholdTokens: number;
+    inputTokenCost?: number;
+    outputTokenCost?: number;
+    cachedInputTokenCost?: number;
   };
 };
 
@@ -983,6 +1007,15 @@ export type EmbeddingsModelName =
   (typeof embeddingsModels)[number]["modelName"];
 export type ModelName = string; // TextModelName | ImageModelName | SpeechToTextModelName;
 
+export const hostedTools: HostedTool[] = [
+  {
+    name: "web_search",
+    provider: "anthropic",
+    description: "Anthropic server-side web search tool.",
+    costPerCall: 0.01,
+  },
+];
+
 export const registeredTextModels: TextModel[] = [];
 
 export function registerTextModel(
@@ -991,15 +1024,54 @@ export function registerTextModel(
   registeredTextModels.push({ ...model, type: "text" });
 }
 
-export function getModel(modelName: ModelName) {
-  const allModels = [
+let registeredModelData: ModelDataBlob | null = null;
+
+export function registerModelData(blob: ModelDataBlob): void {
+  registeredModelData = blob;
+}
+
+export function clearModelData(): void {
+  registeredModelData = null;
+}
+
+export function getRegisteredModelData(): ModelDataBlob | null {
+  return registeredModelData;
+}
+
+function baselineModels(): ModelType[] {
+  return [
     ...textModels,
     ...imageModels,
     ...speechToTextModels,
     ...registeredTextModels,
     ...embeddingsModels,
-  ];
-  return allModels.find((model) => model.modelName === modelName);
+  ] as ModelType[];
+}
+
+export function getModel(
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): ModelType | undefined {
+  let models = baselineModels();
+  if (registeredModelData) {
+    models = mergeModelData(models, registeredModelData.models);
+  }
+  if (requestData) {
+    models = mergeModelData(models, requestData.models);
+  }
+  return models.find((model) => model.modelName === modelName);
+}
+
+export function getHostedTools(requestData?: ModelDataBlob): HostedTool[] {
+  // Start from a copy so callers can never mutate the baseline registry.
+  let tools = [...hostedTools];
+  if (registeredModelData) {
+    tools = mergeHostedTools(tools, registeredModelData.hostedTools);
+  }
+  if (requestData) {
+    tools = mergeHostedTools(tools, requestData.hostedTools);
+  }
+  return tools;
 }
 
 export function isImageModel(model: ModelType): model is ImageModel {

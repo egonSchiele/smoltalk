@@ -1,6 +1,7 @@
 export * from "./client.js";
 export * from "./types.js";
 export * from "./models.js";
+export * from "./modelData.js";
 export * from "./model.js";
 export * from "./smolError.js";
 export * from "./util/util.js";

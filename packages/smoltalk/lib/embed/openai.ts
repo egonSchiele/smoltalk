@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { EmbedConfig, EmbedResult } from "../embed.js";
 import { Result, success, failure } from "../types/result.js";
 import { getModel, isEmbeddingsModel } from "../models.js";
+import type { ModelDataBlob } from "../modelData.js";
 import { round } from "../util/util.js";
 
 export async function openaiEmbed(
@@ -24,7 +25,7 @@ export async function openaiEmbed(
       .map((d) => d.embedding);
 
     const inputTokens = response.usage.prompt_tokens;
-    const costEstimate = calculateEmbeddingCost(config.model, inputTokens);
+    const costEstimate = calculateEmbeddingCost(config.model, inputTokens, config.modelData);
 
     return success({
       embeddings,
@@ -39,8 +40,8 @@ export async function openaiEmbed(
   }
 }
 
-function calculateEmbeddingCost(modelName: string, inputTokens: number) {
-  const model = getModel(modelName);
+function calculateEmbeddingCost(modelName: string, inputTokens: number, modelData?: ModelDataBlob) {
+  const model = getModel(modelName, modelData);
   if (!model || !isEmbeddingsModel(model) || !model.tokenCost) return undefined;
 
   const inputCost = round((inputTokens * model.tokenCost) / 1_000_000, 6);

@@ -33,7 +33,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
   constructor(config: SmolOllamaConfig) {
     super(config);
     this.logger = getLogger();
-    this.model = new Model(config.model);
+    this.model = new Model(config.model, undefined, config.modelData);
     if (config.ollamaApiKey) {
       this.client = new Ollama({
         host: "https://cloud.ollama.com",

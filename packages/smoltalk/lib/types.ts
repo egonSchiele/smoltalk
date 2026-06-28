@@ -5,6 +5,7 @@ import { Message } from "./classes/message/index.js";
 import { ToolCall } from "./classes/ToolCall.js";
 import { Model } from "./model.js";
 import { ModelName } from "./models.js";
+import type { ModelDataBlob } from "./modelData.js";
 import { Result } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
@@ -55,6 +56,9 @@ export type SmolConfig = {
 
   /** Arbitrary metadata passed to custom model providers. */
   metadata?: Record<string, any>;
+
+  /** Refreshed model/hosted-tool data (from refreshModels) to layer over the baked-in registry for this call. */
+  modelData?: ModelDataBlob;
 
   // ── Per-call fields ─────────────────────────────────────────────────
 

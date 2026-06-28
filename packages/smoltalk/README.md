@@ -194,6 +194,45 @@ Detects when the model is stuck in a repetitive tool-call loop.
 | `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
 | `excludeTools` | `string[]` | Tool names to ignore when counting calls. |
 
+## Refreshing model data
+
+Smoltalk ships a baked-in model registry (pricing, context limits, capabilities).
+Because that data goes stale between releases, you can pull a fresh copy at
+runtime and layer it over the built-ins. **You decide where to store it** —
+smoltalk never writes to disk.
+
+```ts
+import { refreshModels, registerModelData } from "smoltalk";
+
+// Fetch the latest data (from a URL smoltalk controls by default).
+const result = await refreshModels();
+if (result.success) {
+  // Persist result.value however you like (file, KV store, etc.),
+  // then register it once at startup:
+  registerModelData(result.value);
+}
+```
+
+Precedence is **per-call `config.modelData` > `registerModelData` (global) >
+baked-in baseline**, merged field-by-field (a refreshed field wins; missing
+fields never erase built-in values). Per-call override:
+
+```ts
+import { textSync, type Message, type ModelDataBlob } from "smoltalk";
+
+declare const messages: Message[];
+declare const modelData: ModelDataBlob;
+
+await textSync({ model: "claude-opus-4-8", messages, modelData });
+```
+
+Override the source URL with the `SMOLTALK_MODEL_DATA_URL` env var or
+`refreshModels({ url })`. The URL may be remote (`https://`, e.g. your own
+self-hosted catalog) or local (`file://…/model-data.json`). The blob also carries
+a `hostedTools` catalog (`getHostedTools()`); the published file is kept current
+by a daily CI job that translates [models.dev](https://models.dev) into
+smoltalk's shape.
+
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
 

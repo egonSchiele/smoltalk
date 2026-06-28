@@ -7,6 +7,7 @@ import {
 } from "../image.js";
 import { Result, success, failure } from "../types/result.js";
 import { getModel, isImageModel } from "../models.js";
+import type { ModelDataBlob } from "../modelData.js";
 import { normalizeImageRef } from "../util/imageRef.js";
 import { COST_DECIMAL_PLACES, round } from "../util/util.js";
 
@@ -58,7 +59,7 @@ export async function googleImage(
     return success({
       images,
       model: config.model,
-      costEstimate: calculateGoogleImageCost(config.model, images.length),
+      costEstimate: calculateGoogleImageCost(config.model, images.length, config.modelData),
     });
   } catch (err) {
     return failure(
@@ -67,8 +68,8 @@ export async function googleImage(
   }
 }
 
-function calculateGoogleImageCost(modelName: string, imageCount: number) {
-  const model = getModel(modelName);
+function calculateGoogleImageCost(modelName: string, imageCount: number, modelData?: ModelDataBlob) {
+  const model = getModel(modelName, modelData);
   if (!model || !isImageModel(model) || !model.costPerImage) return undefined;
   const totalCost = round(model.costPerImage * imageCount, COST_DECIMAL_PLACES);
   return { inputCost: 0, outputCost: totalCost, totalCost, currency: "USD" };
