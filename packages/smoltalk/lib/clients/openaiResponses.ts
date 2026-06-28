@@ -43,7 +43,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     }
     this.client = new OpenAI({ apiKey: config.openAiApiKey });
     this.logger = getLogger();
-    this.model = new Model(config.model);
+    this.model = new Model(config.model, undefined, config.modelData);
   }
 
   getClient() {

@@ -34,12 +34,12 @@ export function unregisterProvider(providerName: string): boolean {
 
 export function getClient(config: SmolClientConfig) {
   const modelName = config.model;
-  const provider = resolveProvider(modelName, config.provider);
+  const provider = resolveProvider(modelName, config.provider, config.modelData);
 
   // For getClient, validate that the model is a text model when no explicit
   // provider is given (since this factory only returns text-generation clients).
   if (!config.provider) {
-    const model = getModel(modelName);
+    const model = getModel(modelName, config.modelData);
     if (model && !isTextModel(model)) {
       throw new SmolError(
         `Only text models are supported currently. ${modelName} is a ${model?.type} model.`,

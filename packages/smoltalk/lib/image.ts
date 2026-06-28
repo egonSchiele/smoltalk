@@ -1,4 +1,5 @@
 import { Provider } from "./models.js";
+import type { ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
@@ -34,6 +35,9 @@ export type ImageConfig = {
 
   // Provider-specific escape hatch
   metadata?: Record<string, unknown>;
+
+  // Refreshed model data to layer over the baked-in registry.
+  modelData?: ModelDataBlob;
 };
 
 export type GeneratedImage = {
@@ -55,7 +59,7 @@ export async function image(
 ): Promise<Result<ImageGenResult>> {
   let provider: string;
   try {
-    provider = resolveProvider(config.model, config.provider);
+    provider = resolveProvider(config.model, config.provider, config.modelData);
   } catch (err) {
     return failure(
       err instanceof Error ? err.message : "Failed to resolve provider",

@@ -1,19 +1,22 @@
 import { ModelName, getModel, isTextModel, ModelNameSchema, Provider } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { ModelLike } from "./types.js";
+import type { ModelDataBlob } from "./modelData.js";
 import { round } from "./util/util.js";
 
 export class Model {
   private model: ModelName;
   private provider?: Provider;
+  private modelData?: ModelDataBlob;
 
-  constructor(model: ModelName, provider?: Provider) {
+  constructor(model: ModelName, provider?: Provider, modelData?: ModelDataBlob) {
     if (!ModelNameSchema.safeParse(model).success) {
       throw new SmolError(
         `Model ${JSON.stringify(model)} is not recognized. Please specify a known model name.`,
       );
     }
     this.model = model;
+    this.modelData = modelData;
     this.provider = provider || this.lookupProvider();
   }
 
@@ -26,7 +29,7 @@ export class Model {
   }
 
   private lookupProvider(): Provider | undefined {
-    const modelInfo = getModel(this.model);
+    const modelInfo = getModel(this.model, this.modelData);
     return modelInfo ? (modelInfo.provider as Provider) : undefined;
   }
 
@@ -43,7 +46,7 @@ export class Model {
     totalCost: number;
     currency: string;
   } | null {
-    const model = getModel(this.model);
+    const model = getModel(this.model, this.modelData);
     if (!model || !isTextModel(model)) {
       return null;
     }
@@ -119,10 +122,10 @@ export class Model {
     return this.model;
   }
 
-  static create(model: ModelLike, provider?: Provider): Model {
+  static create(model: ModelLike, provider?: Provider, modelData?: ModelDataBlob): Model {
     if (model instanceof Model) {
       return model;
     }
-    return new Model(model, provider);
+    return new Model(model, provider, modelData);
   }
 }

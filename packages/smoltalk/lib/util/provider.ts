@@ -1,5 +1,6 @@
 import { getModel } from "../models.js";
 import { SmolError } from "../smolError.js";
+import type { ModelDataBlob } from "../modelData.js";
 
 /**
  * Resolve the provider for a given model name.
@@ -9,10 +10,11 @@ import { SmolError } from "../smolError.js";
 export function resolveProvider(
   modelName: string,
   explicitProvider?: string,
+  modelData?: ModelDataBlob,
 ): string {
   if (explicitProvider) return explicitProvider;
 
-  const model = getModel(modelName);
+  const model = getModel(modelName, modelData);
   if (model === undefined) {
     throw new SmolError(
       `Model ${modelName} is not recognized. Please specify a known model, or explicitly set the provider option in the config.`,

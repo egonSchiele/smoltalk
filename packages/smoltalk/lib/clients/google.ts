@@ -44,7 +44,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     }
     this.client = new GoogleGenAI({ apiKey: config.googleApiKey });
     this.logger = getLogger();
-    this.model = new Model(config.model);
+    this.model = new Model(config.model, undefined, config.modelData);
   }
 
   getClient() {

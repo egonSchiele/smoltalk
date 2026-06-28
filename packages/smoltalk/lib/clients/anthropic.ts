@@ -7,6 +7,7 @@ import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { SystemMessage, DeveloperMessage } from "../classes/message/index.js";
 import { getLogger } from "../util/logger.js";
+import type { ModelDataBlob } from "../modelData.js";
 import {
   CostEstimate,
   PromptResult,
@@ -57,8 +58,11 @@ type OutputConfig = { effort: "low" | "medium" | "high" };
  * default unknown/unregistered models to "adaptive" (the forward-looking shape)
  * rather than the form that's being phased out.
  */
-function thinkingStyleFor(modelName: ModelName): "adaptive" | "budget" {
-  const model = getModel(modelName);
+function thinkingStyleFor(
+  modelName: ModelName,
+  modelData?: ModelDataBlob,
+): "adaptive" | "budget" {
+  const model = getModel(modelName, modelData);
   if (model && isTextModel(model) && model.reasoning?.thinkingStyle) {
     return model.reasoning.thinkingStyle;
   }
@@ -157,7 +161,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     super(config);
     this.client = new Anthropic({ apiKey: config.anthropicApiKey });
     this.logger = getLogger();
-    this.model = new Model(config.model);
+    this.model = new Model(config.model, undefined, config.modelData);
   }
 
   getModel(): ModelName {
@@ -278,7 +282,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       return { thinking: undefined, outputConfig: undefined };
     }
 
-    if (thinkingStyleFor(this.getModel()) === "adaptive") {
+    if (thinkingStyleFor(this.getModel(), this.config.modelData) === "adaptive") {
       // `output_config.effort` controls depth; the budget is irrelevant here.
       return {
         thinking: { type: "adaptive" },
