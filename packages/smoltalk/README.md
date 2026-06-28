@@ -218,7 +218,12 @@ baked-in baseline**, merged field-by-field (a refreshed field wins; missing
 fields never erase built-in values). Per-call override:
 
 ```ts
-await textSync({ model: "claude-opus-4-8", messages, modelData: result.value });
+import { textSync, type Message, type ModelDataBlob } from "smoltalk";
+
+declare const messages: Message[];
+declare const modelData: ModelDataBlob;
+
+await textSync({ model: "claude-opus-4-8", messages, modelData });
 ```
 
 Override the source URL with the `SMOLTALK_MODEL_DATA_URL` env var or
