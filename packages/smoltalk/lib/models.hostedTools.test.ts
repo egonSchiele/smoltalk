@@ -49,7 +49,7 @@ describe("baked-in hosted-tool catalog", () => {
   it("covers the three cloud providers with valid entries", () => {
     const providers = new Set(hostedTools.map((t) => t.provider));
     expect(providers.has("anthropic")).toBe(true);
-    expect(providers.has("openai")).toBe(true);
+    expect(providers.has("openai-responses")).toBe(true); // OpenAI hosted tools are Responses-API tools
     expect(providers.has("google")).toBe(true);
   });
 
