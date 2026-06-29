@@ -295,6 +295,43 @@ charges; free-tier allowances are ignored). Results are populated on `textSync`;
 streaming text is unaffected but the streamed result does not include them yet.
 On Google, web search can't be combined with structured output in one call.
 
+## Registering custom providers
+
+Smoltalk has three registration entry points — one per capability:
+
+```ts
+// example: skip-typecheck
+import {
+  registerProvider,           // text generation (a class extending BaseClient)
+  registerEmbeddingProvider,  // embeddings (a function)
+  registerImageProvider,      // images (a function)
+} from "smoltalk";
+
+// Text: a class extending BaseClient (implements _textSync / _textStream)
+registerProvider("my-llm", MyTextClient);
+
+// Embeddings: a function
+registerEmbeddingProvider("my-embed", async (inputs, config) => {
+  // read credentials from config (e.g. config.metadata), call your service
+  return success({ embeddings: [...], model: config.model });
+});
+
+// Images: a function
+registerImageProvider("my-image", async (input, config) => {
+  return success({ images: [...], model: config.model });
+});
+```
+
+Select a custom provider by passing `provider` in the call config
+(`embed(input, { provider: "my-embed", model })`,
+`image(input, { provider: "my-image", model })`). Built-in providers always take
+precedence; a registered name that collides with a built-in is ignored. Custom
+providers receive the full `config` and read their own credentials from it
+(e.g. `config.metadata`).
+
+Text is a class (it needs retries, tool-loop detection, streaming); embeddings
+and images are one-shot functions.
+
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
 
