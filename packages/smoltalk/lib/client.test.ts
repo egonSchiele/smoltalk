@@ -133,6 +133,12 @@ describe("registerProvider", () => {
     ).toThrow(/not supported/);
   });
 
+  it("treats a prototype-chain key as unregistered (no proto pollution)", () => {
+    expect(() =>
+      getClient({ model: "any-model", provider: "toString" as any }),
+    ).toThrow(/not supported/);
+  });
+
   it("registered provider is used when model specifies it", () => {
     registerProvider("echo2", EchoClient);
     const client = getClient({ model: "my-model", provider: "echo2" as any });
