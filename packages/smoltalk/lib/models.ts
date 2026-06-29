@@ -4,6 +4,7 @@ import {
   mergeHostedTools,
   type ModelDataBlob,
   type HostedTool,
+  type HostedToolPricing,
 } from "./modelData.js";
 export const providers = [
   "ollama",
@@ -1629,16 +1630,62 @@ export function getModel(
   return models.find((model) => model.modelName === modelName);
 }
 
-export function getHostedTools(requestData?: ModelDataBlob): HostedTool[] {
+export function getHostedTools(opts: {
+  provider?: string;
+  model?: string;
+  category?: string;
+  includeDisabled?: boolean;
+  modelData?: ModelDataBlob;
+} = {}): HostedTool[] {
   // Start from a copy so callers can never mutate the baseline registry.
   let tools = [...hostedTools];
   if (registeredModelData) {
     tools = mergeHostedTools(tools, registeredModelData.hostedTools);
   }
-  if (requestData) {
-    tools = mergeHostedTools(tools, requestData.hostedTools);
+  if (opts.modelData) {
+    tools = mergeHostedTools(tools, opts.modelData.hostedTools);
   }
-  return tools;
+
+  let modelProvider: string | undefined;
+  if (opts.model) {
+    modelProvider = getModel(opts.model, opts.modelData)?.provider;
+  }
+
+  return tools.filter((tool) => {
+    if (tool.disabled && !opts.includeDisabled) {
+      return false;
+    }
+    if (opts.provider && tool.provider !== opts.provider) {
+      return false;
+    }
+    if (opts.category && tool.category !== opts.category) {
+      return false;
+    }
+    if (opts.model) {
+      if (tool.provider !== modelProvider) {
+        return false;
+      }
+      if (tool.models && !tool.models.includes(opts.model)) {
+        return false;
+      }
+    }
+    return true;
+  });
+}
+
+export function hostedToolPricingFor(
+  tool: HostedTool,
+  model?: string,
+): HostedToolPricing | undefined {
+  if (!tool.pricing) {
+    return undefined;
+  }
+  // Strip perModel from the base; merge the override for `model` when present.
+  const { perModel, ...base } = tool.pricing;
+  if (model && perModel && perModel[model]) {
+    return { ...base, ...perModel[model] };
+  }
+  return base;
 }
 
 export function isImageModel(model: ModelType): model is ImageModel {
