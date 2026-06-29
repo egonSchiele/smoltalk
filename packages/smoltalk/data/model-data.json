@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-28T23:24:49.756Z",
+  "generatedAt": "2026-06-29T00:06:09.457Z",
   "models": [
     {
       "type": "text",
@@ -12,14 +12,6 @@
       "cachedInputTokenCost": 0.075,
       "outputTokenCost": 0.6,
       "outputTokensPerSecond": 65,
-      "provider": "openai",
-      "knowledge": "2023-09",
-      "releaseDate": "2024-07-18",
-      "lastUpdated": "2024-07-18",
-      "family": "gpt-mini",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -29,7 +21,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2023-09",
+      "releaseDate": "2024-07-18",
+      "lastUpdated": "2024-07-18",
+      "family": "gpt-mini",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -41,14 +41,6 @@
       "cachedInputTokenCost": 1.25,
       "outputTokenCost": 10,
       "outputTokensPerSecond": 143,
-      "provider": "openai",
-      "knowledge": "2023-09",
-      "releaseDate": "2024-05-13",
-      "lastUpdated": "2024-08-06",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -58,7 +50,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2023-09",
+      "releaseDate": "2024-05-13",
+      "lastUpdated": "2024-08-06",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -81,14 +81,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai",
-      "knowledge": "2024-05",
-      "releaseDate": "2025-04-16",
-      "lastUpdated": "2025-04-16",
-      "family": "o",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -98,7 +90,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-05",
+      "releaseDate": "2025-04-16",
+      "lastUpdated": "2025-04-16",
+      "family": "o",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -121,14 +121,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai",
-      "knowledge": "2024-05",
-      "releaseDate": "2024-12-20",
-      "lastUpdated": "2025-01-29",
-      "family": "o-mini",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text"
@@ -136,7 +128,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-05",
+      "releaseDate": "2024-12-20",
+      "lastUpdated": "2025-01-29",
+      "family": "o-mini",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -159,14 +159,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai",
-      "knowledge": "2024-05",
-      "releaseDate": "2025-04-16",
-      "lastUpdated": "2025-04-16",
-      "family": "o-mini",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -175,7 +167,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-05",
+      "releaseDate": "2025-04-16",
+      "lastUpdated": "2025-04-16",
+      "family": "o-mini",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -190,14 +190,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai",
-      "knowledge": "2024-05",
-      "releaseDate": "2025-06-10",
-      "lastUpdated": "2025-06-10",
-      "family": "o-pro",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -206,7 +198,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-05",
+      "releaseDate": "2025-06-10",
+      "lastUpdated": "2025-06-10",
+      "family": "o-pro",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -229,14 +229,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai",
-      "knowledge": "2023-09",
-      "releaseDate": "2024-12-05",
-      "lastUpdated": "2024-12-05",
-      "family": "o",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -246,7 +238,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2023-09",
+      "releaseDate": "2024-12-05",
+      "lastUpdated": "2024-12-05",
+      "family": "o",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -256,15 +256,6 @@
       "maxOutputTokens": 4096,
       "inputTokenCost": 10,
       "outputTokenCost": 30,
-      "disabled": true,
-      "provider": "openai",
-      "knowledge": "2023-12",
-      "releaseDate": "2023-11-06",
-      "lastUpdated": "2024-04-09",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": false,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -273,7 +264,16 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2023-12",
+      "releaseDate": "2023-11-06",
+      "lastUpdated": "2024-04-09",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -283,15 +283,6 @@
       "maxOutputTokens": 8192,
       "inputTokenCost": 30,
       "outputTokenCost": 60,
-      "disabled": true,
-      "provider": "openai",
-      "knowledge": "2023-11",
-      "releaseDate": "2023-11-06",
-      "lastUpdated": "2024-04-09",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": false,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text"
@@ -299,7 +290,16 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2023-11",
+      "releaseDate": "2023-11-06",
+      "lastUpdated": "2024-04-09",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -308,17 +308,8 @@
       "maxInputTokens": 16385,
       "maxOutputTokens": 4096,
       "inputTokenCost": 0.5,
-      "outputTokenCost": 1.5,
-      "disabled": true,
-      "provider": "openai",
       "cachedInputTokenCost": 0,
-      "knowledge": "2021-09-01",
-      "releaseDate": "2023-03-01",
-      "lastUpdated": "2023-11-06",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": false,
-      "temperatureSupported": true,
+      "outputTokenCost": 1.5,
       "modalities": {
         "input": [
           "text"
@@ -326,7 +317,16 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2021-09-01",
+      "releaseDate": "2023-03-01",
+      "lastUpdated": "2023-11-06",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -338,14 +338,6 @@
       "cachedInputTokenCost": 0.5,
       "outputTokenCost": 8,
       "outputTokensPerSecond": 105,
-      "provider": "openai",
-      "knowledge": "2024-04",
-      "releaseDate": "2025-04-14",
-      "lastUpdated": "2025-04-14",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -355,7 +347,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-04",
+      "releaseDate": "2025-04-14",
+      "lastUpdated": "2025-04-14",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -367,14 +367,6 @@
       "cachedInputTokenCost": 0.1,
       "outputTokenCost": 1.6,
       "outputTokensPerSecond": 78,
-      "provider": "openai",
-      "knowledge": "2024-04",
-      "releaseDate": "2025-04-14",
-      "lastUpdated": "2025-04-14",
-      "family": "gpt-mini",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -384,7 +376,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-04",
+      "releaseDate": "2025-04-14",
+      "lastUpdated": "2025-04-14",
+      "family": "gpt-mini",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -396,14 +396,6 @@
       "cachedInputTokenCost": 0.025,
       "outputTokenCost": 0.4,
       "outputTokensPerSecond": 142,
-      "provider": "openai",
-      "knowledge": "2024-04",
-      "releaseDate": "2025-04-14",
-      "lastUpdated": "2025-04-14",
-      "family": "gpt-nano",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -412,7 +404,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-04",
+      "releaseDate": "2025-04-14",
+      "lastUpdated": "2025-04-14",
+      "family": "gpt-nano",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -436,14 +436,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2024-09-30",
-      "releaseDate": "2025-08-07",
-      "lastUpdated": "2025-08-07",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -452,7 +444,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-09-30",
+      "releaseDate": "2025-08-07",
+      "lastUpdated": "2025-08-07",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -476,14 +476,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2024-05-30",
-      "releaseDate": "2025-08-07",
-      "lastUpdated": "2025-08-07",
-      "family": "gpt-mini",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -492,7 +484,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-05-30",
+      "releaseDate": "2025-08-07",
+      "lastUpdated": "2025-08-07",
+      "family": "gpt-mini",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -516,14 +516,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2024-05-30",
-      "releaseDate": "2025-08-07",
-      "lastUpdated": "2025-08-07",
-      "family": "gpt-nano",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -532,7 +524,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-05-30",
+      "releaseDate": "2025-08-07",
+      "lastUpdated": "2025-08-07",
+      "family": "gpt-nano",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -555,14 +555,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2024-09-30",
-      "releaseDate": "2025-11-13",
-      "lastUpdated": "2025-11-13",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -571,7 +563,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-09-30",
+      "releaseDate": "2025-11-13",
+      "lastUpdated": "2025-11-13",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -595,14 +595,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2025-08-31",
-      "releaseDate": "2025-12-11",
-      "lastUpdated": "2025-12-11",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -611,7 +603,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2025-12-11",
+      "lastUpdated": "2025-12-11",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -626,14 +626,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2025-08-31",
-      "releaseDate": "2025-12-11",
-      "lastUpdated": "2025-12-11",
-      "family": "gpt-pro",
-      "openWeights": false,
-      "structuredOutput": false,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -642,7 +634,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2025-12-11",
+      "lastUpdated": "2025-12-11",
+      "family": "gpt-pro",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -653,6 +653,12 @@
       "inputTokenCost": 2.5,
       "cachedInputTokenCost": 0.25,
       "outputTokenCost": 15,
+      "longContext": {
+        "inputTokenCost": 5,
+        "cachedInputTokenCost": 0.5,
+        "outputTokenCost": 22.5,
+        "thresholdTokens": 200000
+      },
       "reasoning": {
         "levels": [
           "none",
@@ -666,20 +672,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "longContext": {
-        "thresholdTokens": 200000,
-        "inputTokenCost": 5,
-        "outputTokenCost": 22.5,
-        "cachedInputTokenCost": 0.5
-      },
-      "knowledge": "2025-08-31",
-      "releaseDate": "2026-03-05",
-      "lastUpdated": "2026-03-05",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -689,7 +681,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-03-05",
+      "lastUpdated": "2026-03-05",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -714,14 +714,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2025-08-31",
-      "releaseDate": "2026-03-17",
-      "lastUpdated": "2026-03-17",
-      "family": "gpt-mini",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -730,7 +722,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-03-17",
+      "lastUpdated": "2026-03-17",
+      "family": "gpt-mini",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -755,14 +755,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "knowledge": "2025-08-31",
-      "releaseDate": "2026-03-17",
-      "lastUpdated": "2026-03-17",
-      "family": "gpt-nano",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -771,7 +763,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-03-17",
+      "lastUpdated": "2026-03-17",
+      "family": "gpt-nano",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -781,6 +781,11 @@
       "maxOutputTokens": 128000,
       "inputTokenCost": 30,
       "outputTokenCost": 180,
+      "longContext": {
+        "inputTokenCost": 60,
+        "outputTokenCost": 270,
+        "thresholdTokens": 200000
+      },
       "reasoning": {
         "levels": [
           "medium",
@@ -792,19 +797,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "longContext": {
-        "thresholdTokens": 200000,
-        "inputTokenCost": 60,
-        "outputTokenCost": 270
-      },
-      "knowledge": "2025-08-31",
-      "releaseDate": "2026-03-05",
-      "lastUpdated": "2026-03-05",
-      "family": "gpt-pro",
-      "openWeights": false,
-      "structuredOutput": false,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -813,7 +805,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-03-05",
+      "lastUpdated": "2026-03-05",
+      "family": "gpt-pro",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -825,6 +825,12 @@
       "cachedInputTokenCost": 0.5,
       "outputTokenCost": 30,
       "outputTokensPerSecond": 66,
+      "longContext": {
+        "inputTokenCost": 10,
+        "cachedInputTokenCost": 1,
+        "outputTokenCost": 45,
+        "thresholdTokens": 200000
+      },
       "reasoning": {
         "levels": [
           "none",
@@ -838,20 +844,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "longContext": {
-        "thresholdTokens": 200000,
-        "inputTokenCost": 10,
-        "outputTokenCost": 45,
-        "cachedInputTokenCost": 1
-      },
-      "knowledge": "2025-12-01",
-      "releaseDate": "2026-04-23",
-      "lastUpdated": "2026-04-23",
-      "family": "gpt",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -861,7 +853,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-12-01",
+      "releaseDate": "2026-04-23",
+      "lastUpdated": "2026-04-23",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -871,6 +871,11 @@
       "maxOutputTokens": 128000,
       "inputTokenCost": 30,
       "outputTokenCost": 180,
+      "longContext": {
+        "inputTokenCost": 60,
+        "outputTokenCost": 270,
+        "thresholdTokens": 200000
+      },
       "reasoning": {
         "levels": [
           "none",
@@ -884,19 +889,6 @@
         "outputsThinking": false,
         "outputsSignatures": false
       },
-      "provider": "openai-responses",
-      "longContext": {
-        "thresholdTokens": 200000,
-        "inputTokenCost": 60,
-        "outputTokenCost": 270
-      },
-      "knowledge": "2025-12-01",
-      "releaseDate": "2026-04-23",
-      "lastUpdated": "2026-04-23",
-      "family": "gpt-pro",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -906,7 +898,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-12-01",
+      "releaseDate": "2026-04-23",
+      "lastUpdated": "2026-04-23",
+      "family": "gpt-pro",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -915,8 +915,15 @@
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
       "inputTokenCost": 2,
+      "cachedInputTokenCost": 0.2,
       "outputTokenCost": 12,
       "outputTokensPerSecond": 133,
+      "longContext": {
+        "inputTokenCost": 4,
+        "cachedInputTokenCost": 0.4,
+        "outputTokenCost": 18,
+        "thresholdTokens": 200000
+      },
       "reasoning": {
         "levels": [
           "low",
@@ -928,13 +935,17 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "google",
-      "cachedInputTokenCost": 0.2,
-      "longContext": {
-        "thresholdTokens": 200000,
-        "inputTokenCost": 4,
-        "outputTokenCost": 18,
-        "cachedInputTokenCost": 0.4
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
       },
       "knowledge": "2025-01",
       "releaseDate": "2026-02-19",
@@ -943,18 +954,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": true,
-      "modalities": {
-        "input": [
-          "text",
-          "image",
-          "video",
-          "audio",
-          "pdf"
-        ],
-        "output": [
-          "text"
-        ]
-      }
+      "provider": "google"
     },
     {
       "type": "text",
@@ -963,23 +963,14 @@
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
       "inputTokenCost": 2,
-      "outputTokenCost": 12,
-      "disabled": true,
-      "provider": "google",
       "cachedInputTokenCost": 0.2,
+      "outputTokenCost": 12,
       "longContext": {
-        "thresholdTokens": 200000,
         "inputTokenCost": 4,
+        "cachedInputTokenCost": 0.4,
         "outputTokenCost": 18,
-        "cachedInputTokenCost": 0.4
+        "thresholdTokens": 200000
       },
-      "knowledge": "2025-01",
-      "releaseDate": "2025-11-18",
-      "lastUpdated": "2025-11-18",
-      "family": "gemini-pro",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -991,7 +982,16 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2025-11-18",
+      "lastUpdated": "2025-11-18",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1002,6 +1002,7 @@
       "inputTokenCost": 1.5,
       "cachedInputTokenCost": 0.15,
       "outputTokenCost": 9,
+      "inputAudioTokenCost": 1.5,
       "reasoning": {
         "levels": [
           "minimal",
@@ -1014,15 +1015,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "google",
-      "inputAudioTokenCost": 1.5,
-      "knowledge": "2025-01",
-      "releaseDate": "2026-05-19",
-      "lastUpdated": "2026-05-19",
-      "family": "gemini-flash",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1034,7 +1026,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2026-05-19",
+      "lastUpdated": "2026-05-19",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1043,8 +1043,10 @@
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
       "inputTokenCost": 0.5,
+      "cachedInputTokenCost": 0.05,
       "outputTokenCost": 3,
       "outputTokensPerSecond": 184,
+      "inputAudioTokenCost": 1,
       "reasoning": {
         "levels": [
           "minimal",
@@ -1057,16 +1059,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "google",
-      "cachedInputTokenCost": 0.05,
-      "inputAudioTokenCost": 1,
-      "knowledge": "2025-01",
-      "releaseDate": "2025-12-17",
-      "lastUpdated": "2025-12-17",
-      "family": "gemini-flash",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1078,7 +1070,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2025-12-17",
+      "lastUpdated": "2025-12-17",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1087,8 +1087,10 @@
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
       "inputTokenCost": 0.25,
+      "cachedInputTokenCost": 0.025,
       "outputTokenCost": 1.5,
       "outputTokensPerSecond": 379,
+      "inputAudioTokenCost": 0.5,
       "reasoning": {
         "levels": [
           "minimal",
@@ -1101,16 +1103,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "google",
-      "cachedInputTokenCost": 0.025,
-      "inputAudioTokenCost": 0.5,
-      "knowledge": "2025-01",
-      "releaseDate": "2026-05-07",
-      "lastUpdated": "2026-05-07",
-      "family": "gemini-flash-lite",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1122,7 +1114,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2026-05-07",
+      "lastUpdated": "2026-05-07",
+      "family": "gemini-flash-lite",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1131,18 +1131,9 @@
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
       "inputTokenCost": 0.25,
-      "outputTokenCost": 1.5,
-      "disabled": true,
-      "provider": "google",
       "cachedInputTokenCost": 0.025,
+      "outputTokenCost": 1.5,
       "inputAudioTokenCost": 0.5,
-      "knowledge": "2025-01",
-      "releaseDate": "2026-03-03",
-      "lastUpdated": "2026-03-03",
-      "family": "gemini-flash-lite",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1154,29 +1145,49 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2026-03-03",
+      "lastUpdated": "2026-03-03",
+      "family": "gemini-flash-lite",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "google"
     },
     {
       "type": "text",
       "modelName": "gemini-2.5-pro",
-      "description": "High-performance Gemini 2.5 model with 2M context window. Adaptive thinking for complex reasoning and coding. Standard pricing for ≤200k tokens ($1.25 input/$10.00 output), higher rates for >200k tokens ($2.50 input/$15.00 output). Batch API: 50% discount.",
+      "description": "High-performance Gemini 2.5 model with 1M context window. Adaptive thinking for complex reasoning and coding. Standard pricing for ≤200k tokens ($1.25 input/$10.00 output), higher rates for >200k tokens ($2.50 input/$15.00 output). Batch API: 50% discount.",
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
       "inputTokenCost": 1.25,
       "cachedInputTokenCost": 0.125,
       "outputTokenCost": 10,
       "outputTokensPerSecond": 145,
+      "longContext": {
+        "inputTokenCost": 2.5,
+        "cachedInputTokenCost": 0.25,
+        "outputTokenCost": 15,
+        "thresholdTokens": 200000
+      },
       "reasoning": {
         "canDisable": false,
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "google",
-      "longContext": {
-        "thresholdTokens": 200000,
-        "inputTokenCost": 2.5,
-        "outputTokenCost": 15,
-        "cachedInputTokenCost": 0.25
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "audio",
+          "video",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
       },
       "knowledge": "2025-01",
       "releaseDate": "2025-06-17",
@@ -1185,18 +1196,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": true,
-      "modalities": {
-        "input": [
-          "text",
-          "image",
-          "audio",
-          "video",
-          "pdf"
-        ],
-        "output": [
-          "text"
-        ]
-      }
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1208,20 +1208,12 @@
       "cachedInputTokenCost": 0.03,
       "outputTokenCost": 2.5,
       "outputTokensPerSecond": 245,
+      "inputAudioTokenCost": 1,
       "reasoning": {
         "canDisable": true,
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "google",
-      "inputAudioTokenCost": 1,
-      "knowledge": "2025-01",
-      "releaseDate": "2025-06-17",
-      "lastUpdated": "2025-06-17",
-      "family": "gemini-flash",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1233,7 +1225,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2025-06-17",
+      "lastUpdated": "2025-06-17",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1245,20 +1245,12 @@
       "cachedInputTokenCost": 0.01,
       "outputTokenCost": 0.4,
       "outputTokensPerSecond": 400,
+      "inputAudioTokenCost": 0.3,
       "reasoning": {
         "canDisable": true,
         "outputsThinking": true,
         "outputsSignatures": false
       },
-      "provider": "google",
-      "inputAudioTokenCost": 0.3,
-      "knowledge": "2025-01",
-      "releaseDate": "2025-06-17",
-      "lastUpdated": "2025-06-17",
-      "family": "gemini-flash-lite",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1270,7 +1262,15 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2025-06-17",
+      "lastUpdated": "2025-06-17",
+      "family": "gemini-flash-lite",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1279,18 +1279,9 @@
       "maxInputTokens": 1048576,
       "maxOutputTokens": 8192,
       "inputTokenCost": 0.1,
+      "cachedInputTokenCost": 0.025,
       "outputTokenCost": 0.4,
       "outputTokensPerSecond": 213,
-      "disabled": true,
-      "provider": "google",
-      "cachedInputTokenCost": 0.025,
-      "knowledge": "2024-06",
-      "releaseDate": "2024-12-11",
-      "lastUpdated": "2024-12-11",
-      "family": "gemini-flash",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1302,7 +1293,16 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-06",
+      "releaseDate": "2024-12-11",
+      "lastUpdated": "2024-12-11",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1323,15 +1323,6 @@
       "maxOutputTokens": 8192,
       "inputTokenCost": 0.075,
       "outputTokenCost": 0.3,
-      "disabled": true,
-      "provider": "google",
-      "knowledge": "2024-06",
-      "releaseDate": "2024-12-11",
-      "lastUpdated": "2024-12-11",
-      "family": "gemini-flash-lite",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1343,7 +1334,16 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2024-06",
+      "releaseDate": "2024-12-11",
+      "lastUpdated": "2024-12-11",
+      "family": "gemini-flash-lite",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "disabled": true,
+      "provider": "google"
     },
     {
       "type": "text",
@@ -1391,6 +1391,7 @@
       "maxOutputTokens": 128000,
       "inputTokenCost": 5,
       "cachedInputTokenCost": 0.5,
+      "cacheCreationInputTokenCost": 6.25,
       "outputTokenCost": 25,
       "reasoning": {
         "thinkingStyle": "adaptive",
@@ -1398,13 +1399,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "anthropic",
-      "cacheCreationInputTokenCost": 6.25,
-      "releaseDate": "2026-05-28",
-      "lastUpdated": "2026-05-28",
-      "family": "claude-opus",
-      "openWeights": false,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -1414,7 +1408,13 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "releaseDate": "2026-05-28",
+      "lastUpdated": "2026-05-28",
+      "family": "claude-opus",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "provider": "anthropic"
     },
     {
       "type": "text",
@@ -1433,13 +1433,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "anthropic",
-      "knowledge": "2026-01-31",
-      "releaseDate": "2026-04-16",
-      "lastUpdated": "2026-04-16",
-      "family": "claude-opus",
-      "openWeights": false,
-      "temperatureSupported": false,
       "modalities": {
         "input": [
           "text",
@@ -1449,7 +1442,14 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2026-01-31",
+      "releaseDate": "2026-04-16",
+      "lastUpdated": "2026-04-16",
+      "family": "claude-opus",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "provider": "anthropic"
     },
     {
       "type": "text",
@@ -1468,13 +1468,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "anthropic",
-      "knowledge": "2025-05-31",
-      "releaseDate": "2026-02-05",
-      "lastUpdated": "2026-03-13",
-      "family": "claude-opus",
-      "openWeights": false,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1484,7 +1477,14 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-05-31",
+      "releaseDate": "2026-02-05",
+      "lastUpdated": "2026-03-13",
+      "family": "claude-opus",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "provider": "anthropic"
     },
     {
       "type": "text",
@@ -1503,13 +1503,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "anthropic",
-      "knowledge": "2025-08-31",
-      "releaseDate": "2026-02-17",
-      "lastUpdated": "2026-03-13",
-      "family": "claude-sonnet",
-      "openWeights": false,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1519,7 +1512,14 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-02-17",
+      "lastUpdated": "2026-03-13",
+      "family": "claude-sonnet",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "provider": "anthropic"
     },
     {
       "type": "text",
@@ -1538,13 +1538,6 @@
         "outputsThinking": true,
         "outputsSignatures": true
       },
-      "provider": "anthropic",
-      "knowledge": "2025-02-28",
-      "releaseDate": "2025-10-15",
-      "lastUpdated": "2025-10-15",
-      "family": "claude-haiku",
-      "openWeights": false,
-      "temperatureSupported": true,
       "modalities": {
         "input": [
           "text",
@@ -1554,7 +1547,14 @@
         "output": [
           "text"
         ]
-      }
+      },
+      "knowledge": "2025-02-28",
+      "releaseDate": "2025-10-15",
+      "lastUpdated": "2025-10-15",
+      "family": "claude-haiku",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "provider": "anthropic"
     },
     {
       "type": "text",
@@ -1585,6 +1585,139 @@
       "outputTokensPerSecond": 66,
       "disabled": true,
       "provider": "anthropic"
+    },
+    {
+      "type": "text",
+      "modelName": "claude-haiku-4-5",
+      "description": "Undated alias for claude-haiku-4-5-20251001. The fastest Claude model with near-frontier intelligence.",
+      "maxInputTokens": 200000,
+      "maxOutputTokens": 64000,
+      "inputTokenCost": 1,
+      "cachedInputTokenCost": 0.1,
+      "cacheCreationInputTokenCost": 1.25,
+      "outputTokenCost": 5,
+      "reasoning": {
+        "thinkingStyle": "budget",
+        "canDisable": true,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2025-02-28",
+      "releaseDate": "2025-10-15",
+      "lastUpdated": "2025-10-15",
+      "family": "claude-haiku",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "provider": "anthropic"
+    },
+    {
+      "type": "text",
+      "modelName": "claude-opus-4-5",
+      "description": "Claude Opus 4.5 — earlier Opus generation. Prefer claude-opus-4-8.",
+      "maxInputTokens": 200000,
+      "maxOutputTokens": 64000,
+      "inputTokenCost": 5,
+      "cachedInputTokenCost": 0.5,
+      "cacheCreationInputTokenCost": 6.25,
+      "outputTokenCost": 25,
+      "reasoning": {
+        "thinkingStyle": "budget",
+        "canDisable": true,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2025-03-31",
+      "releaseDate": "2025-11-24",
+      "lastUpdated": "2025-11-24",
+      "family": "claude-opus",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "provider": "anthropic"
+    },
+    {
+      "type": "text",
+      "modelName": "claude-sonnet-4-5",
+      "description": "Claude Sonnet 4.5 — earlier Sonnet generation. Prefer claude-sonnet-4-6.",
+      "maxInputTokens": 200000,
+      "maxOutputTokens": 64000,
+      "inputTokenCost": 3,
+      "cachedInputTokenCost": 0.3,
+      "cacheCreationInputTokenCost": 3.75,
+      "outputTokenCost": 15,
+      "reasoning": {
+        "thinkingStyle": "budget",
+        "canDisable": true,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2025-07-31",
+      "releaseDate": "2025-09-29",
+      "lastUpdated": "2025-09-29",
+      "family": "claude-sonnet",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "provider": "anthropic"
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5-pro",
+      "description": "GPT-5 Pro uses more compute for complex reasoning tasks. Available via the Responses API.",
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 272000,
+      "inputTokenCost": 15,
+      "outputTokenCost": 120,
+      "reasoning": {
+        "canDisable": false,
+        "outputsThinking": false,
+        "outputsSignatures": false
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2024-09-30",
+      "releaseDate": "2025-10-06",
+      "lastUpdated": "2025-10-06",
+      "family": "gpt-pro",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai-responses"
     },
     {
       "type": "image",
@@ -1780,33 +1913,6 @@
     },
     {
       "type": "text",
-      "modelName": "claude-opus-4-5",
-      "provider": "anthropic",
-      "maxInputTokens": 200000,
-      "maxOutputTokens": 64000,
-      "inputTokenCost": 5,
-      "outputTokenCost": 25,
-      "cachedInputTokenCost": 0.5,
-      "cacheCreationInputTokenCost": 6.25,
-      "knowledge": "2025-03-31",
-      "releaseDate": "2025-11-24",
-      "lastUpdated": "2025-11-24",
-      "family": "claude-opus",
-      "openWeights": false,
-      "temperatureSupported": true,
-      "modalities": {
-        "input": [
-          "text",
-          "image",
-          "pdf"
-        ],
-        "output": [
-          "text"
-        ]
-      }
-    },
-    {
-      "type": "text",
       "modelName": "claude-opus-4-0",
       "provider": "anthropic",
       "maxInputTokens": 200000,
@@ -1873,33 +1979,6 @@
       "releaseDate": "2025-08-05",
       "lastUpdated": "2025-08-05",
       "family": "claude-opus",
-      "openWeights": false,
-      "temperatureSupported": true,
-      "modalities": {
-        "input": [
-          "text",
-          "image",
-          "pdf"
-        ],
-        "output": [
-          "text"
-        ]
-      }
-    },
-    {
-      "type": "text",
-      "modelName": "claude-sonnet-4-5",
-      "provider": "anthropic",
-      "maxInputTokens": 200000,
-      "maxOutputTokens": 64000,
-      "inputTokenCost": 3,
-      "outputTokenCost": 15,
-      "cachedInputTokenCost": 0.3,
-      "cacheCreationInputTokenCost": 3.75,
-      "knowledge": "2025-07-31",
-      "releaseDate": "2025-09-29",
-      "lastUpdated": "2025-09-29",
-      "family": "claude-sonnet",
       "openWeights": false,
       "temperatureSupported": true,
       "modalities": {
@@ -2184,33 +2263,6 @@
     },
     {
       "type": "text",
-      "modelName": "claude-haiku-4-5",
-      "provider": "anthropic",
-      "maxInputTokens": 200000,
-      "maxOutputTokens": 64000,
-      "inputTokenCost": 1,
-      "outputTokenCost": 5,
-      "cachedInputTokenCost": 0.1,
-      "cacheCreationInputTokenCost": 1.25,
-      "knowledge": "2025-02-28",
-      "releaseDate": "2025-10-15",
-      "lastUpdated": "2025-10-15",
-      "family": "claude-haiku",
-      "openWeights": false,
-      "temperatureSupported": true,
-      "modalities": {
-        "input": [
-          "text",
-          "image",
-          "pdf"
-        ],
-        "output": [
-          "text"
-        ]
-      }
-    },
-    {
-      "type": "text",
       "modelName": "claude-sonnet-4-5-20250929",
       "provider": "anthropic",
       "maxInputTokens": 200000,
@@ -2257,31 +2309,6 @@
           "text",
           "image",
           "pdf"
-        ],
-        "output": [
-          "text"
-        ]
-      }
-    },
-    {
-      "type": "text",
-      "modelName": "gpt-5-pro",
-      "provider": "openai",
-      "maxInputTokens": 400000,
-      "maxOutputTokens": 272000,
-      "inputTokenCost": 15,
-      "outputTokenCost": 120,
-      "knowledge": "2024-09-30",
-      "releaseDate": "2025-10-06",
-      "lastUpdated": "2025-10-06",
-      "family": "gpt-pro",
-      "openWeights": false,
-      "structuredOutput": true,
-      "temperatureSupported": false,
-      "modalities": {
-        "input": [
-          "text",
-          "image"
         ],
         "output": [
           "text"
