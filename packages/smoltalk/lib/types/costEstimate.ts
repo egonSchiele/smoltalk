@@ -4,6 +4,7 @@ export type CostEstimate = {
   outputCost: number;
   cachedInputCost?: number;
   cacheCreationInputCost?: number;
+  hostedToolsCost?: number;
   totalCost: number;
   currency: string;
 };
@@ -13,6 +14,7 @@ export const CostEstimateSchema = z.object({
   outputCost: z.number(),
   cachedInputCost: z.number().optional(),
   cacheCreationInputCost: z.number().optional(),
+  hostedToolsCost: z.number().optional(),
   totalCost: z.number(),
   currency: z.string(),
 });
