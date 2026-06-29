@@ -14,7 +14,7 @@ import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { ModelName } from "../models.js";
-import { CostEstimate, TokenUsage, HostedToolResult } from "../types.js";
+import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type {
   ResponseInputItem,
@@ -42,12 +42,15 @@ export function parseOpenAIResponsesHostedTools(
   provider: string,
 ): HostedToolResult[] {
   const queries: string[] = [];
-  const sources: { url: string; title?: string }[] = [];
-  const citations: { url: string; title?: string; startIndex?: number; endIndex?: number }[] = [];
+  const sources: WebSearchSource[] = [];
+  const citations: WebSearchCitation[] = [];
+  const raw: any[] = [];
   let callCount = 0;
   for (const item of response.output || []) {
     if (item.type === "web_search_call") {
+      raw.push(item);
       callCount += 1;
+      // action.query is present for `search` actions but not always (e.g. open_page).
       const query = item.action?.query;
       if (typeof query === "string") {
         queries.push(query);
@@ -66,7 +69,7 @@ export function parseOpenAIResponsesHostedTools(
   if (callCount === 0 && citations.length === 0) {
     return [];
   }
-  return [webSearchResult(provider, { queries, sources, citations, callCount })];
+  return [webSearchResult(provider, { queries, sources, citations, callCount, raw })];
 }
 
 export class SmolOpenAiResponses extends BaseClient implements SmolClient {
@@ -278,14 +281,17 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       this.config.modelData,
     );
 
-    return success({
+    const result: PromptResult = {
       output,
       toolCalls,
       usage,
       cost: finalCost,
       model: this.getModel(),
-      ...(hostedToolResults.length > 0 && { hostedToolResults }),
-    });
+    };
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
+    }
+    return success(result);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {

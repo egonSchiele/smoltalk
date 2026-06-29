@@ -28,6 +28,7 @@ describe("parseGoogleHostedTools", () => {
     expect(out[0].sources?.[0].url).toBe("https://ts.dev/6");
     expect(out[0].citations?.[0].url).toBe("https://ts.dev/6");
     expect(out[0].callCount).toBe(2);
+    expect(out[0].raw).toBeDefined(); // full grounding payload preserved
   });
   it("callCount = 1 on gemini 2.5 (billed per prompt)", () => {
     const out = parseGoogleHostedTools(result, "google", "gemini-2.5-flash");

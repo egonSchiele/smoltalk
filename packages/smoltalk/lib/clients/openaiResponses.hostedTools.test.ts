@@ -24,6 +24,7 @@ describe("parseOpenAIResponsesHostedTools", () => {
     expect(out[0].callCount).toBe(1);
     expect(out[0].citations?.[0].url).toBe("https://ts.dev/6");
     expect(out[0].sources?.[0].url).toBe("https://ts.dev/6");
+    expect(out[0].raw).toBeDefined(); // full provider payload preserved
   });
   it("returns [] with no web search", () => {
     expect(parseOpenAIResponsesHostedTools({ output: [{ type: "message", content: [] }] }, "openai-responses")).toEqual([]);

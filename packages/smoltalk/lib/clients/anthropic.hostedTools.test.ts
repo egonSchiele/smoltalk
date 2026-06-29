@@ -30,6 +30,7 @@ describe("parseAnthropicHostedTools", () => {
     expect(out[0].sources?.[0].url).toBe("https://ts.dev/6");
     expect(out[0].citations?.[0].url).toBe("https://ts.dev/6");
     expect(out[0].callCount).toBe(1);
+    expect(out[0].raw).toBeDefined(); // full provider payload preserved
   });
   it("returns [] when no web search happened", () => {
     expect(parseAnthropicHostedTools({ content: [{ type: "text", text: "hi" }], usage: {} }, "anthropic")).toEqual([]);

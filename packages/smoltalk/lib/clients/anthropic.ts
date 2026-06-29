@@ -18,6 +18,8 @@ import {
   ThinkingBlock,
   TokenUsage,
   HostedToolResult,
+  WebSearchSource,
+  WebSearchCitation,
   success,
 } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
@@ -46,15 +48,19 @@ export function parseAnthropicHostedTools(
   provider: string,
 ): HostedToolResult[] {
   const queries: string[] = [];
-  const sources: { url: string; title?: string }[] = [];
-  const citations: { url: string; title?: string }[] = [];
+  const sources: WebSearchSource[] = [];
+  const citations: WebSearchCitation[] = [];
+  const raw: any[] = [];
   for (const block of response.content || []) {
     if (block.type === "server_tool_use" && block.name === "web_search") {
-      const query = block.input?.query;
-      if (typeof query === "string") {
-        queries.push(query);
+      raw.push(block);
+      // input.query is always the search string; guard only against a malformed block.
+      if (block.input?.query) {
+        queries.push(block.input.query);
       }
     } else if (block.type === "web_search_tool_result") {
+      raw.push(block);
+      // content items are web_search_result entries; an error variant has no url.
       for (const r of block.content || []) {
         if (r && typeof r.url === "string") {
           sources.push({ url: r.url, title: r.title });
@@ -73,7 +79,7 @@ export function parseAnthropicHostedTools(
   if (!used) {
     return [];
   }
-  return [webSearchResult(provider, { queries, sources, citations, callCount })];
+  return [webSearchResult(provider, { queries, sources, citations, callCount, raw })];
 }
 
 type EphemeralCacheControl = { type: "ephemeral" };
@@ -451,15 +457,20 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       this.config.modelData,
     );
 
-    return success({
+    const result: PromptResult = {
       output,
       toolCalls,
-      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
       cost: finalCost,
       model: this.getModel(),
-      ...(hostedToolResults.length > 0 && { hostedToolResults }),
-    });
+    };
+    if (thinkingBlocks.length > 0) {
+      result.thinkingBlocks = thinkingBlocks;
+    }
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
+    }
+    return success(result);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {

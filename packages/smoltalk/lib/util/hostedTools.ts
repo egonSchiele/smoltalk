@@ -105,6 +105,7 @@ export function webSearchResult(
     sources?: WebSearchSource[];
     citations?: WebSearchCitation[];
     callCount?: number;
+    raw?: unknown;
   },
 ): HostedToolResult {
   const result: HostedToolResult = { tool: WEB_SEARCH, provider };
@@ -119,6 +120,9 @@ export function webSearchResult(
   }
   if (parts.callCount) {
     result.callCount = parts.callCount;
+  }
+  if (parts.raw !== undefined) {
+    result.raw = parts.raw;
   }
   return result;
 }

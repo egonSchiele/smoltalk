@@ -23,7 +23,7 @@ import { extractHttpErrorFields } from "../util/httpError.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
-import { CostEstimate, TokenUsage, HostedToolResult } from "../types.js";
+import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { Model } from "../model.js";
 import { userMessage } from "../classes/message/index.js";
@@ -43,13 +43,17 @@ export function parseGoogleHostedTools(
   model: string,
 ): HostedToolResult[] {
   const queries: string[] = [];
-  const sources: { url: string; title?: string }[] = [];
-  const citations: { url: string; title?: string; startIndex?: number; endIndex?: number }[] = [];
+  const sources: WebSearchSource[] = [];
+  const citations: WebSearchCitation[] = [];
+  const raw: any[] = [];
   for (const candidate of result.candidates || []) {
     const gm = candidate.groundingMetadata;
+    // A candidate without groundingMetadata simply didn't ground — nothing to
+    // extract. If no candidate grounded, this returns [] overall.
     if (!gm) {
       continue;
     }
+    raw.push(gm);
     for (const q of gm.webSearchQueries || []) {
       queries.push(q);
     }
@@ -81,7 +85,7 @@ export function parseGoogleHostedTools(
   if (model.startsWith("gemini-2.5")) {
     callCount = 1;
   }
-  return [webSearchResult(provider, { queries, sources, citations, callCount })];
+  return [webSearchResult(provider, { queries, sources, citations, callCount, raw })];
 }
 type GeneratedRequest = {
   contents: Content[];
@@ -392,15 +396,20 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     );
 
     // Return the response, updating the chat history
-    return success({
+    const promptResult: PromptResult = {
       output,
       toolCalls,
-      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
       cost: finalCost,
       model: request.model as ModelName,
-      ...(hostedToolResults.length > 0 && { hostedToolResults }),
-    });
+    };
+    if (thinkingBlocks.length > 0) {
+      promptResult.thinkingBlocks = thinkingBlocks;
+    }
+    if (hostedToolResults.length > 0) {
+      promptResult.hostedToolResults = hostedToolResults;
+    }
+    return success(promptResult);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
