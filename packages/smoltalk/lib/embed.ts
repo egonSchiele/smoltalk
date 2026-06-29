@@ -1,4 +1,3 @@
-import { Provider } from "./models.js";
 import type { ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
@@ -10,7 +9,7 @@ import { ollamaEmbed } from "./embed/ollama.js";
 
 export type EmbedConfig = {
   model: string;
-  provider?: Provider;
+  provider?: string;
   dimensions?: number;
 
   // API keys
@@ -34,6 +33,17 @@ export type EmbedResult = {
   tokenUsage?: TokenUsage;
   costEstimate?: CostEstimate;
 };
+
+export type EmbedProvider = (
+  inputs: string[],
+  config: EmbedConfig,
+) => Promise<Result<EmbedResult>>;
+
+const registeredEmbedProviders: Record<string, EmbedProvider> = {};
+
+export function registerEmbeddingProvider(name: string, fn: EmbedProvider): void {
+  registeredEmbedProviders[name] = fn;
+}
 
 export async function embed(
   input: string | string[],
@@ -72,9 +82,14 @@ export async function embed(
     }
     case "ollama":
       return ollamaEmbed(inputs, config, apiKey, config.ollamaHost);
-    default:
+    default: {
+      const custom = registeredEmbedProviders[provider];
+      if (custom) {
+        return custom(inputs, config);
+      }
       return failure(
-        `Provider "${provider}" does not support embeddings`,
+        `Provider "${provider}" does not support embeddings. Register one with registerEmbeddingProvider(name, fn).`,
       );
+    }
   }
 }
