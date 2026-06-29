@@ -233,6 +233,32 @@ a `hostedTools` catalog (`getHostedTools()`); the published file is kept current
 by a daily CI job that translates [models.dev](https://models.dev) into
 smoltalk's shape.
 
+## Hosted tools catalog
+
+Each cloud provider offers server-side "hosted" tools (web search, code
+execution, file search, image generation). Smoltalk ships a catalog of what's
+available and what it costs — query it with `getHostedTools()`:
+
+```ts
+import { getHostedTools, hostedToolPricingFor } from "smoltalk";
+
+// Hosted tools usable with a given model (respects provider + model allowlists):
+console.log(getHostedTools({ model: "claude-opus-4-8" }));
+
+// All web-search tools across providers:
+const search = getHostedTools({ category: "web_search" });
+
+// Effective pricing for a tool on a specific model (applies per-model overrides):
+const first = search[0];
+if (first) {
+  console.log(hostedToolPricingFor(first, "gemini-2.5-pro"));
+}
+```
+
+The catalog rides in the same refresh blob as model data, so `refreshModels()`
+keeps it current. It's informational (catalog/pricing only) — smoltalk does not
+yet invoke hosted tools on your behalf. Local models (Ollama) have none.
+
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
 
