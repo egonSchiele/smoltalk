@@ -193,6 +193,10 @@ OpenRouter's published per-provider list.
 
 - Runtime invocation / passing hosted tools to provider APIs / parsing results.
 - Structured `search_context_size` pricing tiers (captured in `note`).
-- Auto-syncing the catalog from an upstream (none exists; hand-maintained).
+- Auto-*deriving* the catalog content from a third-party upstream — no source
+  publishes hosted-tool pricing (not models.dev/LiteLLM/OpenRouter), so the
+  catalog *content* is hand-maintained. (Note: *distribution* is not out of
+  scope — the catalog ships in the refresh blob and updates via `refreshModels()`
+  like model data; the CI job preserves `hostedTools` in `data/model-data.json`.)
 - Cumulative free-tier accounting (allowances are stateful across requests; the
   catalog records them as informational notes, not a usage meter).
