@@ -288,7 +288,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -484,7 +484,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -514,7 +514,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -544,7 +544,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -573,7 +573,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -603,7 +603,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -664,7 +664,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -694,7 +694,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -724,7 +724,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",
@@ -793,7 +793,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai-responses",
+    provider: "openai",
   },
   {
     type: "text",

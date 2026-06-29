@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-29T00:06:09.457Z",
+  "generatedAt": "2026-06-29T00:25:26.453Z",
   "models": [
     {
       "type": "text",
@@ -206,7 +206,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai"
+      "provider": "openai-responses"
     },
     {
       "type": "text",
@@ -452,7 +452,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -492,7 +492,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -532,7 +532,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -571,7 +571,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -611,7 +611,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -689,7 +689,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -730,7 +730,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -771,7 +771,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
@@ -861,7 +861,7 @@
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai-responses"
+      "provider": "openai"
     },
     {
       "type": "text",
