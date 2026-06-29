@@ -72,6 +72,11 @@ export type SmolConfig = {
     schema: ZodType;
   }[];
 
+  /** Provider hosted tools (server-side) to enable for this call, by capability
+   *  name (catalog category), e.g. ["web_search"]. Distinct from `tools`
+   *  (client functions) — hosted tools run server-side and can't be intercepted. */
+  hostedTools?: string[];
+
   /** Maximum number of tokens the model can generate in its response. */
   maxTokens?: number;
 
@@ -135,6 +140,30 @@ export type ToolLoopDetection = {
   excludeTools?: string[];
 };
 
+export type WebSearchSource = {
+  url: string;
+  title?: string;
+  snippet?: string;
+};
+
+export type WebSearchCitation = {
+  url: string;
+  title?: string;
+  startIndex?: number;
+  endIndex?: number;
+};
+
+export type HostedToolResult = {
+  tool: string; // capability name (catalog category), e.g. "web_search"
+  provider: string;
+  queries?: string[];
+  sources?: WebSearchSource[];
+  citations?: WebSearchCitation[];
+  callCount?: number; // billable operations the provider reported
+  estimatedCost?: number; // USD; callCount x catalog price; undefined if not derivable
+  raw?: unknown; // provider payload, unnormalized (escape hatch)
+};
+
 export type PromptResult = {
   output: string | null;
   toolCalls: ToolCall[];
@@ -142,6 +171,7 @@ export type PromptResult = {
   usage?: TokenUsage;
   cost?: CostEstimate;
   model?: ModelName;
+  hostedToolResults?: HostedToolResult[];
 };
 
 export function promptResult({
@@ -151,6 +181,7 @@ export function promptResult({
   usage,
   cost,
   model,
+  hostedToolResults,
 }: Partial<PromptResult>): PromptResult {
   return {
     output: output || null,
@@ -159,6 +190,7 @@ export function promptResult({
     usage,
     cost,
     model,
+    hostedToolResults,
   };
 }
 

@@ -17,8 +17,12 @@ import {
   StreamChunk,
   ThinkingBlock,
   TokenUsage,
+  HostedToolResult,
+  WebSearchSource,
+  WebSearchCitation,
   success,
 } from "../types.js";
+import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { zodToAnthropicTool } from "../util/tool.js";
 import {
   SmolContentPolicyError,
@@ -31,6 +35,52 @@ import { ModelName, TextModelName, getModel, isTextModel } from "../models.js";
 import { Model } from "../model.js";
 
 const DEFAULT_MAX_TOKENS = 4096;
+
+export function anthropicWebSearchEntries(hostedTools?: string[]): any[] {
+  if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
+    return [{ type: "web_search_20250305", name: "web_search" }];
+  }
+  return [];
+}
+
+export function parseAnthropicHostedTools(
+  response: any,
+  provider: string,
+): HostedToolResult[] {
+  const queries: string[] = [];
+  const sources: WebSearchSource[] = [];
+  const citations: WebSearchCitation[] = [];
+  const raw: any[] = [];
+  for (const block of response.content || []) {
+    if (block.type === "server_tool_use" && block.name === "web_search") {
+      raw.push(block);
+      // input.query is always the search string; guard only against a malformed block.
+      if (block.input?.query) {
+        queries.push(block.input.query);
+      }
+    } else if (block.type === "web_search_tool_result") {
+      raw.push(block);
+      // content items are web_search_result entries; an error variant has no url.
+      for (const r of block.content || []) {
+        if (r && typeof r.url === "string") {
+          sources.push({ url: r.url, title: r.title });
+        }
+      }
+    } else if (block.type === "text" && Array.isArray(block.citations)) {
+      for (const c of block.citations) {
+        if (c && typeof c.url === "string") {
+          citations.push({ url: c.url, title: c.title });
+        }
+      }
+    }
+  }
+  const callCount = response.usage?.server_tool_use?.web_search_requests;
+  const used = queries.length > 0 || sources.length > 0 || (callCount ?? 0) > 0;
+  if (!used) {
+    return [];
+  }
+  return [webSearchResult(provider, { queries, sources, citations, callCount, raw })];
+}
 
 type EphemeralCacheControl = { type: "ephemeral" };
 type SystemBlock = {
@@ -242,14 +292,17 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       anthropicMessages.push(converted as MessageParam);
     }
 
-    const tools =
+    const functionTools =
       config.tools && config.tools.length > 0
         ? (config.tools.map((tool) =>
             zodToAnthropicTool(tool.name, tool.schema, {
               description: tool.description,
             }),
           ) as Tool[])
-        : undefined;
+        : [];
+    const hostedEntries = anthropicWebSearchEntries(config.hostedTools);
+    const allTools = [...functionTools, ...hostedEntries] as Tool[];
+    const tools = allTools.length > 0 ? allTools : undefined;
 
     // Normalize the user's provider-agnostic thinking/effort config into the
     // shape this specific model accepts. Both `thinking.enabled` and
@@ -396,15 +449,28 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     }
 
     const { usage, cost } = this.calculateUsageAndCost(response.usage);
+    const parsed = parseAnthropicHostedTools(response, "anthropic");
+    const { results: hostedToolResults, cost: finalCost } = applyHostedToolCost(
+      parsed,
+      cost,
+      this.getModel(),
+      this.config.modelData,
+    );
 
-    return success({
+    const result: PromptResult = {
       output,
       toolCalls,
-      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
-      cost,
+      cost: finalCost,
       model: this.getModel(),
-    });
+    };
+    if (thinkingBlocks.length > 0) {
+      result.thinkingBlocks = thinkingBlocks;
+    }
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
+    }
+    return success(result);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {

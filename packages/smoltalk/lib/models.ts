@@ -1600,7 +1600,7 @@ export const hostedTools: HostedTool[] = [
   },
   {
     name: "web_search",
-    provider: "openai",
+    provider: "openai-responses",
     category: "web_search",
     description: "Server-side web search (Responses API).",
     providerToolId: "web_search",
@@ -1608,7 +1608,7 @@ export const hostedTools: HostedTool[] = [
   },
   {
     name: "file_search",
-    provider: "openai",
+    provider: "openai-responses",
     category: "file_search",
     description: "Semantic + keyword search over uploaded files.",
     providerToolId: "file_search",
@@ -1616,7 +1616,7 @@ export const hostedTools: HostedTool[] = [
   },
   {
     name: "code_interpreter",
-    provider: "openai",
+    provider: "openai-responses",
     category: "code_execution",
     description: "Run Python in a sandboxed container.",
     providerToolId: "code_interpreter",
@@ -1624,7 +1624,7 @@ export const hostedTools: HostedTool[] = [
   },
   {
     name: "image_generation",
-    provider: "openai",
+    provider: "openai-responses",
     category: "image_generation",
     description: "Generate images with gpt-image-1 as a tool.",
     providerToolId: "image_generation",

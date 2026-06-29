@@ -256,8 +256,44 @@ if (first) {
 ```
 
 The catalog rides in the same refresh blob as model data, so `refreshModels()`
-keeps it current. It's informational (catalog/pricing only) — smoltalk does not
-yet invoke hosted tools on your behalf. Local models (Ollama) have none.
+keeps it current. Local models (Ollama) have none.
+
+### Using a hosted tool (web search)
+
+Enable a provider's hosted web search on a call with `hostedTools` (a list of
+capability names). It's separate from `tools` because hosted tools run
+server-side — you can't intercept or gate them like your own functions.
+
+```ts
+import { textSync, type Message } from "smoltalk";
+
+declare const messages: Message[];
+
+const result = await textSync({
+  model: "claude-opus-4-8",
+  messages,
+  hostedTools: ["web_search"],
+});
+
+// Normalized across providers, regardless of who ran the search:
+if (result.success) {
+  console.log(result.value.hostedToolResults);
+  // [{ tool: "web_search", provider: "anthropic", queries: [...], sources: [...],
+  //    citations: [...], callCount: 1, estimatedCost: 0.01 }]
+}
+```
+
+Supported on Anthropic, Google, and OpenAI **Responses-API** models. Note that
+smoltalk routes base GPT-5 / GPT-4o to Chat Completions, so on OpenAI hosted web
+search is available only on the `openai-responses` models (the `*-pro` variants,
+e.g. `gpt-5-pro`). Chat-only OpenAI models (`gpt-4o`, `gpt-5`) and local models
+return a clear error — use a search *function* (e.g. the Brave/Tavily-backed
+stdlib tools) as a regular `tool` instead.
+
+`estimatedCost` is an upper-bound estimate (providers report usage counts, not
+charges; free-tier allowances are ignored). Results are populated on `textSync`;
+streaming text is unaffected but the streamed result does not include them yet.
+On Google, web search can't be combined with structured output in one call.
 
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:

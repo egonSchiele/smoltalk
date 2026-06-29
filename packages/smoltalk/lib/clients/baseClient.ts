@@ -11,7 +11,9 @@ import {
   SmolConfig,
   StreamChunk,
   success,
+  failure,
 } from "../types.js";
+import { validateHostedTools } from "../util/hostedTools.js";
 import { z } from "zod";
 
 const DEFAULT_NUM_RETRIES = 2;
@@ -84,6 +86,15 @@ export class BaseClient implements SmolClient {
   async textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
+
+    const hostedError = validateHostedTools(
+      promptConfig.hostedTools,
+      promptConfig.model,
+      promptConfig.modelData,
+    );
+    if (hostedError) {
+      return failure(hostedError);
+    }
 
     const { continue: shouldContinue, newSmolConfig } =
       this.checkForToolLoops(promptConfig);
@@ -377,6 +388,16 @@ export class BaseClient implements SmolClient {
             ? messageLimitResult.error
             : "Message limit exceeded",
       };
+      return;
+    }
+
+    const hostedError = validateHostedTools(
+      config.hostedTools,
+      config.model,
+      config.modelData,
+    );
+    if (hostedError) {
+      yield { type: "error", error: hostedError };
       return;
     }
 

@@ -23,11 +23,70 @@ import { extractHttpErrorFields } from "../util/httpError.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName } from "../models.js";
-import { CostEstimate, TokenUsage } from "../types.js";
+import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
+import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { Model } from "../model.js";
 import { userMessage } from "../classes/message/index.js";
 
 export type SmolGoogleConfig = SmolConfig;
+
+export function googleWebSearchEntries(hostedTools?: string[]): any[] {
+  if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
+    return [{ googleSearch: {} }];
+  }
+  return [];
+}
+
+export function parseGoogleHostedTools(
+  result: any,
+  provider: string,
+  model: string,
+): HostedToolResult[] {
+  const queries: string[] = [];
+  const sources: WebSearchSource[] = [];
+  const citations: WebSearchCitation[] = [];
+  const raw: any[] = [];
+  for (const candidate of result.candidates || []) {
+    const gm = candidate.groundingMetadata;
+    // A candidate without groundingMetadata simply didn't ground — nothing to
+    // extract. If no candidate grounded, this returns [] overall.
+    if (!gm) {
+      continue;
+    }
+    raw.push(gm);
+    for (const q of gm.webSearchQueries || []) {
+      queries.push(q);
+    }
+    const chunks = gm.groundingChunks || [];
+    for (const c of chunks) {
+      if (c.web && typeof c.web.uri === "string") {
+        sources.push({ url: c.web.uri, title: c.web.title });
+      }
+    }
+    for (const s of gm.groundingSupports || []) {
+      for (const idx of s.groundingChunkIndices || []) {
+        const chunk = chunks[idx];
+        if (chunk && chunk.web && typeof chunk.web.uri === "string") {
+          citations.push({
+            url: chunk.web.uri,
+            title: chunk.web.title,
+            startIndex: s.segment?.startIndex,
+            endIndex: s.segment?.endIndex,
+          });
+        }
+      }
+    }
+  }
+  if (queries.length === 0 && sources.length === 0) {
+    return [];
+  }
+  // Gemini 2.5 bills per prompt (1), Gemini 3+ per query.
+  let callCount = queries.length;
+  if (model.startsWith("gemini-2.5")) {
+    callCount = 1;
+  }
+  return [webSearchResult(provider, { queries, sources, citations, callCount, raw })];
+}
 type GeneratedRequest = {
   contents: Content[];
   model: ModelName;
@@ -109,8 +168,16 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       genConfig.systemInstruction = systemParts.join("\n");
     }
 
-    if (tools.length > 0) {
-      genConfig.tools = [{ functionDeclarations: tools }];
+    const hostedEntries = googleWebSearchEntries(config.hostedTools);
+    if (tools.length > 0 || hostedEntries.length > 0) {
+      const toolGroups: any[] = [];
+      if (tools.length > 0) {
+        toolGroups.push({ functionDeclarations: tools });
+      }
+      for (const entry of hostedEntries) {
+        toolGroups.push(entry);
+      }
+      genConfig.tools = toolGroups;
     }
 
     if (config.responseFormat) {
@@ -320,16 +387,29 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     // Extract usage and calculate cost
     const { usage, cost } = this.calculateUsageAndCost(result.usageMetadata);
+    const parsed = parseGoogleHostedTools(result, "google", request.model as string);
+    const { results: hostedToolResults, cost: finalCost } = applyHostedToolCost(
+      parsed,
+      cost,
+      request.model as string,
+      this.config.modelData,
+    );
 
     // Return the response, updating the chat history
-    return success({
+    const promptResult: PromptResult = {
       output,
       toolCalls,
-      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
-      cost,
+      cost: finalCost,
       model: request.model as ModelName,
-    });
+    };
+    if (thinkingBlocks.length > 0) {
+      promptResult.thinkingBlocks = thinkingBlocks;
+    }
+    if (hostedToolResults.length > 0) {
+      promptResult.hostedToolResults = hostedToolResults;
+    }
+    return success(promptResult);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
