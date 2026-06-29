@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validateHostedTools, estimateHostedToolCost, foldHostedToolCost, webSearchResult, applyHostedToolCost } from "./hostedTools.js";
+import { getHostedTools } from "../models.js";
 import type { HostedToolResult } from "../types.js";
 
 describe("validateHostedTools", () => {
@@ -73,5 +74,16 @@ describe("applyHostedToolCost", () => {
     );
     expect(results[0].estimatedCost).toBeCloseTo(0.02, 6);
     expect(cost?.hostedToolsCost).toBeCloseTo(0.02, 6);
+  });
+});
+
+describe("OpenAI hosted tools are Responses-API tools", () => {
+  it("web_search is available for gpt-5-pro (openai-responses) but not gpt-4o/gpt-5 (openai chat)", () => {
+    const forPro = getHostedTools({ model: "gpt-5-pro" }).map((t) => t.category);
+    const forGpt4o = getHostedTools({ model: "gpt-4o" }).map((t) => t.category);
+    const forGpt5 = getHostedTools({ model: "gpt-5" }).map((t) => t.category);
+    expect(forPro).toContain("web_search");
+    expect(forGpt4o).not.toContain("web_search");
+    expect(forGpt5).not.toContain("web_search");
   });
 });
