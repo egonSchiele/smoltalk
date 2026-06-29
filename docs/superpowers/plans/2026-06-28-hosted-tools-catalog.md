@@ -287,10 +287,7 @@ export function getHostedTools(opts: {
 
   let modelProvider: string | undefined;
   if (opts.model) {
-    const model = getModel(opts.model, opts.modelData);
-    if (model) {
-      modelProvider = model.provider;
-    }
+    modelProvider = getModel(opts.model, opts.modelData)?.provider;
   }
 
   return tools.filter((tool) => {
@@ -319,16 +316,15 @@ export function hostedToolPricingFor(
   tool: HostedTool,
   model?: string,
 ): HostedToolPricing | undefined {
-  const base = tool.pricing;
-  if (!base) {
+  if (!tool.pricing) {
     return undefined;
   }
-  let result: HostedToolPricing = { ...base };
-  if (model && base.perModel && base.perModel[model]) {
-    result = { ...result, ...base.perModel[model] };
+  // Strip perModel from the base; merge the override for `model` when present.
+  const { perModel, ...base } = tool.pricing;
+  if (model && perModel && perModel[model]) {
+    return { ...base, ...perModel[model] };
   }
-  delete result.perModel;
-  return result;
+  return base;
 }
 ```
 
