@@ -1,4 +1,3 @@
-import { Provider } from "./models.js";
 import type { ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
@@ -20,7 +19,7 @@ export type ImageInput =
 
 export type ImageConfig = {
   model: string;
-  provider?: Provider;
+  provider?: string;
 
   // Common knobs (passed when supported, ignored otherwise)
   n?: number;
@@ -52,6 +51,17 @@ export type ImageGenResult = {
   tokenUsage?: TokenUsage;
   costEstimate?: CostEstimate;
 };
+
+export type ImageProvider = (
+  input: ImageInput,
+  config: ImageConfig,
+) => Promise<Result<ImageGenResult>>;
+
+const registeredImageProviders: Record<string, ImageProvider> = {};
+
+export function registerImageProvider(name: string, fn: ImageProvider): void {
+  registeredImageProviders[name] = fn;
+}
 
 export async function image(
   input: ImageInput,
@@ -95,9 +105,14 @@ export async function image(
       }
       return googleImage(input, config, apiKey);
     }
-    default:
+    default: {
+      const custom = registeredImageProviders[provider];
+      if (custom) {
+        return custom(input, config);
+      }
       return failure(
-        `Provider "${provider}" does not support image generation`,
+        `Provider "${provider}" does not support image generation. Register one with registerImageProvider(name, fn).`,
       );
+    }
   }
 }
