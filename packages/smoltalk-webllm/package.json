@@ -34,7 +34,7 @@
     "@mlc-ai/web-llm": "^0.2.83"
   },
   "peerDependencies": {
-    "smoltalk": "^0.4.2",
+    "smoltalk": "^0.5.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {

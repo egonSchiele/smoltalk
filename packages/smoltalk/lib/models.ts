@@ -1737,9 +1737,15 @@ export function getHostedTools(opts: {
     tools = mergeHostedTools(tools, opts.modelData.hostedTools);
   }
 
+  // A provider override is authoritative: it decides which API the model routes
+  // through, and therefore which hosted tools are available for it.
   let modelProvider: string | undefined;
   if (opts.model) {
-    modelProvider = getModel(opts.model, opts.modelData)?.provider;
+    if (opts.provider) {
+      modelProvider = opts.provider;
+    } else {
+      modelProvider = getModel(opts.model, opts.modelData)?.provider;
+    }
   }
 
   return tools.filter((tool) => {

@@ -24,6 +24,20 @@ describe("validateHostedTools", () => {
     expect(validateHostedTools(undefined, "claude-opus-4-8")).toBeNull();
     expect(validateHostedTools([], "claude-opus-4-8")).toBeNull();
   });
+  it("rejects web_search for a chat model with no provider override", () => {
+    const msg = validateHostedTools(["web_search"], "gpt-4o-mini");
+    expect(msg).toContain("web_search");
+    expect(msg).toContain("openai");
+  });
+  it("accepts web_search when the provider override routes through openai-responses", () => {
+    expect(
+      validateHostedTools(["web_search"], "gpt-4o-mini", "openai-responses"),
+    ).toBeNull();
+  });
+  it("names the override provider in the rejection message", () => {
+    const msg = validateHostedTools(["web_search"], "gpt-4o-mini", "openai");
+    expect(msg).toContain("(openai)");
+  });
 });
 
 describe("estimateHostedToolCost", () => {
@@ -38,6 +52,10 @@ describe("estimateHostedToolCost", () => {
   it("returns undefined without a callCount", () => {
     const r: HostedToolResult = { tool: "web_search", provider: "anthropic" };
     expect(estimateHostedToolCost(r, "claude-opus-4-8")).toBeUndefined();
+  });
+  it("prices a base model routed through openai-responses (result provider override)", () => {
+    const r: HostedToolResult = { tool: "web_search", provider: "openai-responses", callCount: 2 };
+    expect(estimateHostedToolCost(r, "gpt-4o-mini")).toBeCloseTo(0.02, 6);
   });
 });
 
@@ -85,5 +103,12 @@ describe("OpenAI hosted tools are Responses-API tools", () => {
     expect(forPro).toContain("web_search");
     expect(forGpt4o).not.toContain("web_search");
     expect(forGpt5).not.toContain("web_search");
+  });
+  it("a provider override exposes the responses-API tools for a chat model", () => {
+    const overridden = getHostedTools({
+      model: "gpt-4o-mini",
+      provider: "openai-responses",
+    }).map((t) => t.category);
+    expect(overridden).toContain("web_search");
   });
 });

@@ -90,6 +90,7 @@ export class BaseClient implements SmolClient {
     const hostedError = validateHostedTools(
       promptConfig.hostedTools,
       promptConfig.model,
+      promptConfig.provider,
       promptConfig.modelData,
     );
     if (hostedError) {
@@ -394,6 +395,7 @@ export class BaseClient implements SmolClient {
     const hostedError = validateHostedTools(
       config.hostedTools,
       config.model,
+      config.provider,
       config.modelData,
     );
     if (hostedError) {

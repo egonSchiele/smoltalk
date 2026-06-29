@@ -12,9 +12,13 @@ export const IMPLEMENTED_HOSTED_TOOLS = new Set<string>([WEB_SEARCH]);
 
 // Returns an error message if any requested capability is unusable for this
 // model, else null. Capabilities are matched against the catalog `category`.
+// A `provider` override is authoritative: the same model can route through a
+// different API (e.g. gpt-4o-mini via "openai-responses"), which changes which
+// hosted tools are available.
 export function validateHostedTools(
   requested: string[] | undefined,
   model: string,
+  provider?: string,
   modelData?: ModelDataBlob,
 ): string | null {
   if (!requested || requested.length === 0) {
@@ -24,7 +28,7 @@ export function validateHostedTools(
     getHostedTools({ includeDisabled: true, modelData }).map((t) => t.category),
   );
   const availableCategories = new Set(
-    getHostedTools({ model, modelData }).map((t) => t.category),
+    getHostedTools({ model, provider, modelData }).map((t) => t.category),
   );
   for (const name of requested) {
     if (!IMPLEMENTED_HOSTED_TOOLS.has(name)) {
@@ -34,8 +38,11 @@ export function validateHostedTools(
       return `Unknown hosted tool "${name}".`;
     }
     if (!availableCategories.has(name)) {
-      const provider = getModel(model, modelData)?.provider ?? "unknown";
-      return `${name} is a hosted capability; ${model} (${provider}) doesn't offer it — pass a search function as a tool instead.`;
+      let effectiveProvider = provider;
+      if (!effectiveProvider) {
+        effectiveProvider = getModel(model, modelData)?.provider ?? "unknown";
+      }
+      return `${name} is a hosted capability; ${model} (${effectiveProvider}) doesn't offer it — pass a search function as a tool instead.`;
     }
   }
   return null;
@@ -51,7 +58,15 @@ export function estimateHostedToolCost(
   if (!result.callCount) {
     return undefined;
   }
-  const tools = getHostedTools({ model, includeDisabled: true, modelData });
+  // The result names the provider that produced it, which may differ from the
+  // model's registered provider (e.g. a base model routed through Responses).
+  // Use it so the catalog lookup isn't filtered out by the wrong provider.
+  const tools = getHostedTools({
+    model,
+    provider: result.provider,
+    includeDisabled: true,
+    modelData,
+  });
   const tool = tools.find(
     (t) => t.category === result.tool && t.provider === result.provider,
   );

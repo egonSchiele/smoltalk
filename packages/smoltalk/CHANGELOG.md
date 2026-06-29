@@ -1,5 +1,10 @@
 # Changelog
 
+## smoltalk 0.5.1 (2026-06-29)
+
+### Fixed
+- Hosted-tool validation now respects the `provider` override, so requesting `hostedTools: ["web_search"]` on an OpenAI chat model routed through `provider: "openai-responses"` is no longer wrongly rejected. Cost estimation honors the producing provider too, so web-search cost is no longer silently dropped for these calls.
+
 ## smoltalk 0.5.0 (2026-06-29)
 
 ### Added
