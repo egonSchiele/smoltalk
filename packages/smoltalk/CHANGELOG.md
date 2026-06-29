@@ -1,5 +1,17 @@
 # Changelog
 
+## smoltalk 0.5.0 (2026-06-29)
+
+### Added
+- Runtime model-data refresh: `refreshModels()` pulls updated model data from a default URL, a URL you control, or a local `file://` path. Then you can use `registerModelData()` to register it once, or provide a `config.modelData` per call.
+- Hosted-tools catalog: `getHostedTools()` and `hostedToolPricingFor()` expose which server-side tools each provider offers (web search, code execution, file search, image generation, etc) plus structured pricing.
+- Hosted web search: enable per call with `hostedTools: ["web_search"]` on Anthropic, Google, and OpenAI Responses models. Results come back normalized in `PromptResult.hostedToolResults`, with an estimated cost folded into `CostEstimate`.
+- `registerEmbeddingProvider()` and `registerImageProvider()` to register custom providers for `embed()` and `image()`, just like `registerProvider()` for text.
+- New optional metadata fields for models: knowledge cutoff, release/updated dates, modalities, family, capability flags, and tiered/audio pricing.
+
+### Changed
+- Refreshed the baked-in model registry from models.dev. Corrected pricing and context limits, added models including `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`, and `gpt-5-pro`.
+
 ## smoltalk 0.4.2 (2026-06-24)
 
 ### Added
