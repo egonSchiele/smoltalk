@@ -6,13 +6,23 @@ import { Result, success, failure } from "./types/result.js";
 
 export const SUPPORTED_SCHEMA_VERSION = 1;
 
+export type HostedToolPricing = {
+  unit: "per_call" | "per_session" | "per_hour" | "per_gb_day" | "tokens" | "free";
+  amount?: number;        // USD per unit; omitted for free / token-based
+  freeAllowance?: string; // human note of a free tier, e.g. "50 container-hours/day"
+  note?: string;          // long-tail nuance (tiers, "+ content tokens", context-size)
+  // Per-model overrides, merged over the base pricing (base field <- override field).
+  perModel?: Record<string, Partial<HostedToolPricing>>;
+};
+
 export type HostedTool = {
-  name: string;
-  provider: string;
+  name: string;             // smoltalk canonical name, e.g. "web_search"
+  provider: string;         // "anthropic" | "openai" | "google"
+  category?: string;        // cross-provider grouping, e.g. "web_search" | "code_execution"
   description?: string;
-  costPerCall?: number;
-  inputTokenCost?: number;
-  outputTokenCost?: number;
+  providerToolId?: string;  // the provider's real tool id, e.g. "web_search_preview"
+  models?: string[];        // optional allowlist; omitted = all of provider's models
+  pricing?: HostedToolPricing;
   disabled?: boolean;
 };
 
@@ -39,14 +49,25 @@ const ModelEntrySchema = z
   })
   .catchall(z.unknown());
 
+const HostedToolPricingSchema = z
+  .object({
+    unit: z.string(),
+    amount: z.number().optional(),
+    freeAllowance: z.string().optional(),
+    note: z.string().optional(),
+    perModel: z.record(z.string(), z.unknown()).optional(),
+  })
+  .catchall(z.unknown());
+
 const HostedToolSchema = z
   .object({
     name: z.string(),
     provider: z.string(),
+    category: z.string().optional(),
     description: z.string().optional(),
-    costPerCall: z.number().optional(),
-    inputTokenCost: z.number().optional(),
-    outputTokenCost: z.number().optional(),
+    providerToolId: z.string().optional(),
+    models: z.array(z.string()).optional(),
+    pricing: HostedToolPricingSchema.optional(),
     disabled: z.boolean().optional(),
   })
   .catchall(z.unknown());

@@ -1576,8 +1576,10 @@ export const hostedTools: HostedTool[] = [
   {
     name: "web_search",
     provider: "anthropic",
+    category: "web_search",
     description: "Anthropic server-side web search tool.",
-    costPerCall: 0.01,
+    providerToolId: "web_search",
+    pricing: { unit: "per_call", amount: 0.01, note: "$10 per 1,000 searches, plus content tokens." },
   },
 ];
 
