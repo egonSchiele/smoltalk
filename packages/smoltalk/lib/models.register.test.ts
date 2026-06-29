@@ -49,7 +49,7 @@ describe("registerModelData", () => {
   });
 
   it("merges hosted tools from baseline, global, and request layers", () => {
-    registerModelData({ schemaVersion: 1, generatedAt: "x", models: [], hostedTools: [{ name: "web_search", provider: "anthropic", pricing: { unit: "per_call", amount: 0.02 } } as any] });
+    registerModelData({ schemaVersion: 1, generatedAt: "x", models: [], hostedTools: [{ name: "web_search", provider: "anthropic", pricing: { unit: "per_call", amount: 0.02 } }] });
     const tools = getHostedTools();
     const ws = tools.find((t) => t.name === "web_search");
     expect(ws?.pricing?.amount).toBe(0.02); // global overlay wins over baseline

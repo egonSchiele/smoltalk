@@ -6,13 +6,19 @@ import { Result, success, failure } from "./types/result.js";
 
 export const SUPPORTED_SCHEMA_VERSION = 1;
 
-export type HostedToolPricing = {
+// The price itself, with no per-model overrides. This is what
+// hostedToolPricingFor() returns (a single resolved price).
+export type HostedToolPrice = {
   unit: "per_call" | "per_session" | "per_hour" | "per_gb_day" | "tokens" | "free";
   amount?: number;        // USD per unit; omitted for free / token-based
   freeAllowance?: string; // human note of a free tier, e.g. "50 container-hours/day"
   note?: string;          // long-tail nuance (tiers, "+ content tokens", context-size)
-  // Per-model overrides, merged over the base pricing (base field <- override field).
-  perModel?: Record<string, Partial<HostedToolPricing>>;
+};
+
+export type HostedToolPricing = HostedToolPrice & {
+  // Per-model overrides, merged over the base price (base field <- override field).
+  // Overrides are plain prices — they cannot themselves carry perModel.
+  perModel?: Record<string, Partial<HostedToolPrice>>;
 };
 
 export type HostedTool = {
@@ -49,13 +55,25 @@ const ModelEntrySchema = z
   })
   .catchall(z.unknown());
 
+// Per-model override: price fields only. No `.catchall`, so unknown keys
+// (including a stray nested `perModel`) are stripped — the resolver can never
+// reintroduce perModel into its result.
+const PerModelPriceSchema = z.object({
+  unit: z.string().optional(),
+  amount: z.number().optional(),
+  freeAllowance: z.string().optional(),
+  note: z.string().optional(),
+});
+
+// `unit` stays a lenient string (forward-compat, mirroring ModelEntrySchema's
+// `type: z.string()`); the closed union is the known/intended set.
 const HostedToolPricingSchema = z
   .object({
     unit: z.string(),
     amount: z.number().optional(),
     freeAllowance: z.string().optional(),
     note: z.string().optional(),
-    perModel: z.record(z.string(), z.unknown()).optional(),
+    perModel: z.record(z.string(), PerModelPriceSchema).optional(),
   })
   .catchall(z.unknown());
 

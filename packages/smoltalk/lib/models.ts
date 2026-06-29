@@ -4,7 +4,7 @@ import {
   mergeHostedTools,
   type ModelDataBlob,
   type HostedTool,
-  type HostedToolPricing,
+  type HostedToolPrice,
 } from "./modelData.js";
 export const providers = [
   "ollama",
@@ -1767,11 +1767,12 @@ export function getHostedTools(opts: {
 export function hostedToolPricingFor(
   tool: HostedTool,
   model?: string,
-): HostedToolPricing | undefined {
+): HostedToolPrice | undefined {
   if (!tool.pricing) {
     return undefined;
   }
-  // Strip perModel from the base; merge the override for `model` when present.
+  // Drop perModel from the base; merge the override for `model` when present.
+  // The return type is HostedToolPrice, so the result can never carry perModel.
   const { perModel, ...base } = tool.pricing;
   if (model && perModel && perModel[model]) {
     return { ...base, ...perModel[model] };
