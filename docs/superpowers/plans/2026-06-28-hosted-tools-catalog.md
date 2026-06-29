@@ -517,15 +517,19 @@ In `lib/models.register.test.ts`, find the test `"merges hosted tools from basel
 Run: `pnpm exec vitest run lib/models.hostedTools.test.ts lib/models.register.test.ts && pnpm typecheck`
 Expected: PASS.
 
-Then regenerate the published artifact:
+Then regenerate the published artifact. Use `refresh-data` (NOT `seed-data`):
+`seed-data` serializes baseline consts only and would drop the models.dev model
+enrichment already published on `main`. `refresh-data` re-merges baseline +
+models.dev *and* picks up the new `hostedTools` catalog (its `buildSeedBlob`
+baseline now includes it).
 
-Run: `pnpm seed-data`
-Expected: writes `data/model-data.json` (now with the full hostedTools catalog).
+Run: `pnpm refresh-data`
+Expected: writes `data/model-data.json` with the enriched models + new catalog.
 
-Verify the catalog landed in the artifact:
+Verify both landed in the artifact:
 
-Run: `node -e "const b=require('./data/model-data.json'); console.log('hostedTools:', b.hostedTools.length, '| providers:', [...new Set(b.hostedTools.map(t=>t.provider))].join(','))"`
-Expected: `hostedTools: 11 | providers: anthropic,openai,google`
+Run: `node -e "const b=require('./data/model-data.json'); console.log('models:', b.models.length, '| hostedTools:', b.hostedTools.length, '| tool providers:', [...new Set(b.hostedTools.map(t=>t.provider))].join(','))"`
+Expected: `models: 103 | hostedTools: 11 | tool providers: anthropic,openai,google`
 
 - [ ] **Step 5: Commit**
 

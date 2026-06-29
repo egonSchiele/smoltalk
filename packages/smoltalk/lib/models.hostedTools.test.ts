@@ -45,6 +45,33 @@ describe("getHostedTools filtering", () => {
   });
 });
 
+describe("baked-in hosted-tool catalog", () => {
+  it("covers the three cloud providers with valid entries", () => {
+    const providers = new Set(hostedTools.map((t) => t.provider));
+    expect(providers.has("anthropic")).toBe(true);
+    expect(providers.has("openai")).toBe(true);
+    expect(providers.has("google")).toBe(true);
+  });
+
+  it("every entry has a known unit and no duplicate (provider, name)", () => {
+    const UNITS = new Set(["per_call", "per_session", "per_hour", "per_gb_day", "tokens", "free"]);
+    const seen = new Set<string>();
+    for (const t of hostedTools) {
+      expect(t.pricing?.unit, t.name).toBeDefined();
+      expect(UNITS.has(t.pricing!.unit), `${t.name} unit`).toBe(true);
+      const key = `${t.provider}:${t.name}`;
+      expect(seen.has(key), key).toBe(false);
+      seen.add(key);
+    }
+  });
+
+  it("maps_grounding is gated to the Gemini 3 family", () => {
+    const maps = hostedTools.find((t) => t.name === "maps_grounding");
+    expect(maps?.models?.length).toBeGreaterThan(0);
+    expect(maps?.models?.every((m) => m.startsWith("gemini-3"))).toBe(true);
+  });
+});
+
 describe("hostedToolPricingFor", () => {
   it("returns base pricing with perModel stripped", () => {
     const tool = { name: "google_search", provider: "google", pricing: { unit: "per_call", amount: 0.014, perModel: { "gemini-2.5-flash": { amount: 0.035 } } } } as any;
