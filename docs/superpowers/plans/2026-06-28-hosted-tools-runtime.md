@@ -193,6 +193,8 @@ git commit -m "feat(hostedTools): config.hostedTools + normalized result/cost ty
   - `validateHostedTools(requested: string[] | undefined, model: string, modelData?: ModelDataBlob): string | null`
   - `estimateHostedToolCost(result: HostedToolResult, model: string, modelData?: ModelDataBlob): number | undefined`
   - `foldHostedToolCost(cost: CostEstimate | undefined, results: HostedToolResult[]): CostEstimate | undefined`
+  - `webSearchResult(provider: string, parts: { queries?: string[]; sources?: WebSearchSource[]; citations?: WebSearchCitation[]; callCount?: number }): HostedToolResult` — builds a normalized result, omitting empty fields (so each parser stops repeating the omit-empty assembly).
+  - `applyHostedToolCost(results: HostedToolResult[], cost: CostEstimate | undefined, model: string, modelData?: ModelDataBlob): { results: HostedToolResult[]; cost: CostEstimate | undefined }` — runs the estimate + fold once for every client.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -200,7 +202,7 @@ Create `lib/util/hostedTools.test.ts`:
 
 ```ts
 import { describe, it, expect } from "vitest";
-import { validateHostedTools, estimateHostedToolCost, foldHostedToolCost } from "./hostedTools.js";
+import { validateHostedTools, estimateHostedToolCost, foldHostedToolCost, webSearchResult, applyHostedToolCost } from "./hostedTools.js";
 import type { HostedToolResult } from "../types.js";
 
 describe("validateHostedTools", () => {
@@ -254,6 +256,29 @@ describe("foldHostedToolCost", () => {
     expect(foldHostedToolCost(base, [])).toBe(base);
   });
 });
+
+describe("webSearchResult", () => {
+  it("omits empty fields", () => {
+    const r = webSearchResult("anthropic", { queries: [], sources: [{ url: "https://a" }], callCount: 2 });
+    expect(r.tool).toBe("web_search");
+    expect(r.queries).toBeUndefined();
+    expect(r.sources).toHaveLength(1);
+    expect(r.callCount).toBe(2);
+  });
+});
+
+describe("applyHostedToolCost", () => {
+  it("sets estimatedCost per result and folds into cost", () => {
+    const base = { inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" };
+    const { results, cost } = applyHostedToolCost(
+      [{ tool: "web_search", provider: "anthropic", callCount: 2 }],
+      base,
+      "claude-opus-4-8",
+    );
+    expect(results[0].estimatedCost).toBeCloseTo(0.02, 6);
+    expect(cost?.hostedToolsCost).toBeCloseTo(0.02, 6);
+  });
+});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -269,7 +294,7 @@ Create `lib/util/hostedTools.ts`:
 import { getHostedTools, hostedToolPricingFor } from "../models.js";
 import type { ModelDataBlob } from "../modelData.js";
 import type { CostEstimate } from "../types/costEstimate.js";
-import type { HostedToolResult } from "../types.js";
+import type { HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
 import { getModel } from "../models.js";
 import { round } from "./util.js";
 
@@ -362,6 +387,50 @@ export function foldHostedToolCost(
     hostedToolsCost: round((cost.hostedToolsCost || 0) + hosted, 6),
     totalCost: round(cost.totalCost + hosted, 6),
   };
+}
+
+// Build a normalized web-search result, omitting empty fields. One place for the
+// "assemble result" shape so each parser doesn't repeat it.
+export function webSearchResult(
+  provider: string,
+  parts: {
+    queries?: string[];
+    sources?: WebSearchSource[];
+    citations?: WebSearchCitation[];
+    callCount?: number;
+  },
+): HostedToolResult {
+  const result: HostedToolResult = { tool: WEB_SEARCH, provider };
+  if (parts.queries && parts.queries.length > 0) {
+    result.queries = parts.queries;
+  }
+  if (parts.sources && parts.sources.length > 0) {
+    result.sources = parts.sources;
+  }
+  if (parts.citations && parts.citations.length > 0) {
+    result.citations = parts.citations;
+  }
+  if (parts.callCount) {
+    result.callCount = parts.callCount;
+  }
+  return result;
+}
+
+// Estimate per-result cost and fold the total into the CostEstimate. One call
+// for every client, so the estimate+fold sequence lives in exactly one place.
+export function applyHostedToolCost(
+  results: HostedToolResult[],
+  cost: CostEstimate | undefined,
+  model: string,
+  modelData?: ModelDataBlob,
+): { results: HostedToolResult[]; cost: CostEstimate | undefined } {
+  for (const r of results) {
+    const est = estimateHostedToolCost(r, model, modelData);
+    if (est !== undefined) {
+      r.estimatedCost = est;
+    }
+  }
+  return { results, cost: foldHostedToolCost(cost, results) };
 }
 ```
 
@@ -599,7 +668,7 @@ Expected: FAIL — functions not exported.
 In `lib/clients/anthropic.ts`, add imports near the top (with the other `../util` / `../types` imports):
 
 ```ts
-import { WEB_SEARCH, estimateHostedToolCost, foldHostedToolCost } from "../util/hostedTools.js";
+import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type { HostedToolResult } from "../types.js";
 ```
 
@@ -645,20 +714,7 @@ export function parseAnthropicHostedTools(
   if (!used) {
     return [];
   }
-  const result: HostedToolResult = { tool: WEB_SEARCH, provider };
-  if (queries.length > 0) {
-    result.queries = queries;
-  }
-  if (sources.length > 0) {
-    result.sources = sources;
-  }
-  if (citations.length > 0) {
-    result.citations = citations;
-  }
-  if (callCount !== undefined) {
-    result.callCount = callCount;
-  }
-  return [result];
+  return [webSearchResult(provider, { queries, sources, citations, callCount })];
 }
 ```
 
@@ -682,11 +738,13 @@ Wire parsing + cost into the `_textSync` result assembly (replace the `const { u
 
 ```ts
     const { usage, cost } = this.calculateUsageAndCost(response.usage);
-    const hostedToolResults = parseAnthropicHostedTools(response, "anthropic");
-    for (const r of hostedToolResults) {
-      r.estimatedCost = estimateHostedToolCost(r, this.getModel(), this.config.modelData);
-    }
-    const finalCost = foldHostedToolCost(cost, hostedToolResults);
+    const parsed = parseAnthropicHostedTools(response, "anthropic");
+    const { results: hostedToolResults, cost: finalCost } = applyHostedToolCost(
+      parsed,
+      cost,
+      this.getModel(),
+      this.config.modelData,
+    );
 
     return success({
       output,
@@ -772,7 +830,7 @@ Expected: FAIL — functions not exported.
 In `lib/clients/openaiResponses.ts`, add imports:
 
 ```ts
-import { WEB_SEARCH, estimateHostedToolCost, foldHostedToolCost } from "../util/hostedTools.js";
+import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type { HostedToolResult } from "../types.js";
 ```
 
@@ -815,20 +873,7 @@ export function parseOpenAIResponsesHostedTools(
   if (callCount === 0 && citations.length === 0) {
     return [];
   }
-  const result: HostedToolResult = { tool: WEB_SEARCH, provider };
-  if (queries.length > 0) {
-    result.queries = queries;
-  }
-  if (sources.length > 0) {
-    result.sources = sources;
-  }
-  if (citations.length > 0) {
-    result.citations = citations;
-  }
-  if (callCount > 0) {
-    result.callCount = callCount;
-  }
-  return [result];
+  return [webSearchResult(provider, { queries, sources, citations, callCount })];
 }
 ```
 
@@ -846,11 +891,13 @@ Wire parsing + cost into `_textSync` (replace the `const { usage, cost } = ...; 
 
 ```ts
     const { usage, cost } = this.calculateUsageAndCost(response.usage);
-    const hostedToolResults = parseOpenAIResponsesHostedTools(response, "openai-responses");
-    for (const r of hostedToolResults) {
-      r.estimatedCost = estimateHostedToolCost(r, this.getModel(), this.config.modelData);
-    }
-    const finalCost = foldHostedToolCost(cost, hostedToolResults);
+    const parsed = parseOpenAIResponsesHostedTools(response, "openai-responses");
+    const { results: hostedToolResults, cost: finalCost } = applyHostedToolCost(
+      parsed,
+      cost,
+      this.getModel(),
+      this.config.modelData,
+    );
 
     return success({
       output,
@@ -949,7 +996,7 @@ Expected: FAIL — functions not exported.
 In `lib/clients/google.ts`, add imports:
 
 ```ts
-import { WEB_SEARCH, estimateHostedToolCost, foldHostedToolCost } from "../util/hostedTools.js";
+import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type { HostedToolResult } from "../types.js";
 ```
 
@@ -1007,17 +1054,7 @@ export function parseGoogleHostedTools(
   if (model.startsWith("gemini-2.5")) {
     callCount = 1;
   }
-  const out: HostedToolResult = { tool: WEB_SEARCH, provider, callCount };
-  if (queries.length > 0) {
-    out.queries = queries;
-  }
-  if (sources.length > 0) {
-    out.sources = sources;
-  }
-  if (citations.length > 0) {
-    out.citations = citations;
-  }
-  return [out];
+  return [webSearchResult(provider, { queries, sources, citations, callCount })];
 }
 ```
 
@@ -1043,11 +1080,13 @@ Wire parsing + cost into `__textSync` result assembly (replace the `const { usag
 
 ```ts
     const { usage, cost } = this.calculateUsageAndCost(result.usageMetadata);
-    const hostedToolResults = parseGoogleHostedTools(result, "google", request.model as string);
-    for (const r of hostedToolResults) {
-      r.estimatedCost = estimateHostedToolCost(r, request.model as string, this.config.modelData);
-    }
-    const finalCost = foldHostedToolCost(cost, hostedToolResults);
+    const parsed = parseGoogleHostedTools(result, "google", request.model as string);
+    const { results: hostedToolResults, cost: finalCost } = applyHostedToolCost(
+      parsed,
+      cost,
+      request.model as string,
+      this.config.modelData,
+    );
 
     return success({
       output,
