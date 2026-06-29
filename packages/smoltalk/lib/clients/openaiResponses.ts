@@ -14,7 +14,8 @@ import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { ModelName } from "../models.js";
-import { CostEstimate, TokenUsage } from "../types.js";
+import { CostEstimate, TokenUsage, HostedToolResult } from "../types.js";
+import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type {
   ResponseInputItem,
   ResponseStreamEvent,
@@ -28,6 +29,45 @@ import {
 import { extractHttpErrorFields } from "../util/httpError.js";
 
 export type SmolOpenAiResponsesConfig = SmolConfig;
+
+export function openaiResponsesWebSearchEntries(hostedTools?: string[]): any[] {
+  if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
+    return [{ type: "web_search" }];
+  }
+  return [];
+}
+
+export function parseOpenAIResponsesHostedTools(
+  response: any,
+  provider: string,
+): HostedToolResult[] {
+  const queries: string[] = [];
+  const sources: { url: string; title?: string }[] = [];
+  const citations: { url: string; title?: string; startIndex?: number; endIndex?: number }[] = [];
+  let callCount = 0;
+  for (const item of response.output || []) {
+    if (item.type === "web_search_call") {
+      callCount += 1;
+      const query = item.action?.query;
+      if (typeof query === "string") {
+        queries.push(query);
+      }
+    } else if (item.type === "message") {
+      for (const part of item.content || []) {
+        for (const ann of part.annotations || []) {
+          if (ann.type === "url_citation" && typeof ann.url === "string") {
+            citations.push({ url: ann.url, title: ann.title, startIndex: ann.start_index, endIndex: ann.end_index });
+            sources.push({ url: ann.url, title: ann.title });
+          }
+        }
+      }
+    }
+  }
+  if (callCount === 0 && citations.length === 0) {
+    return [];
+  }
+  return [webSearchResult(provider, { queries, sources, citations, callCount })];
+}
 
 export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   private client: OpenAI;
@@ -111,6 +151,12 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
           description: tool.description,
         }),
       );
+    }
+
+    const hostedEntries = openaiResponsesWebSearchEntries(config.hostedTools);
+    if (hostedEntries.length > 0) {
+      const existing = Array.isArray(request.tools) ? request.tools : [];
+      request.tools = [...existing, ...hostedEntries];
     }
 
     if (config.temperature !== undefined) {
@@ -224,13 +270,21 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     }
 
     const { usage, cost } = this.calculateUsageAndCost(response.usage);
+    const parsed = parseOpenAIResponsesHostedTools(response, "openai-responses");
+    const { results: hostedToolResults, cost: finalCost } = applyHostedToolCost(
+      parsed,
+      cost,
+      this.getModel(),
+      this.config.modelData,
+    );
 
     return success({
       output,
       toolCalls,
       usage,
-      cost,
+      cost: finalCost,
       model: this.getModel(),
+      ...(hostedToolResults.length > 0 && { hostedToolResults }),
     });
   }
 
