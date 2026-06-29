@@ -47,4 +47,10 @@ describe("registerEmbeddingProvider", () => {
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toContain("registerEmbeddingProvider");
   });
+
+  it("treats a prototype-chain key as unregistered (no proto pollution)", async () => {
+    const result = await embed(["a"], { provider: "toString", model: "x" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain("registerEmbeddingProvider");
+  });
 });

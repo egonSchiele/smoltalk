@@ -57,7 +57,10 @@ export type ImageProvider = (
   config: ImageConfig,
 ) => Promise<Result<ImageGenResult>>;
 
-const registeredImageProviders: Record<string, ImageProvider> = {};
+// Null-prototype so provider names like "toString"/"__proto__" can't collide
+// with Object.prototype or pollute the registry.
+const registeredImageProviders: Record<string, ImageProvider> =
+  Object.create(null);
 
 export function registerImageProvider(name: string, fn: ImageProvider): void {
   registeredImageProviders[name] = fn;

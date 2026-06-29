@@ -39,7 +39,10 @@ export type EmbedProvider = (
   config: EmbedConfig,
 ) => Promise<Result<EmbedResult>>;
 
-const registeredEmbedProviders: Record<string, EmbedProvider> = {};
+// Null-prototype so provider names like "toString"/"__proto__" can't collide
+// with Object.prototype or pollute the registry.
+const registeredEmbedProviders: Record<string, EmbedProvider> =
+  Object.create(null);
 
 export function registerEmbeddingProvider(name: string, fn: EmbedProvider): void {
   registeredEmbedProviders[name] = fn;

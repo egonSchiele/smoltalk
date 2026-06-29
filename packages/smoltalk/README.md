@@ -302,6 +302,7 @@ Smoltalk has three registration entry points — one per capability:
 ```ts
 // example: skip-typecheck
 import {
+  success,                    // Result helper
   registerProvider,           // text generation (a class extending BaseClient)
   registerEmbeddingProvider,  // embeddings (a function)
   registerImageProvider,      // images (a function)

@@ -48,4 +48,10 @@ describe("registerImageProvider", () => {
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toContain("registerImageProvider");
   });
+
+  it("treats a prototype-chain key as unregistered (no proto pollution)", async () => {
+    const result = await image("a cat", { provider: "toString", model: "x" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toContain("registerImageProvider");
+  });
 });
