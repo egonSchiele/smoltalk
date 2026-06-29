@@ -58,7 +58,7 @@ describe("Model", () => {
     });
 
     it("computes disjoint-bucket cost for Gemini with cached tokens", () => {
-      // gemini-2.5-flash: inputTokenCost=0.30, cachedInputTokenCost=0.075, outputTokenCost=2.50
+      // gemini-2.5-flash: inputTokenCost=0.30, cachedInputTokenCost=0.03, outputTokenCost=2.50
       // After client normalization, inputTokens is the uncached portion only.
       const model = new Model("gemini-2.5-flash");
       const cost = model.calculateCost({
@@ -68,10 +68,10 @@ describe("Model", () => {
       });
       expect(cost).not.toBeNull();
       // 700_000 @ $0.30/M = $0.21
-      // 300_000 @ $0.075/M = $0.0225
+      // 300_000 @ $0.03/M = $0.009
       expect(cost!.inputCost).toBeCloseTo(0.21, 6);
-      expect(cost!.cachedInputCost).toBeCloseTo(0.0225, 6);
-      expect(cost!.totalCost).toBeCloseTo(0.2325, 6);
+      expect(cost!.cachedInputCost).toBeCloseTo(0.009, 6);
+      expect(cost!.totalCost).toBeCloseTo(0.219, 6);
     });
 
     it("computes disjoint-bucket cost for Anthropic with cache reads + cache creation", () => {

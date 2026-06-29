@@ -57,14 +57,14 @@ describe("buildRefreshedBlob", () => {
   });
 
   it("reuses the baseline provider for a known model (no cross-provider duplicate)", () => {
-    // models.dev labels gpt-5 as `openai`, but smoltalk serves it via
-    // `openai-responses`. The correction must land on the single entry that
-    // getModel() (match-by-name) returns — not a shadow `openai:gpt-5` dup.
-    const api = { openai: { id: "openai", models: { "gpt-5": { id: "gpt-5", limit: { context: 400000, output: 128000 }, cost: { input: 99, output: 10 } } } } };
+    // models.dev labels gpt-5-pro as `openai`, but smoltalk serves it via
+    // `openai-responses` (Responses-only). The correction must land on the single
+    // entry that getModel() (match-by-name) returns — not a shadow `openai` dup.
+    const api = { openai: { id: "openai", models: { "gpt-5-pro": { id: "gpt-5-pro", limit: { context: 400000, output: 128000 }, cost: { input: 99, output: 10 } } } } };
     const blob = buildRefreshedBlob(api, "2026-06-28T00:00:00Z");
-    const gpt5 = blob.models.filter((m) => m.modelName === "gpt-5");
-    expect(gpt5).toHaveLength(1);
-    expect(gpt5[0].provider).toBe("openai-responses");
-    expect(gpt5[0].inputTokenCost).toBe(99);
+    const matches = blob.models.filter((m) => m.modelName === "gpt-5-pro");
+    expect(matches).toHaveLength(1);
+    expect(matches[0].provider).toBe("openai-responses");
+    expect(matches[0].inputTokenCost).toBe(99);
   });
 });
