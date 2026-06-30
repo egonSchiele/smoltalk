@@ -6,6 +6,7 @@ import {
   SmolConfig,
   StreamChunk,
   success,
+  HostedToolResult,
 } from "../types.js";
 import { EgonLog } from "../util/logger.js";
 import {
@@ -31,18 +32,67 @@ import { CostEstimate, TokenUsage } from "../types.js";
 export type SmolOpenAiConfig = SmolConfig;
 
 export class SmolOpenAi extends BaseClient implements SmolClient {
-  private client: OpenAI;
-  private logger: EgonLog;
-  private model: Model;
+  protected client: OpenAI;
+  protected logger: EgonLog;
+  protected model: Model;
   constructor(config: SmolOpenAiConfig) {
     super(config);
+    const options = this.resolveClientOptions(config);
+    this.client = new OpenAI(options);
+    this.logger = getLogger();
+    this.model = new Model(config.model, undefined, config.modelData);
+  }
+
+  /**
+   * Build the `new OpenAI({...})` options. Subclasses override to inject a
+   * different baseURL or to pull the key from a different config field.
+   *
+   * Default behavior: read OPENAI_API_KEY (or config.apiKey.openAi). Throws
+   * if the key is missing — subclasses with required keys do their own check.
+   */
+  protected resolveClientOptions(config: SmolConfig): {
+    apiKey?: string;
+    baseURL?: string;
+  } {
     const apiKey = config.apiKey?.openAi || process.env.OPENAI_API_KEY;
     if (!apiKey) {
       throw new Error("OpenAI API key is required for SmolOpenAi client.");
     }
-    this.client = new OpenAI({ apiKey });
-    this.logger = getLogger();
-    this.model = new Model(config.model, undefined, config.modelData);
+    return { apiKey };
+  }
+
+  /**
+   * Inspect the provider-returned usage (and optionally the raw HTTP response)
+   * for a USD cost figure. Returns `undefined` if the provider didn't surface
+   * one, in which case `calculateUsageAndCost` falls back to the smoltalk
+   * model registry. Subclasses (OpenRouter, DeepInfra, LiteLLM) override this.
+   */
+  protected resolveCostUsd(
+    _usage: any,
+    _rawResponse?: Response,
+  ): number | undefined {
+    return undefined;
+  }
+
+  /**
+   * Extra request body fields injected on every call. Subclasses override to
+   * add provider-specific request shapes (e.g. OpenRouter's `usage: { include: true }`
+   * or its `plugins: [{ id: "web" }]` for web search). Merged into the request
+   * after the standard params so it can override them.
+   */
+  protected buildRequestExtras(_config: SmolConfig): Record<string, unknown> {
+    return {};
+  }
+
+  /**
+   * Extract provider-specific hosted-tool results (e.g. OpenRouter web_search
+   * annotations) from a completion. Subclasses override; default returns none.
+   */
+  protected parseHostedToolResults(
+    _completion: any,
+    _config: SmolConfig,
+  ): HostedToolResult[] {
+    return [];
   }
 
   getClient() {
@@ -53,7 +103,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return this.model.getModel();
   }
 
-  private calculateUsageAndCost(usageData: any): {
+  protected calculateUsageAndCost(
+    usageData: any,
+    rawResponse?: Response,
+  ): {
     usage?: TokenUsage;
     cost?: CostEstimate;
   } {
@@ -71,9 +124,22 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         usage.cachedInputTokens = cached;
       }
 
-      const calculatedCost = this.model.calculateCost(usage);
-      if (calculatedCost) {
-        cost = calculatedCost;
+      // Prefer provider-supplied cost when available (e.g. OpenRouter
+      // usage.cost, DeepInfra usage.estimated_cost, LiteLLM header).
+      // Fall back to the smoltalk model-registry calculation.
+      const providerCost = this.resolveCostUsd(usageData, rawResponse);
+      if (typeof providerCost === "number") {
+        cost = {
+          inputCost: 0,
+          outputCost: 0,
+          totalCost: providerCost,
+          currency: "USD",
+        };
+      } else {
+        const calculatedCost = this.model.calculateCost(usage);
+        if (calculatedCost) {
+          cost = calculatedCost;
+        }
       }
     }
 
@@ -94,6 +160,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         reasoning_effort: config.reasoningEffort,
       }),
       ...sanitizeAttributes(config.rawAttributes),
+      ...this.buildRequestExtras(config),
     };
     if (config.responseFormat) {
       (request as any).response_format = {
@@ -132,15 +199,20 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     this.statelogClient?.promptRequest(request);
 
     const signal = this.getAbortSignal(config);
-    let completion;
+    let completion: any;
+    let rawResponse: Response | undefined;
     try {
-      completion = await this.client.chat.completions.create(
-        {
-          ...request,
-          stream: false as const,
-        },
-        { ...(signal && { signal }) },
-      );
+      const result = await this.client.chat.completions
+        .create(
+          {
+            ...request,
+            stream: false as const,
+          },
+          { ...(signal && { signal }) },
+        )
+        .withResponse();
+      completion = result.data;
+      rawResponse = result.response;
     } catch (error) {
       this.rethrowAsSmolError(error);
     }
@@ -181,8 +253,14 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
     }
 
-    // Extract usage and calculate cost
-    const { usage, cost } = this.calculateUsageAndCost(completion.usage);
+    // Extract usage and calculate cost. rawResponse lets subclasses read
+    // response headers (e.g. LiteLLM's x-litellm-response-cost).
+    const { usage, cost } = this.calculateUsageAndCost(
+      completion.usage,
+      rawResponse,
+    );
+
+    const hostedToolResults = this.parseHostedToolResults(completion, config);
 
     return success({
       output,
@@ -190,6 +268,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       usage,
       cost,
       model: this.getModel(),
+      ...(hostedToolResults.length > 0 ? { hostedToolResults } : {}),
     });
   }
 
@@ -228,6 +307,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     for await (const chunk of completion) {
       // Extract usage from the final chunk
       if (chunk.usage) {
+        // Header-based cost (LiteLLM) is unsupported while streaming.
+        // Body-based cost (OpenRouter/DeepInfra) still works because it
+        // comes through chunk.usage.
         const usageAndCost = this.calculateUsageAndCost(chunk.usage);
         usage = usageAndCost.usage;
         cost = usageAndCost.cost;
