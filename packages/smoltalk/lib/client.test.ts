@@ -112,6 +112,39 @@ describe("getClient", () => {
     });
     expect(client).toBeDefined();
   });
+
+  it("routes the four hosted providers", () => {
+    expect(
+      getClient({
+        model: "z-ai/glm-5.2",
+        provider: "openrouter",
+        apiKey: { openRouter: "k" },
+      }).constructor.name,
+    ).toBe("SmolOpenRouter");
+    expect(
+      getClient({
+        model: "zai-org/GLM-5.2",
+        provider: "deepinfra",
+        apiKey: { deepInfra: "k" },
+      }).constructor.name,
+    ).toBe("SmolDeepInfra");
+    expect(
+      getClient({
+        model: "openai/gpt-4o",
+        provider: "litellm",
+        apiKey: { liteLlm: "k" },
+        baseUrl: { liteLlm: "http://localhost:4000" },
+      }).constructor.name,
+    ).toBe("SmolLiteLlm");
+    expect(
+      getClient({
+        model: "x/y",
+        provider: "openai-compat",
+        apiKey: { openAiCompat: "k" },
+        baseUrl: { openAiCompat: "https://h.test/v1" },
+      }).constructor.name,
+    ).toBe("SmolOpenAiCompat");
+  });
 });
 
 describe("registerProvider", () => {

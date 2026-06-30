@@ -4,12 +4,20 @@ export * from "./clients/openai.js";
 export * from "./clients/openaiResponses.js";
 export * from "./clients/baseClient.js";
 export * from "./clients/ollama.js";
+export * from "./clients/openaiCompat.js";
+export * from "./clients/openrouter.js";
+export * from "./clients/deepinfra.js";
+export * from "./clients/litellm.js";
 import { SmolAnthropic } from "./clients/anthropic.js";
 import { BaseClient } from "./clients/baseClient.js";
 import { SmolGoogle } from "./clients/google.js";
 import { SmolOllama } from "./clients/ollama.js";
 import { SmolOpenAi } from "./clients/openai.js";
 import { SmolOpenAiResponses } from "./clients/openaiResponses.js";
+import { SmolOpenAiCompat } from "./clients/openaiCompat.js";
+import { SmolOpenRouter } from "./clients/openrouter.js";
+import { SmolDeepInfra } from "./clients/deepinfra.js";
+import { SmolLiteLlm } from "./clients/litellm.js";
 import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolClientConfig, SmolConfig } from "./types.js";
@@ -100,6 +108,14 @@ export function getClient(config: SmolClientConfig) {
       return new SmolGoogle(clientConfig);
     case "ollama":
       return new SmolOllama(clientConfig);
+    case "openrouter":
+      return new SmolOpenRouter(clientConfig);
+    case "deepinfra":
+      return new SmolDeepInfra(clientConfig);
+    case "litellm":
+      return new SmolLiteLlm(clientConfig);
+    case "openai-compat":
+      return new SmolOpenAiCompat(clientConfig);
     default:
       if (provider in registeredProviders) {
         const ClientClass = registeredProviders[provider];
