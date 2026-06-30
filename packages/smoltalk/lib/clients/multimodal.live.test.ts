@@ -14,7 +14,10 @@ const cases = [
 
 describe("multimodal live", () => {
   for (const c of cases) {
-    const run = c.key ? it : it.skip;
+    let run: typeof it | typeof it.skip = it.skip;
+    if (c.key) {
+      run = it;
+    }
     run(`${c.model} accepts an image`, async () => {
       const res = await textSync({
         model: c.model as any,

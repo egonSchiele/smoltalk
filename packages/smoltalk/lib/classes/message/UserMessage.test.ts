@@ -80,6 +80,13 @@ describe("UserMessage.toOpenAIMessage", () => {
     expect(msg.content).toEqual([{ type: "image_url", image_url: { url: "https://x/y.png" } }]);
   });
 
+  it("defaults the file part filename to attachment.pdf when omitted", () => {
+    const msg = userMessage([filePart(pdf)]).toOpenAIMessage();
+    expect(msg.content).toEqual([
+      { type: "file", file: { file_data: "data:application/pdf;base64,PDF", filename: "attachment.pdf" } },
+    ]);
+  });
+
   it("throws if an unresolved path source reaches the serializer (safety net)", () => {
     expect(() => userMessage([filePart({ kind: "path", path: "/x.pdf" })]).toOpenAIMessage()).toThrow(/resolved/);
   });

@@ -162,4 +162,38 @@ describe("normalizeImageRef MIME prefix + size options", () => {
       normalizeImageRef({ kind: "base64", base64: big, mimeType: "image/png" }, { maxBytes: 10 }),
     ).rejects.toThrow(/exceeds the maximum size/);
   });
+
+  it("rejects an over-cap url on Content-Length before reading the body", async () => {
+    let bodyRead = false;
+    const body = new Response(new Uint8Array([1, 2, 3])).body;
+    const fakeRes = {
+      ok: true,
+      headers: new Headers({ "content-type": "image/png", "content-length": "999999" }),
+      get body() {
+        bodyRead = true;
+        return body;
+      },
+      arrayBuffer: async () => {
+        bodyRead = true;
+        return new Uint8Array([1, 2, 3]).buffer;
+      },
+    } as unknown as Response;
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(fakeRes);
+    await expect(
+      normalizeImageRef({ kind: "url", url: "https://x/big.png" }, { maxBytes: 10 }),
+    ).rejects.toThrow(/exceeds the maximum size/);
+    expect(bodyRead).toBe(false);
+    fetchSpy.mockRestore();
+  });
+
+  it("aborts a streamed url body once it exceeds maxBytes (lying Content-Length)", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      // 100 bytes of body, no/honest content-length absent → caught while streaming.
+      new Response(new Uint8Array(100), { headers: { "content-type": "image/png" } }),
+    );
+    await expect(
+      normalizeImageRef({ kind: "url", url: "https://x/y.png" }, { maxBytes: 10 }),
+    ).rejects.toThrow(/exceeds the maximum size/);
+    fetchSpy.mockRestore();
+  });
 });

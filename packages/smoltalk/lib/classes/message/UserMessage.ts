@@ -13,7 +13,7 @@ import {
   mapContentParts,
 } from "./contentParts.js";
 import type { ImageRef } from "../../util/imageRef.js";
-import { refToBase64, toDataUri, openAiImageUrl, anthropicSource } from "../../util/attachments.js";
+import { refToBase64, toDataUri, openAiImageUrl, anthropicSource, attachmentFilename } from "../../util/attachments.js";
 
 export const UserMessageJSONSchema = z.object({
   role: z.literal("user"),
@@ -97,7 +97,10 @@ export class UserMessage extends BaseMessage implements MessageClass {
       onImage: (p) => ({ type: "image_url", image_url: { url: openAiImageUrl(p.source) } }),
       onFile: (p) => {
         const { base64, mimeType } = refToBase64(p.source);
-        return { type: "file", file: { file_data: toDataUri(base64, mimeType), filename: p.filename } };
+        return {
+          type: "file",
+          file: { file_data: toDataUri(base64, mimeType), filename: attachmentFilename(p.filename) },
+        };
       },
     });
     return { role: this.role, content: parts as any, name: this.name } as ChatCompletionMessageParam;
@@ -115,11 +118,11 @@ export class UserMessage extends BaseMessage implements MessageClass {
           return { type: "input_file", file_url: p.source.url };
         }
         const { base64, mimeType } = refToBase64(p.source);
-        let filename = p.filename;
-        if (filename === undefined) {
-          filename = "attachment.pdf";
-        }
-        return { type: "input_file", file_data: toDataUri(base64, mimeType), filename };
+        return {
+          type: "input_file",
+          file_data: toDataUri(base64, mimeType),
+          filename: attachmentFilename(p.filename),
+        };
       },
     });
     return { type: "message", role: "user", content } as ResponseInputItem;
@@ -210,11 +213,8 @@ function userContentToText(content: UserContent): string {
 
 function bytesRefToBase64(ref: ImageRef): ImageRef {
   if (ref.kind === "bytes") {
-    return {
-      kind: "base64",
-      base64: Buffer.from(ref.data).toString("base64"),
-      mimeType: ref.mimeType,
-    };
+    const { base64, mimeType } = refToBase64(ref);
+    return { kind: "base64", base64, mimeType };
   }
   return ref;
 }

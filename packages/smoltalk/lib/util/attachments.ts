@@ -1,5 +1,16 @@
 import type { ImageRef } from "./imageRef.js";
 
+/** Filename sent to providers that require one when a file part omits its own. */
+export const DEFAULT_ATTACHMENT_FILENAME = "attachment.pdf";
+
+/** A file part's filename, falling back to the shared default when unset. */
+export function attachmentFilename(filename?: string): string {
+  if (filename === undefined) {
+    return DEFAULT_ATTACHMENT_FILENAME;
+  }
+  return filename;
+}
+
 /**
  * Extract base64 + MIME from an ImageRef that has already been resolved to
  * in-memory bytes. `path`/`url` refs must be resolved (via the BaseClient

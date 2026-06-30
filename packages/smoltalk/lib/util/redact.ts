@@ -28,7 +28,9 @@ function redactString(s: string): string {
     const prefix = s.slice(0, s.indexOf(marker) + marker.length);
     return `${prefix}[redacted ${s.length} chars]`;
   }
-  if (s.length > MAX_STRING && /^[A-Za-z0-9+/=\s]+$/.test(s)) {
+  // A bare base64 payload is a single unbroken token. Requiring zero whitespace
+  // keeps prose (which has spaces) intact even when it's long and punctuation-free.
+  if (s.length > MAX_STRING && /^[A-Za-z0-9+/=]+$/.test(s)) {
     return `[redacted ${s.length} base64 chars]`;
   }
   return s;

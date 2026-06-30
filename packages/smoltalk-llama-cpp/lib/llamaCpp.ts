@@ -19,6 +19,7 @@ import {
   TokenUsage,
   ToolCall,
   ToolMessage,
+  UserMessage,
   getLogger,
   sanitizeAttributes,
   success,
@@ -83,6 +84,16 @@ export class LlamaCPP extends BaseClient {
           systemPrompt += "\n" + msg.content;
         }
       } else if (msg.role === "user") {
+        if (msg instanceof UserMessage && msg.getContentParts() !== null) {
+          const hasAttachment = msg
+            .getContentParts()!
+            .some((part) => part.type === "image" || part.type === "file");
+          if (hasAttachment) {
+            getLogger().warn(
+              "node-llama-cpp does not support image/file attachments; dropping them and sending text only.",
+            );
+          }
+        }
         chatHistory.push({ type: "user", text: msg.content });
       } else if (msg.role === "assistant") {
         const assistantMsg = msg as AssistantMessage;

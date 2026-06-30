@@ -86,24 +86,49 @@ export class BaseClient implements SmolClient {
     return null;
   }
 
+  /**
+   * Gate on input modalities and resolve any image/PDF attachment refs
+   * (path/url/bytes → base64) before the synchronous serializers run. Returns
+   * the (possibly rewritten) config on success, or a Failure to surface. Shared
+   * by textSync and textStream so the two paths can't diverge.
+   */
+  protected async prepareAttachments(
+    config: SmolConfig,
+  ): Promise<Result<SmolConfig>> {
+    const modalityResult = validateModalities(config);
+    if (modalityResult && modalityResult.success === false) {
+      return modalityResult;
+    }
+
+    if (!messagesHaveAttachments(config.messages)) {
+      return success(config);
+    }
+
+    const provider = resolveProvider(
+      config.model,
+      config.provider,
+      config.modelData,
+    );
+    const maxBytes = config.attachments?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
+    const resolved = await resolveMessageAttachments(config.messages, {
+      provider,
+      maxBytes,
+    });
+    if (!resolved.success) {
+      return resolved;
+    }
+    return success({ ...config, messages: resolved.value });
+  }
+
   async textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
 
-    const modalityResult = validateModalities(promptConfig);
-    if (modalityResult) {
-      return modalityResult;
+    const prepared = await this.prepareAttachments(promptConfig);
+    if (!prepared.success) {
+      return prepared;
     }
-
-    if (messagesHaveAttachments(promptConfig.messages)) {
-      const provider = resolveProvider(promptConfig.model, promptConfig.provider, promptConfig.modelData);
-      const maxBytes = promptConfig.attachments?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
-      const resolved = await resolveMessageAttachments(promptConfig.messages, { provider, maxBytes });
-      if (!resolved.success) {
-        return resolved;
-      }
-      promptConfig = { ...promptConfig, messages: resolved.value };
-    }
+    promptConfig = prepared.value;
 
     const hostedError = validateHostedTools(
       promptConfig.hostedTools,
@@ -410,22 +435,12 @@ export class BaseClient implements SmolClient {
       return;
     }
 
-    const modalityResult = validateModalities(config);
-    if (modalityResult && modalityResult.success === false) {
-      yield { type: "error", error: modalityResult.error };
+    const prepared = await this.prepareAttachments(config);
+    if (!prepared.success) {
+      yield { type: "error", error: prepared.error };
       return;
     }
-
-    if (messagesHaveAttachments(config.messages)) {
-      const provider = resolveProvider(config.model, config.provider, config.modelData);
-      const maxBytes = config.attachments?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
-      const resolved = await resolveMessageAttachments(config.messages, { provider, maxBytes });
-      if (!resolved.success) {
-        yield { type: "error", error: resolved.error };
-        return;
-      }
-      config = { ...config, messages: resolved.value };
-    }
+    config = prepared.value;
 
     const hostedError = validateHostedTools(
       config.hostedTools,

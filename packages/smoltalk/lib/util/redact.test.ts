@@ -17,6 +17,13 @@ describe("redactAttachments", () => {
     expect((redactAttachments({ text }) as any).text).toBe(text);
   });
 
+  it("leaves long punctuation-free prose with spaces untouched", () => {
+    // > 2048 chars, only letters and spaces — must NOT be mistaken for base64.
+    const text = "word ".repeat(600);
+    expect(text.length).toBeGreaterThan(2048);
+    expect((redactAttachments({ text }) as any).text).toBe(text);
+  });
+
   it("recurses into arrays and nested objects", () => {
     const out: any = redactAttachments({ messages: [{ content: [{ image_url: { url: "data:image/png;base64," + "A".repeat(5000) } }] }] });
     expect(out.messages[0].content[0].image_url.url).toContain("[redacted");
