@@ -92,7 +92,7 @@ describe("getClient", () => {
     // SmolConfig would force callers to pass dummy messages.
     const client = getClient({
       model: "gpt-4o",
-      openAiApiKey: "test-key",
+      apiKey: { openAi: "test-key" },
     });
     expect(client).toBeDefined();
   });
@@ -100,7 +100,7 @@ describe("getClient", () => {
   it("creates a client with a valid google config", () => {
     const client = getClient({
       model: "gemini-2.5-flash",
-      googleApiKey: "test-key",
+      apiKey: { google: "test-key" },
     });
     expect(client).toBeDefined();
   });
@@ -111,6 +111,39 @@ describe("getClient", () => {
       provider: "ollama",
     });
     expect(client).toBeDefined();
+  });
+
+  it("routes the four hosted providers", () => {
+    expect(
+      getClient({
+        model: "z-ai/glm-5.2",
+        provider: "openrouter",
+        apiKey: { openRouter: "k" },
+      }).constructor.name,
+    ).toBe("SmolOpenRouter");
+    expect(
+      getClient({
+        model: "zai-org/GLM-5.2",
+        provider: "deepinfra",
+        apiKey: { deepInfra: "k" },
+      }).constructor.name,
+    ).toBe("SmolDeepInfra");
+    expect(
+      getClient({
+        model: "openai/gpt-4o",
+        provider: "litellm",
+        apiKey: { liteLlm: "k" },
+        baseUrl: { liteLlm: "http://localhost:4000" },
+      }).constructor.name,
+    ).toBe("SmolLiteLlm");
+    expect(
+      getClient({
+        model: "x/y",
+        provider: "openai-compat",
+        apiKey: { openAiCompat: "k" },
+        baseUrl: { openAiCompat: "https://h.test/v1" },
+      }).constructor.name,
+    ).toBe("SmolOpenAiCompat");
   });
 });
 
@@ -181,9 +214,9 @@ describe("registerProvider", () => {
     getClient({
       model: "any-model",
       provider: "capturing" as any,
-      openAiApiKey: "captured-key",
+      apiKey: { openAi: "captured-key" },
     });
     expect(captured?.model).toBe("any-model");
-    expect(captured?.openAiApiKey).toBe("captured-key");
+    expect(captured?.apiKey?.openAi).toBe("captured-key");
   });
 });

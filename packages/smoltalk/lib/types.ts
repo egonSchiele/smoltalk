@@ -19,20 +19,29 @@ export type SmolConfig = {
   /** Override the provider for the given model (e.g., use a custom endpoint for an OpenAI-compatible model). */
   provider?: string;
 
-  /** API key for OpenAI. Required when using OpenAI models. */
-  openAiApiKey?: string;
+  /** API keys, nested by provider. Each key falls back to its conventional env var
+   *  if unset (e.g. apiKey.openAi → OPENAI_API_KEY). */
+  apiKey?: {
+    openAi?: string;
+    google?: string;
+    anthropic?: string;
+    ollama?: string;
+    openRouter?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 
-  /** API key for Google Gemini. Required when using Google models. */
-  googleApiKey?: string;
-
-  /** API key for Anthropic. Required when using Anthropic/Claude models. */
-  anthropicApiKey?: string;
-
-  /** API key for Ollama. Only needed when connecting to a cloud-hosted Ollama instance. */
-  ollamaApiKey?: string;
-
-  /** Base URL for the Ollama server. Defaults to localhost if not set. (Ollama only) */
-  ollamaHost?: string;
+  /** Custom base URLs, nested by provider. Defaults are baked in where applicable
+   *  (e.g. openrouter, deepinfra); litellm and openai-compat require an explicit URL. */
+  baseUrl?: {
+    /** Host URL for the Ollama server. Defaults to http://localhost:11434 (or $OLLAMA_HOST). */
+    ollama?: string;
+    openRouter?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 
   /** Log level for internal debug logging. */
   logLevel?: LogLevel;

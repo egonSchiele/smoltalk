@@ -198,9 +198,7 @@ function applyCacheBreakpoints(
   return { system, messages, tools };
 }
 
-export type SmolAnthropicConfig = SmolConfig & {
-  anthropicApiKey: string;
-};
+export type SmolAnthropicConfig = SmolConfig;
 
 export class SmolAnthropic extends BaseClient implements SmolClient {
   private client: Anthropic;
@@ -209,7 +207,11 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
 
   constructor(config: SmolAnthropicConfig) {
     super(config);
-    this.client = new Anthropic({ apiKey: config.anthropicApiKey });
+    const apiKey = config.apiKey?.anthropic || process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error("Anthropic API key is required for SmolAnthropic client.");
+    }
+    this.client = new Anthropic({ apiKey });
     this.logger = getLogger();
     this.model = new Model(config.model, undefined, config.modelData);
   }

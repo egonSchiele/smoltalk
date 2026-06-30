@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { image } from "./image.js";
 import { openaiImage } from "./image/openai.js";
 import { googleImage } from "./image/google.js";
+import { openaiCompatImage } from "./image/openaiCompat.js";
 
 // vi.mock calls are hoisted by vitest above any imports.
 vi.mock("./image/openai.js", () => ({
@@ -24,11 +25,21 @@ vi.mock("./image/google.js", () => ({
   }),
 }));
 
+vi.mock("./image/openaiCompat.js", () => ({
+  openaiCompatImage: vi.fn().mockResolvedValue({
+    success: true,
+    value: {
+      images: [{ data: new Uint8Array([3]), mimeType: "image/png" }],
+      model: "compat-model",
+    },
+  }),
+}));
+
 describe("image", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("dispatches to OpenAI for OpenAI image models", async () => {
-    await image("a cat", { model: "gpt-image-1", openAiApiKey: "k" });
+    await image("a cat", { model: "gpt-image-1", apiKey: { openAi: "k" } });
     expect(openaiImage).toHaveBeenCalled();
     expect(googleImage).not.toHaveBeenCalled();
   });
@@ -36,7 +47,7 @@ describe("image", () => {
   it("dispatches to Google for Gemini image models", async () => {
     await image("a cat", {
       model: "gemini-2.5-flash-image",
-      googleApiKey: "k",
+      apiKey: { google: "k" },
     });
     expect(googleImage).toHaveBeenCalled();
     expect(openaiImage).not.toHaveBeenCalled();
@@ -50,7 +61,7 @@ describe("image", () => {
           { kind: "bytes", data: new Uint8Array([1]), mimeType: "image/png" },
         ],
       },
-      { model: "gpt-image-1", openAiApiKey: "k" },
+      { model: "gpt-image-1", apiKey: { openAi: "k" } },
     );
     expect(openaiImage).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: "edit" }),
@@ -80,7 +91,7 @@ describe("image", () => {
           mimeType: "image/png",
         },
       },
-      { model: "gemini-2.5-flash-image", googleApiKey: "k" },
+      { model: "gemini-2.5-flash-image", apiKey: { google: "k" } },
     );
     expect(r.success).toBe(false);
     if (!r.success) {
@@ -97,5 +108,54 @@ describe("image", () => {
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error).toContain("API key");
     if (orig !== undefined) process.env.OPENAI_API_KEY = orig;
+  });
+
+  it("returns failure for openrouter (no images endpoint)", async () => {
+    const r = await image("a cat", {
+      model: "any",
+      provider: "openrouter",
+      apiKey: { openAi: "k" } as any,
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/openrouter/i);
+  });
+
+  it("returns failure for deepinfra (different image API shape)", async () => {
+    const r = await image("a cat", {
+      model: "stabilityai/sdxl",
+      provider: "deepinfra",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/deepinfra/i);
+  });
+
+  it("dispatches to openaiCompatImage for litellm", async () => {
+    await image("a cat", {
+      model: "dall-e-3",
+      provider: "litellm",
+      apiKey: { liteLlm: "k" },
+      baseUrl: { liteLlm: "http://localhost:4000" },
+    });
+    expect(openaiCompatImage).toHaveBeenCalledWith(
+      "a cat",
+      expect.anything(),
+      "k",
+      "http://localhost:4000",
+    );
+  });
+
+  it("dispatches to openaiCompatImage for openai-compat", async () => {
+    await image("a cat", {
+      model: "my/model",
+      provider: "openai-compat",
+      apiKey: { openAiCompat: "k" },
+      baseUrl: { openAiCompat: "https://h.test/v1" },
+    });
+    expect(openaiCompatImage).toHaveBeenCalledWith(
+      "a cat",
+      expect.anything(),
+      "k",
+      "https://h.test/v1",
+    );
   });
 });

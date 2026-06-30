@@ -25,7 +25,7 @@ function rethrow(client: unknown, error: unknown): SmolError {
 describe("SmolOpenAi.rethrowAsSmolError", () => {
   const client = new SmolOpenAi({
     model: "gpt-4o-mini",
-    openAiApiKey: "test-key",
+    apiKey: { openAi: "test-key" },
     messages: [],
   });
 
@@ -80,7 +80,7 @@ describe("SmolOpenAi.rethrowAsSmolError", () => {
 describe("SmolAnthropic.rethrowAsSmolError", () => {
   const client = new SmolAnthropic({
     model: "claude-sonnet-4-6",
-    anthropicApiKey: "test-key",
+    apiKey: { anthropic: "test-key" },
     messages: [],
   });
 

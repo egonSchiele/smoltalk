@@ -79,12 +79,13 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
   constructor(config: SmolOpenAiResponsesConfig) {
     super(config);
-    if (!config.openAiApiKey) {
+    const apiKey = config.apiKey?.openAi || process.env.OPENAI_API_KEY;
+    if (!apiKey) {
       throw new Error(
         "OpenAI API key is required for SmolOpenAiResponses client.",
       );
     }
-    this.client = new OpenAI({ apiKey: config.openAiApiKey });
+    this.client = new OpenAI({ apiKey });
     this.logger = getLogger();
     this.model = new Model(config.model, undefined, config.modelData);
   }

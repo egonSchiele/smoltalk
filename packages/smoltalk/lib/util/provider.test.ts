@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { resolveProvider, resolveApiKey } from "./provider.js";
+import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./provider.js";
 
 describe("resolveProvider", () => {
   it("returns explicit provider when given", () => {
@@ -29,17 +29,30 @@ describe("resolveApiKey", () => {
     delete process.env.OPENAI_API_KEY;
     delete process.env.GEMINI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
+    delete process.env.OPENROUTER_API_KEY;
+    delete process.env.DEEPINFRA_API_KEY;
+    delete process.env.LITELLM_API_KEY;
+    delete process.env.OPENAI_COMPAT_API_KEY;
   });
 
   afterEach(() => {
     process.env = { ...originalEnv };
   });
 
+  it("reads keys from the nested apiKey map", () => {
+    expect(resolveApiKey("openai", { apiKey: { openAi: "sk-1" } })).toBe(
+      "sk-1",
+    );
+    expect(
+      resolveApiKey("anthropic", { apiKey: { anthropic: "an-1" } }),
+    ).toBe("an-1");
+  });
+
   it("prefers config key over env var", () => {
     process.env.OPENAI_API_KEY = "env-key";
-    expect(resolveApiKey("openai", { openAiApiKey: "config-key" })).toBe(
-      "config-key",
-    );
+    expect(
+      resolveApiKey("openai", { apiKey: { openAi: "config-key" } }),
+    ).toBe("config-key");
   });
 
   it("falls back to env var when config key is missing", () => {
@@ -56,25 +69,104 @@ describe("resolveApiKey", () => {
     expect(resolveApiKey("google", {})).toBe("gemini-key");
   });
 
-  it("resolves Anthropic key", () => {
-    expect(
-      resolveApiKey("anthropic", { anthropicApiKey: "anth-key" }),
-    ).toBe("anth-key");
-  });
-
   it("handles openai-responses same as openai", () => {
     expect(
-      resolveApiKey("openai-responses", { openAiApiKey: "key" }),
+      resolveApiKey("openai-responses", { apiKey: { openAi: "key" } }),
     ).toBe("key");
   });
 
-  it("returns ollamaApiKey for ollama provider", () => {
-    expect(resolveApiKey("ollama", { ollamaApiKey: "olla-key" })).toBe(
-      "olla-key",
-    );
+  it("returns ollama key for ollama provider (no env fallback)", () => {
+    expect(
+      resolveApiKey("ollama", { apiKey: { ollama: "olla-key" } }),
+    ).toBe("olla-key");
+    expect(resolveApiKey("ollama", {})).toBeUndefined();
+  });
+
+  it("resolves openrouter / deepinfra / litellm / openai-compat", () => {
+    expect(
+      resolveApiKey("openrouter", { apiKey: { openRouter: "or-1" } }),
+    ).toBe("or-1");
+    expect(
+      resolveApiKey("deepinfra", { apiKey: { deepInfra: "di-1" } }),
+    ).toBe("di-1");
+    expect(
+      resolveApiKey("litellm", { apiKey: { liteLlm: "ll-1" } }),
+    ).toBe("ll-1");
+    expect(
+      resolveApiKey("openai-compat", { apiKey: { openAiCompat: "oc-1" } }),
+    ).toBe("oc-1");
+
+    process.env.OPENROUTER_API_KEY = "or-env";
+    process.env.DEEPINFRA_API_KEY = "di-env";
+    process.env.LITELLM_API_KEY = "ll-env";
+    process.env.OPENAI_COMPAT_API_KEY = "oc-env";
+    expect(resolveApiKey("openrouter", {})).toBe("or-env");
+    expect(resolveApiKey("deepinfra", {})).toBe("di-env");
+    expect(resolveApiKey("litellm", {})).toBe("ll-env");
+    expect(resolveApiKey("openai-compat", {})).toBe("oc-env");
+  });
+
+  it("no longer reads the old flat fields", () => {
+    // @ts-expect-error flat field removed from the type
+    expect(resolveApiKey("openai", { openAiApiKey: "sk-old" })).toBeUndefined();
   });
 
   it("returns undefined for unknown provider", () => {
     expect(resolveApiKey("unknown", {})).toBeUndefined();
+  });
+});
+
+describe("resolveBaseUrl", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    delete process.env.OLLAMA_HOST;
+    delete process.env.LITELLM_BASE_URL;
+    delete process.env.OPENAI_COMPAT_BASE_URL;
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it("returns baked default for openrouter and deepinfra", () => {
+    expect(resolveBaseUrl("openrouter", {})).toBe(
+      "https://openrouter.ai/api/v1",
+    );
+    expect(resolveBaseUrl("deepinfra", {})).toBe(
+      "https://api.deepinfra.com/v1/openai",
+    );
+  });
+
+  it("config override beats baked default", () => {
+    expect(
+      resolveBaseUrl("openrouter", {
+        baseUrl: { openRouter: "https://proxy.test/v1" },
+      }),
+    ).toBe("https://proxy.test/v1");
+  });
+
+  it("returns undefined when litellm/openai-compat URL is missing", () => {
+    expect(resolveBaseUrl("litellm", {})).toBeUndefined();
+    expect(resolveBaseUrl("openai-compat", {})).toBeUndefined();
+  });
+
+  it("falls back to env vars for litellm and openai-compat", () => {
+    process.env.LITELLM_BASE_URL = "http://litellm.local:4000";
+    process.env.OPENAI_COMPAT_BASE_URL = "http://compat.local/v1";
+    expect(resolveBaseUrl("litellm", {})).toBe("http://litellm.local:4000");
+    expect(resolveBaseUrl("openai-compat", {})).toBe("http://compat.local/v1");
+  });
+
+  it("ollama reads config then OLLAMA_HOST", () => {
+    expect(
+      resolveBaseUrl("ollama", { baseUrl: { ollama: "http://ol.test" } }),
+    ).toBe("http://ol.test");
+    process.env.OLLAMA_HOST = "http://envhost:11434";
+    expect(resolveBaseUrl("ollama", {})).toBe("http://envhost:11434");
+  });
+
+  it("returns undefined for unknown provider", () => {
+    expect(resolveBaseUrl("unknown", {})).toBeUndefined();
   });
 });

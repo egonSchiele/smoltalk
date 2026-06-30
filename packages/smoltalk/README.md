@@ -8,6 +8,15 @@ Smoltalk exposes a common API to different LLM providers, with built-in cost tra
 pnpm install smoltalk
 ```
 
+> **Upgrading to 0.6.x?** The flat API-key/host fields on `SmolConfig` have
+> been removed in favor of nested `apiKey` and `baseUrl` maps. Migration:
+> ```diff
+> -{ openAiApiKey: "sk-...",   googleApiKey: "...", ollamaHost: "http://..." }
+> +{ apiKey: { openAi: "sk-...", google: "..." }, baseUrl: { ollama: "http://..." } }
+> ```
+> Env-var fallbacks are unchanged (`OPENAI_API_KEY`, `GEMINI_API_KEY`,
+> `ANTHROPIC_API_KEY`, `OLLAMA_HOST`).
+
 ## Hello world example
 
 ```typescript
@@ -68,8 +77,10 @@ const messages = [
 const resp = await text({
   messages,
   model: "gemini-2.0-flash-lite",
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
-  googleApiKey: process.env.GEMINI_API_KEY || "",
+  apiKey: {
+    openAi: process.env.OPENAI_API_KEY || "",
+    google: process.env.GEMINI_API_KEY || "",
+  },
   logLevel: "debug",
 });
 ```
@@ -80,8 +91,10 @@ If you want to construct a client once and reuse it across many calls, use `getC
 import { getClient, userMessage } from "smoltalk";
 
 const client = getClient({
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
-  googleApiKey: process.env.GEMINI_API_KEY || "",
+  apiKey: {
+    openAi: process.env.OPENAI_API_KEY || "",
+    google: process.env.GEMINI_API_KEY || "",
+  },
   model: "gemini-2.0-flash-lite",
 });
 
@@ -147,12 +160,9 @@ A couple of design decisions to note:
 |--------|------|-------------|
 | `model` | `ModelName` | **Required.** The model to use (e.g. `"gpt-4o"`, `"gemini-2.0-flash-lite"`). |
 | `messages` | `Message[]` | **Required.** The conversation messages to send. |
-| `openAiApiKey` | `string` | OpenAI API key. |
-| `googleApiKey` | `string` | Google Gemini API key. |
-| `anthropicApiKey` | `string` | Anthropic API key. |
-| `ollamaApiKey` | `string` | Ollama API key (only needed for cloud Ollama). |
-| `ollamaHost` | `string` | Ollama host URL (for self-hosted or cloud Ollama). |
-| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, or any provider registered via `registerProvider()`. |
+| `apiKey` | `{ openAi?, google?, anthropic?, ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat? }` | API keys, nested by provider. Each falls back to its conventional env var (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `DEEPINFRA_API_KEY`, `LITELLM_API_KEY`, `OPENAI_COMPAT_API_KEY`). Ollama has no env-var fallback for the key. |
+| `baseUrl` | `{ ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat? }` | Custom base URLs. `ollama` defaults to `$OLLAMA_HOST` then `http://localhost:11434`; `openRouter`/`deepInfra` defaults are baked in; `liteLlm`/`openAiCompat` require an explicit URL (or `LITELLM_BASE_URL` / `OPENAI_COMPAT_BASE_URL` env). |
+| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, `"openrouter"`, `"deepinfra"`, `"litellm"`, `"openai-compat"`, or any provider registered via `registerProvider()`. |
 | `logLevel` | `LogLevel` | Logging verbosity: `"debug"`, `"info"`, `"warn"`, `"error"`. |
 | `tools` | `{ name, description?, schema }[]` | Tool definitions. `schema` is a Zod object schema. |
 | `responseFormat` | `ZodType` | Zod schema for structured output. The response is parsed and validated against this schema. |
@@ -193,6 +203,53 @@ Detects when the model is stuck in a repetitive tool-call loop.
 | `maxCalls` | `number` | Number of calls to a specific tool before triggering intervention. |
 | `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
 | `excludeTools` | `string[]` | Tool names to ignore when counting calls. |
+
+## Hosted OpenAI-compatible providers
+
+Smoltalk ships four built-in providers for hosted open-source models that all
+speak the OpenAI chat-completions shape. Use these when you want to run a
+Llama, GLM, Qwen, etc. via someone else's hosted infrastructure without
+adding a new dependency. You must pass `provider:` explicitly because these
+model ids aren't in the smoltalk registry.
+
+| `provider:` | What it is | Required config | Cost source |
+|-------------|------------|-----------------|-------------|
+| `"openrouter"` | OpenRouter.ai aggregator | `apiKey.openRouter` (or `OPENROUTER_API_KEY`) | `usage.cost` (auto-enabled by injecting `usage:{include:true}`) |
+| `"deepinfra"` | DeepInfra hosted models | `apiKey.deepInfra` (or `DEEPINFRA_API_KEY`) | `usage.estimated_cost` |
+| `"litellm"`   | Your own LiteLLM proxy   | `apiKey.liteLlm` + `baseUrl.liteLlm` (or `LITELLM_API_KEY` / `LITELLM_BASE_URL`) | `x-litellm-response-cost` header (non-stream only) |
+| `"openai-compat"` | Any OpenAI-shape backend (vLLM, TGI, LM Studio…) | `apiKey.openAiCompat` + `baseUrl.openAiCompat` (or `OPENAI_COMPAT_API_KEY` / `OPENAI_COMPAT_BASE_URL`) | Best-effort: reads `usage.cost`/`estimated_cost`/`cost_usd` if present |
+
+```ts
+import { textSync, userMessage } from "smoltalk";
+
+const r = await textSync({
+  model: "z-ai/glm-5.2",
+  provider: "openrouter",
+  apiKey: { openRouter: process.env.OPENROUTER_API_KEY! },
+  messages: [userMessage("hi")],
+});
+// r.value.cost.totalCost is a real OpenRouter-reported USD cost.
+```
+
+**Capability matrix:**
+
+|                 | chat | embeddings | image generation | `web_search` hosted tool |
+|-----------------|------|------------|------------------|--------------------------|
+| `openrouter`    | ✅   | ❌         | ❌               | ✅ (via `:online` / web plugin) |
+| `deepinfra`     | ✅   | ✅         | ❌ (uses per-model endpoints, not OpenAI shape) | ❌ |
+| `litellm`       | ✅   | ✅         | ✅ (if the upstream model supports it) | ✅ (if upstream supports it) |
+| `openai-compat` | ✅   | ✅         | ✅ (backend-dependent) | depends on backend |
+
+Smoltalk surfaces a clear `failure(...)` from `embed()`/`image()` for the
+unsupported combinations rather than silently dropping the call.
+
+**Running a local LiteLLM proxy:**
+
+```bash
+pip install 'litellm[proxy]'
+litellm --model openai/gpt-4o
+# In your code: baseUrl: { liteLlm: "http://localhost:4000" }
+```
 
 ## Refreshing model data
 

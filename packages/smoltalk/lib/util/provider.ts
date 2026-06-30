@@ -23,11 +23,28 @@ export function resolveProvider(
   return model.provider;
 }
 
-type ApiKeyConfig = {
-  openAiApiKey?: string;
-  googleApiKey?: string;
-  anthropicApiKey?: string;
-  ollamaApiKey?: string;
+/**
+ * Minimal shape needed to read API keys / base URLs. Kept local to avoid
+ * importing SmolConfig (which would create a circular import).
+ */
+type NestedKeyConfig = {
+  apiKey?: {
+    openAi?: string;
+    google?: string;
+    anthropic?: string;
+    ollama?: string;
+    openRouter?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
+  baseUrl?: {
+    ollama?: string;
+    openRouter?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 };
 
 /**
@@ -35,18 +52,56 @@ type ApiKeyConfig = {
  */
 export function resolveApiKey(
   provider: string,
-  config: ApiKeyConfig,
+  config: NestedKeyConfig,
 ): string | undefined {
+  const k = config.apiKey;
   switch (provider) {
     case "openai":
     case "openai-responses":
-      return config.openAiApiKey || process.env.OPENAI_API_KEY;
+      return k?.openAi || process.env.OPENAI_API_KEY;
     case "google":
-      return config.googleApiKey || process.env.GEMINI_API_KEY;
+      return k?.google || process.env.GEMINI_API_KEY;
     case "anthropic":
-      return config.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+      return k?.anthropic || process.env.ANTHROPIC_API_KEY;
     case "ollama":
-      return config.ollamaApiKey;
+      return k?.ollama;
+    case "openrouter":
+      return k?.openRouter || process.env.OPENROUTER_API_KEY;
+    case "deepinfra":
+      return k?.deepInfra || process.env.DEEPINFRA_API_KEY;
+    case "litellm":
+      return k?.liteLlm || process.env.LITELLM_API_KEY;
+    case "openai-compat":
+      return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Resolve the base URL for a provider, checking config then env vars then a
+ * baked-in default. Returns `undefined` when a provider requires the caller to
+ * supply one (litellm, openai-compat) and nothing was given.
+ *
+ * Centralized here so we don't duplicate the env-fallback table across
+ * embed.ts, image.ts, and each client constructor.
+ */
+export function resolveBaseUrl(
+  provider: string,
+  config: NestedKeyConfig,
+): string | undefined {
+  const b = config.baseUrl;
+  switch (provider) {
+    case "ollama":
+      return b?.ollama || process.env.OLLAMA_HOST;
+    case "openrouter":
+      return b?.openRouter || "https://openrouter.ai/api/v1";
+    case "deepinfra":
+      return b?.deepInfra || "https://api.deepinfra.com/v1/openai";
+    case "litellm":
+      return b?.liteLlm || process.env.LITELLM_BASE_URL;
+    case "openai-compat":
+      return b?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
     default:
       return undefined;
   }

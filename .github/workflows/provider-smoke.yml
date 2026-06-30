@@ -44,6 +44,10 @@ jobs:
       # Fail loudly if any required secret is missing — without this, every test's
       # describe.runIf(haveKey) would silently skip and the workflow would go green
       # while running zero paid calls.
+      #
+      # OpenRouter and DeepInfra are optional: if their secrets aren't set in
+      # the repo, those live suites simply skip. LiteLLM and openai-compat
+      # need a self-hosted proxy/backend and are not run in CI by default.
       - name: verify required secrets are set
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -63,4 +67,6 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DEEPINFRA_API_KEY: ${{ secrets.DEEPINFRA_API_KEY }}
         run: pnpm --filter smoltalk test:live

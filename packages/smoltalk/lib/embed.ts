@@ -2,7 +2,7 @@ import type { ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { resolveProvider, resolveApiKey } from "./util/provider.js";
+import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
@@ -12,13 +12,25 @@ export type EmbedConfig = {
   provider?: string;
   dimensions?: number;
 
-  // API keys
-  openAiApiKey?: string;
-  googleApiKey?: string;
-  ollamaApiKey?: string;
+  /** API keys, nested by provider. Falls back to env vars
+   *  (OPENAI_API_KEY / GEMINI_API_KEY / DEEPINFRA_API_KEY /
+   *  LITELLM_API_KEY / OPENAI_COMPAT_API_KEY). */
+  apiKey?: {
+    openAi?: string;
+    google?: string;
+    ollama?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 
-  // Ollama-specific
-  ollamaHost?: string;
+  /** Custom base URLs, nested by provider. */
+  baseUrl?: {
+    ollama?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 
   // Plugin support
   metadata?: Record<string, unknown>;
@@ -70,7 +82,7 @@ export async function embed(
     case "openai-responses": {
       if (!apiKey) {
         return failure(
-          "No OpenAI API key provided. Set openAiApiKey in config or the OPENAI_API_KEY environment variable.",
+          "No OpenAI API key provided. Set config.apiKey.openAi or the OPENAI_API_KEY environment variable.",
         );
       }
       return openaiEmbed(inputs, config, apiKey);
@@ -78,13 +90,53 @@ export async function embed(
     case "google": {
       if (!apiKey) {
         return failure(
-          "No Google API key provided. Set googleApiKey in config or the GEMINI_API_KEY environment variable.",
+          "No Google API key provided. Set config.apiKey.google or the GEMINI_API_KEY environment variable.",
         );
       }
       return googleEmbed(inputs, config, apiKey);
     }
     case "ollama":
-      return ollamaEmbed(inputs, config, apiKey, config.ollamaHost);
+      return ollamaEmbed(inputs, config, apiKey, resolveBaseUrl("ollama", config));
+    case "openrouter":
+      return failure(
+        "openrouter does not expose an embeddings endpoint; use deepinfra, openai-compat, or litellm instead.",
+      );
+    case "deepinfra": {
+      if (!apiKey) {
+        return failure(
+          "No DeepInfra API key provided. Set config.apiKey.deepInfra or the DEEPINFRA_API_KEY environment variable.",
+        );
+      }
+      return openaiEmbed(inputs, config, apiKey, resolveBaseUrl("deepinfra", config));
+    }
+    case "litellm": {
+      if (!apiKey) {
+        return failure(
+          "No LiteLLM API key provided. Set config.apiKey.liteLlm or the LITELLM_API_KEY environment variable.",
+        );
+      }
+      const baseURL = resolveBaseUrl("litellm", config);
+      if (!baseURL) {
+        return failure(
+          "No LiteLLM base URL provided. Set config.baseUrl.liteLlm or the LITELLM_BASE_URL environment variable.",
+        );
+      }
+      return openaiEmbed(inputs, config, apiKey, baseURL);
+    }
+    case "openai-compat": {
+      if (!apiKey) {
+        return failure(
+          "No openai-compat API key provided. Set config.apiKey.openAiCompat or the OPENAI_COMPAT_API_KEY environment variable.",
+        );
+      }
+      const baseURL = resolveBaseUrl("openai-compat", config);
+      if (!baseURL) {
+        return failure(
+          "No openai-compat base URL provided. Set config.baseUrl.openAiCompat or the OPENAI_COMPAT_BASE_URL environment variable.",
+        );
+      }
+      return openaiEmbed(inputs, config, apiKey, baseURL);
+    }
     default: {
       const custom = registeredEmbedProviders[provider];
       if (custom) {

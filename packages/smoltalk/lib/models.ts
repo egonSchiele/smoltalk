@@ -14,6 +14,10 @@ export const providers = [
   "google",
   "replicate",
   "modal",
+  "openrouter",
+  "deepinfra",
+  "litellm",
+  "openai-compat",
 ] as const;
 export const ProviderSchema = z.enum(providers);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -1673,6 +1677,19 @@ export const hostedTools: HostedTool[] = [
     models: ["gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite"],
     pricing: { unit: "per_call", note: "Gemini 3 family only; see Google pricing." },
   },
+  {
+    name: "web_search",
+    provider: "openrouter",
+    category: "web_search",
+    description:
+      "Web search via OpenRouter's web plugin (Exa-backed). Adds citations as annotations.",
+    providerToolId: "web",
+    pricing: {
+      unit: "per_call",
+      amount: 0.02,
+      note: "$4 per 1,000 results returned by the web plugin × default 5 results/call = $0.02/call. Plus token cost for inserted context. If you override max_results, scale this accordingly.",
+    },
+  },
 ];
 
 export const registeredTextModels: TextModel[] = [];
@@ -1806,6 +1823,6 @@ export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
 export const ModelNameSchema = z
   .string()
   .regex(
-    /^[a-zA-Z0-9._:-]+$/,
-    "Model name must only contain letters, numbers, dots, underscores, hyphens, and colons",
+    /^[a-zA-Z0-9._:@/-]+$/,
+    "Model name must only contain letters, numbers, dots, underscores, hyphens, colons, slashes, and @",
   );
