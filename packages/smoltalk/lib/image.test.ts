@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { image } from "./image.js";
 import { openaiImage } from "./image/openai.js";
 import { googleImage } from "./image/google.js";
+import { openaiCompatImage } from "./image/openaiCompat.js";
 
 // vi.mock calls are hoisted by vitest above any imports.
 vi.mock("./image/openai.js", () => ({
@@ -20,6 +21,16 @@ vi.mock("./image/google.js", () => ({
     value: {
       images: [{ data: new Uint8Array([2]), mimeType: "image/png" }],
       model: "gemini-2.5-flash-image",
+    },
+  }),
+}));
+
+vi.mock("./image/openaiCompat.js", () => ({
+  openaiCompatImage: vi.fn().mockResolvedValue({
+    success: true,
+    value: {
+      images: [{ data: new Uint8Array([3]), mimeType: "image/png" }],
+      model: "compat-model",
     },
   }),
 }));
@@ -97,5 +108,54 @@ describe("image", () => {
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error).toContain("API key");
     if (orig !== undefined) process.env.OPENAI_API_KEY = orig;
+  });
+
+  it("returns failure for openrouter (no images endpoint)", async () => {
+    const r = await image("a cat", {
+      model: "any",
+      provider: "openrouter",
+      apiKey: { openAi: "k" } as any,
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/openrouter/i);
+  });
+
+  it("returns failure for deepinfra (different image API shape)", async () => {
+    const r = await image("a cat", {
+      model: "stabilityai/sdxl",
+      provider: "deepinfra",
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/deepinfra/i);
+  });
+
+  it("dispatches to openaiCompatImage for litellm", async () => {
+    await image("a cat", {
+      model: "dall-e-3",
+      provider: "litellm",
+      apiKey: { liteLlm: "k" },
+      baseUrl: { liteLlm: "http://localhost:4000" },
+    });
+    expect(openaiCompatImage).toHaveBeenCalledWith(
+      "a cat",
+      expect.anything(),
+      "k",
+      "http://localhost:4000",
+    );
+  });
+
+  it("dispatches to openaiCompatImage for openai-compat", async () => {
+    await image("a cat", {
+      model: "my/model",
+      provider: "openai-compat",
+      apiKey: { openAiCompat: "k" },
+      baseUrl: { openAiCompat: "https://h.test/v1" },
+    });
+    expect(openaiCompatImage).toHaveBeenCalledWith(
+      "a cat",
+      expect.anything(),
+      "k",
+      "https://h.test/v1",
+    );
   });
 });
