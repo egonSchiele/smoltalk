@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import { BaseClient } from "./baseClient.js";
-import { userMessage, assistantMessage, AssistantMessage } from "../classes/message/index.js";
+import { userMessage, assistantMessage, AssistantMessage, imagePart } from "../classes/message/index.js";
 import { SmolConfig, PromptResult, Result, StreamChunk } from "../types.js";
 import { SmolStructuredOutputError } from "../smolError.js";
 
@@ -303,6 +303,45 @@ describe("extractResponse", () => {
         strictSchema,
       ),
     ).toThrow();
+  });
+});
+
+class StubAttachmentClient extends BaseClient {
+  public seen: any;
+  async _textSync(config: SmolConfig) {
+    this.seen = config.messages;
+    return { success: true as const, value: { output: "ok", toolCalls: [], model: config.model } };
+  }
+}
+
+describe("BaseClient multimodal wiring", () => {
+  const image = { kind: "base64", base64: "IMG", mimeType: "image/png" } as const;
+  const bytesImage = { kind: "bytes", data: new Uint8Array([1, 2, 3]), mimeType: "image/png" } as const;
+
+  it("gates an image to a text-only model with a Failure", async () => {
+    const client = new StubAttachmentClient({ model: "o3-mini", messages: [] } as any);
+    const res = await client.textSync({ model: "o3-mini", messages: [userMessage(["x", imagePart(image)])] } as any);
+    expect(res.success).toBe(false);
+  });
+
+  it("resolves attachments (bytes → base64) before reaching _textSync", async () => {
+    const client = new StubAttachmentClient({ model: "gpt-4o", messages: [] } as any);
+    const res = await client.textSync({ model: "gpt-4o", messages: [userMessage(["x", imagePart(bytesImage)])] } as any);
+    expect(res.success).toBe(true);
+    // Start from a bytes source so this only passes if resolution actually ran.
+    const part: any = client.seen[0]._content[1];
+    expect(part.source.kind).toBe("base64");
+    expect(part.source.base64).toBe(Buffer.from(bytesImage.data).toString("base64"));
+  });
+
+  it("textStream gates with an error chunk and no done chunk", async () => {
+    const client = new StubAttachmentClient({ model: "o3-mini", messages: [] } as any);
+    const chunks: any[] = [];
+    for await (const c of client.textStream({ model: "o3-mini", messages: [userMessage(["x", imagePart(image)])] } as any)) {
+      chunks.push(c);
+    }
+    expect(chunks.some((c) => c.type === "error")).toBe(true);
+    expect(chunks.some((c) => c.type === "done")).toBe(false);
   });
 });
 

@@ -11,5 +11,6 @@ export * from "./functions.js";
 export * from "./classes/ToolCall.js";
 export * from "./embed.js";
 export * from "./image.js";
+export { normalizeImageRef } from "./util/imageRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
 export type { LogLevel } from "./util/logger.js";

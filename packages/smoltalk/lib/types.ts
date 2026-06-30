@@ -1,4 +1,5 @@
 export * from "./types/result.js";
+export * from "./classes/message/contentParts.js";
 import { LogLevel } from "./util/logger.js";
 import z, { ZodType } from "zod";
 import { Message } from "./classes/message/index.js";
@@ -65,6 +66,12 @@ export type SmolConfig = {
 
   /** Arbitrary metadata passed to custom model providers. */
   metadata?: Record<string, any>;
+
+  /** Options for image/PDF attachments on user messages. */
+  attachments?: {
+    /** Max resolved attachment size in bytes. Default 20 MB. Over → Failure. */
+    maxBytes?: number;
+  };
 
   /** Refreshed model/hosted-tool data (from refreshModels) to layer over the baked-in registry for this call. */
   modelData?: ModelDataBlob;
@@ -221,11 +228,6 @@ export interface SmolClient {
   _textStream(config: SmolConfig): AsyncGenerator<StreamChunk>;
 }
 
-export type TextPart = {
-  type: "text";
-  text: string;
-};
-
 /** Loose variant of SmolConfig for `getClient()` — messages are not required at construction time. */
 export type SmolClientConfig = Omit<SmolConfig, "messages"> & {
   messages?: Message[];
@@ -237,11 +239,6 @@ export type ThinkingBlock = {
   text: string;
   signature: string;
 };
-
-export const TextPartSchema = z.object({
-  type: z.literal("text"),
-  text: z.string(),
-});
 
 export const ThinkingBlockSchema = z.object({
   text: z.string(),

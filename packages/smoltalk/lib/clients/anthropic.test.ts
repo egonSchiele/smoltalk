@@ -1,11 +1,31 @@
 import { describe, it, expect } from "vitest";
-import { SmolAnthropic } from "./anthropic.js";
+import { SmolAnthropic, applyCacheBreakpoints } from "./anthropic.js";
 import {
   SystemMessage,
   userMessage,
   assistantMessage,
 } from "../classes/message/index.js";
 import { z } from "zod";
+
+describe("applyCacheBreakpoints with image content", () => {
+  it("marks the last block of a user message ending in an image", () => {
+    const out: any = applyCacheBreakpoints({
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "look" },
+            { type: "image", source: { type: "base64", media_type: "image/png", data: "IMG" } },
+          ],
+        },
+      ],
+    } as any);
+    const blocks = out.messages[0].content;
+    const last = blocks[blocks.length - 1];
+    expect(last.type).toBe("image");
+    expect(last.cache_control).toEqual({ type: "ephemeral" });
+  });
+});
 
 function build(client: SmolAnthropic, config: any) {
   return (client as any).buildRequest(config);

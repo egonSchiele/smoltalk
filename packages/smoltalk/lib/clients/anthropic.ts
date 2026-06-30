@@ -7,6 +7,7 @@ import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { SystemMessage, DeveloperMessage } from "../classes/message/index.js";
 import { getLogger } from "../util/logger.js";
+import { redactAttachments } from "../util/redact.js";
 import type { ModelDataBlob } from "../modelData.js";
 import {
   CostEstimate,
@@ -127,7 +128,7 @@ function thinkingStyleFor(
  *
  * Anthropic enforces minimum prefix sizes; smaller prefixes silently no-op.
  */
-function applyCacheBreakpoints(
+export function applyCacheBreakpoints(
   req: AnthropicRequestShape,
 ): AnthropicRequestShape {
   const cc: EphemeralCacheControl = { type: "ephemeral" };
@@ -399,7 +400,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       thinking,
       output_config: outputConfig,
     };
-    this.logger.debug("Sending request to Anthropic:", debugData);
+    this.logger.debug("Sending request to Anthropic:", redactAttachments(debugData));
     this.statelogClient?.promptRequest(debugData);
 
     const signal = this.getAbortSignal(config);
@@ -490,7 +491,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     };
     this.logger.debug(
       "Sending streaming request to Anthropic:",
-      streamDebugData,
+      redactAttachments(streamDebugData),
     );
     this.statelogClient?.promptRequest(streamDebugData);
 

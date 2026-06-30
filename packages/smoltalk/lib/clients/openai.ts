@@ -17,6 +17,7 @@ import {
 import { ToolCall } from "../classes/ToolCall.js";
 import { isFunctionToolCall, sanitizeAttributes } from "../util/util.js";
 import { getLogger } from "../util/logger.js";
+import { redactAttachments } from "../util/redact.js";
 import { BaseClient } from "./baseClient.js";
 import {
   SmolContentPolicyError,
@@ -194,7 +195,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending request to OpenAI:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request);
 
@@ -277,7 +278,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending streaming request to OpenAI:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request);
 

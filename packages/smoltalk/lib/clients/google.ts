@@ -2,6 +2,7 @@ import { Content, GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
+import { redactAttachments } from "../util/redact.js";
 import {
   PromptResult,
   Result,
@@ -331,7 +332,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   async __textSync(request: GeneratedRequest): Promise<Result<PromptResult>> {
     this.logger.debug(
       "Sending request to Google Gemini:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request as any);
     let result;
@@ -436,7 +437,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending streaming request to Google Gemini:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request as any);
 
