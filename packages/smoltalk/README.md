@@ -8,6 +8,15 @@ Smoltalk exposes a common API to different LLM providers, with built-in cost tra
 pnpm install smoltalk
 ```
 
+> **Upgrading to 0.6.x?** The flat API-key/host fields on `SmolConfig` have
+> been removed in favor of nested `apiKey` and `baseUrl` maps. Migration:
+> ```diff
+> -{ openAiApiKey: "sk-...",   googleApiKey: "...", ollamaHost: "http://..." }
+> +{ apiKey: { openAi: "sk-...", google: "..." }, baseUrl: { ollama: "http://..." } }
+> ```
+> Env-var fallbacks are unchanged (`OPENAI_API_KEY`, `GEMINI_API_KEY`,
+> `ANTHROPIC_API_KEY`, `OLLAMA_HOST`).
+
 ## Hello world example
 
 ```typescript
@@ -194,6 +203,53 @@ Detects when the model is stuck in a repetitive tool-call loop.
 | `maxCalls` | `number` | Number of calls to a specific tool before triggering intervention. |
 | `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
 | `excludeTools` | `string[]` | Tool names to ignore when counting calls. |
+
+## Hosted OpenAI-compatible providers
+
+Smoltalk ships four built-in providers for hosted open-source models that all
+speak the OpenAI chat-completions shape. Use these when you want to run a
+Llama, GLM, Qwen, etc. via someone else's hosted infrastructure without
+adding a new dependency. You must pass `provider:` explicitly because these
+model ids aren't in the smoltalk registry.
+
+| `provider:` | What it is | Required config | Cost source |
+|-------------|------------|-----------------|-------------|
+| `"openrouter"` | OpenRouter.ai aggregator | `apiKey.openRouter` (or `OPENROUTER_API_KEY`) | `usage.cost` (auto-enabled by injecting `usage:{include:true}`) |
+| `"deepinfra"` | DeepInfra hosted models | `apiKey.deepInfra` (or `DEEPINFRA_API_KEY`) | `usage.estimated_cost` |
+| `"litellm"`   | Your own LiteLLM proxy   | `apiKey.liteLlm` + `baseUrl.liteLlm` (or `LITELLM_API_KEY` / `LITELLM_BASE_URL`) | `x-litellm-response-cost` header (non-stream only) |
+| `"openai-compat"` | Any OpenAI-shape backend (vLLM, TGI, LM Studio…) | `apiKey.openAiCompat` + `baseUrl.openAiCompat` (or `OPENAI_COMPAT_API_KEY` / `OPENAI_COMPAT_BASE_URL`) | Best-effort: reads `usage.cost`/`estimated_cost`/`cost_usd` if present |
+
+```ts
+import { textSync, userMessage } from "smoltalk";
+
+const r = await textSync({
+  model: "z-ai/glm-5.2",
+  provider: "openrouter",
+  apiKey: { openRouter: process.env.OPENROUTER_API_KEY! },
+  messages: [userMessage("hi")],
+});
+// r.value.cost.totalCost is a real OpenRouter-reported USD cost.
+```
+
+**Capability matrix:**
+
+|                 | chat | embeddings | image generation | `web_search` hosted tool |
+|-----------------|------|------------|------------------|--------------------------|
+| `openrouter`    | ✅   | ❌         | ❌               | ✅ (via `:online` / web plugin) |
+| `deepinfra`     | ✅   | ✅         | ❌ (uses per-model endpoints, not OpenAI shape) | ❌ |
+| `litellm`       | ✅   | ✅         | ✅ (if the upstream model supports it) | ✅ (if upstream supports it) |
+| `openai-compat` | ✅   | ✅         | ✅ (backend-dependent) | depends on backend |
+
+Smoltalk surfaces a clear `failure(...)` from `embed()`/`image()` for the
+unsupported combinations rather than silently dropping the call.
+
+**Running a local LiteLLM proxy:**
+
+```bash
+pip install 'litellm[proxy]'
+litellm --model openai/gpt-4o
+# In your code: baseUrl: { liteLlm: "http://localhost:4000" }
+```
 
 ## Refreshing model data
 
