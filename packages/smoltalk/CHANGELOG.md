@@ -1,5 +1,16 @@
 # Changelog
 
+## smoltalk 0.6.0 (2026-06-29)
+
+### Added
+- Four built-in providers for hosted OpenAI-compatible models — `openrouter`, `deepinfra`, `litellm`, and `openai-compat` — covering OpenRouter.ai, DeepInfra, a self-hosted LiteLLM proxy, and any OpenAI-shape backend (vLLM, TGI, LM Studio, etc.). Pass `provider:` explicitly since these model ids aren't in the registry; cost is read from each provider's reported usage where available.
+- `embed()` and `image()` work on the new providers where the backend supports them (e.g. DeepInfra/LiteLLM embeddings), returning a clear `failure(...)` for unsupported combinations instead of silently dropping the call.
+- Per-provider `baseUrl` config for custom endpoints. `openrouter`/`deepinfra` defaults are baked in; `litellm`/`openai-compat` require an explicit URL (or `LITELLM_BASE_URL` / `OPENAI_COMPAT_BASE_URL`).
+
+### Changed
+- **Breaking:** API keys are now nested under a single `apiKey` object. The flat `openAiApiKey`, `googleApiKey`, `anthropicApiKey`, and `ollamaApiKey` fields are removed — use `apiKey: { openAi, google, anthropic, ollama, openRouter, deepInfra, liteLlm, openAiCompat }`. Env-var fallbacks (`OPENAI_API_KEY`, etc.) are unchanged.
+- **Breaking:** `ollamaHost` is removed; set the Ollama server URL via `baseUrl.ollama` instead (still falls back to `$OLLAMA_HOST`).
+
 ## smoltalk 0.5.1 (2026-06-29)
 
 ### Fixed
