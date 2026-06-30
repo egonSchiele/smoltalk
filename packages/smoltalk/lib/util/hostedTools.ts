@@ -42,7 +42,11 @@ export function validateHostedTools(
       if (!effectiveProvider) {
         effectiveProvider = getModel(model, modelData)?.provider ?? "unknown";
       }
-      return `${name} is a hosted capability; ${model} (${effectiveProvider}) doesn't offer it — pass a search function as a tool instead.`;
+      let err = `${name} is a hosted capability; ${model} (${effectiveProvider}) doesn't offer it — pass a search function as a tool instead.`;
+      if (effectiveProvider === "openai") {
+        err += " You can also use the provider 'openai-responses' to access hosted tools for OpenAI models (you're currently using the base 'openai' provider).";
+      }
+      return err;
     }
   }
   return null;
