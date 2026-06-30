@@ -14,6 +14,9 @@ import {
   failure,
 } from "../types.js";
 import { validateHostedTools } from "../util/hostedTools.js";
+import { resolveMessageAttachments, messagesHaveAttachments, DEFAULT_MAX_ATTACHMENT_BYTES } from "./resolveAttachments.js";
+import { validateModalities } from "../util/modalities.js";
+import { resolveProvider } from "../util/provider.js";
 import { z } from "zod";
 
 const DEFAULT_NUM_RETRIES = 2;
@@ -86,6 +89,21 @@ export class BaseClient implements SmolClient {
   async textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
+
+    const modalityResult = validateModalities(promptConfig);
+    if (modalityResult) {
+      return modalityResult;
+    }
+
+    if (messagesHaveAttachments(promptConfig.messages)) {
+      const provider = resolveProvider(promptConfig.model, promptConfig.provider, promptConfig.modelData);
+      const maxBytes = promptConfig.attachments?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
+      const resolved = await resolveMessageAttachments(promptConfig.messages, { provider, maxBytes });
+      if (!resolved.success) {
+        return resolved;
+      }
+      promptConfig = { ...promptConfig, messages: resolved.value };
+    }
 
     const hostedError = validateHostedTools(
       promptConfig.hostedTools,
@@ -390,6 +408,23 @@ export class BaseClient implements SmolClient {
             : "Message limit exceeded",
       };
       return;
+    }
+
+    const modalityResult = validateModalities(config);
+    if (modalityResult && modalityResult.success === false) {
+      yield { type: "error", error: modalityResult.error };
+      return;
+    }
+
+    if (messagesHaveAttachments(config.messages)) {
+      const provider = resolveProvider(config.model, config.provider, config.modelData);
+      const maxBytes = config.attachments?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
+      const resolved = await resolveMessageAttachments(config.messages, { provider, maxBytes });
+      if (!resolved.success) {
+        yield { type: "error", error: resolved.error };
+        return;
+      }
+      config = { ...config, messages: resolved.value };
     }
 
     const hostedError = validateHostedTools(

@@ -59,7 +59,7 @@ describe("normalizeImageRef", () => {
     try {
       await expect(
         normalizeImageRef({ kind: "path", path }),
-      ).rejects.toThrow(/Could not determine image MIME type/);
+      ).rejects.toThrow(/Could not determine an allowed MIME type/);
     } finally {
       unlinkSync(path);
     }
@@ -73,7 +73,7 @@ describe("normalizeImageRef", () => {
     );
     await expect(
       normalizeImageRef({ kind: "url", url: "https://example.com/x" }),
-    ).rejects.toThrow(/Could not determine image MIME type/);
+    ).rejects.toThrow(/Could not determine an allowed MIME type/);
     fetchSpy.mockRestore();
   });
 
@@ -108,5 +108,58 @@ describe("normalizeImageRef", () => {
     } finally {
       unlinkSync(path);
     }
+  });
+});
+
+describe("normalizeImageRef MIME prefix + size options", () => {
+  it("accepts a .pdf path when application/pdf is allowed", async () => {
+    const path = join(tmpdir(), `smoltalk-test-${Date.now()}-doc.pdf`);
+    writeFileSync(path, Buffer.from("%PDF-1.4 fake"));
+    try {
+      const out = await normalizeImageRef(
+        { kind: "path", path },
+        { allowedMimePrefixes: ["application/pdf"] },
+      );
+      expect(out.mimeType).toBe("application/pdf");
+    } finally {
+      unlinkSync(path);
+    }
+  });
+
+  it("throws for a .pdf path under the default image-only prefixes", async () => {
+    const path = join(tmpdir(), `smoltalk-test-${Date.now()}-doc2.pdf`);
+    writeFileSync(path, Buffer.from("%PDF-1.4 fake"));
+    try {
+      await expect(normalizeImageRef({ kind: "path", path })).rejects.toThrow(/allowed MIME type/);
+    } finally {
+      unlinkSync(path);
+    }
+  });
+
+  it("accepts a url whose Content-Type is allowed", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "application/pdf" } }),
+    );
+    const out = await normalizeImageRef(
+      { kind: "url", url: "https://x/y.pdf" },
+      { allowedMimePrefixes: ["application/pdf"] },
+    );
+    expect(out.mimeType).toBe("application/pdf");
+    fetchSpy.mockRestore();
+  });
+
+  it("accepts a pdf base64 ref when application/pdf is allowed", async () => {
+    const out = await normalizeImageRef(
+      { kind: "base64", base64: "AAA", mimeType: "application/pdf" },
+      { allowedMimePrefixes: ["application/pdf"] },
+    );
+    expect(out.mimeType).toBe("application/pdf");
+  });
+
+  it("throws when the resolved data exceeds maxBytes", async () => {
+    const big = Buffer.alloc(100).toString("base64");
+    await expect(
+      normalizeImageRef({ kind: "base64", base64: big, mimeType: "image/png" }, { maxBytes: 10 }),
+    ).rejects.toThrow(/exceeds the maximum size/);
   });
 });

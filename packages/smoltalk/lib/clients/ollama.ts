@@ -3,6 +3,7 @@ import { ChatRequest, Message, Ollama } from "ollama";
 import { ToolCall as OllamaToolCall } from "ollama";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
+import { redactAttachments } from "../util/redact.js";
 import {
   PromptResult,
   Result,
@@ -94,7 +95,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
-    const messages = config.messages.map((msg) => msg.toOpenAIMessage());
+    const messages = config.messages.map((msg) => msg.toOllamaMessage());
 
     const tools = (config.tools || []).map((tool) => {
       return zodToGoogleTool(tool.name, tool.schema, {
@@ -103,7 +104,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     });
 
     const request: ChatRequest = {
-      messages: messages as Message[],
+      messages,
       model: this.getModel(),
     };
     if (tools.length > 0) {
@@ -116,7 +117,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending request to Ollama:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request as any);
     const signal = this.getAbortSignal(config);
@@ -162,7 +163,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
-    const messages = config.messages.map((msg) => msg.toOpenAIMessage());
+    const messages = config.messages.map((msg) => msg.toOllamaMessage());
 
     const tools = (config.tools || []).map((tool) => {
       return zodToGoogleTool(tool.name, tool.schema, {
@@ -171,7 +172,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
     });
 
     const request: ChatRequest = {
-      messages: messages as Message[],
+      messages,
       model: this.getModel(),
       stream: true,
     };
@@ -185,7 +186,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending streaming request to Ollama:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request as any);
 

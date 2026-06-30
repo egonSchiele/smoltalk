@@ -1738,6 +1738,27 @@ export function getModel(
   return models.find((model) => model.modelName === modelName);
 }
 
+/**
+ * Whether a model is known to accept the given input modality ("image", "pdf", …).
+ * Returns undefined when the model is unknown or carries no `modalities` data —
+ * callers should treat undefined as "don't gate".
+ */
+export function modelSupportsInputModality(
+  modelName: ModelName,
+  modality: string,
+  requestData?: ModelDataBlob,
+): boolean | undefined {
+  const model = getModel(modelName, requestData);
+  if (!model || model.type !== "text") {
+    return undefined;
+  }
+  const inputs = model.modalities?.input;
+  if (!inputs) {
+    return undefined;
+  }
+  return inputs.includes(modality);
+}
+
 export function getHostedTools(opts: {
   provider?: string;
   model?: string;

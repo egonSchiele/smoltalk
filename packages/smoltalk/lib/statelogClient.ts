@@ -2,6 +2,7 @@ import { nanoid } from "nanoid";
 import { ModelLike, PromptResult } from "./types.js";
 import { failure, mergeResults, Result, success } from "./types/result.js";
 import { ModelName } from "./models.js";
+import { redactAttachments } from "./util/redact.js";
 
 export type AgencyFile = {
   name: string;
@@ -436,7 +437,7 @@ export class StatelogClient {
     const postBody = JSON.stringify({
       trace_id: this.traceId,
       project_id: this.projectId,
-      data: { ...body, timestamp: new Date().toISOString() },
+      data: redactAttachments({ ...body, timestamp: new Date().toISOString() }),
     });
 
     if (this.host.toLowerCase() === "stdout") {

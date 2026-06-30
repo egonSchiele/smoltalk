@@ -10,6 +10,7 @@ import {
 import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
+import { redactAttachments } from "../util/redact.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
 import { sanitizeAttributes } from "../util/util.js";
@@ -240,7 +241,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending request to OpenAI Responses API:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request);
 
@@ -300,7 +301,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
     this.logger.debug(
       "Sending streaming request to OpenAI Responses API:",
-      JSON.stringify(request, null, 2),
+      JSON.stringify(redactAttachments(request), null, 2),
     );
     this.statelogClient?.promptRequest(request);
 

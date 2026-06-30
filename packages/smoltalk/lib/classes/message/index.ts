@@ -8,7 +8,15 @@ import type { AssistantMessageJSON } from "./AssistantMessage.js";
 import type { DeveloperMessageJSON } from "./DeveloperMessage.js";
 import type { SystemMessageJSON } from "./SystemMessage.js";
 import type { ToolMessageJSON } from "./ToolMessage.js";
-import { CostEstimate, TextPart, TokenUsage } from "../../types.js";
+import {
+  CostEstimate,
+  TextPart,
+  TokenUsage,
+  UserContentInput,
+  ImagePart,
+  FilePart,
+} from "../../types.js";
+import type { ImageRef } from "../../util/imageRef.js";
 
 export * from "./AssistantMessage.js";
 export * from "./BaseMessage.js";
@@ -35,10 +43,25 @@ export function messageFromJSON(json: MessageJSON): Message {
 }
 
 export function userMessage(
-  content: string,
+  content: UserContentInput,
   options: { name?: string; rawData?: any } = {},
 ) {
   return new UserMessage(content, options);
+}
+
+export function textPart(text: string): TextPart {
+  return { type: "text", text };
+}
+
+export function imagePart(source: ImageRef): ImagePart {
+  return { type: "image", source };
+}
+
+export function filePart(source: ImageRef, options: { filename?: string } = {}): FilePart {
+  if (options.filename === undefined) {
+    return { type: "file", source };
+  }
+  return { type: "file", source, filename: options.filename };
 }
 
 export function assistantMessage(
