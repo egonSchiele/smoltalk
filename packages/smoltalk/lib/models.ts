@@ -14,6 +14,10 @@ export const providers = [
   "google",
   "replicate",
   "modal",
+  "openrouter",
+  "deepinfra",
+  "litellm",
+  "openai-compat",
 ] as const;
 export const ProviderSchema = z.enum(providers);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -1806,6 +1810,6 @@ export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
 export const ModelNameSchema = z
   .string()
   .regex(
-    /^[a-zA-Z0-9._:-]+$/,
-    "Model name must only contain letters, numbers, dots, underscores, hyphens, and colons",
+    /^[a-zA-Z0-9._:@/-]+$/,
+    "Model name must only contain letters, numbers, dots, underscores, hyphens, colons, slashes, and @",
   );
