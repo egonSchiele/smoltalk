@@ -1677,6 +1677,19 @@ export const hostedTools: HostedTool[] = [
     models: ["gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.1-flash-lite"],
     pricing: { unit: "per_call", note: "Gemini 3 family only; see Google pricing." },
   },
+  {
+    name: "web_search",
+    provider: "openrouter",
+    category: "web_search",
+    description:
+      "Web search via OpenRouter's web plugin (Exa-backed). Adds citations as annotations.",
+    providerToolId: "web",
+    pricing: {
+      unit: "per_call",
+      amount: 0.004,
+      note: "$4 per 1,000 results returned by the web plugin (default 5 results/call ≈ $0.02/call). Plus token cost for inserted context.",
+    },
+  },
 ];
 
 export const registeredTextModels: TextModel[] = [];
