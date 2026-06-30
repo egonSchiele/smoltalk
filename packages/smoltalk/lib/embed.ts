@@ -2,11 +2,10 @@ import type { ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { resolveProvider, resolveApiKey } from "./util/provider.js";
+import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
-import { openaiCompatEmbed } from "./embed/openaiCompat.js";
 
 export type EmbedConfig = {
   model: string;
@@ -96,11 +95,8 @@ export async function embed(
       }
       return googleEmbed(inputs, config, apiKey);
     }
-    case "ollama": {
-      const host =
-        config.baseUrl?.ollama || process.env.OLLAMA_HOST;
-      return ollamaEmbed(inputs, config, apiKey, host);
-    }
+    case "ollama":
+      return ollamaEmbed(inputs, config, apiKey, resolveBaseUrl("ollama", config));
     case "openrouter":
       return failure(
         "openrouter does not expose an embeddings endpoint; use deepinfra, openai-compat, or litellm instead.",
@@ -111,9 +107,7 @@ export async function embed(
           "No DeepInfra API key provided. Set config.apiKey.deepInfra or the DEEPINFRA_API_KEY environment variable.",
         );
       }
-      const baseURL =
-        config.baseUrl?.deepInfra || "https://api.deepinfra.com/v1/openai";
-      return openaiCompatEmbed(inputs, config, apiKey, baseURL);
+      return openaiEmbed(inputs, config, apiKey, resolveBaseUrl("deepinfra", config));
     }
     case "litellm": {
       if (!apiKey) {
@@ -121,14 +115,13 @@ export async function embed(
           "No LiteLLM API key provided. Set config.apiKey.liteLlm or the LITELLM_API_KEY environment variable.",
         );
       }
-      const baseURL =
-        config.baseUrl?.liteLlm || process.env.LITELLM_BASE_URL;
+      const baseURL = resolveBaseUrl("litellm", config);
       if (!baseURL) {
         return failure(
           "No LiteLLM base URL provided. Set config.baseUrl.liteLlm or the LITELLM_BASE_URL environment variable.",
         );
       }
-      return openaiCompatEmbed(inputs, config, apiKey, baseURL);
+      return openaiEmbed(inputs, config, apiKey, baseURL);
     }
     case "openai-compat": {
       if (!apiKey) {
@@ -136,14 +129,13 @@ export async function embed(
           "No openai-compat API key provided. Set config.apiKey.openAiCompat or the OPENAI_COMPAT_API_KEY environment variable.",
         );
       }
-      const baseURL =
-        config.baseUrl?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
+      const baseURL = resolveBaseUrl("openai-compat", config);
       if (!baseURL) {
         return failure(
           "No openai-compat base URL provided. Set config.baseUrl.openAiCompat or the OPENAI_COMPAT_BASE_URL environment variable.",
         );
       }
-      return openaiCompatEmbed(inputs, config, apiKey, baseURL);
+      return openaiEmbed(inputs, config, apiKey, baseURL);
     }
     default: {
       const custom = registeredEmbedProviders[provider];

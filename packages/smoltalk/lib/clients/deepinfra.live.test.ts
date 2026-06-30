@@ -20,7 +20,7 @@ const d = KEY ? describe : describe.skip;
 
 d("DeepInfra - embeddings", () => {
   it(
-    "returns vectors via openaiCompatEmbed",
+    "returns vectors via openaiEmbed",
     { timeout: 60_000 },
     async () => {
       const r = await embed("hello world", {

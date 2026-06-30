@@ -3,7 +3,7 @@ import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
 import { ImageRef } from "./util/imageRef.js";
-import { resolveProvider, resolveApiKey } from "./util/provider.js";
+import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
 import { openaiImage } from "./image/openai.js";
 import { googleImage } from "./image/google.js";
 import { openaiCompatImage } from "./image/openaiCompat.js";
@@ -134,8 +134,7 @@ export async function image(
           "No LiteLLM API key provided. Set config.apiKey.liteLlm or the LITELLM_API_KEY environment variable.",
         );
       }
-      const baseURL =
-        config.baseUrl?.liteLlm || process.env.LITELLM_BASE_URL;
+      const baseURL = resolveBaseUrl("litellm", config);
       if (!baseURL) {
         return failure(
           "No LiteLLM base URL provided. Set config.baseUrl.liteLlm or the LITELLM_BASE_URL environment variable.",
@@ -149,8 +148,7 @@ export async function image(
           "No openai-compat API key provided. Set config.apiKey.openAiCompat or the OPENAI_COMPAT_API_KEY environment variable.",
         );
       }
-      const baseURL =
-        config.baseUrl?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
+      const baseURL = resolveBaseUrl("openai-compat", config);
       if (!baseURL) {
         return failure(
           "No openai-compat base URL provided. Set config.baseUrl.openAiCompat or the OPENAI_COMPAT_BASE_URL environment variable.",

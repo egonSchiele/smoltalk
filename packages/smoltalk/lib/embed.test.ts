@@ -31,21 +31,10 @@ vi.mock("./embed/ollama.js", () => ({
   }),
 }));
 
-vi.mock("./embed/openaiCompat.js", () => ({
-  openaiCompatEmbed: vi.fn().mockResolvedValue({
-    success: true,
-    value: {
-      embeddings: [[0.7, 0.8]],
-      model: "compat-model",
-    },
-  }),
-}));
-
 import { embed } from "./embed.js";
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
-import { openaiCompatEmbed } from "./embed/openaiCompat.js";
 
 describe("embed", () => {
   beforeEach(() => {
@@ -135,13 +124,13 @@ describe("embed", () => {
     }
   });
 
-  it("dispatches to openaiCompatEmbed for deepinfra with baked baseURL", async () => {
+  it("dispatches to openaiEmbed for deepinfra with baked baseURL", async () => {
     await embed(["hello"], {
       model: "BAAI/bge-small-en-v1.5",
       provider: "deepinfra",
       apiKey: { deepInfra: "k" },
     });
-    expect(openaiCompatEmbed).toHaveBeenCalledWith(
+    expect(openaiEmbed).toHaveBeenCalledWith(
       ["hello"],
       expect.anything(),
       "k",
@@ -149,14 +138,14 @@ describe("embed", () => {
     );
   });
 
-  it("dispatches to openaiCompatEmbed for litellm with user baseURL", async () => {
+  it("dispatches to openaiEmbed for litellm with user baseURL", async () => {
     await embed(["hello"], {
       model: "text-embedding-3-small",
       provider: "litellm",
       apiKey: { liteLlm: "k" },
       baseUrl: { liteLlm: "http://localhost:4000" },
     });
-    expect(openaiCompatEmbed).toHaveBeenCalledWith(
+    expect(openaiEmbed).toHaveBeenCalledWith(
       ["hello"],
       expect.anything(),
       "k",
@@ -177,14 +166,14 @@ describe("embed", () => {
     if (orig !== undefined) process.env.LITELLM_BASE_URL = orig;
   });
 
-  it("dispatches to openaiCompatEmbed for openai-compat", async () => {
+  it("dispatches to openaiEmbed for openai-compat", async () => {
     await embed(["hello"], {
       model: "any/model",
       provider: "openai-compat",
       apiKey: { openAiCompat: "k" },
       baseUrl: { openAiCompat: "https://h.test/v1" },
     });
-    expect(openaiCompatEmbed).toHaveBeenCalledWith(
+    expect(openaiEmbed).toHaveBeenCalledWith(
       ["hello"],
       expect.anything(),
       "k",

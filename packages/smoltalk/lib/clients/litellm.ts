@@ -1,5 +1,6 @@
 import { SmolOpenAiCompat } from "./openaiCompat.js";
 import type { SmolConfig } from "../types.js";
+import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 
 /**
  * LiteLLM proxy client (https://docs.litellm.ai/docs/simple_proxy). OpenAI-
@@ -16,8 +17,8 @@ export class SmolLiteLlm extends SmolOpenAiCompat {
     apiKey: string;
     baseURL: string;
   } {
-    const apiKey = config.apiKey?.liteLlm || process.env.LITELLM_API_KEY;
-    const baseURL = config.baseUrl?.liteLlm || process.env.LITELLM_BASE_URL;
+    const apiKey = resolveApiKey("litellm", config);
+    const baseURL = resolveBaseUrl("litellm", config);
     if (!apiKey) {
       throw new Error(
         "litellm: API key required (config.apiKey.liteLlm or LITELLM_API_KEY).",

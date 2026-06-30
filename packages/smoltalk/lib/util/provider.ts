@@ -24,14 +24,21 @@ export function resolveProvider(
 }
 
 /**
- * Minimal shape needed to read API keys. Kept local to avoid importing
- * SmolConfig (which would create a circular import).
+ * Minimal shape needed to read API keys / base URLs. Kept local to avoid
+ * importing SmolConfig (which would create a circular import).
  */
 type NestedKeyConfig = {
   apiKey?: {
     openAi?: string;
     google?: string;
     anthropic?: string;
+    ollama?: string;
+    openRouter?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
+  baseUrl?: {
     ollama?: string;
     openRouter?: string;
     deepInfra?: string;
@@ -66,6 +73,35 @@ export function resolveApiKey(
       return k?.liteLlm || process.env.LITELLM_API_KEY;
     case "openai-compat":
       return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Resolve the base URL for a provider, checking config then env vars then a
+ * baked-in default. Returns `undefined` when a provider requires the caller to
+ * supply one (litellm, openai-compat) and nothing was given.
+ *
+ * Centralized here so we don't duplicate the env-fallback table across
+ * embed.ts, image.ts, and each client constructor.
+ */
+export function resolveBaseUrl(
+  provider: string,
+  config: NestedKeyConfig,
+): string | undefined {
+  const b = config.baseUrl;
+  switch (provider) {
+    case "ollama":
+      return b?.ollama || process.env.OLLAMA_HOST;
+    case "openrouter":
+      return b?.openRouter || "https://openrouter.ai/api/v1";
+    case "deepinfra":
+      return b?.deepInfra || "https://api.deepinfra.com/v1/openai";
+    case "litellm":
+      return b?.liteLlm || process.env.LITELLM_BASE_URL;
+    case "openai-compat":
+      return b?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
     default:
       return undefined;
   }

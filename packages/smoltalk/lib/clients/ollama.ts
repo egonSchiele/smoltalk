@@ -13,6 +13,7 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import { sanitizeAttributes } from "../util/util.js";
+import { resolveBaseUrl } from "../util/provider.js";
 import { BaseClient } from "./baseClient.js";
 import {
   SmolContextWindowExceededError,
@@ -41,8 +42,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
         headers: { Authorization: "Bearer " + apiKey },
       });
     } else {
-      const host =
-        config.baseUrl?.ollama || process.env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST;
+      const host = resolveBaseUrl("ollama", config) || DEFAULT_OLLAMA_HOST;
       this.client = new Ollama({ host });
     }
   }

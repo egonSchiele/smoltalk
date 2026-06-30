@@ -5,13 +5,20 @@ import { getModel, isEmbeddingsModel } from "../models.js";
 import type { ModelDataBlob } from "../modelData.js";
 import { round } from "../util/util.js";
 
+/**
+ * OpenAI-compatible embedding call. Used by openai directly and by other
+ * OpenAI-shape backends (deepinfra, litellm, openai-compat) which pass a
+ * custom `baseURL`. Cost comes from the smoltalk model registry; provider-
+ * returned cost fields aren't standardized on this endpoint.
+ */
 export async function openaiEmbed(
   inputs: string[],
   config: EmbedConfig,
   apiKey: string,
+  baseURL?: string,
 ): Promise<Result<EmbedResult>> {
   try {
-    const client = new OpenAI({ apiKey });
+    const client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
     const response = await client.embeddings.create({
       model: config.model,
       input: inputs,

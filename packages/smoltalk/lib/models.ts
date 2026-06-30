@@ -1686,8 +1686,8 @@ export const hostedTools: HostedTool[] = [
     providerToolId: "web",
     pricing: {
       unit: "per_call",
-      amount: 0.004,
-      note: "$4 per 1,000 results returned by the web plugin (default 5 results/call ≈ $0.02/call). Plus token cost for inserted context.",
+      amount: 0.02,
+      note: "$4 per 1,000 results returned by the web plugin × default 5 results/call = $0.02/call. Plus token cost for inserted context. If you override max_results, scale this accordingly.",
     },
   },
 ];

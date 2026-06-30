@@ -1,6 +1,7 @@
 import { SmolOpenAiCompat } from "./openaiCompat.js";
 import type { SmolConfig, HostedToolResult } from "../types.js";
 import { webSearchResult } from "../util/hostedTools.js";
+import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 
 /**
  * OpenRouter client (https://openrouter.ai). OpenAI-compatible chat completions.
@@ -19,10 +20,9 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
     apiKey: string;
     baseURL: string;
   } {
-    const apiKey =
-      config.apiKey?.openRouter || process.env.OPENROUTER_API_KEY;
-    const baseURL =
-      config.baseUrl?.openRouter || "https://openrouter.ai/api/v1";
+    const apiKey = resolveApiKey("openrouter", config);
+    // resolveBaseUrl bakes in the openrouter default, so this is always defined.
+    const baseURL = resolveBaseUrl("openrouter", config)!;
     if (!apiKey) {
       throw new Error(
         "openrouter: API key required (config.apiKey.openRouter or OPENROUTER_API_KEY).",
@@ -63,21 +63,24 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
     for (const a of annotations) {
       if (a?.type !== "url_citation" || !a.url_citation?.url) continue;
       const uc = a.url_citation;
-      sources.push({
+
+      const source: { url: string; title?: string; snippet?: string } = {
         url: uc.url,
-        ...(uc.title ? { title: uc.title } : {}),
-        ...(uc.content ? { snippet: uc.content } : {}),
-      });
-      citations.push({
-        url: uc.url,
-        ...(uc.title ? { title: uc.title } : {}),
-        ...(typeof uc.start_index === "number"
-          ? { startIndex: uc.start_index }
-          : {}),
-        ...(typeof uc.end_index === "number"
-          ? { endIndex: uc.end_index }
-          : {}),
-      });
+      };
+      if (uc.title) source.title = uc.title;
+      if (uc.content) source.snippet = uc.content;
+      sources.push(source);
+
+      const citation: {
+        url: string;
+        title?: string;
+        startIndex?: number;
+        endIndex?: number;
+      } = { url: uc.url };
+      if (uc.title) citation.title = uc.title;
+      if (typeof uc.start_index === "number") citation.startIndex = uc.start_index;
+      if (typeof uc.end_index === "number") citation.endIndex = uc.end_index;
+      citations.push(citation);
     }
 
     if (sources.length === 0) return [];

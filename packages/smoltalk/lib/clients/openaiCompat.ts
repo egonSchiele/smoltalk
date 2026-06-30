@@ -1,5 +1,6 @@
 import { SmolOpenAi } from "./openai.js";
 import type { SmolConfig } from "../types.js";
+import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 
 /**
  * Generic OpenAI-compatible client. Use when pointing smoltalk at any
@@ -19,10 +20,8 @@ export class SmolOpenAiCompat extends SmolOpenAi {
     apiKey: string;
     baseURL: string;
   } {
-    const apiKey =
-      config.apiKey?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
-    const baseURL =
-      config.baseUrl?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
+    const apiKey = resolveApiKey("openai-compat", config);
+    const baseURL = resolveBaseUrl("openai-compat", config);
     if (!apiKey) {
       throw new Error(
         "openai-compat: API key required (config.apiKey.openAiCompat or OPENAI_COMPAT_API_KEY).",

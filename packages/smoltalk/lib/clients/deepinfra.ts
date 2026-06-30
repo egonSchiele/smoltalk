@@ -1,5 +1,6 @@
 import { SmolOpenAiCompat } from "./openaiCompat.js";
 import type { SmolConfig } from "../types.js";
+import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 
 /**
  * DeepInfra client (https://deepinfra.com). OpenAI-compatible chat completions
@@ -14,10 +15,9 @@ export class SmolDeepInfra extends SmolOpenAiCompat {
     apiKey: string;
     baseURL: string;
   } {
-    const apiKey =
-      config.apiKey?.deepInfra || process.env.DEEPINFRA_API_KEY;
-    const baseURL =
-      config.baseUrl?.deepInfra || "https://api.deepinfra.com/v1/openai";
+    const apiKey = resolveApiKey("deepinfra", config);
+    // resolveBaseUrl bakes in the deepinfra default, so this is always defined.
+    const baseURL = resolveBaseUrl("deepinfra", config)!;
     if (!apiKey) {
       throw new Error(
         "deepinfra: API key required (config.apiKey.deepInfra or DEEPINFRA_API_KEY).",

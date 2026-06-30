@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { resolveProvider, resolveApiKey } from "./provider.js";
+import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./provider.js";
 
 describe("resolveProvider", () => {
   it("returns explicit provider when given", () => {
@@ -113,5 +113,60 @@ describe("resolveApiKey", () => {
 
   it("returns undefined for unknown provider", () => {
     expect(resolveApiKey("unknown", {})).toBeUndefined();
+  });
+});
+
+describe("resolveBaseUrl", () => {
+  const originalEnv = { ...process.env };
+
+  beforeEach(() => {
+    delete process.env.OLLAMA_HOST;
+    delete process.env.LITELLM_BASE_URL;
+    delete process.env.OPENAI_COMPAT_BASE_URL;
+  });
+
+  afterEach(() => {
+    process.env = { ...originalEnv };
+  });
+
+  it("returns baked default for openrouter and deepinfra", () => {
+    expect(resolveBaseUrl("openrouter", {})).toBe(
+      "https://openrouter.ai/api/v1",
+    );
+    expect(resolveBaseUrl("deepinfra", {})).toBe(
+      "https://api.deepinfra.com/v1/openai",
+    );
+  });
+
+  it("config override beats baked default", () => {
+    expect(
+      resolveBaseUrl("openrouter", {
+        baseUrl: { openRouter: "https://proxy.test/v1" },
+      }),
+    ).toBe("https://proxy.test/v1");
+  });
+
+  it("returns undefined when litellm/openai-compat URL is missing", () => {
+    expect(resolveBaseUrl("litellm", {})).toBeUndefined();
+    expect(resolveBaseUrl("openai-compat", {})).toBeUndefined();
+  });
+
+  it("falls back to env vars for litellm and openai-compat", () => {
+    process.env.LITELLM_BASE_URL = "http://litellm.local:4000";
+    process.env.OPENAI_COMPAT_BASE_URL = "http://compat.local/v1";
+    expect(resolveBaseUrl("litellm", {})).toBe("http://litellm.local:4000");
+    expect(resolveBaseUrl("openai-compat", {})).toBe("http://compat.local/v1");
+  });
+
+  it("ollama reads config then OLLAMA_HOST", () => {
+    expect(
+      resolveBaseUrl("ollama", { baseUrl: { ollama: "http://ol.test" } }),
+    ).toBe("http://ol.test");
+    process.env.OLLAMA_HOST = "http://envhost:11434";
+    expect(resolveBaseUrl("ollama", {})).toBe("http://envhost:11434");
+  });
+
+  it("returns undefined for unknown provider", () => {
+    expect(resolveBaseUrl("unknown", {})).toBeUndefined();
   });
 });
