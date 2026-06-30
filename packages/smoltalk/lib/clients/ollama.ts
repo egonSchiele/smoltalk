@@ -34,13 +34,15 @@ export class SmolOllama extends BaseClient implements SmolClient {
     super(config);
     this.logger = getLogger();
     this.model = new Model(config.model, undefined, config.modelData);
-    if (config.ollamaApiKey) {
+    const apiKey = config.apiKey?.ollama;
+    if (apiKey) {
       this.client = new Ollama({
         host: "https://cloud.ollama.com",
-        headers: { Authorization: "Bearer " + config.ollamaApiKey },
+        headers: { Authorization: "Bearer " + apiKey },
       });
     } else {
-      const host = config.ollamaHost || DEFAULT_OLLAMA_HOST;
+      const host =
+        config.baseUrl?.ollama || process.env.OLLAMA_HOST || DEFAULT_OLLAMA_HOST;
       this.client = new Ollama({ host });
     }
   }

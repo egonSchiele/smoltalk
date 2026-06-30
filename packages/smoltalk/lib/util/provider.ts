@@ -23,11 +23,21 @@ export function resolveProvider(
   return model.provider;
 }
 
-type ApiKeyConfig = {
-  openAiApiKey?: string;
-  googleApiKey?: string;
-  anthropicApiKey?: string;
-  ollamaApiKey?: string;
+/**
+ * Minimal shape needed to read API keys. Kept local to avoid importing
+ * SmolConfig (which would create a circular import).
+ */
+type NestedKeyConfig = {
+  apiKey?: {
+    openAi?: string;
+    google?: string;
+    anthropic?: string;
+    ollama?: string;
+    openRouter?: string;
+    deepInfra?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 };
 
 /**
@@ -35,18 +45,27 @@ type ApiKeyConfig = {
  */
 export function resolveApiKey(
   provider: string,
-  config: ApiKeyConfig,
+  config: NestedKeyConfig,
 ): string | undefined {
+  const k = config.apiKey;
   switch (provider) {
     case "openai":
     case "openai-responses":
-      return config.openAiApiKey || process.env.OPENAI_API_KEY;
+      return k?.openAi || process.env.OPENAI_API_KEY;
     case "google":
-      return config.googleApiKey || process.env.GEMINI_API_KEY;
+      return k?.google || process.env.GEMINI_API_KEY;
     case "anthropic":
-      return config.anthropicApiKey || process.env.ANTHROPIC_API_KEY;
+      return k?.anthropic || process.env.ANTHROPIC_API_KEY;
     case "ollama":
-      return config.ollamaApiKey;
+      return k?.ollama;
+    case "openrouter":
+      return k?.openRouter || process.env.OPENROUTER_API_KEY;
+    case "deepinfra":
+      return k?.deepInfra || process.env.DEEPINFRA_API_KEY;
+    case "litellm":
+      return k?.liteLlm || process.env.LITELLM_API_KEY;
+    case "openai-compat":
+      return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
     default:
       return undefined;
   }

@@ -92,7 +92,7 @@ describe("getClient", () => {
     // SmolConfig would force callers to pass dummy messages.
     const client = getClient({
       model: "gpt-4o",
-      openAiApiKey: "test-key",
+      apiKey: { openAi: "test-key" },
     });
     expect(client).toBeDefined();
   });
@@ -100,7 +100,7 @@ describe("getClient", () => {
   it("creates a client with a valid google config", () => {
     const client = getClient({
       model: "gemini-2.5-flash",
-      googleApiKey: "test-key",
+      apiKey: { google: "test-key" },
     });
     expect(client).toBeDefined();
   });
@@ -181,9 +181,9 @@ describe("registerProvider", () => {
     getClient({
       model: "any-model",
       provider: "capturing" as any,
-      openAiApiKey: "captured-key",
+      apiKey: { openAi: "captured-key" },
     });
     expect(captured?.model).toBe("any-model");
-    expect(captured?.openAiApiKey).toBe("captured-key");
+    expect(captured?.apiKey?.openAi).toBe("captured-key");
   });
 });

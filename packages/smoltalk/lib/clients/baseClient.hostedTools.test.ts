@@ -8,7 +8,7 @@ describe("hosted-tool validation runs before any network call", () => {
       model: "gpt-4o", // openai chat — no hosted web_search
       hostedTools: ["web_search"],
       messages: [new UserMessage("hi")],
-      openAiApiKey: "sk-not-used",
+      apiKey: { openAi: "sk-not-used" },
     });
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error).toContain("web_search");

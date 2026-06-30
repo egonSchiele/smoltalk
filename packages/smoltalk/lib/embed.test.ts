@@ -44,7 +44,7 @@ describe("embed", () => {
   it("normalizes single string input to array", async () => {
     const result = await embed("hello", {
       model: "text-embedding-3-small",
-      openAiApiKey: "test-key",
+      apiKey: { openAi: "test-key" },
     });
 
     expect(result.success).toBe(true);
@@ -58,7 +58,7 @@ describe("embed", () => {
   it("dispatches to OpenAI for OpenAI models", async () => {
     await embed(["hello"], {
       model: "text-embedding-3-small",
-      openAiApiKey: "test-key",
+      apiKey: { openAi: "test-key" },
     });
 
     expect(openaiEmbed).toHaveBeenCalled();
@@ -68,7 +68,7 @@ describe("embed", () => {
   it("dispatches to Google for Gemini models", async () => {
     await embed(["hello"], {
       model: "gemini-embedding-001",
-      googleApiKey: "test-key",
+      apiKey: { google: "test-key" },
     });
 
     expect(googleEmbed).toHaveBeenCalled();

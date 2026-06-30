@@ -98,10 +98,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   private model: Model;
   constructor(config: SmolGoogleConfig) {
     super(config);
-    if (!config.googleApiKey) {
+    const apiKey = config.apiKey?.google || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
       throw new Error("Google API key is required for SmolGoogle client.");
     }
-    this.client = new GoogleGenAI({ apiKey: config.googleApiKey });
+    this.client = new GoogleGenAI({ apiKey });
     this.logger = getLogger();
     this.model = new Model(config.model, undefined, config.modelData);
   }

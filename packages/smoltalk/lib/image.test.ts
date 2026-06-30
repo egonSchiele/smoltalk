@@ -28,7 +28,7 @@ describe("image", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("dispatches to OpenAI for OpenAI image models", async () => {
-    await image("a cat", { model: "gpt-image-1", openAiApiKey: "k" });
+    await image("a cat", { model: "gpt-image-1", apiKey: { openAi: "k" } });
     expect(openaiImage).toHaveBeenCalled();
     expect(googleImage).not.toHaveBeenCalled();
   });
@@ -36,7 +36,7 @@ describe("image", () => {
   it("dispatches to Google for Gemini image models", async () => {
     await image("a cat", {
       model: "gemini-2.5-flash-image",
-      googleApiKey: "k",
+      apiKey: { google: "k" },
     });
     expect(googleImage).toHaveBeenCalled();
     expect(openaiImage).not.toHaveBeenCalled();
@@ -50,7 +50,7 @@ describe("image", () => {
           { kind: "bytes", data: new Uint8Array([1]), mimeType: "image/png" },
         ],
       },
-      { model: "gpt-image-1", openAiApiKey: "k" },
+      { model: "gpt-image-1", apiKey: { openAi: "k" } },
     );
     expect(openaiImage).toHaveBeenCalledWith(
       expect.objectContaining({ prompt: "edit" }),
@@ -80,7 +80,7 @@ describe("image", () => {
           mimeType: "image/png",
         },
       },
-      { model: "gemini-2.5-flash-image", googleApiKey: "k" },
+      { model: "gemini-2.5-flash-image", apiKey: { google: "k" } },
     );
     expect(r.success).toBe(false);
     if (!r.success) {

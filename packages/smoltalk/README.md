@@ -68,8 +68,10 @@ const messages = [
 const resp = await text({
   messages,
   model: "gemini-2.0-flash-lite",
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
-  googleApiKey: process.env.GEMINI_API_KEY || "",
+  apiKey: {
+    openAi: process.env.OPENAI_API_KEY || "",
+    google: process.env.GEMINI_API_KEY || "",
+  },
   logLevel: "debug",
 });
 ```
@@ -80,8 +82,10 @@ If you want to construct a client once and reuse it across many calls, use `getC
 import { getClient, userMessage } from "smoltalk";
 
 const client = getClient({
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
-  googleApiKey: process.env.GEMINI_API_KEY || "",
+  apiKey: {
+    openAi: process.env.OPENAI_API_KEY || "",
+    google: process.env.GEMINI_API_KEY || "",
+  },
   model: "gemini-2.0-flash-lite",
 });
 
@@ -147,12 +151,9 @@ A couple of design decisions to note:
 |--------|------|-------------|
 | `model` | `ModelName` | **Required.** The model to use (e.g. `"gpt-4o"`, `"gemini-2.0-flash-lite"`). |
 | `messages` | `Message[]` | **Required.** The conversation messages to send. |
-| `openAiApiKey` | `string` | OpenAI API key. |
-| `googleApiKey` | `string` | Google Gemini API key. |
-| `anthropicApiKey` | `string` | Anthropic API key. |
-| `ollamaApiKey` | `string` | Ollama API key (only needed for cloud Ollama). |
-| `ollamaHost` | `string` | Ollama host URL (for self-hosted or cloud Ollama). |
-| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, or any provider registered via `registerProvider()`. |
+| `apiKey` | `{ openAi?, google?, anthropic?, ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat? }` | API keys, nested by provider. Each falls back to its conventional env var (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `DEEPINFRA_API_KEY`, `LITELLM_API_KEY`, `OPENAI_COMPAT_API_KEY`). Ollama has no env-var fallback for the key. |
+| `baseUrl` | `{ ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat? }` | Custom base URLs. `ollama` defaults to `$OLLAMA_HOST` then `http://localhost:11434`; `openRouter`/`deepInfra` defaults are baked in; `liteLlm`/`openAiCompat` require an explicit URL (or `LITELLM_BASE_URL` / `OPENAI_COMPAT_BASE_URL` env). |
+| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, `"openrouter"`, `"deepinfra"`, `"litellm"`, `"openai-compat"`, or any provider registered via `registerProvider()`. |
 | `logLevel` | `LogLevel` | Logging verbosity: `"debug"`, `"info"`, `"warn"`, `"error"`. |
 | `tools` | `{ name, description?, schema }[]` | Tool definitions. `schema` is a Zod object schema. |
 | `responseFormat` | `ZodType` | Zod schema for structured output. The response is parsed and validated against this schema. |

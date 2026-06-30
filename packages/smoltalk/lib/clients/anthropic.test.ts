@@ -14,7 +14,7 @@ function build(client: SmolAnthropic, config: any) {
 describe("SmolAnthropic.buildRequest cache_control", () => {
   const client = new SmolAnthropic({
     model: "claude-sonnet-4-6",
-    anthropicApiKey: "test-key",
+    apiKey: { anthropic: "test-key" },
     messages: [],
   });
 
@@ -88,7 +88,7 @@ describe("SmolAnthropic.buildRequest thinking normalization", () => {
   function clientFor(model: string) {
     return new SmolAnthropic({
       model: model as any,
-      anthropicApiKey: "test-key",
+      apiKey: { anthropic: "test-key" },
       messages: [],
     });
   }
@@ -154,7 +154,7 @@ describe("SmolAnthropic.buildRequest thinking normalization", () => {
 describe("SmolAnthropic.calculateUsageAndCost", () => {
   const client = new SmolAnthropic({
     model: "claude-sonnet-4-6",
-    anthropicApiKey: "test-key",
+    apiKey: { anthropic: "test-key" },
     messages: [],
   });
 

@@ -20,7 +20,7 @@ class SpyClient extends BaseClient {
   callIndex = 0;
 
   constructor(responses: Result<PromptResult>[]) {
-    super({ model: "gpt-4o", openAiApiKey: "test" });
+    super({ model: "gpt-4o", apiKey: { openAi: "test" } });
     this.responses = responses;
   }
 
@@ -37,7 +37,7 @@ function makeMessages(count: number) {
 }
 
 describe("maxMessages", () => {
-  const client = new TestClient({ model: "gpt-4o", openAiApiKey: "test" });
+  const client = new TestClient({ model: "gpt-4o", apiKey: { openAi: "test" } });
 
   it("textSync returns failure when messages exceed maxMessages", async () => {
     const result = await client.textSync({
@@ -213,7 +213,7 @@ describe("textWithRetry - allowExtraKeys", () => {
 });
 
 describe("extractResponse", () => {
-  const client = new TestClient({ model: "gpt-4o", openAiApiKey: "test" });
+  const client = new TestClient({ model: "gpt-4o", apiKey: { openAi: "test" } });
   const schema = z.object({ result: z.number() });
   const config = { messages: [] };
 

@@ -6,6 +6,7 @@ import { ImageRef } from "./util/imageRef.js";
 import { resolveProvider, resolveApiKey } from "./util/provider.js";
 import { openaiImage } from "./image/openai.js";
 import { googleImage } from "./image/google.js";
+import { openaiCompatImage } from "./image/openaiCompat.js";
 
 export { ImageRef };
 
@@ -28,9 +29,20 @@ export type ImageConfig = {
   outputFormat?: "png" | "jpeg" | "webp";
   background?: "transparent" | "opaque" | "auto";
 
-  // API keys
-  openAiApiKey?: string;
-  googleApiKey?: string;
+  /** API keys, nested by provider. Falls back to env vars
+   *  (OPENAI_API_KEY / GEMINI_API_KEY / LITELLM_API_KEY / OPENAI_COMPAT_API_KEY). */
+  apiKey?: {
+    openAi?: string;
+    google?: string;
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
+
+  /** Custom base URLs, nested by provider. */
+  baseUrl?: {
+    liteLlm?: string;
+    openAiCompat?: string;
+  };
 
   // Provider-specific escape hatch
   metadata?: Record<string, unknown>;
@@ -95,7 +107,7 @@ export async function image(
     case "openai-responses": {
       if (!apiKey) {
         return failure(
-          "No OpenAI API key provided. Set openAiApiKey in config or the OPENAI_API_KEY environment variable.",
+          "No OpenAI API key provided. Set config.apiKey.openAi or the OPENAI_API_KEY environment variable.",
         );
       }
       return openaiImage(input, config, apiKey);
@@ -103,10 +115,48 @@ export async function image(
     case "google": {
       if (!apiKey) {
         return failure(
-          "No Google API key provided. Set googleApiKey in config or the GEMINI_API_KEY environment variable.",
+          "No Google API key provided. Set config.apiKey.google or the GEMINI_API_KEY environment variable.",
         );
       }
       return googleImage(input, config, apiKey);
+    }
+    case "openrouter":
+      return failure(
+        "openrouter does not expose an OpenAI-compatible images endpoint; use openai-compat or litellm instead.",
+      );
+    case "deepinfra":
+      return failure(
+        "deepinfra exposes per-model image endpoints rather than the OpenAI `/images/generations` shape; use openai-compat with a specific backend or litellm instead.",
+      );
+    case "litellm": {
+      if (!apiKey) {
+        return failure(
+          "No LiteLLM API key provided. Set config.apiKey.liteLlm or the LITELLM_API_KEY environment variable.",
+        );
+      }
+      const baseURL =
+        config.baseUrl?.liteLlm || process.env.LITELLM_BASE_URL;
+      if (!baseURL) {
+        return failure(
+          "No LiteLLM base URL provided. Set config.baseUrl.liteLlm or the LITELLM_BASE_URL environment variable.",
+        );
+      }
+      return openaiCompatImage(input, config, apiKey, baseURL);
+    }
+    case "openai-compat": {
+      if (!apiKey) {
+        return failure(
+          "No openai-compat API key provided. Set config.apiKey.openAiCompat or the OPENAI_COMPAT_API_KEY environment variable.",
+        );
+      }
+      const baseURL =
+        config.baseUrl?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
+      if (!baseURL) {
+        return failure(
+          "No openai-compat base URL provided. Set config.baseUrl.openAiCompat or the OPENAI_COMPAT_BASE_URL environment variable.",
+        );
+      }
+      return openaiCompatImage(input, config, apiKey, baseURL);
     }
     default: {
       const custom = registeredImageProviders[provider];
