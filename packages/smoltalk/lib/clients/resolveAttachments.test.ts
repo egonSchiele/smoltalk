@@ -4,6 +4,52 @@ import { userMessage, imagePart, filePart } from "../classes/message/index.js";
 
 const opts = { provider: "openai", maxBytes: 20 * 1024 * 1024 };
 
+describe("resolveMessageAttachments — providerFile", () => {
+  const g = { kind: "providerFile", provider: "google", id: "files/a", uri: "u", mimeType: "application/pdf" } as const;
+  const oa = { kind: "providerFile", provider: "openai", id: "file-1", mimeType: "application/pdf" } as const;
+  const oaImg = { kind: "providerFile", provider: "openai", id: "file-1", mimeType: "image/png" } as const;
+  const call = (msgs: any[], provider: string) =>
+    resolveMessageAttachments(msgs, { provider, maxBytes: 20 * 1024 * 1024 });
+
+  it("passes a matching google ref through untouched", async () => {
+    const res = await call([userMessage([filePart(g)])], "google");
+    expect(res.success).toBe(true);
+    if (res.success) expect((res.value[0] as any).getContentParts()[0].source).toEqual(g);
+  });
+  it("accepts an openai ref on an openai-responses call (same family)", async () => {
+    expect((await call([userMessage([filePart(oa)])], "openai-responses")).success).toBe(true);
+  });
+  it("accepts a non-image openai ref on the openai Chat path", async () => {
+    expect((await call([userMessage([filePart(oa)])], "openai")).success).toBe(true);
+  });
+  it("accepts anthropic-on-anthropic and google-on-google", async () => {
+    expect((await call([userMessage([filePart({ kind: "providerFile", provider: "anthropic", id: "f" })])], "anthropic")).success).toBe(true);
+    expect((await call([userMessage([filePart(g)])], "google")).success).toBe(true);
+  });
+  it("fails a provider-family mismatch with a message", async () => {
+    const res = await call([userMessage([filePart(g)])], "openai-responses");
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/file family/i);
+  });
+  it("fails a providerFile on a no-files provider (openrouter)", async () => {
+    expect((await call([userMessage([filePart(oa)])], "openrouter")).success).toBe(false);
+  });
+  it("fails an image providerFile on the openai Chat path (responses-only)", async () => {
+    const res = await call([userMessage([imagePart(oaImg)])], "openai");
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/openai-responses/);
+  });
+  it("resolves mixed attachments: providerFile passes through while a bytes image normalizes", async () => {
+    const res = await call([userMessage([filePart(oa), imagePart({ kind: "bytes", data: new Uint8Array([1]), mimeType: "image/png" })])], "openai-responses");
+    expect(res.success).toBe(true);
+    if (res.success) {
+      const parts = (res.value[0] as any).getContentParts();
+      expect(parts[0].source).toEqual(oa);
+      expect(parts[1].source.kind).toBe("base64");
+    }
+  });
+});
+
 describe("acceptsRemoteUrl", () => {
   it("accepts image URLs for openai and anthropic, not google/ollama", () => {
     expect(acceptsRemoteUrl("openai", "image")).toBe(true);

@@ -1,6 +1,7 @@
 import { Message, UserMessage } from "../classes/message/index.js";
 import { UserContentPart } from "../classes/message/contentParts.js";
 import { normalizeImageRef, ImageRef } from "../util/imageRef.js";
+import { fileFamily } from "../util/attachments.js";
 import { Result, success, failure } from "../types.js";
 
 export const DEFAULT_MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -61,6 +62,23 @@ export async function resolveMessageAttachments(
     const resolvedParts: UserContentPart[] = [];
     for (const part of parts) {
       if (part.type === "text") {
+        resolvedParts.push(part);
+        continue;
+      }
+      // Provider file references are validated and passed through (no download/cap).
+      if (part.source.kind === "providerFile") {
+        const family = fileFamily(options.provider);
+        if (family === null || part.source.provider !== family) {
+          return failure(
+            `Attachment references a "${part.source.provider}" file, but this call targets provider ` +
+              `"${options.provider}" (file family ${family ?? "none"}).`,
+          );
+        }
+        if (part.type === "image" && options.provider === "openai") {
+          return failure(
+            "An image file reference requires the openai-responses provider (OpenAI Chat Completions has no image-by-file_id form).",
+          );
+        }
         resolvedParts.push(part);
         continue;
       }

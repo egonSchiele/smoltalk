@@ -35,3 +35,11 @@ function redactString(s: string): string {
   }
   return s;
 }
+
+/** Replace every occurrence of a secret (e.g. an API key) in text with a marker. */
+export function redactSecret(text: string, secret?: string): string {
+  if (!secret) {
+    return text;
+  }
+  return text.split(secret).join("[redacted]");
+}

@@ -9,4 +9,11 @@ describe("public exports", () => {
     expect(typeof smoltalk.userMessage).toBe("function");
     expect(typeof smoltalk.normalizeImageRef).toBe("function");
   });
+
+  it("exports the files API", () => {
+    expect(typeof smoltalk.uploadFile).toBe("function");
+    expect(typeof smoltalk.deleteFile).toBe("function");
+    expect(typeof smoltalk.registerFileProvider).toBe("function");
+    expect(typeof smoltalk.loadBlob).toBe("function");
+  });
 });
