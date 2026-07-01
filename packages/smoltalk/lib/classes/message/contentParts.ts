@@ -8,12 +8,12 @@ export type TextPart = {
 
 export type ImagePart = {
   type: "image";
-  source: ImageRef;
+  source: AttachmentSource;
 };
 
 export type FilePart = {
   type: "file";
-  source: ImageRef;
+  source: AttachmentSource;
   filename?: string;
 };
 
@@ -85,12 +85,12 @@ export function mapAttachmentSource<T>(
 
 export const ImagePartSchema = z.object({
   type: z.literal("image"),
-  source: ImageRefSchema,
+  source: AttachmentSourceSchema,
 });
 
 export const FilePartSchema = z.object({
   type: z.literal("file"),
-  source: ImageRefSchema,
+  source: AttachmentSourceSchema,
   filename: z.string().optional(),
 });
 

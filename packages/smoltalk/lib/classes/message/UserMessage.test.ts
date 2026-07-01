@@ -175,3 +175,53 @@ describe("UserMessage.toOllamaMessage", () => {
     expect(msg).toEqual({ role: "user", content: "look", images: ["IMG"] });
   });
 });
+
+describe("UserMessage providerFile serialization", () => {
+  const oaFile = { kind: "providerFile", provider: "openai", id: "file-1", mimeType: "application/pdf" } as const;
+  const gFile = { kind: "providerFile", provider: "google", id: "files/abc", uri: "https://x/files/abc", mimeType: "application/pdf", expiresAt: 1780000000000 } as const;
+  const anImgFile = { kind: "providerFile", provider: "anthropic", id: "file_1", mimeType: "image/png" } as const;
+
+  it("openai Chat file → file_id; image throws (responses-only)", () => {
+    expect(userMessage([filePart(oaFile)]).toOpenAIMessage().content).toEqual([{ type: "file", file: { file_id: "file-1" } }]);
+    expect(() => userMessage([imagePart(oaFile)]).toOpenAIMessage()).toThrow(/openai-responses/);
+  });
+  it("openai Responses image + file → file_id", () => {
+    const item: any = userMessage([imagePart(oaFile), filePart(oaFile)]).toOpenAIResponseInputItem();
+    expect(item.content).toEqual([
+      { type: "input_image", file_id: "file-1" },
+      { type: "input_file", file_id: "file-1" },
+    ]);
+  });
+  it("anthropic image + document → source file_id (serializer does not validate providers)", () => {
+    const msg: any = userMessage([imagePart(anImgFile), filePart(oaFile)]).toAnthropicMessage();
+    expect(msg.content).toEqual([
+      { type: "image", source: { type: "file", file_id: "file_1" } },
+      { type: "document", source: { type: "file", file_id: "file-1" } },
+    ]);
+  });
+  it("google → fileData with the uri", () => {
+    const msg: any = userMessage([filePart(gFile)]).toGoogleMessage();
+    expect(msg.parts).toEqual([{ fileData: { fileUri: "https://x/files/abc", mimeType: "application/pdf" } }]);
+  });
+  it("ollama throws on a providerFile image", () => {
+    expect(() => userMessage([imagePart(oaFile)]).toOllamaMessage()).toThrow(/Ollama does not support/);
+  });
+  it("mixed content: text + inline image + providerFile all serialize (Responses)", () => {
+    const item: any = userMessage([
+      "hi",
+      imagePart({ kind: "base64", base64: "IMG", mimeType: "image/png" }),
+      filePart(oaFile),
+    ]).toOpenAIResponseInputItem();
+    expect(item.content).toEqual([
+      { type: "input_text", text: "hi" },
+      { type: "input_image", image_url: "data:image/png;base64,IMG", detail: "auto" },
+      { type: "input_file", file_id: "file-1" },
+    ]);
+  });
+  it("round-trips a google ref (uri+expiresAt) and an openai ref (neither) through JSON", () => {
+    for (const ref of [gFile, oaFile]) {
+      const back = UserMessage.fromJSON(userMessage([filePart(ref)]).toJSON());
+      expect(back.getContentParts()?.[0]).toMatchObject({ type: "file", source: ref });
+    }
+  });
+});

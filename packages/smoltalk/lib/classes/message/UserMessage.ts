@@ -10,7 +10,9 @@ import {
   UserContentInput,
   UserContentPart,
   UserContentSchema,
+  AttachmentSource,
   mapContentParts,
+  mapAttachmentSource,
 } from "./contentParts.js";
 import type { ImageRef } from "../../util/imageRef.js";
 import { refToBase64, toDataUri, openAiImageUrl, anthropicSource, attachmentFilename } from "../../util/attachments.js";
@@ -94,14 +96,21 @@ export class UserMessage extends BaseMessage implements MessageClass {
     }
     const parts = mapContentParts<any>(this._content, {
       onText: (p) => ({ type: "text", text: p.text }),
-      onImage: (p) => ({ type: "image_url", image_url: { url: openAiImageUrl(p.source) } }),
-      onFile: (p) => {
-        const { base64, mimeType } = refToBase64(p.source);
-        return {
-          type: "file",
-          file: { file_data: toDataUri(base64, mimeType), filename: attachmentFilename(p.filename) },
-        };
-      },
+      onImage: (p) => mapAttachmentSource<any>(p.source, {
+        onProviderFile: () => {
+          throw new Error(
+            "OpenAI Chat Completions cannot reference an image by file id; use the openai-responses provider or inline the image.",
+          );
+        },
+        onInline: (src) => ({ type: "image_url", image_url: { url: openAiImageUrl(src) } }),
+      }),
+      onFile: (p) => mapAttachmentSource<any>(p.source, {
+        onProviderFile: (ref) => ({ type: "file", file: { file_id: ref.id } }),
+        onInline: (src) => {
+          const { base64, mimeType } = refToBase64(src);
+          return { type: "file", file: { file_data: toDataUri(base64, mimeType), filename: attachmentFilename(p.filename) } };
+        },
+      }),
     });
     return { role: this.role, content: parts as any, name: this.name } as ChatCompletionMessageParam;
   }
@@ -112,18 +121,20 @@ export class UserMessage extends BaseMessage implements MessageClass {
     }
     const content = mapContentParts<any>(this._content, {
       onText: (p) => ({ type: "input_text", text: p.text }),
-      onImage: (p) => ({ type: "input_image", image_url: openAiImageUrl(p.source), detail: "auto" }),
-      onFile: (p) => {
-        if (p.source.kind === "url") {
-          return { type: "input_file", file_url: p.source.url };
-        }
-        const { base64, mimeType } = refToBase64(p.source);
-        return {
-          type: "input_file",
-          file_data: toDataUri(base64, mimeType),
-          filename: attachmentFilename(p.filename),
-        };
-      },
+      onImage: (p) => mapAttachmentSource<any>(p.source, {
+        onProviderFile: (ref) => ({ type: "input_image", file_id: ref.id }),
+        onInline: (src) => ({ type: "input_image", image_url: openAiImageUrl(src), detail: "auto" }),
+      }),
+      onFile: (p) => mapAttachmentSource<any>(p.source, {
+        onProviderFile: (ref) => ({ type: "input_file", file_id: ref.id }),
+        onInline: (src) => {
+          if (src.kind === "url") {
+            return { type: "input_file", file_url: src.url };
+          }
+          const { base64, mimeType } = refToBase64(src);
+          return { type: "input_file", file_data: toDataUri(base64, mimeType), filename: attachmentFilename(p.filename) };
+        },
+      }),
     });
     return { type: "message", role: "user", content } as ResponseInputItem;
   }
@@ -132,16 +143,17 @@ export class UserMessage extends BaseMessage implements MessageClass {
     if (typeof this._content === "string") {
       return { role: this.role, parts: [{ text: this._content }] };
     }
+    const toGooglePart = (source: AttachmentSource) => mapAttachmentSource<any>(source, {
+      onProviderFile: (ref) => ({ fileData: { fileUri: ref.uri, mimeType: ref.mimeType } }),
+      onInline: (src) => {
+        const { base64, mimeType } = refToBase64(src);
+        return { inlineData: { mimeType, data: base64 } };
+      },
+    });
     const parts = mapContentParts<any>(this._content, {
       onText: (p) => ({ text: p.text }),
-      onImage: (p) => {
-        const { base64, mimeType } = refToBase64(p.source);
-        return { inlineData: { mimeType, data: base64 } };
-      },
-      onFile: (p) => {
-        const { base64, mimeType } = refToBase64(p.source);
-        return { inlineData: { mimeType, data: base64 } };
-      },
+      onImage: (p) => toGooglePart(p.source),
+      onFile: (p) => toGooglePart(p.source),
     });
     return { role: this.role, parts };
   }
@@ -158,8 +170,14 @@ export class UserMessage extends BaseMessage implements MessageClass {
         continue;
       }
       if (part.type === "image") {
+        if (part.source.kind === "providerFile") {
+          throw new Error("Ollama does not support provider file references.");
+        }
         images.push(refToBase64(part.source).base64);
         continue;
+      }
+      if (part.source.kind === "providerFile") {
+        throw new Error("Ollama does not support provider file references.");
       }
       getLogger().warn("Ollama does not support file attachments; dropping a file part.");
     }
@@ -176,8 +194,14 @@ export class UserMessage extends BaseMessage implements MessageClass {
     }
     const blocks = mapContentParts<any>(this._content, {
       onText: (p) => ({ type: "text", text: p.text }),
-      onImage: (p) => ({ type: "image", source: anthropicSource(p.source) }),
-      onFile: (p) => ({ type: "document", source: anthropicSource(p.source) }),
+      onImage: (p) => mapAttachmentSource<any>(p.source, {
+        onProviderFile: (ref) => ({ type: "image", source: { type: "file", file_id: ref.id } }),
+        onInline: (src) => ({ type: "image", source: anthropicSource(src) }),
+      }),
+      onFile: (p) => mapAttachmentSource<any>(p.source, {
+        onProviderFile: (ref) => ({ type: "document", source: { type: "file", file_id: ref.id } }),
+        onInline: (src) => ({ type: "document", source: anthropicSource(src) }),
+      }),
     });
     return { role: "user", content: blocks };
   }
@@ -211,7 +235,7 @@ function userContentToText(content: UserContent): string {
   return texts.join("\n");
 }
 
-function bytesRefToBase64(ref: ImageRef): ImageRef {
+function bytesRefToBase64(ref: AttachmentSource): AttachmentSource {
   if (ref.kind === "bytes") {
     const { base64, mimeType } = refToBase64(ref);
     return { kind: "base64", base64, mimeType };
