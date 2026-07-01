@@ -1,5 +1,14 @@
 # Changelog
 
+## smoltalk 0.8.0 (2026-07-01)
+
+### Fixed
+- Gemini hosted web search combined with function calling no longer 400s: the request now sets `includeServerSideToolInvocations` so built-in tools are accepted alongside function declarations.
+- Gemini 3 thought signatures are round-tripped on function-call parts (sync and streaming), so multi-turn tool use no longer fails with a missing `thought_signature`.
+
+### Changed
+- Bumped provider SDKs and shared deps: `@anthropic-ai/sdk` 0.78→0.109, `@google/genai` 1.x→2.x, `openai` 6.15→6.45, plus `zod`, `node-llama-cpp`, and `@mlc-ai/web-llm`.
+
 ## smoltalk 0.7.1 (2026-07-01)
 
 ### Added
