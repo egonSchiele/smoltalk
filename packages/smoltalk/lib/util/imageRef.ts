@@ -111,7 +111,8 @@ async function readBodyWithLimit(
     }
     chunks.push(value);
   }
-  return new Uint8Array(Buffer.concat(chunks));
+  // Pass the known total so concat doesn't re-scan the chunk list for its length.
+  return new Uint8Array(Buffer.concat(chunks, total));
 }
 
 async function loadRef(
