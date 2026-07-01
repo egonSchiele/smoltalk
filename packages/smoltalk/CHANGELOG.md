@@ -1,5 +1,20 @@
 # Changelog
 
+## smoltalk 0.7.1 (2026-07-01)
+
+### Added
+- `redactAttachments()` is now exported: deep-copies a value with attachment payloads (base64 / data URIs) summarized, so logs and observability never carry large media blobs.
+
+## smoltalk 0.7.0 (2026-07-01)
+
+### Added
+- Image and PDF attachments on user messages: `imagePart()` and `filePart()` builders let a `userMessage` carry an image or PDF.
+- Provider Files API: `uploadFile()`, `deleteFile()`, and `registerFileProvider()` upload a file once to OpenAI, Anthropic, or Google and reference it by id as an attachment. Uploaded files persist until you call `deleteFile()`.
+- `getAllModels()` to enumerate the baked-in model catalog.
+
+### Changed
+- Hosted-tool validation errors now hint that OpenAI models can reach hosted tools through the `openai-responses` provider when the call is on the base `openai` provider.
+
 ## smoltalk 0.6.0 (2026-06-29)
 
 ### Added

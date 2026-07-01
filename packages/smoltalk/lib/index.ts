@@ -18,3 +18,4 @@ export { normalizeImageRef, loadBlob } from "./util/imageRef.js";
 export type { BlobRef } from "./util/imageRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
 export type { LogLevel } from "./util/logger.js";
+export { redactAttachments } from "./util/redact.js";
