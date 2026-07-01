@@ -11,6 +11,7 @@ export * from "./functions.js";
 export * from "./classes/ToolCall.js";
 export * from "./embed.js";
 export * from "./image.js";
+export * from "./files.js";
 export { normalizeImageRef, loadBlob } from "./util/imageRef.js";
 export type { BlobRef } from "./util/imageRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
