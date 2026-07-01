@@ -1,9 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-import type { FileProvider, FileProviderContext } from "../files.js";
+import type { FileProviderContext } from "../files.js";
 import type { ProviderFileRef } from "../classes/message/contentParts.js";
-import { Result, success, failure } from "../types/result.js";
-import { getLogger } from "../util/logger.js";
-import { redactSecret } from "../util/redact.js";
+import { BaseFileProvider } from "./BaseFileProvider.js";
 
 export function googleFileRef(
   uploaded: { name?: string; uri?: string; mimeType?: string; expirationTime?: string },
@@ -29,28 +27,22 @@ export function googleFileRef(
   };
 }
 
-export const googleFileProvider: FileProvider = {
-  async upload(data: Uint8Array, mimeType: string, ctx: FileProviderContext): Promise<Result<ProviderFileRef>> {
-    try {
-      const ai = new GoogleGenAI({ apiKey: ctx.apiKey });
-      // P2 (follow-up): `new Blob([data])` copies the buffer; prefer a no-copy /
-      // streaming form if the SDK supports it. Blob is acceptable for v1.
-      const blob = new Blob([data as BlobPart], { type: mimeType });
-      const uploaded = await ai.files.upload({ file: blob, config: { mimeType } });
-      return success(googleFileRef(uploaded as any, mimeType));
-    } catch (err) {
-      getLogger().error("Google file upload failed:", err);
-      return failure(`Google file upload failed: ${redactSecret((err as Error).message, ctx.apiKey)}`);
-    }
-  },
-  async delete(ref, ctx): Promise<Result<void>> {
-    try {
-      const ai = new GoogleGenAI({ apiKey: ctx.apiKey });
-      await ai.files.delete({ name: ref.id });
-      return success(undefined);
-    } catch (err) {
-      getLogger().error("Google file delete failed:", err);
-      return failure(`Google file delete failed: ${redactSecret((err as Error).message, ctx.apiKey)}`);
-    }
-  },
-};
+class GoogleFileProvider extends BaseFileProvider {
+  protected readonly label = "Google";
+
+  protected async doUpload(data: Uint8Array, mimeType: string, ctx: FileProviderContext): Promise<ProviderFileRef> {
+    const ai = new GoogleGenAI({ apiKey: ctx.apiKey });
+    // P2 (follow-up): `new Blob([data])` copies the buffer; prefer a no-copy /
+    // streaming form if the SDK supports it. Blob is acceptable for v1.
+    const blob = new Blob([data as BlobPart], { type: mimeType });
+    const uploaded = await ai.files.upload({ file: blob, config: { mimeType } });
+    return googleFileRef(uploaded as any, mimeType);
+  }
+
+  protected async doDelete(ref: ProviderFileRef, ctx: { apiKey: string }): Promise<void> {
+    const ai = new GoogleGenAI({ apiKey: ctx.apiKey });
+    await ai.files.delete({ name: ref.id });
+  }
+}
+
+export const googleFileProvider = new GoogleFileProvider();

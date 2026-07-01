@@ -203,6 +203,10 @@ describe("UserMessage providerFile serialization", () => {
     const msg: any = userMessage([filePart(gFile)]).toGoogleMessage();
     expect(msg.parts).toEqual([{ fileData: { fileUri: "https://x/files/abc", mimeType: "application/pdf" } }]);
   });
+  it("google throws on a providerFile missing uri/mimeType instead of emitting fileUri: undefined", () => {
+    const noUri = { kind: "providerFile", provider: "google", id: "files/x", mimeType: "application/pdf" } as const;
+    expect(() => userMessage([filePart(noUri)]).toGoogleMessage()).toThrow(/missing uri\/mimeType/);
+  });
   it("ollama throws on a providerFile image", () => {
     expect(() => userMessage([imagePart(oaFile)]).toOllamaMessage()).toThrow(/Ollama does not support/);
   });

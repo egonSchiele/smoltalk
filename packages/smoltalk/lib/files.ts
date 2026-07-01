@@ -1,9 +1,9 @@
-import { Result, success, failure } from "./types/result.js";
+import { Result, failure } from "./types/result.js";
 import type { SmolConfig } from "./types.js";
 import { ProviderFileRef } from "./classes/message/contentParts.js";
 import { BlobRef, loadBlob } from "./util/imageRef.js";
 import { fileFamily } from "./util/attachments.js";
-import { resolveApiKey, resolveBaseUrl } from "./util/provider.js";
+import { resolveApiKey } from "./util/provider.js";
 import { openaiFileProvider } from "./files/openai.js";
 import { anthropicFileProvider } from "./files/anthropic.js";
 import { googleFileProvider } from "./files/google.js";
@@ -33,18 +33,16 @@ export type UploadFileOptions = {
   /** Max resolved size in bytes. Default {@link DEFAULT_UPLOAD_BYTES} (100 MB). */
   maxBytes?: number;
   apiKey?: SmolConfig["apiKey"];
-  baseUrl?: SmolConfig["baseUrl"];
 };
 
 export type FileProviderContext = {
   apiKey: string;
-  baseUrl?: string;
   filename?: string;
 };
 
 export type FileProvider = {
   upload(data: Uint8Array, mimeType: string, ctx: FileProviderContext): Promise<Result<ProviderFileRef>>;
-  delete(ref: ProviderFileRef, ctx: { apiKey: string; baseUrl?: string }): Promise<Result<void>>;
+  delete(ref: ProviderFileRef, ctx: { apiKey: string }): Promise<Result<void>>;
 };
 
 const BUILT_INS: Record<"openai" | "anthropic" | "google", FileProvider> = {
@@ -56,6 +54,13 @@ const BUILT_INS: Record<"openai" | "anthropic" | "google", FileProvider> = {
 const registered: Record<string, FileProvider> = Object.create(null);
 export function registerFileProvider(name: string, impl: FileProvider): void {
   registered[name] = impl;
+}
+
+/** Test-only: clear all registered custom providers so registrations don't leak across tests. */
+export function _resetForTests(): void {
+  for (const name of Object.keys(registered)) {
+    delete registered[name];
+  }
 }
 
 // First-party built-ins win (not registry-overridable); unknown → registry.
@@ -96,13 +101,12 @@ export async function uploadFile(
   if (sel.builtin && !apiKey) {
     return failure(`No API key for provider "${opts.provider}". Set config.apiKey or the provider's env var.`);
   }
-  const baseUrl = resolveBaseUrl(opts.provider, { baseUrl: opts.baseUrl });
-  return sel.impl.upload(loaded.data, mimeType, { apiKey: apiKey ?? "", baseUrl, filename: opts.filename });
+  return sel.impl.upload(loaded.data, mimeType, { apiKey: apiKey ?? "", filename: opts.filename });
 }
 
 export async function deleteFile(
   ref: ProviderFileRef,
-  opts: { apiKey?: SmolConfig["apiKey"]; baseUrl?: SmolConfig["baseUrl"] } = {},
+  opts: { apiKey?: SmolConfig["apiKey"] } = {},
 ): Promise<Result<void>> {
   const sel = selectProvider(ref.provider);
   if (!sel) {
@@ -112,6 +116,5 @@ export async function deleteFile(
   if (sel.builtin && !apiKey) {
     return failure(`No API key for provider "${ref.provider}".`);
   }
-  const baseUrl = resolveBaseUrl(ref.provider, { baseUrl: opts.baseUrl });
-  return sel.impl.delete(ref, { apiKey: apiKey ?? "", baseUrl });
+  return sel.impl.delete(ref, { apiKey: apiKey ?? "" });
 }

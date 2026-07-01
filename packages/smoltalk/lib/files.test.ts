@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { uploadFile, deleteFile, registerFileProvider } from "./files.js";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { uploadFile, deleteFile, registerFileProvider, _resetForTests } from "./files.js";
 
 const okProvider = {
   upload: vi.fn(async (_d: Uint8Array, mimeType: string) => ({ success: true as const, value: { kind: "providerFile" as const, provider: "fake", id: "F1", mimeType } })),
@@ -7,6 +7,7 @@ const okProvider = {
 };
 
 describe("files dispatch", () => {
+  beforeEach(() => { _resetForTests(); });
   afterEach(() => { vi.clearAllMocks(); delete process.env.OPENAI_API_KEY; });
 
   const REJECTED = ["ollama", "openrouter", "deepinfra", "litellm", "openai-compat"];

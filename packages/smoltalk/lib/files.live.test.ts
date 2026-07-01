@@ -22,9 +22,13 @@ describe("files API live round-trip", () => {
       const up = await uploadFile({ kind: "bytes", data: PDF, mimeType: "application/pdf" }, { provider: c.provider });
       expect(up.success).toBe(true);
       if (!up.success) return;
-      const res = await textSync({ model: c.model as any, provider: c.callProvider, messages: [userMessage(["Reply OK.", filePart(up.value)])] });
-      expect(res.success).toBe(true);
-      expect((await deleteFile(up.value)).success).toBe(true);
+      try {
+        const res = await textSync({ model: c.model as any, provider: c.callProvider, messages: [userMessage(["Reply OK.", filePart(up.value)])] });
+        expect(res.success).toBe(true);
+      } finally {
+        // Always clean up the uploaded file, even if the assertion above threw.
+        expect((await deleteFile(up.value)).success).toBe(true);
+      }
     });
 
     // Image-by-file_id: only openai-responses + anthropic support it.
@@ -33,9 +37,12 @@ describe("files API live round-trip", () => {
         const up = await uploadFile({ kind: "bytes", data: PNG, mimeType: "image/png" }, { provider: c.provider });
         expect(up.success).toBe(true);
         if (!up.success) return;
-        const res = await textSync({ model: c.model as any, provider: c.callProvider, messages: [userMessage(["Reply OK.", imagePart(up.value)])] });
-        expect(res.success).toBe(true);
-        await deleteFile(up.value);
+        try {
+          const res = await textSync({ model: c.model as any, provider: c.callProvider, messages: [userMessage(["Reply OK.", imagePart(up.value)])] });
+          expect(res.success).toBe(true);
+        } finally {
+          await deleteFile(up.value);
+        }
       });
     }
   }
@@ -45,9 +52,12 @@ describe("files API live round-trip", () => {
     const up = await uploadFile({ kind: "bytes", data: PNG, mimeType: "image/png" }, { provider: "openai" });
     expect(up.success).toBe(true);
     if (!up.success) return;
-    const res = await textSync({ model: "gpt-4o" as any, provider: "openai", messages: [userMessage([imagePart(up.value)])] });
-    expect(res.success).toBe(false);
-    if (!res.success) expect(res.error).toMatch(/openai-responses/);
-    await deleteFile(up.value);
+    try {
+      const res = await textSync({ model: "gpt-4o" as any, provider: "openai", messages: [userMessage([imagePart(up.value)])] });
+      expect(res.success).toBe(false);
+      if (!res.success) expect(res.error).toMatch(/openai-responses/);
+    } finally {
+      await deleteFile(up.value);
+    }
   });
 });

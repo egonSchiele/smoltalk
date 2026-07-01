@@ -3,10 +3,8 @@ import {
   UserContentSchema,
   ImagePartSchema,
   FilePartSchema,
-  mapContentParts,
   ProviderFileRefSchema,
   AttachmentSourceSchema,
-  mapAttachmentSource,
 } from "./contentParts.js";
 
 describe("ProviderFileRef schema", () => {
@@ -22,21 +20,6 @@ describe("ProviderFileRef schema", () => {
     expect(AttachmentSourceSchema.safeParse({ kind: "providerFile", provider: "anthropic", id: "file_1" }).success).toBe(true);
     expect(AttachmentSourceSchema.safeParse({ kind: "base64", base64: "AAA", mimeType: "image/png" }).success).toBe(true);
     expect(AttachmentSourceSchema.safeParse({ kind: "blob" }).success).toBe(false);
-  });
-});
-
-describe("mapAttachmentSource", () => {
-  it("dispatches providerFile vs inline", () => {
-    const pf = mapAttachmentSource({ kind: "providerFile", provider: "openai", id: "f" }, {
-      onProviderFile: (r) => `PF:${r.id}`,
-      onInline: () => "INLINE",
-    });
-    const inl = mapAttachmentSource({ kind: "base64", base64: "A", mimeType: "image/png" }, {
-      onProviderFile: () => "PF",
-      onInline: (s) => `IN:${s.kind}`,
-    });
-    expect(pf).toBe("PF:f");
-    expect(inl).toBe("IN:base64");
   });
 });
 
@@ -66,30 +49,5 @@ describe("content part schemas", () => {
   it("parses a file part with optional filename omitted", () => {
     const part = { type: "file", source: { kind: "base64", base64: "AAA", mimeType: "application/pdf" } };
     expect(FilePartSchema.parse(part)).toEqual(part);
-  });
-});
-
-describe("mapContentParts", () => {
-  it("wraps a plain string as a single text result", () => {
-    const out = mapContentParts("hi", {
-      onText: (p) => `T:${p.text}`,
-      onImage: () => "I",
-      onFile: () => "F",
-    });
-    expect(out).toEqual(["T:hi"]);
-  });
-
-  it("dispatches each part to the matching visitor branch", () => {
-    const content = [
-      { type: "text", text: "a" },
-      { type: "image", source: { kind: "base64", base64: "X", mimeType: "image/png" } },
-      { type: "file", source: { kind: "base64", base64: "Y", mimeType: "application/pdf" } },
-    ] as const;
-    const out = mapContentParts(content as any, {
-      onText: (p) => `T:${p.text}`,
-      onImage: () => "I",
-      onFile: () => "F",
-    });
-    expect(out).toEqual(["T:a", "I", "F"]);
   });
 });

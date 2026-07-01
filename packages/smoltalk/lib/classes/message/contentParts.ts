@@ -68,21 +68,6 @@ export const AttachmentSourceSchema = z.discriminatedUnion("kind", [
   ProviderFileRefSchema,
 ]);
 
-export type AttachmentSourceVisitor<T> = {
-  onInline: (src: ImageRef) => T;
-  onProviderFile: (ref: ProviderFileRef) => T;
-};
-
-export function mapAttachmentSource<T>(
-  source: AttachmentSource,
-  v: AttachmentSourceVisitor<T>,
-): T {
-  if (source.kind === "providerFile") {
-    return v.onProviderFile(source);
-  }
-  return v.onInline(source);
-}
-
 export const ImagePartSchema = z.object({
   type: z.literal("image"),
   source: AttachmentSourceSchema,
@@ -101,33 +86,3 @@ export const UserContentPartSchema = z.discriminatedUnion("type", [
 ]);
 
 export const UserContentSchema = z.union([z.string(), z.array(UserContentPartSchema)]);
-
-/**
- * Visitor over user content. Encapsulates the string-vs-array walk so consumers
- * (serializers, JSON) stay declarative — "what to emit per part", not "how to loop".
- */
-export type ContentPartVisitor<T> = {
-  onText: (part: TextPart) => T;
-  onImage: (part: ImagePart) => T;
-  onFile: (part: FilePart) => T;
-};
-
-export function mapContentParts<T>(
-  content: UserContent,
-  visitor: ContentPartVisitor<T>,
-): T[] {
-  if (typeof content === "string") {
-    return [visitor.onText({ type: "text", text: content })];
-  }
-  const out: T[] = [];
-  for (const part of content) {
-    if (part.type === "text") {
-      out.push(visitor.onText(part));
-    } else if (part.type === "image") {
-      out.push(visitor.onImage(part));
-    } else {
-      out.push(visitor.onFile(part));
-    }
-  }
-  return out;
-}

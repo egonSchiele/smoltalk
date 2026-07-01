@@ -48,7 +48,9 @@ describe("loadBlob (no MIME gate)", () => {
     }
   });
   it("rejects non-http(s) URL schemes (S2)", async () => {
-    await expect(loadBlob({ kind: "url", url: "file:///etc/passwd" })).rejects.toThrow(/scheme/);
+    // Benign target: the scheme guard must reject before any file read, so even
+    // if it regressed this path points at nothing sensitive.
+    await expect(loadBlob({ kind: "url", url: "file:///smoltalk-nonexistent-scheme-test" })).rejects.toThrow(/scheme/);
     await expect(loadBlob({ kind: "url", url: "gopher://x/" })).rejects.toThrow(/scheme/);
   });
 });

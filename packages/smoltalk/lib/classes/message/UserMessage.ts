@@ -10,12 +10,14 @@ import {
   UserContentInput,
   UserContentPart,
   UserContentSchema,
-  AttachmentSource,
-  mapContentParts,
-  mapAttachmentSource,
 } from "./contentParts.js";
-import type { ImageRef } from "../../util/imageRef.js";
-import { refToBase64, toDataUri, openAiImageUrl, anthropicSource, attachmentFilename } from "../../util/attachments.js";
+import { refToBase64 } from "../../util/attachments.js";
+import { renderParts } from "./renderers/PartRenderer.js";
+import { OpenAIChatRenderer } from "./renderers/OpenAIChatRenderer.js";
+import { OpenAIResponsesRenderer } from "./renderers/OpenAIResponsesRenderer.js";
+import { GoogleRenderer } from "./renderers/GoogleRenderer.js";
+import { AnthropicRenderer } from "./renderers/AnthropicRenderer.js";
+import { JSONRenderer } from "./renderers/JSONRenderer.js";
 
 export const UserMessageJSONSchema = z.object({
   role: z.literal("user"),
@@ -94,24 +96,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     if (typeof this._content === "string") {
       return { role: this.role, content: this._content, name: this.name };
     }
-    const parts = mapContentParts<any>(this._content, {
-      onText: (p) => ({ type: "text", text: p.text }),
-      onImage: (p) => mapAttachmentSource<any>(p.source, {
-        onProviderFile: () => {
-          throw new Error(
-            "OpenAI Chat Completions cannot reference an image by file id; use the openai-responses provider or inline the image.",
-          );
-        },
-        onInline: (src) => ({ type: "image_url", image_url: { url: openAiImageUrl(src) } }),
-      }),
-      onFile: (p) => mapAttachmentSource<any>(p.source, {
-        onProviderFile: (ref) => ({ type: "file", file: { file_id: ref.id } }),
-        onInline: (src) => {
-          const { base64, mimeType } = refToBase64(src);
-          return { type: "file", file: { file_data: toDataUri(base64, mimeType), filename: attachmentFilename(p.filename) } };
-        },
-      }),
-    });
+    const parts = renderParts<any>(this._content, new OpenAIChatRenderer());
     return { role: this.role, content: parts as any, name: this.name } as ChatCompletionMessageParam;
   }
 
@@ -119,23 +104,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     if (typeof this._content === "string") {
       return { type: "message", role: "user", content: this._content } as ResponseInputItem;
     }
-    const content = mapContentParts<any>(this._content, {
-      onText: (p) => ({ type: "input_text", text: p.text }),
-      onImage: (p) => mapAttachmentSource<any>(p.source, {
-        onProviderFile: (ref) => ({ type: "input_image", file_id: ref.id }),
-        onInline: (src) => ({ type: "input_image", image_url: openAiImageUrl(src), detail: "auto" }),
-      }),
-      onFile: (p) => mapAttachmentSource<any>(p.source, {
-        onProviderFile: (ref) => ({ type: "input_file", file_id: ref.id }),
-        onInline: (src) => {
-          if (src.kind === "url") {
-            return { type: "input_file", file_url: src.url };
-          }
-          const { base64, mimeType } = refToBase64(src);
-          return { type: "input_file", file_data: toDataUri(base64, mimeType), filename: attachmentFilename(p.filename) };
-        },
-      }),
-    });
+    const content = renderParts<any>(this._content, new OpenAIResponsesRenderer());
     return { type: "message", role: "user", content } as ResponseInputItem;
   }
 
@@ -143,18 +112,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     if (typeof this._content === "string") {
       return { role: this.role, parts: [{ text: this._content }] };
     }
-    const toGooglePart = (source: AttachmentSource) => mapAttachmentSource<any>(source, {
-      onProviderFile: (ref) => ({ fileData: { fileUri: ref.uri, mimeType: ref.mimeType } }),
-      onInline: (src) => {
-        const { base64, mimeType } = refToBase64(src);
-        return { inlineData: { mimeType, data: base64 } };
-      },
-    });
-    const parts = mapContentParts<any>(this._content, {
-      onText: (p) => ({ text: p.text }),
-      onImage: (p) => toGooglePart(p.source),
-      onFile: (p) => toGooglePart(p.source),
-    });
+    const parts = renderParts<any>(this._content, new GoogleRenderer());
     return { role: this.role, parts };
   }
 
@@ -192,17 +150,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     if (typeof this._content === "string") {
       return { role: "user", content: this._content };
     }
-    const blocks = mapContentParts<any>(this._content, {
-      onText: (p) => ({ type: "text", text: p.text }),
-      onImage: (p) => mapAttachmentSource<any>(p.source, {
-        onProviderFile: (ref) => ({ type: "image", source: { type: "file", file_id: ref.id } }),
-        onInline: (src) => ({ type: "image", source: anthropicSource(src) }),
-      }),
-      onFile: (p) => mapAttachmentSource<any>(p.source, {
-        onProviderFile: (ref) => ({ type: "document", source: { type: "file", file_id: ref.id } }),
-        onInline: (src) => ({ type: "document", source: anthropicSource(src) }),
-      }),
-    });
+    const blocks = renderParts<any>(this._content, new AnthropicRenderer());
     return { role: "user", content: blocks };
   }
 }
@@ -235,21 +183,9 @@ function userContentToText(content: UserContent): string {
   return texts.join("\n");
 }
 
-function bytesRefToBase64(ref: AttachmentSource): AttachmentSource {
-  if (ref.kind === "bytes") {
-    const { base64, mimeType } = refToBase64(ref);
-    return { kind: "base64", base64, mimeType };
-  }
-  return ref;
-}
-
 function serializeUserContentForJSON(content: UserContent): UserContent {
   if (typeof content === "string") {
     return content;
   }
-  return mapContentParts<UserContentPart>(content, {
-    onText: (p) => p,
-    onImage: (p) => ({ type: "image", source: bytesRefToBase64(p.source) }),
-    onFile: (p) => ({ type: "file", source: bytesRefToBase64(p.source), filename: p.filename }),
-  });
+  return renderParts<UserContentPart>(content, new JSONRenderer());
 }
