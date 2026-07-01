@@ -11,6 +11,10 @@ export * from "./functions.js";
 export * from "./classes/ToolCall.js";
 export * from "./embed.js";
 export * from "./image.js";
-export { normalizeImageRef } from "./util/imageRef.js";
+// Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
+export { uploadFile, deleteFile, registerFileProvider, DEFAULT_UPLOAD_BYTES } from "./files.js";
+export type { UploadFileOptions, FileProviderContext, FileProvider } from "./files.js";
+export { normalizeImageRef, loadBlob } from "./util/imageRef.js";
+export type { BlobRef } from "./util/imageRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
 export type { LogLevel } from "./util/logger.js";

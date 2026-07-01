@@ -85,6 +85,27 @@ const result = await textSync("Solve this step by step", {
 // result.thinkingBlocks → [{ text: "Let me think...", signature: "WaUj..." }]
 ```
 
+## Files API
+
+`uploadFile(source, { provider })` uploads a file to a provider's Files API and
+returns a `ProviderFileRef` usable directly as an attachment (`filePart(ref)` /
+`imagePart(ref)`). `deleteFile(ref)` removes it. `registerFileProvider(name, impl)`
+adds a custom provider. Built-ins: openai, anthropic, google (others → Failure).
+OpenAI image-by-file_id requires the `openai-responses` provider.
+
+**Lifecycle (caller-owned):** uploaded files persist until you call `deleteFile`
+— OpenAI keeps them indefinitely (storage bills accrue), Anthropic applies a
+retention window (a cached ref can 404 later), Google auto-expires ~48 h
+(surfaced as `ProviderFileRef.expiresAt`). No list/GC helper in v1.
+
+**When to use it:** prefer `uploadFile` for files more than a few MB — it sends
+bytes directly, avoiding the ~1.3× base64 round-trip that inline attachments
+(bytes → base64 → provider) pay. Default size cap 100 MB (`opts.maxBytes`).
+
+**Security:** `{ kind: "path" }` reads any process-readable file and
+`{ kind: "url" }` fetches arbitrary http(s) URLs — do not pass untrusted paths
+or URLs. See `lib/files.ts` and `docs/superpowers/specs/2026-06-30-files-api-design.md`.
+
 ## Adding a New Provider
 
 There are two paths: **in-tree** (built into smoltalk core, like OpenAI/Anthropic/Google/Ollama) or **external plugin** (a separate package, like `smoltalk-llama-cpp`).

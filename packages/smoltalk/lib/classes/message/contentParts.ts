@@ -8,12 +8,12 @@ export type TextPart = {
 
 export type ImagePart = {
   type: "image";
-  source: ImageRef;
+  source: AttachmentSource;
 };
 
 export type FilePart = {
   type: "file";
-  source: ImageRef;
+  source: AttachmentSource;
   filename?: string;
 };
 
@@ -42,14 +42,40 @@ export const ImageRefSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+export type ProviderFileRef = {
+  kind: "providerFile";
+  provider: string;
+  id: string;
+  uri?: string;
+  mimeType?: string;
+  expiresAt?: number;
+};
+
+export const ProviderFileRefSchema = z.object({
+  kind: z.literal("providerFile"),
+  provider: z.string(),
+  id: z.string(),
+  uri: z.string().optional(),
+  mimeType: z.string().optional(),
+  expiresAt: z.number().optional(),
+});
+
+export type AttachmentSource = ImageRef | ProviderFileRef;
+
+// Compose from ImageRefSchema so future arms don't need mirroring here.
+export const AttachmentSourceSchema = z.discriminatedUnion("kind", [
+  ...ImageRefSchema.options,
+  ProviderFileRefSchema,
+]);
+
 export const ImagePartSchema = z.object({
   type: z.literal("image"),
-  source: ImageRefSchema,
+  source: AttachmentSourceSchema,
 });
 
 export const FilePartSchema = z.object({
   type: z.literal("file"),
-  source: ImageRefSchema,
+  source: AttachmentSourceSchema,
   filename: z.string().optional(),
 });
 
@@ -60,33 +86,3 @@ export const UserContentPartSchema = z.discriminatedUnion("type", [
 ]);
 
 export const UserContentSchema = z.union([z.string(), z.array(UserContentPartSchema)]);
-
-/**
- * Visitor over user content. Encapsulates the string-vs-array walk so consumers
- * (serializers, JSON) stay declarative — "what to emit per part", not "how to loop".
- */
-export type ContentPartVisitor<T> = {
-  onText: (part: TextPart) => T;
-  onImage: (part: ImagePart) => T;
-  onFile: (part: FilePart) => T;
-};
-
-export function mapContentParts<T>(
-  content: UserContent,
-  visitor: ContentPartVisitor<T>,
-): T[] {
-  if (typeof content === "string") {
-    return [visitor.onText({ type: "text", text: content })];
-  }
-  const out: T[] = [];
-  for (const part of content) {
-    if (part.type === "text") {
-      out.push(visitor.onText(part));
-    } else if (part.type === "image") {
-      out.push(visitor.onImage(part));
-    } else {
-      out.push(visitor.onFile(part));
-    }
-  }
-  return out;
-}

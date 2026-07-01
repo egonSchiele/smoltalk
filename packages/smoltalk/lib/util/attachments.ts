@@ -33,6 +33,20 @@ export function toDataUri(base64: string, mimeType: string): string {
   return `data:${mimeType};base64,${base64}`;
 }
 
+/** The Files-API namespace for a provider, or null when it has no Files API. */
+export function fileFamily(provider: string): "openai" | "anthropic" | "google" | null {
+  if (provider === "openai" || provider === "openai-responses") {
+    return "openai";
+  }
+  if (provider === "anthropic") {
+    return "anthropic";
+  }
+  if (provider === "google") {
+    return "google";
+  }
+  return null;
+}
+
 /**
  * OpenAI-style image URL: a passthrough `url` ref stays a remote URL; anything
  * else becomes a base64 data URI.

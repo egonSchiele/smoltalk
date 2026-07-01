@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { redactAttachments } from "./redact.js";
+import { redactAttachments, redactSecret } from "./redact.js";
 
 describe("redactAttachments", () => {
   it("summarizes a base64 data URI", () => {
@@ -27,5 +27,13 @@ describe("redactAttachments", () => {
   it("recurses into arrays and nested objects", () => {
     const out: any = redactAttachments({ messages: [{ content: [{ image_url: { url: "data:image/png;base64," + "A".repeat(5000) } }] }] });
     expect(out.messages[0].content[0].image_url.url).toContain("[redacted");
+  });
+});
+
+describe("redactSecret", () => {
+  it("scrubs the secret and no-ops on empty", () => {
+    expect(redactSecret("failed with key sk-abc123 in url", "sk-abc123")).toBe("failed with key [redacted] in url");
+    expect(redactSecret("no secret here", "")).toBe("no secret here");
+    expect(redactSecret("no secret here")).toBe("no secret here");
   });
 });

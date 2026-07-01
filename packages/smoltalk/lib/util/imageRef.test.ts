@@ -1,8 +1,59 @@
 import { describe, it, expect, vi } from "vitest";
-import { normalizeImageRef } from "./imageRef.js";
+import { normalizeImageRef, loadBlob } from "./imageRef.js";
 import { writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
+describe("loadBlob (no MIME gate)", () => {
+  it("loads a non-image base64 without gating", async () => {
+    const out = await loadBlob({ kind: "base64", base64: "AAA", mimeType: "text/csv" });
+    expect(out.mimeType).toBe("text/csv");
+  });
+  it("passes bytes through with its mime", async () => {
+    const out = await loadBlob({ kind: "bytes", data: new Uint8Array([1, 2]), mimeType: "application/zip" });
+    expect(out).toEqual({ data: new Uint8Array([1, 2]), mimeType: "application/zip" });
+  });
+  it("returns undefined mimeType for a path with an unknown extension (no gate)", async () => {
+    const path = join(tmpdir(), `smoltalk-blob-${Date.now()}.bin`);
+    writeFileSync(path, Buffer.from([1, 2]));
+    try {
+      const out = await loadBlob({ kind: "path", path });
+      expect(out.mimeType).toBeUndefined();
+      expect(Array.from(out.data)).toEqual([1, 2]);
+    } finally {
+      unlinkSync(path);
+    }
+  });
+  it("loads a url without gating on Content-Type", async () => {
+    const spy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
+      new Response(new Uint8Array([9]), { headers: { "content-type": "application/octet-stream" } }),
+    );
+    const out = await loadBlob({ kind: "url", url: "https://x/y" });
+    expect(out.mimeType).toBe("application/octet-stream");
+    spy.mockRestore();
+  });
+  it("enforces maxBytes on a bytes/base64 source (S1)", async () => {
+    const big = Buffer.alloc(100).toString("base64");
+    await expect(
+      loadBlob({ kind: "base64", base64: big, mimeType: "application/pdf" }, { maxBytes: 10 }),
+    ).rejects.toThrow(/exceeds the maximum size/);
+  });
+  it("rejects a path over maxBytes before reading it (S1)", async () => {
+    const path = join(tmpdir(), `smoltalk-blob-${Date.now()}-big.bin`);
+    writeFileSync(path, Buffer.alloc(100));
+    try {
+      await expect(loadBlob({ kind: "path", path }, { maxBytes: 10 })).rejects.toThrow(/exceeds the maximum size/);
+    } finally {
+      unlinkSync(path);
+    }
+  });
+  it("rejects non-http(s) URL schemes (S2)", async () => {
+    // Benign target: the scheme guard must reject before any file read, so even
+    // if it regressed this path points at nothing sensitive.
+    await expect(loadBlob({ kind: "url", url: "file:///smoltalk-nonexistent-scheme-test" })).rejects.toThrow(/scheme/);
+    await expect(loadBlob({ kind: "url", url: "gopher://x/" })).rejects.toThrow(/scheme/);
+  });
+});
 
 describe("normalizeImageRef", () => {
   it("passes through bytes refs", async () => {

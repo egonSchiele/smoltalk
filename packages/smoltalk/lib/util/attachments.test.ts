@@ -1,5 +1,19 @@
 import { describe, it, expect } from "vitest";
-import { refToBase64, toDataUri, openAiImageUrl, anthropicSource } from "./attachments.js";
+import { refToBase64, toDataUri, openAiImageUrl, anthropicSource, fileFamily } from "./attachments.js";
+
+describe("fileFamily", () => {
+  it("maps openai/openai-responses → openai; anthropic/google → self", () => {
+    expect(fileFamily("openai")).toBe("openai");
+    expect(fileFamily("openai-responses")).toBe("openai");
+    expect(fileFamily("anthropic")).toBe("anthropic");
+    expect(fileFamily("google")).toBe("google");
+  });
+  it("returns null for providers without a Files API and unknown names", () => {
+    for (const p of ["openrouter", "ollama", "deepinfra", "", "made-up"]) {
+      expect(fileFamily(p)).toBeNull();
+    }
+  });
+});
 
 describe("url passthrough helpers", () => {
   it("openAiImageUrl passes a url ref through, data-URIs a base64 ref", () => {
