@@ -1724,10 +1724,15 @@ function baselineModels(): ModelType[] {
   ] as ModelType[];
 }
 
-export function getModel(
-  modelName: ModelName,
-  requestData?: ModelDataBlob,
-): ModelType | undefined {
+/**
+ * All known models: the baked-in catalog merged with any registered
+ * (refreshed) model data and optional per-request overrides. This is the same
+ * data `getModel` searches, exposed as a list so callers can enumerate, filter,
+ * or display the catalog (e.g. a model picker). Fields worth filtering on live
+ * on `ModelType`: `provider`, `openWeights`, `inputTokenCost` / `outputTokenCost`,
+ * `maxInputTokens`, and `modalities`.
+ */
+export function getAllModels(requestData?: ModelDataBlob): ModelType[] {
   let models = baselineModels();
   if (registeredModelData) {
     models = mergeModelData(models, registeredModelData.models);
@@ -1735,7 +1740,16 @@ export function getModel(
   if (requestData) {
     models = mergeModelData(models, requestData.models);
   }
-  return models.find((model) => model.modelName === modelName);
+  return models;
+}
+
+export function getModel(
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): ModelType | undefined {
+  return getAllModels(requestData).find(
+    (model) => model.modelName === modelName,
+  );
 }
 
 /**
