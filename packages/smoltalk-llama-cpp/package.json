@@ -27,7 +27,7 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "node-llama-cpp": "^3.17.1"
+    "node-llama-cpp": "^3.19.0"
   },
   "peerDependencies": {
     "smoltalk": ">=0.5.1 <1.0.0"

@@ -31,7 +31,7 @@
   ],
   "license": "ISC",
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.83"
+    "@mlc-ai/web-llm": "^0.2.84"
   },
   "peerDependencies": {
     "smoltalk": ">=0.5.1 <1.0.0",
@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "smoltalk": "workspace:*",
-    "zod": "^4.3.6",
+    "zod": "^4.4.3",
     "jsdom": "^25.0.0"
   }
 }
