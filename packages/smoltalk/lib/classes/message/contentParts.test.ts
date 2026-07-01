@@ -4,7 +4,41 @@ import {
   ImagePartSchema,
   FilePartSchema,
   mapContentParts,
+  ProviderFileRefSchema,
+  AttachmentSourceSchema,
+  mapAttachmentSource,
 } from "./contentParts.js";
+
+describe("ProviderFileRef schema", () => {
+  it("parses full + minimal refs", () => {
+    const full = { kind: "providerFile", provider: "google", id: "files/abc", uri: "u", mimeType: "application/pdf", expiresAt: 1780000000000 };
+    expect(ProviderFileRefSchema.parse(full)).toEqual(full);
+    expect(ProviderFileRefSchema.parse({ kind: "providerFile", provider: "openai", id: "file-1" })).toBeTruthy();
+  });
+  it("rejects a ref missing id", () => {
+    expect(ProviderFileRefSchema.safeParse({ kind: "providerFile", provider: "openai" }).success).toBe(false);
+  });
+  it("AttachmentSourceSchema accepts providerFile and image refs, rejects an unknown kind", () => {
+    expect(AttachmentSourceSchema.safeParse({ kind: "providerFile", provider: "anthropic", id: "file_1" }).success).toBe(true);
+    expect(AttachmentSourceSchema.safeParse({ kind: "base64", base64: "AAA", mimeType: "image/png" }).success).toBe(true);
+    expect(AttachmentSourceSchema.safeParse({ kind: "blob" }).success).toBe(false);
+  });
+});
+
+describe("mapAttachmentSource", () => {
+  it("dispatches providerFile vs inline", () => {
+    const pf = mapAttachmentSource({ kind: "providerFile", provider: "openai", id: "f" }, {
+      onProviderFile: (r) => `PF:${r.id}`,
+      onInline: () => "INLINE",
+    });
+    const inl = mapAttachmentSource({ kind: "base64", base64: "A", mimeType: "image/png" }, {
+      onProviderFile: () => "PF",
+      onInline: (s) => `IN:${s.kind}`,
+    });
+    expect(pf).toBe("PF:f");
+    expect(inl).toBe("IN:base64");
+  });
+});
 
 describe("content part schemas", () => {
   it("accepts a plain string as user content", () => {

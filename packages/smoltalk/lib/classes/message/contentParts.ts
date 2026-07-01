@@ -42,6 +42,47 @@ export const ImageRefSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+export type ProviderFileRef = {
+  kind: "providerFile";
+  provider: string;
+  id: string;
+  uri?: string;
+  mimeType?: string;
+  expiresAt?: number;
+};
+
+export const ProviderFileRefSchema = z.object({
+  kind: z.literal("providerFile"),
+  provider: z.string(),
+  id: z.string(),
+  uri: z.string().optional(),
+  mimeType: z.string().optional(),
+  expiresAt: z.number().optional(),
+});
+
+export type AttachmentSource = ImageRef | ProviderFileRef;
+
+// Compose from ImageRefSchema so future arms don't need mirroring here.
+export const AttachmentSourceSchema = z.discriminatedUnion("kind", [
+  ...ImageRefSchema.options,
+  ProviderFileRefSchema,
+]);
+
+export type AttachmentSourceVisitor<T> = {
+  onInline: (src: ImageRef) => T;
+  onProviderFile: (ref: ProviderFileRef) => T;
+};
+
+export function mapAttachmentSource<T>(
+  source: AttachmentSource,
+  v: AttachmentSourceVisitor<T>,
+): T {
+  if (source.kind === "providerFile") {
+    return v.onProviderFile(source);
+  }
+  return v.onInline(source);
+}
+
 export const ImagePartSchema = z.object({
   type: z.literal("image"),
   source: ImageRefSchema,
