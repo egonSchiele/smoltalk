@@ -2,9 +2,11 @@ import { describe, it, expect } from "vitest";
 import { textSync } from "../functions.js";
 import { userMessage, imagePart } from "../classes/message/index.js";
 
-// A 1x1 transparent PNG, inlined so no binary fixture is needed.
-const PNG_1x1_BASE64 =
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+// A 64x64 RGB checkerboard PNG, inlined so no binary fixture is needed. It must
+// be a real image with dimensions: OpenAI and Anthropic reject a degenerate 1x1
+// image with "Could not process image" (Gemini tolerates it).
+const PNG_64x64_BASE64 =
+  "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAk0lEQVR4nO3PsQ2AABDDQMZh/3lYg54FSEFlLPn1pYvccY+7zvP1/9YffxsUgB4UgB4UgB70GWAZuvoAdB+A7gPQvR9gGbr6AHQfgO4D0L0fYBm6+gB0H4DuA9C9H2AZuvoAdB+A7gPQvR9gGbr6AHQfgO4D0L0fYBm6+gB0H4DuA9C9H2AZuvoAdB+A7gPQvR7wAIuiWeEFLZN7AAAAAElFTkSuQmCC";
 
 const cases = [
   { model: "gpt-4o", key: process.env.OPENAI_API_KEY },
@@ -24,7 +26,7 @@ describe("multimodal live", () => {
         messages: [
           userMessage([
             "Reply with the single word OK.",
-            imagePart({ kind: "base64", base64: PNG_1x1_BASE64, mimeType: "image/png" }),
+            imagePart({ kind: "base64", base64: PNG_64x64_BASE64, mimeType: "image/png" }),
           ]),
         ],
       });
