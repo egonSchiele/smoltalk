@@ -29,3 +29,12 @@ describe("redactAttachments", () => {
     expect(out.messages[0].content[0].image_url.url).toContain("[redacted");
   });
 });
+
+import { redactSecret } from "./redact.js";
+describe("redactSecret", () => {
+  it("scrubs the secret and no-ops on empty", () => {
+    expect(redactSecret("failed with key sk-abc123 in url", "sk-abc123")).toBe("failed with key [redacted] in url");
+    expect(redactSecret("no secret here", "")).toBe("no secret here");
+    expect(redactSecret("no secret here")).toBe("no secret here");
+  });
+});
