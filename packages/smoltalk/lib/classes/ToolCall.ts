@@ -8,16 +8,22 @@ export const ToolCallJSONSchema = z.object({
   id: z.string().default(""),
   name: z.string(),
   arguments: z.record(z.string(), z.any()).default({}),
+  // Google Gemini 3 attaches an encrypted thought signature to the same part as
+  // the function call; it must be echoed back verbatim during tool use.
+  thoughtSignature: z.string().optional(),
 });
 
 export type ToolCallJSON = z.infer<typeof ToolCallJSONSchema>;
 
-export type ToolCallOptions = {};
+export type ToolCallOptions = {
+  thoughtSignature?: string;
+};
 
 export class ToolCall {
   private _id: string;
   private _name: string;
   private _arguments: Record<string, any>;
+  private _thoughtSignature?: string;
   private logger: EgonLog;
 
   constructor(
@@ -28,6 +34,7 @@ export class ToolCall {
   ) {
     this._id = id;
     this._name = name;
+    this._thoughtSignature = options.thoughtSignature;
     this.logger = getLogger();
     if (typeof args === "string") {
       try {
@@ -61,11 +68,18 @@ export class ToolCall {
     return this._arguments;
   }
 
+  get thoughtSignature(): string | undefined {
+    return this._thoughtSignature;
+  }
+
   toJSON(): ToolCallJSON {
     return {
       id: this._id,
       name: this._name,
       arguments: this._arguments,
+      ...(this._thoughtSignature !== undefined && {
+        thoughtSignature: this._thoughtSignature,
+      }),
     };
   }
 
@@ -78,7 +92,9 @@ export class ToolCall {
       logger.debug("ToolCall payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse ToolCall");
     }
-    return new ToolCall(result.data.id, result.data.name, result.data.arguments);
+    return new ToolCall(result.data.id, result.data.name, result.data.arguments, {
+      thoughtSignature: result.data.thoughtSignature,
+    });
   }
 
   toOpenAI(): any {
@@ -92,12 +108,17 @@ export class ToolCall {
     };
   }
 
-  toGoogle(): { functionCall: FunctionCall } {
+  toGoogle(): { functionCall: FunctionCall; thoughtSignature?: string } {
     return {
       functionCall: {
         name: this.name,
         args: this.arguments,
       },
+      // Gemini 3 requires the original thought signature echoed back on the
+      // function-call part; omitting it fails validation during tool use.
+      ...(this._thoughtSignature !== undefined && {
+        thoughtSignature: this._thoughtSignature,
+      }),
     };
   }
 

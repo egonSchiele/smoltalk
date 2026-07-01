@@ -180,6 +180,14 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         toolGroups.push(entry);
       }
       genConfig.tools = toolGroups;
+      // Gemini rejects mixing built-in (server-side) tools with function calling
+      // unless the caller opts in. Only required when both kinds coexist.
+      if (tools.length > 0 && hostedEntries.length > 0) {
+        genConfig.toolConfig = {
+          ...genConfig.toolConfig,
+          includeServerSideToolInvocations: true,
+        };
+      }
     }
 
     if (config.responseFormat) {
@@ -369,8 +377,12 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         candidate.content.parts.forEach((part: any) => {
           if (part.functionCall) {
             const functionCall = part.functionCall;
+            // Gemini 3 rides the thought signature on the same part as the
+            // function call; capture it so it can be echoed back during tool use.
             toolCalls.push(
-              new ToolCall("", functionCall.name, functionCall.args),
+              new ToolCall("", functionCall.name, functionCall.args, {
+                thoughtSignature: part.thoughtSignature,
+              }),
             );
           } else if (part.thoughtSignature) {
             // Capture thought parts (thought: true indicates a thinking part)
@@ -451,7 +463,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     let content = "";
     const toolCallsMap = new Map<
       string,
-      { id: string; name: string; arguments: any }
+      { id: string; name: string; arguments: any; thoughtSignature?: string }
     >();
     const thinkingBlocks: ThinkingBlock[] = [];
     let usage: TokenUsage | undefined;
@@ -470,7 +482,36 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         for (const part of candidate?.content?.parts || []) {
           const p = part as any;
 
-          if (p.thoughtSignature) {
+          // Check functionCall first: Gemini 3 attaches the thought signature to
+          // the same part as the function call, so a thoughtSignature-first check
+          // would misfile the tool call as a thinking block and drop it.
+          if (p.functionCall) {
+            const id = p.functionCall.id || p.functionCall.name || "";
+            const name = p.functionCall.name || "";
+            const existing = toolCallsMap.get(id);
+            if (!existing) {
+              toolCallsMap.set(id, {
+                id,
+                name,
+                arguments: p.functionCall.args,
+                thoughtSignature: p.thoughtSignature,
+              });
+            } else {
+              // A later chunk can carry the thought signature (or fuller
+              // args/name) for a function call first seen without them.
+              // Backfill missing fields rather than dropping the update, so the
+              // signature isn't lost during tool-use round trips.
+              if (p.thoughtSignature && !existing.thoughtSignature) {
+                existing.thoughtSignature = p.thoughtSignature;
+              }
+              if (p.functionCall.args && !existing.arguments) {
+                existing.arguments = p.functionCall.args;
+              }
+              if (name && !existing.name) {
+                existing.name = name;
+              }
+            }
+          } else if (p.thoughtSignature) {
             const block: ThinkingBlock = {
               text: p.text || "",
               signature: p.thoughtSignature,
@@ -484,16 +525,6 @@ export class SmolGoogle extends BaseClient implements SmolClient {
           } else if (p.text) {
             content += p.text;
             yield { type: "text", text: p.text };
-          } else if (p.functionCall) {
-            const id = p.functionCall.id || p.functionCall.name || "";
-            const name = p.functionCall.name || "";
-            if (!toolCallsMap.has(id)) {
-              toolCallsMap.set(id, {
-                id,
-                name,
-                arguments: p.functionCall.args,
-              });
-            }
           }
         }
       }
@@ -505,7 +536,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     // Yield tool calls
     const toolCalls: ToolCall[] = [];
     for (const tc of toolCallsMap.values()) {
-      const toolCall = new ToolCall(tc.id, tc.name, tc.arguments);
+      const toolCall = new ToolCall(tc.id, tc.name, tc.arguments, {
+        thoughtSignature: tc.thoughtSignature,
+      });
       toolCalls.push(toolCall);
       yield { type: "tool_call", toolCall };
     }
