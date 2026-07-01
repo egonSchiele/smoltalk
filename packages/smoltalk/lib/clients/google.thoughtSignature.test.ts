@@ -105,3 +105,92 @@ describe("Google: thought_signature round-trip on functionCall parts (error 2)",
     expect(fcPart.thoughtSignature).toBe("SIG");
   });
 });
+
+// Wraps a fixed list of chunks as the async-iterable that
+// generateContentStream resolves to.
+function streamOf(chunks: any[]) {
+  return {
+    async *[Symbol.asyncIterator]() {
+      for (const c of chunks) yield c;
+    },
+  };
+}
+
+async function collect(gen: AsyncGenerator<any>): Promise<any[]> {
+  const out: any[] = [];
+  for await (const c of gen) out.push(c);
+  return out;
+}
+
+describe("Google: thought_signature on the streaming path (error 2)", () => {
+  it("captures thoughtSignature on a functionCall part without misfiling it as thinking", async () => {
+    const client = makeClient();
+    (client as any).client = {
+      models: {
+        generateContentStream: async () =>
+          streamOf([
+            {
+              candidates: [
+                {
+                  content: {
+                    parts: [
+                      {
+                        functionCall: { name: "researchAgent", args: { q: "hi" } },
+                        thoughtSignature: "SIG123",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ]),
+      },
+    };
+    const chunks = await collect(
+      (client as any)._textStream({ model: "gemini-3-pro-preview", messages: [] }),
+    );
+    // The part carries both functionCall and thoughtSignature; it must surface
+    // as a tool call (with the signature), not a thinking block.
+    expect(chunks.some((c) => c.type === "thinking")).toBe(false);
+    const toolCallChunk = chunks.find((c) => c.type === "tool_call");
+    expect(toolCallChunk).toBeDefined();
+    expect(toolCallChunk.toolCall.name).toBe("researchAgent");
+    expect(toolCallChunk.toolCall.thoughtSignature).toBe("SIG123");
+    const done = chunks.find((c) => c.type === "done");
+    expect(done.result.toolCalls[0].thoughtSignature).toBe("SIG123");
+  });
+
+  it("backfills a thoughtSignature that arrives in a later chunk than the functionCall", async () => {
+    const client = makeClient();
+    (client as any).client = {
+      models: {
+        generateContentStream: async () =>
+          streamOf([
+            {
+              candidates: [
+                { content: { parts: [{ functionCall: { name: "foo", args: { x: 1 } } }] } },
+              ],
+            },
+            {
+              candidates: [
+                {
+                  content: {
+                    parts: [{ functionCall: { name: "foo" }, thoughtSignature: "LATE" }],
+                  },
+                },
+              ],
+            },
+          ]),
+      },
+    };
+    const chunks = await collect(
+      (client as any)._textStream({ model: "gemini-3-pro-preview", messages: [] }),
+    );
+    const toolCalls = chunks.filter((c) => c.type === "tool_call");
+    // Deduped to a single call whose signature was backfilled from chunk 2.
+    expect(toolCalls).toHaveLength(1);
+    expect(toolCalls[0].toolCall.name).toBe("foo");
+    expect(toolCalls[0].toolCall.arguments).toEqual({ x: 1 });
+    expect(toolCalls[0].toolCall.thoughtSignature).toBe("LATE");
+  });
+});

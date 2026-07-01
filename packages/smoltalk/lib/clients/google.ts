@@ -488,13 +488,28 @@ export class SmolGoogle extends BaseClient implements SmolClient {
           if (p.functionCall) {
             const id = p.functionCall.id || p.functionCall.name || "";
             const name = p.functionCall.name || "";
-            if (!toolCallsMap.has(id)) {
+            const existing = toolCallsMap.get(id);
+            if (!existing) {
               toolCallsMap.set(id, {
                 id,
                 name,
                 arguments: p.functionCall.args,
                 thoughtSignature: p.thoughtSignature,
               });
+            } else {
+              // A later chunk can carry the thought signature (or fuller
+              // args/name) for a function call first seen without them.
+              // Backfill missing fields rather than dropping the update, so the
+              // signature isn't lost during tool-use round trips.
+              if (p.thoughtSignature && !existing.thoughtSignature) {
+                existing.thoughtSignature = p.thoughtSignature;
+              }
+              if (p.functionCall.args && !existing.arguments) {
+                existing.arguments = p.functionCall.args;
+              }
+              if (name && !existing.name) {
+                existing.name = name;
+              }
             }
           } else if (p.thoughtSignature) {
             const block: ThinkingBlock = {
