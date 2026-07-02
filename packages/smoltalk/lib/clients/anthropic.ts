@@ -38,16 +38,19 @@ import { Model } from "../model.js";
 const DEFAULT_MAX_TOKENS = 4096;
 
 // Normalize an Anthropic message's content to a block array for merging.
-// A non-empty string becomes a single text block; an empty string becomes no
-// blocks (Anthropic rejects empty text blocks).
+// Array content is passed through; a non-empty string becomes a single text
+// block; an empty string (or any other unexpected value) becomes no blocks
+// (Anthropic rejects empty text blocks). Guarding non-array values keeps the
+// exported merge helper from throwing on a spread if a caller passes content
+// that isn't the string | block[] the type promises.
 function anthropicContentToBlocks(content: string | any[]): any[] {
-  if (typeof content !== "string") {
+  if (Array.isArray(content)) {
     return content;
   }
-  if (content.length === 0) {
-    return [];
+  if (typeof content === "string" && content.length > 0) {
+    return [{ type: "text", text: content }];
   }
-  return [{ type: "text", text: content }];
+  return [];
 }
 
 // Anthropic requires strict user/assistant turn alternation. Collapse any run of

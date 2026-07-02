@@ -124,6 +124,15 @@ describe("mergeConsecutiveMessages", () => {
     mergeConsecutiveMessages(input);
     expect(input).toEqual(snapshot);
   });
+
+  it("does not throw when a same-role message has non-array, non-string content", () => {
+    const out = mergeConsecutiveMessages([
+      { role: "assistant", content: null },
+      { role: "assistant", content: "recovered" },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toEqual([{ type: "text", text: "recovered" }]);
+  });
 });
 
 describe("SmolAnthropic.buildRequest merges consecutive same-role messages", () => {

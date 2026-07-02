@@ -54,11 +54,16 @@ export function mergeConsecutiveMessages(messages: MessageParam[]): MessageParam
 ~267–296) is removed — the general helper subsumes it (a run of tool_result-only
 user messages still merges, plus every other same-role case).
 
-Ordering stays natural: `assistant(tool_use)` → `ToolMessage`(s) →
-`UserMessage` merges the tool-result user turn and the text user turn into one
-`[...tool_result, text]` user message, with tool_result blocks first (as
-Anthropic requires), because the tool messages precede the user message in the
-list.
+The helper preserves input order — it concatenates content in the order the
+messages appear and never reorders blocks. It does not itself enforce
+Anthropic's rule that a user turn responding to tool use must *begin* with the
+corresponding `tool_result` blocks; that ordering falls out of a well-formed
+message list, where the `ToolMessage`s already precede any following
+`UserMessage`. So in the normal flow `assistant(tool_use)` → `ToolMessage`(s) →
+`UserMessage`, the merged user turn is `[...tool_result, text]` (tool_result
+first). If instead a `UserMessage` precedes the `ToolMessage` in the list, the
+merged content is `[text, ...tool_result]` (text first) — order is preserved
+either way.
 
 `applyCacheBreakpoints` runs downstream on the merged array and already handles
 both string and array content, so it is unaffected.
