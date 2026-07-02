@@ -1,5 +1,10 @@
 # Changelog
 
+## smoltalk 0.9.0 (2026-07-02)
+
+### Fixed
+- Anthropic no longer errors on consecutive same-role turns: two or more user messages in a row (or a user message followed by tool results) are now merged into one message to satisfy Anthropic's strict user/assistant alternation. Generalizes the previous tool-result-only merge, so consecutive assistant turns collapse too.
+
 ## smoltalk 0.8.0 (2026-07-01)
 
 ### Fixed
