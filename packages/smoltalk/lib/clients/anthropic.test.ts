@@ -1,9 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { SmolAnthropic, applyCacheBreakpoints } from "./anthropic.js";
+import {
+  SmolAnthropic,
+  applyCacheBreakpoints,
+  mergeConsecutiveMessages,
+} from "./anthropic.js";
 import {
   SystemMessage,
   userMessage,
   assistantMessage,
+  ToolMessage,
 } from "../classes/message/index.js";
 import { z } from "zod";
 
@@ -30,6 +35,148 @@ describe("applyCacheBreakpoints with image content", () => {
 function build(client: SmolAnthropic, config: any) {
   return (client as any).buildRequest(config);
 }
+
+describe("mergeConsecutiveMessages", () => {
+  it("merges two consecutive user string messages into one", () => {
+    const out = mergeConsecutiveMessages([
+      { role: "user", content: "first" },
+      { role: "user", content: "second" },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].role).toBe("user");
+    expect(out[0].content).toEqual([
+      { type: "text", text: "first" },
+      { type: "text", text: "second" },
+    ]);
+  });
+
+  it("merges a user message followed by tool_result blocks (both role user)", () => {
+    const out = mergeConsecutiveMessages([
+      { role: "user", content: "please continue" },
+      {
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "t1", content: "42" }],
+      },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toEqual([
+      { type: "text", text: "please continue" },
+      { type: "tool_result", tool_use_id: "t1", content: "42" },
+    ]);
+  });
+
+  it("merges consecutive tool_result-only user messages (the pre-existing case)", () => {
+    const out = mergeConsecutiveMessages([
+      {
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "t1", content: "a" }],
+      },
+      {
+        role: "user",
+        content: [{ type: "tool_result", tool_use_id: "t2", content: "b" }],
+      },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toEqual([
+      { type: "tool_result", tool_use_id: "t1", content: "a" },
+      { type: "tool_result", tool_use_id: "t2", content: "b" },
+    ]);
+  });
+
+  it("merges consecutive assistant string messages into one", () => {
+    const out = mergeConsecutiveMessages([
+      { role: "assistant", content: "part one" },
+      { role: "assistant", content: "part two" },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].role).toBe("assistant");
+    expect(out[0].content).toEqual([
+      { type: "text", text: "part one" },
+      { type: "text", text: "part two" },
+    ]);
+  });
+
+  it("leaves an already-alternating conversation unchanged", () => {
+    const input = [
+      { role: "user", content: "hi" },
+      { role: "assistant", content: "hello" },
+      { role: "user", content: "bye" },
+    ] as any;
+    const out = mergeConsecutiveMessages(input);
+    expect(out).toEqual(input);
+  });
+
+  it("drops empty-string content instead of emitting an empty text block", () => {
+    const out = mergeConsecutiveMessages([
+      { role: "user", content: "" },
+      { role: "user", content: "real" },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toEqual([{ type: "text", text: "real" }]);
+  });
+
+  it("does not mutate the input messages", () => {
+    const input = [
+      { role: "user", content: "a" },
+      { role: "user", content: "b" },
+    ] as any;
+    const snapshot = JSON.parse(JSON.stringify(input));
+    mergeConsecutiveMessages(input);
+    expect(input).toEqual(snapshot);
+  });
+
+  it("does not throw when a same-role message has non-array, non-string content", () => {
+    const out = mergeConsecutiveMessages([
+      { role: "assistant", content: null },
+      { role: "assistant", content: "recovered" },
+    ] as any);
+    expect(out).toHaveLength(1);
+    expect(out[0].content).toEqual([{ type: "text", text: "recovered" }]);
+  });
+});
+
+describe("SmolAnthropic.buildRequest merges consecutive same-role messages", () => {
+  const client = new SmolAnthropic({
+    model: "claude-sonnet-4-6",
+    apiKey: { anthropic: "test-key" },
+    messages: [],
+  });
+
+  it("collapses two consecutive user messages into a single Anthropic turn", () => {
+    const { messages } = build(client, {
+      model: "claude-sonnet-4-6" as const,
+      messages: [
+        userMessage("first question"),
+        userMessage("actually, also this"),
+        assistantMessage("answering both"),
+      ],
+    });
+    const userTurns = messages.filter((m: any) => m.role === "user");
+    expect(userTurns).toHaveLength(1);
+    const texts = (userTurns[0].content as any[])
+      .filter((b) => b.type === "text")
+      .map((b) => b.text);
+    expect(texts).toEqual(["first question", "actually, also this"]);
+  });
+
+  it("merges a trailing tool result into the preceding user message", () => {
+    const { messages } = build(client, {
+      model: "claude-sonnet-4-6" as const,
+      messages: [
+        userMessage("use the tool then tell me"),
+        new ToolMessage("tool output", {
+          tool_call_id: "call_1",
+          name: "my_tool",
+        }),
+      ],
+    });
+    const userTurns = messages.filter((m: any) => m.role === "user");
+    expect(userTurns).toHaveLength(1);
+    const types = (userTurns[0].content as any[]).map((b) => b.type);
+    expect(types).toContain("text");
+    expect(types).toContain("tool_result");
+  });
+});
 
 describe("SmolAnthropic.buildRequest cache_control", () => {
   const client = new SmolAnthropic({
