@@ -37,6 +37,41 @@ import { Model } from "../model.js";
 
 const DEFAULT_MAX_TOKENS = 4096;
 
+// Normalize an Anthropic message's content to a block array for merging.
+// A non-empty string becomes a single text block; an empty string becomes no
+// blocks (Anthropic rejects empty text blocks).
+function anthropicContentToBlocks(content: string | any[]): any[] {
+  if (typeof content !== "string") {
+    return content;
+  }
+  if (content.length === 0) {
+    return [];
+  }
+  return [{ type: "text", text: content }];
+}
+
+// Anthropic requires strict user/assistant turn alternation. Collapse any run of
+// consecutive messages that share a role into a single message by concatenating
+// their content blocks. Does not mutate the input.
+export function mergeConsecutiveMessages(
+  messages: MessageParam[],
+): MessageParam[] {
+  const merged: MessageParam[] = [];
+  for (const msg of messages) {
+    const last = merged[merged.length - 1];
+    if (last && last.role === msg.role) {
+      const content = [
+        ...anthropicContentToBlocks(last.content as any),
+        ...anthropicContentToBlocks(msg.content as any),
+      ];
+      merged[merged.length - 1] = { ...last, content } as MessageParam;
+      continue;
+    }
+    merged.push(msg);
+  }
+  return merged;
+}
+
 export function anthropicWebSearchEntries(hostedTools?: string[]): any[] {
   if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
     return [{ type: "web_search_20250305", name: "web_search" }];
@@ -264,36 +299,22 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
 
     const system = systemParts.length > 0 ? systemParts.join("\n") : undefined;
 
-    // Convert remaining messages, merging consecutive tool_result user messages
-    const anthropicMessages: MessageParam[] = [];
+    // Convert remaining messages into Anthropic message params.
+    const converted: MessageParam[] = [];
     for (const msg of config.messages) {
       if (msg instanceof SystemMessage || msg instanceof DeveloperMessage) {
         continue;
       }
 
-      const converted = msg.toAnthropicMessage();
-      if (converted === null) continue;
-
-      // Merge consecutive tool_result user messages into one (required by Anthropic)
-      if (
-        converted.role === "user" &&
-        Array.isArray(converted.content) &&
-        (converted.content as any[]).every((c: any) => c.type === "tool_result")
-      ) {
-        const last = anthropicMessages[anthropicMessages.length - 1];
-        if (
-          last &&
-          last.role === "user" &&
-          Array.isArray(last.content) &&
-          (last.content as any[]).every((c: any) => c.type === "tool_result")
-        ) {
-          (last.content as any[]).push(...(converted.content as any[]));
-          continue;
-        }
-      }
-
-      anthropicMessages.push(converted as MessageParam);
+      const c = msg.toAnthropicMessage();
+      if (c === null) continue;
+      converted.push(c as MessageParam);
     }
+
+    // Anthropic requires strict user/assistant alternation — merge any run of
+    // consecutive same-role messages into one (e.g. two user turns, or a user
+    // turn followed by tool results, which also map to role "user").
+    const anthropicMessages = mergeConsecutiveMessages(converted);
 
     const functionTools =
       config.tools && config.tools.length > 0
