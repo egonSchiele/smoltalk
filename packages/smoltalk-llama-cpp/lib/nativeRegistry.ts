@@ -119,8 +119,9 @@ export function acquireModelEntry(
 /**
  * Dispose one model's native state. Awaits the per-model lock (nothing in
  * flight), drains pending checkpoint work under the context lock via
- * clearHistory(), then frees the context and model. Safe no-op for unknown
- * keys. `key` is the resolved model path (see acquireModelEntry).
+ * clearHistory(), then frees the context and model. If the drain throws, the
+ * context is intentionally leaked rather than freed (see below). Safe no-op for
+ * unknown keys. `key` is the resolved model path (see acquireModelEntry).
  */
 export async function disposeModel(key: string): Promise<void> {
   const entryPromise = registry[key];
@@ -136,14 +137,20 @@ export async function disposeModel(key: string): Promise<void> {
   }
 
   await entry.lock.runExclusive(async () => {
-    // Best-effort drain — must not block freeing the native resources.
+    // Drain pending checkpoint work under the context lock. This is what makes
+    // context.dispose() safe: clearHistory() serializes behind the fire-and-
+    // forget checkpoint worker (bug.md). If it throws we can't assume the
+    // worker finished, so freeing the context now would re-open the very
+    // use-after-free this package exists to prevent — leak instead of crash.
     try {
       await entry.sequence.clearHistory();
     } catch (error) {
       getLogger().warn(
-        "llama.cpp: clearHistory during dispose failed:",
+        "llama.cpp: clearHistory during dispose failed; leaking native context " +
+          "to avoid a use-after-free:",
         (error as Error).message,
       );
+      return;
     }
     await entry.context.dispose();
     await entry.model.dispose();

@@ -266,11 +266,18 @@ export class LlamaCPP extends BaseClient {
         genResult = await chat.generateResponse(chatHistory, options);
         meterAfter = entry.sequence.tokenMeter.getState();
       } finally {
-        chat.dispose();
+        // Both cleanup steps are best-effort: neither may mask the generation
+        // result or its error. The lock is released by runExclusive regardless.
+        try {
+          chat.dispose();
+        } catch (error) {
+          this.logger.warn(
+            "llama.cpp: chat.dispose after generation failed:",
+            (error as Error).message,
+          );
+        }
         // Reset KV state for the next call AND drain pending checkpoint work
         // under the context lock before the next call reuses the sequence.
-        // Best-effort: a drain failure must not mask the generation result or
-        // its error.
         try {
           await entry.sequence.clearHistory();
         } catch (error) {
@@ -425,7 +432,17 @@ export class LlamaCPP extends BaseClient {
           pushChunk({ type: "error", error: (error as Error).message });
         })
         .finally(async () => {
-          chat.dispose();
+          // Every cleanup step is guarded: a throw here would both wedge the
+          // per-model lock (release() is skipped below) and hang the generator
+          // (done/wake never run). Cleanup must always complete.
+          try {
+            chat.dispose();
+          } catch (error) {
+            this.logger.warn(
+              "llama.cpp: chat.dispose after stream failed:",
+              (error as Error).message,
+            );
+          }
           // Reset KV state and drain pending checkpoint work under the context
           // lock. NEVER context.dispose() here — that is the SIGSEGV (bug.md).
           try {
@@ -458,9 +475,10 @@ export class LlamaCPP extends BaseClient {
       // Wait for generation (and its clearHistory drain) to fully settle before
       // releasing the lock — even if the consumer broke out of the loop early —
       // so the next queued call never runs concurrently on the shared sequence.
-      // promptPromise never rejects (its own .catch swallows errors).
+      // The .catch guarantees release() always runs: a wedged per-model lock
+      // would hang every later call to this model for the process lifetime.
       if (promptPromise) {
-        await promptPromise;
+        await promptPromise.catch(() => {});
       }
       release();
     }

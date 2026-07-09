@@ -24,14 +24,20 @@ const h = vi.hoisted(() => {
     generate: 0,
     activeGenerate: 0,
     maxConcurrentGenerate: 0,
+    signalReceived: 0,
   };
-  // Fault injection: when true, sequence.clearHistory() rejects, simulating a
-  // drain failure. clearHistory is a best-effort drain and must never break
-  // generation results or block disposal.
-  const flags = { failClearHistory: false };
+  // Fault injection to exercise the failure paths the crash-safety of this
+  // package depends on.
+  const flags = {
+    failClearHistory: false, // sequence.clearHistory() rejects (drain failure)
+    failChatDispose: false, // chat.dispose() throws during cleanup
+    failLoadModelOnce: false, // first loadModel() rejects, then recovers
+  };
   const reset = () => {
     for (const k of Object.keys(counters)) (counters as any)[k] = 0;
     flags.failClearHistory = false;
+    flags.failChatDispose = false;
+    flags.failLoadModelOnce = false;
   };
   return { counters, flags, reset };
 });
@@ -51,6 +57,13 @@ vi.mock("node-llama-cpp", () => {
         counters.maxConcurrentGenerate,
         counters.activeGenerate,
       );
+      if (options?.signal) counters.signalReceived++;
+      // Mirror node-llama-cpp's stopOnAbortSignal: resolve normally (no throw)
+      // when the signal is already aborted, rather than running to completion.
+      if (options?.signal?.aborted && options?.stopOnAbortSignal) {
+        counters.activeGenerate--;
+        return { response: "", functionCalls: undefined };
+      }
       if (options?.onTextChunk) options.onTextChunk("hi");
       // yield the event loop so overlapping calls would actually overlap
       await new Promise((r) => setTimeout(r, 10));
@@ -61,7 +74,11 @@ vi.mock("node-llama-cpp", () => {
         functionCalls: undefined,
       };
     }
-    dispose() {}
+    dispose() {
+      if (h.flags.failChatDispose) {
+        throw new Error("simulated chat.dispose failure");
+      }
+    }
   }
 
   const makeSequence = () => ({
@@ -103,6 +120,10 @@ vi.mock("node-llama-cpp", () => {
   const makeLlama = () => ({
     async loadModel(_opts: any) {
       counters.loadModel++;
+      if (h.flags.failLoadModelOnce) {
+        h.flags.failLoadModelOnce = false;
+        throw new Error("simulated loadModel failure");
+      }
       return makeModel();
     },
     async createGrammarForJsonSchema(_schema: any) {
@@ -206,6 +227,23 @@ describe("native-state reuse", () => {
     expect(counters.clearHistory).toBe(2);
   });
 
+  it("does not wedge the lock if stream cleanup (chat.dispose) throws", async () => {
+    const client = makeClient("m.gguf");
+    flags.failChatDispose = true;
+
+    const chunks = await drainStream(
+      client._textStream({ messages: userMessages("s") } as any),
+    );
+    flags.failChatDispose = false;
+
+    // Stream still completed — cleanup throwing must not hang the generator.
+    expect(chunks.find((c) => c.type === "done")?.result.output).toBe("s-resp");
+
+    // The per-model lock was released, so a follow-up call is not wedged.
+    const next = await client._textSync({ messages: userMessages("t") } as any);
+    expect(next.success && next.value.output).toBe("t-resp");
+  });
+
   it("serializes concurrent calls on one model and loads it once", async () => {
     const client = makeClient("m.gguf");
 
@@ -237,6 +275,20 @@ describe("native-state reuse", () => {
     expect(counters.contextDispose).toBe(0);
   });
 
+  it("evicts a failed model load so the next call can retry", async () => {
+    const client = makeClient("m.gguf");
+    flags.failLoadModelOnce = true;
+
+    await expect(
+      client._textSync({ messages: userMessages("a") } as any),
+    ).rejects.toThrow(/simulated loadModel/);
+
+    // The cached rejection was evicted from the registry; a retry reloads.
+    const ok = await client._textSync({ messages: userMessages("b") } as any);
+    expect(ok.success && ok.value.output).toBe("b-resp");
+    expect(counters.loadModel).toBe(2);
+  });
+
   it("clears history between turns so calls are not contaminated", async () => {
     const client = makeClient("m.gguf");
 
@@ -265,6 +317,8 @@ describe("native-state reuse", () => {
       messages: userMessages("again"),
     } as any);
 
+    // The signal actually reached generateResponse (only the first call).
+    expect(counters.signalReceived).toBe(1);
     expect(aborted.success).toBe(true);
     expect(next.success && next.value.output).toBe("again-resp");
     expect(counters.clearHistory).toBe(2);
@@ -286,18 +340,18 @@ describe("native-state reuse", () => {
     flags.failClearHistory = false;
   });
 
-  it("disposeAll still frees native state when the drain fails", async () => {
+  it("skips native disposal when the drain fails (leak over crash)", async () => {
     const client = makeClient("m.gguf");
     await client._textSync({ messages: userMessages("a") } as any);
 
     flags.failClearHistory = true;
-    await disposeAll();
-
-    // A failing best-effort drain must not leak the context/model.
-    expect(counters.contextDispose).toBe(1);
-    expect(counters.modelDispose).toBe(1);
-
+    await disposeAll(); // must not throw
     flags.failClearHistory = false;
+
+    // A failed drain can't guarantee the checkpoint worker finished, so freeing
+    // the context now would re-open the use-after-free. Leak instead of crash.
+    expect(counters.contextDispose).toBe(0);
+    expect(counters.modelDispose).toBe(0);
   });
 
   it("disposeAll frees native state and a later call reloads", async () => {
