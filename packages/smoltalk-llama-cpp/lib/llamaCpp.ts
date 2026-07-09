@@ -269,7 +269,16 @@ export class LlamaCPP extends BaseClient {
         chat.dispose();
         // Reset KV state for the next call AND drain pending checkpoint work
         // under the context lock before the next call reuses the sequence.
-        await entry.sequence.clearHistory();
+        // Best-effort: a drain failure must not mask the generation result or
+        // its error.
+        try {
+          await entry.sequence.clearHistory();
+        } catch (error) {
+          this.logger.warn(
+            "llama.cpp: clearHistory after generation failed:",
+            (error as Error).message,
+          );
+        }
       }
       const { usage: u, cost: c } = this.calculateUsageAndCost(
         meterBefore,

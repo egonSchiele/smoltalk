@@ -5,6 +5,7 @@ import type {
   LlamaContext,
   LlamaContextSequence,
 } from "node-llama-cpp";
+import { getLogger } from "smoltalk";
 import path from "path";
 
 /**
@@ -135,7 +136,15 @@ export async function disposeModel(key: string): Promise<void> {
   }
 
   await entry.lock.runExclusive(async () => {
-    await entry.sequence.clearHistory();
+    // Best-effort drain — must not block freeing the native resources.
+    try {
+      await entry.sequence.clearHistory();
+    } catch (error) {
+      getLogger().warn(
+        "llama.cpp: clearHistory during dispose failed:",
+        (error as Error).message,
+      );
+    }
     await entry.context.dispose();
     await entry.model.dispose();
   });

@@ -25,10 +25,15 @@ const h = vi.hoisted(() => {
     activeGenerate: 0,
     maxConcurrentGenerate: 0,
   };
+  // Fault injection: when true, sequence.clearHistory() rejects, simulating a
+  // drain failure. clearHistory is a best-effort drain and must never break
+  // generation results or block disposal.
+  const flags = { failClearHistory: false };
   const reset = () => {
     for (const k of Object.keys(counters)) (counters as any)[k] = 0;
+    flags.failClearHistory = false;
   };
-  return { counters, reset };
+  return { counters, flags, reset };
 });
 
 vi.mock("node-llama-cpp", () => {
@@ -65,6 +70,9 @@ vi.mock("node-llama-cpp", () => {
     },
     async clearHistory() {
       counters.clearHistory++;
+      if (h.flags.failClearHistory) {
+        throw new Error("simulated clearHistory failure");
+      }
     },
   });
 
@@ -115,7 +123,7 @@ vi.mock("node-llama-cpp", () => {
 import { LlamaCPP } from "./llamaCpp.js";
 import { disposeAll } from "./nativeRegistry.js";
 
-const { counters, reset } = h;
+const { counters, flags, reset } = h;
 
 function makeClient(modelFile: string, dir = "/models") {
   return new LlamaCPP({
@@ -261,6 +269,35 @@ describe("native-state reuse", () => {
     expect(next.success && next.value.output).toBe("again-resp");
     expect(counters.clearHistory).toBe(2);
     expect(counters.contextDispose).toBe(0);
+  });
+
+  it("a clearHistory (drain) failure does not break the generation result", async () => {
+    const client = makeClient("m.gguf");
+    flags.failClearHistory = true;
+
+    const result = await client._textSync({
+      messages: userMessages("a"),
+    } as any);
+
+    // The drain is best-effort: a successful generation must still be returned.
+    expect(result.success && result.value.output).toBe("a-resp");
+    expect(counters.clearHistory).toBe(1);
+
+    flags.failClearHistory = false;
+  });
+
+  it("disposeAll still frees native state when the drain fails", async () => {
+    const client = makeClient("m.gguf");
+    await client._textSync({ messages: userMessages("a") } as any);
+
+    flags.failClearHistory = true;
+    await disposeAll();
+
+    // A failing best-effort drain must not leak the context/model.
+    expect(counters.contextDispose).toBe(1);
+    expect(counters.modelDispose).toBe(1);
+
+    flags.failClearHistory = false;
   });
 
   it("disposeAll frees native state and a later call reloads", async () => {
