@@ -46,3 +46,29 @@ const result = await text({
 ```
 
 `metadata.llamaCppModelDir` points to a directory containing your `.gguf` model files.
+
+## Lifecycle & concurrency
+
+Native model state is expensive to allocate and cannot be safely torn down
+mid-request, so this plugin keeps it alive and reuses it:
+
+- Each model is loaded **once per process** and cached (keyed by its resolved
+  path). The context and sequence are created once and reused across every
+  `text()` / `textStream()` call — smoltalk constructs a fresh client per call,
+  but the heavy native state is shared behind the scenes.
+- Requests to the **same model are serialized** (one generation at a time on
+  the shared sequence). Concurrent `text()` calls are safe but run one after
+  another; different models run independently.
+- Native state is retained until process exit. For long-lived embedders (and
+  tests), call `disposeAll()` when nothing is in flight to free every loaded
+  model, or `disposeModel(modelKey(dir, file))` for a single one:
+
+  ```ts
+  import { disposeAll } from "smoltalk-llama-cpp";
+  await disposeAll();
+  ```
+
+> Why reuse instead of a fresh context per call: disposing a `LlamaContext`
+> immediately after generation races `node-llama-cpp`'s internal checkpoint
+> worker on SWA/hybrid models (Qwen3, Gemma), causing a native use-after-free
+> crash (`SIGSEGV`). Reusing the context removes that crash class entirely.

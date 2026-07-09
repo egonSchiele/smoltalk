@@ -1,4 +1,4 @@
-import { getLlama, LlamaChat, LlamaLogLevel } from "node-llama-cpp";
+import { LlamaChat } from "node-llama-cpp";
 import type {
   ChatHistoryItem,
   ChatModelFunctions,
@@ -26,12 +26,9 @@ import {
 } from "smoltalk";
 import type { Message } from "smoltalk";
 import path from "path";
+import { acquireModelEntry } from "./nativeRegistry.js";
 
 export class LlamaCPP extends BaseClient {
-  private llama: Awaited<ReturnType<typeof getLlama>> | null = null;
-  private llamaModel: Awaited<
-    ReturnType<Awaited<ReturnType<typeof getLlama>>["loadModel"]>
-  > | null = null;
   private modelDir: string;
   private model: Model;
   private logger: ReturnType<typeof getLogger>;
@@ -51,11 +48,14 @@ export class LlamaCPP extends BaseClient {
     this.logger = getLogger();
   }
 
+  /**
+   * Warm the shared native state for this model (load + context allocation).
+   * Optional — the generation paths load lazily on first use — but callers can
+   * pay the cost up front. The context is created once and reused; it is never
+   * torn down here (see nativeRegistry.ts / bug.md).
+   */
   async setup() {
-    this.llama = await getLlama({ logLevel: LlamaLogLevel.error });
-    this.llamaModel = await this.llama.loadModel({
-      modelPath: path.join(this.modelDir, this.config.model),
-    });
+    await acquireModelEntry(this.modelDir, this.config.model);
   }
 
   private getModelName(): ModelName {
@@ -200,12 +200,6 @@ export class LlamaCPP extends BaseClient {
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
-    if (!this.llama || !this.llamaModel) {
-      await this.setup();
-    }
-    const setupLlama = this.llama!;
-    const setupModel = this.llamaModel!;
-
     const { chatHistory } = this.convertMessages(config.messages);
 
     if (chatHistory.length === 0) {
@@ -216,26 +210,22 @@ export class LlamaCPP extends BaseClient {
       });
     }
 
-    // Create grammar for response format
+    // Long-lived, shared native state for this model. The context/sequence are
+    // created once and reused — never disposed here (bug.md: per-call context
+    // disposal races the checkpoint worker => SIGSEGV on SWA models).
+    const entry = await acquireModelEntry(this.modelDir, this.config.model);
+
+    // Create grammar for response format (independent of the sequence, so it's
+    // fine outside the lock).
     let grammar;
     if (config.responseFormat) {
-      grammar = await setupLlama.createGrammarForJsonSchema(
+      grammar = await entry.llama.createGrammarForJsonSchema(
         config.responseFormat.toJSONSchema() as any,
       );
     }
 
-    // Create context and LlamaChat
-    const context = await setupModel.createContext();
-    const sequence = context.getSequence();
-    const chat = new LlamaChat({
-      contextSequence: sequence,
-    });
-
     // Build tools if provided
     const functions = this.buildFunctions(config.tools);
-
-    // Track token usage
-    const meterBefore = sequence.tokenMeter.getState();
 
     // Build options
     const options: Record<string, any> = {};
@@ -265,15 +255,44 @@ export class LlamaCPP extends BaseClient {
       messageCount: config.messages.length,
     } as any);
 
-    let result;
-    let meterAfter: TokenMeterState;
-    try {
-      result = await chat.generateResponse(chatHistory, options);
-      meterAfter = sequence.tokenMeter.getState();
-    } finally {
-      chat.dispose();
-      await context.dispose();
-    }
+    // Serialize generation on the shared sequence. Token-meter reads must be
+    // inside the lock so deltas are attributable to this call.
+    const { result, usage, cost } = await entry.lock.runExclusive(async () => {
+      const chat = new LlamaChat({ contextSequence: entry.sequence });
+      const meterBefore = entry.sequence.tokenMeter.getState();
+      let genResult;
+      let meterAfter: TokenMeterState;
+      try {
+        genResult = await chat.generateResponse(chatHistory, options);
+        meterAfter = entry.sequence.tokenMeter.getState();
+      } finally {
+        // Both cleanup steps are best-effort: neither may mask the generation
+        // result or its error. The lock is released by runExclusive regardless.
+        try {
+          chat.dispose();
+        } catch (error) {
+          this.logger.warn(
+            "llama.cpp: chat.dispose after generation failed:",
+            (error as Error).message,
+          );
+        }
+        // Reset KV state for the next call AND drain pending checkpoint work
+        // under the context lock before the next call reuses the sequence.
+        try {
+          await entry.sequence.clearHistory();
+        } catch (error) {
+          this.logger.warn(
+            "llama.cpp: clearHistory after generation failed:",
+            (error as Error).message,
+          );
+        }
+      }
+      const { usage: u, cost: c } = this.calculateUsageAndCost(
+        meterBefore,
+        meterAfter,
+      );
+      return { result: genResult, usage: u, cost: c };
+    });
 
     // Extract text output
     const output = result.response || null;
@@ -284,9 +303,6 @@ export class LlamaCPP extends BaseClient {
         | LlamaChatResponseFunctionCall<ChatModelFunctions>[]
         | undefined,
     );
-
-    // Calculate usage and cost
-    const { usage, cost } = this.calculateUsageAndCost(meterBefore, meterAfter);
 
     this.logger.debug("Response from llama.cpp:", output);
     this.statelogClient?.promptResponse({ output, usage, cost } as any);
@@ -301,12 +317,6 @@ export class LlamaCPP extends BaseClient {
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
-    if (!this.llama || !this.llamaModel) {
-      await this.setup();
-    }
-    const setupLlama = this.llama!;
-    const setupModel = this.llamaModel!;
-
     const { chatHistory } = this.convertMessages(config.messages);
 
     if (chatHistory.length === 0) {
@@ -317,128 +327,160 @@ export class LlamaCPP extends BaseClient {
       return;
     }
 
+    // Long-lived, shared native state for this model (see _textSync).
+    const entry = await acquireModelEntry(this.modelDir, this.config.model);
+
     // Create grammar for response format
     let grammar;
     if (config.responseFormat) {
-      grammar = await setupLlama.createGrammarForJsonSchema(
+      grammar = await entry.llama.createGrammarForJsonSchema(
         config.responseFormat.toJSONSchema() as any,
       );
     }
 
-    // Create context and LlamaChat
-    const context = await setupModel.createContext();
-    const sequence = context.getSequence();
-    const chat = new LlamaChat({
-      contextSequence: sequence,
-    });
-
     const functions = this.buildFunctions(config.tools);
 
-    const meterBefore = sequence.tokenMeter.getState();
+    // Serialize the whole stream on the shared sequence: hold the per-model
+    // lock from before generation until the stream is fully drained. Released
+    // in the finally below even on error/abort so the lock never wedges.
+    const release = await entry.lock.acquire();
+    let promptPromise: Promise<void> | undefined;
+    try {
+      const sequence = entry.sequence;
+      const chat = new LlamaChat({ contextSequence: sequence });
+      const meterBefore = sequence.tokenMeter.getState();
 
-    // Bridge callback-based streaming to async generator using a queue
-    const chunks: StreamChunk[] = [];
-    let resolveWaiter: (() => void) | null = null;
-    let done = false;
+      // Bridge callback-based streaming to async generator using a queue
+      const chunks: StreamChunk[] = [];
+      let resolveWaiter: (() => void) | null = null;
+      let done = false;
 
-    const pushChunk = (chunk: StreamChunk) => {
-      chunks.push(chunk);
-      if (resolveWaiter) {
-        resolveWaiter();
-        resolveWaiter = null;
-      }
-    };
-
-    // Build options
-    const options: Record<string, any> = {
-      onTextChunk: (text: string) => {
-        pushChunk({ type: "text", text });
-      },
-    };
-    if (config.maxTokens !== undefined) {
-      options.maxTokens = config.maxTokens;
-    }
-    if (config.temperature !== undefined) {
-      options.temperature = config.temperature;
-    }
-    if (config.abortSignal) {
-      options.signal = config.abortSignal;
-      options.stopOnAbortSignal = true;
-    }
-    if (grammar && !functions) {
-      options.grammar = grammar;
-    }
-    if (functions) {
-      options.functions = functions;
-    }
-    Object.assign(options, sanitizeAttributes(config.rawAttributes));
-
-    this.logger.debug("Sending streaming request to llama.cpp");
-    this.statelogClient?.promptRequest({
-      model: this.getModelName(),
-      messageCount: config.messages.length,
-    } as any);
-
-    // Run generateResponse in background, push chunks as they arrive
-    const promptPromise = chat
-      .generateResponse(chatHistory, options)
-      .then((result) => {
-        const meterAfter = sequence.tokenMeter.getState();
-
-        const toolCalls = this.extractToolCalls(
-          result.functionCalls as
-            | LlamaChatResponseFunctionCall<ChatModelFunctions>[]
-            | undefined,
-        );
-        for (const tc of toolCalls) {
-          pushChunk({ type: "tool_call", toolCall: tc });
-        }
-
-        const { usage, cost } = this.calculateUsageAndCost(
-          meterBefore,
-          meterAfter,
-        );
-        const output = result.response || null;
-
-        this.logger.debug("Streaming response completed from llama.cpp");
-        this.statelogClient?.promptResponse({ output, usage, cost } as any);
-
-        pushChunk({
-          type: "done",
-          result: {
-            output,
-            toolCalls,
-            usage,
-            cost,
-            model: this.getModelName(),
-          },
-        });
-      })
-      .catch((error) => {
-        pushChunk({ type: "error", error: (error as Error).message });
-      })
-      .finally(() => {
-        done = true;
-        chat.dispose();
-        context.dispose();
-        // Wake up the generator if it's waiting
+      const pushChunk = (chunk: StreamChunk) => {
+        chunks.push(chunk);
         if (resolveWaiter) {
           resolveWaiter();
           resolveWaiter = null;
         }
-      });
+      };
 
-    // Yield chunks as they arrive
-    while (!done || chunks.length > 0) {
-      if (chunks.length > 0) {
-        yield chunks.shift()!;
-      } else if (!done) {
-        await new Promise<void>((resolve) => {
-          resolveWaiter = resolve;
-        });
+      // Build options
+      const options: Record<string, any> = {
+        onTextChunk: (text: string) => {
+          pushChunk({ type: "text", text });
+        },
+      };
+      if (config.maxTokens !== undefined) {
+        options.maxTokens = config.maxTokens;
       }
-    }
+      if (config.temperature !== undefined) {
+        options.temperature = config.temperature;
+      }
+      if (config.abortSignal) {
+        options.signal = config.abortSignal;
+        options.stopOnAbortSignal = true;
+      }
+      if (grammar && !functions) {
+        options.grammar = grammar;
+      }
+      if (functions) {
+        options.functions = functions;
+      }
+      Object.assign(options, sanitizeAttributes(config.rawAttributes));
 
-    await promptPromise;
+      this.logger.debug("Sending streaming request to llama.cpp");
+      this.statelogClient?.promptRequest({
+        model: this.getModelName(),
+        messageCount: config.messages.length,
+      } as any);
+
+      // Run generateResponse in background, push chunks as they arrive
+      promptPromise = chat
+        .generateResponse(chatHistory, options)
+        .then((result) => {
+          const meterAfter = sequence.tokenMeter.getState();
+
+          const toolCalls = this.extractToolCalls(
+            result.functionCalls as
+              | LlamaChatResponseFunctionCall<ChatModelFunctions>[]
+              | undefined,
+          );
+          for (const tc of toolCalls) {
+            pushChunk({ type: "tool_call", toolCall: tc });
+          }
+
+          const { usage, cost } = this.calculateUsageAndCost(
+            meterBefore,
+            meterAfter,
+          );
+          const output = result.response || null;
+
+          this.logger.debug("Streaming response completed from llama.cpp");
+          this.statelogClient?.promptResponse({ output, usage, cost } as any);
+
+          pushChunk({
+            type: "done",
+            result: {
+              output,
+              toolCalls,
+              usage,
+              cost,
+              model: this.getModelName(),
+            },
+          });
+        })
+        .catch((error) => {
+          pushChunk({ type: "error", error: (error as Error).message });
+        })
+        .finally(async () => {
+          // Every cleanup step is guarded: a throw here would both wedge the
+          // per-model lock (release() is skipped below) and hang the generator
+          // (done/wake never run). Cleanup must always complete.
+          try {
+            chat.dispose();
+          } catch (error) {
+            this.logger.warn(
+              "llama.cpp: chat.dispose after stream failed:",
+              (error as Error).message,
+            );
+          }
+          // Reset KV state and drain pending checkpoint work under the context
+          // lock. NEVER context.dispose() here — that is the SIGSEGV (bug.md).
+          try {
+            await sequence.clearHistory();
+          } catch (error) {
+            this.logger.warn(
+              "llama.cpp: clearHistory after stream failed:",
+              (error as Error).message,
+            );
+          }
+          done = true;
+          // Wake up the generator if it's waiting
+          if (resolveWaiter) {
+            resolveWaiter();
+            resolveWaiter = null;
+          }
+        });
+
+      // Yield chunks as they arrive
+      while (!done || chunks.length > 0) {
+        if (chunks.length > 0) {
+          yield chunks.shift()!;
+        } else if (!done) {
+          await new Promise<void>((resolve) => {
+            resolveWaiter = resolve;
+          });
+        }
+      }
+    } finally {
+      // Wait for generation (and its clearHistory drain) to fully settle before
+      // releasing the lock — even if the consumer broke out of the loop early —
+      // so the next queued call never runs concurrently on the shared sequence.
+      // The .catch guarantees release() always runs: a wedged per-model lock
+      // would hang every later call to this model for the process lifetime.
+      if (promptPromise) {
+        await promptPromise.catch(() => {});
+      }
+      release();
+    }
   }
 }
