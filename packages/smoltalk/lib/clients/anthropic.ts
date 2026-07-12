@@ -557,11 +557,17 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     // Track server-side web_search blocks by index -> partial input JSON. The
     // query streams in as input_json_delta just like a client tool call; we
     // parse it once the block stops and emit a live `web_search` chunk.
-    const webSearchBlocks = new Map<number, { arguments: string }>();
+    const webSearchBlocks = new Map<
+      number,
+      { arguments: string; start: any }
+    >();
     // Accumulated hosted-tool signal for the final `done` result (parity with
-    // the non-streaming path's `hostedToolResults`).
+    // the non-streaming path's `hostedToolResults`): queries, sources,
+    // citations, billed count, and the raw provider blocks.
     const webSearchQueries: string[] = [];
     const webSearchSources: WebSearchSource[] = [];
+    const webSearchCitations: WebSearchCitation[] = [];
+    const webSearchRaw: any[] = [];
     let webSearchRequests: number | undefined;
     let inputTokens = 0;
     let cacheReadTokens = 0;
@@ -585,10 +591,16 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           event.content_block.type === "server_tool_use" &&
           event.content_block.name === "web_search"
         ) {
-          webSearchBlocks.set(event.index, { arguments: "" });
+          // Keep the start block so we can reconstruct the raw provider block
+          // (with its streamed `input`) at content_block_stop.
+          webSearchBlocks.set(event.index, {
+            arguments: "",
+            start: event.content_block,
+          });
         } else if (event.content_block.type === "web_search_tool_result") {
-          // Server tool results arrive whole (no deltas). Collect sources so
-          // the final `done` result carries them, matching _textSync.
+          // Server tool results arrive whole (no deltas). Collect sources and
+          // keep the raw block so the final `done` result matches _textSync.
+          webSearchRaw.push(event.content_block);
           for (const r of event.content_block.content || []) {
             if (r && typeof r.url === "string") {
               webSearchSources.push({ url: r.url, title: r.title });
@@ -620,6 +632,14 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           if (block) {
             block.signature = event.delta.signature;
           }
+        } else if (event.delta.type === "citations_delta") {
+          // Citations stream in one per delta (whereas _textSync reads them
+          // from the assembled text block's `citations` array). Collect any
+          // with a url so the done result's hostedToolResults match sync.
+          const c = event.delta.citation;
+          if (c && typeof c.url === "string") {
+            webSearchCitations.push({ url: c.url, title: c.title });
+          }
         }
       } else if (event.type === "content_block_stop") {
         // Emit thinking chunk once the block is fully assembled
@@ -635,12 +655,19 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         // consumers see the keywords live rather than only in the final result.
         const searchBlock = webSearchBlocks.get(event.index);
         if (searchBlock) {
-          let query: string | undefined;
+          // Delete first so a replayed/duplicate stop event can't emit the
+          // same query twice.
+          webSearchBlocks.delete(event.index);
+          let input: any;
           try {
-            query = JSON.parse(searchBlock.arguments || "{}")?.query;
+            input = JSON.parse(searchBlock.arguments || "{}");
           } catch {
             // Malformed/partial JSON — skip this block rather than throw.
           }
+          // Reconstruct the raw provider block (start header + streamed input)
+          // so hostedToolResults.raw matches the non-streaming shape.
+          webSearchRaw.push({ ...searchBlock.start, input });
+          const query = input?.query;
           if (typeof query === "string" && query.length > 0) {
             webSearchQueries.push(query);
             yield { type: "web_search", query };
@@ -696,9 +723,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     let cost = this.model.calculateCost(usage) ?? undefined;
 
     // Fold hosted-tool (web search) results into the done result so the
-    // streaming path reports the same `hostedToolResults` as _textSync. The
-    // live `web_search` chunks above already surfaced the queries; this is the
-    // durable record (queries + sources + billed cost).
+    // streaming path reports the same `hostedToolResults` shape as _textSync.
+    // The live `web_search` chunks above already surfaced the queries; this is
+    // the durable record (queries + sources + citations + billed cost + raw).
     let hostedToolResults: HostedToolResult[] = [];
     const usedWebSearch =
       webSearchQueries.length > 0 ||
@@ -710,7 +737,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           webSearchResult("anthropic", {
             queries: webSearchQueries,
             sources: webSearchSources,
+            citations: webSearchCitations,
             callCount: webSearchRequests,
+            raw: webSearchRaw,
           }),
         ],
         cost,

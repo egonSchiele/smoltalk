@@ -48,6 +48,14 @@ async function* fakeWebSearchStream() {
     index: 2,
     delta: { type: "text_delta", text: "It shipped." },
   };
+  yield {
+    type: "content_block_delta",
+    index: 2,
+    delta: {
+      type: "citations_delta",
+      citation: { type: "web_search_result_location", url: "https://a.dev/x", title: "A" },
+    },
+  };
   yield { type: "content_block_stop", index: 2 };
   yield {
     type: "message_delta",
@@ -97,7 +105,7 @@ describe("SmolAnthropic._textStream web search", () => {
     expect(searchIdx).toBeLessThan(doneIdx);
   });
 
-  it("folds queries and sources into the done result's hostedToolResults", async () => {
+  it("folds queries, sources, citations, callCount and raw into the done result (parity with _textSync)", async () => {
     const chunks = await collect();
     const done = chunks.find((c) => c.type === "done");
     expect(done?.type).toBe("done");
@@ -106,7 +114,50 @@ describe("SmolAnthropic._textStream web search", () => {
     expect(results[0].tool).toBe("web_search");
     expect(results[0].queries).toEqual(["claude opus 4.8 release date"]);
     expect(results[0].sources?.[0].url).toBe("https://a.dev/x");
+    expect(results[0].citations?.[0].url).toBe("https://a.dev/x");
     expect(results[0].callCount).toBe(1);
+    // raw preserves the provider blocks (server_tool_use then result), matching
+    // parseAnthropicHostedTools.
+    const raw = results[0].raw as any[];
+    expect(raw.some((b) => b.type === "server_tool_use" && b.input?.query === "claude opus 4.8 release date")).toBe(true);
+    expect(raw.some((b) => b.type === "web_search_tool_result")).toBe(true);
+  });
+
+  it("does not emit a duplicate web_search chunk if a stop event replays", async () => {
+    const client = new SmolAnthropic({
+      model: "claude-sonnet-4-6",
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    });
+    (client as any).client = {
+      messages: {
+        create: async () =>
+          (async function* () {
+            yield { type: "message_start", message: { usage: { input_tokens: 5 } } };
+            yield {
+              type: "content_block_start",
+              index: 0,
+              content_block: { type: "server_tool_use", name: "web_search" },
+            };
+            yield {
+              type: "content_block_delta",
+              index: 0,
+              delta: { type: "input_json_delta", partial_json: '{"query":"x"}' },
+            };
+            yield { type: "content_block_stop", index: 0 };
+            yield { type: "content_block_stop", index: 0 }; // replayed
+            yield { type: "message_delta", usage: { output_tokens: 1 } };
+          })(),
+      },
+    };
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of client._textStream({
+      model: "claude-sonnet-4-6",
+      messages: [userMessage("hi")],
+    } as any)) {
+      chunks.push(chunk);
+    }
+    expect(chunks.filter((c) => c.type === "web_search")).toHaveLength(1);
   });
 
   it("does not add hostedToolResults when no web search occurred", async () => {
