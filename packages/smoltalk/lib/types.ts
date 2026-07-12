@@ -214,6 +214,11 @@ export type StreamChunk =
   | { type: "text"; text: string }
   | { type: "thinking"; text: string; signature?: string }
   | { type: "tool_call"; toolCall: ToolCall }
+  /** A provider-run web search (server-side tool). Emitted the moment a
+   *  search block completes, so consumers can surface the query live. One
+   *  chunk per search; a turn may emit several. The same queries also appear
+   *  in the final `done` result's `hostedToolResults`. */
+  | { type: "web_search"; query: string }
   | { type: "done"; result: PromptResult }
   | { type: "error"; error: string }
   | { type: "timeout"; error: string };
