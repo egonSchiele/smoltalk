@@ -16,6 +16,7 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import {
+  SmolError,
   SmolContentPolicyError,
   SmolContextWindowExceededError,
   smolErrorForStatus,
@@ -36,6 +37,26 @@ export function googleWebSearchEntries(hostedTools?: string[]): any[] {
     return [{ googleSearch: {} }];
   }
   return [];
+}
+
+/**
+ * Whether a Gemini model can combine built-in tools (e.g. hosted web search)
+ * with function calling in a single request. Confirmed against the live API:
+ *   - Gemini 3+  : supported, but ONLY when `toolConfig
+ *     .includeServerSideToolInvocations` is set ("tool call context
+ *     circulation"). Without it the API 400s asking you to enable it.
+ *   - Gemini 2.5 and earlier: NOT supported by any means — the raw combination
+ *     400s with "Built-in tools and Function Calling cannot be combined", and
+ *     the flag 400s with "Tool call context circulation is not enabled for
+ *     <model>".
+ * Unknown / non-versioned model names default to supported (forward-looking):
+ * new models are expected to allow the combination.
+ * See egonSchiele/agency-lang#495.
+ */
+export function geminiSupportsToolCirculation(model: string): boolean {
+  const m = /^gemini-(\d+)/.exec(model);
+  if (!m) return true;
+  return parseInt(m[1], 10) >= 3;
 }
 
 export function parseGoogleHostedTools(
@@ -180,9 +201,25 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         toolGroups.push(entry);
       }
       genConfig.tools = toolGroups;
-      // Gemini rejects mixing built-in (server-side) tools with function calling
-      // unless the caller opts in. Only required when both kinds coexist.
+      // Combining built-in tools (hosted web search) with function calling is a
+      // Gemini feature ("tool call context circulation") that must be opted
+      // into via includeServerSideToolInvocations AND is only supported on
+      // Gemini 3+. On older models the combination is impossible: sending the
+      // flag 400s ("circulation is not enabled for <model>") and omitting it
+      // 400s ("Built-in tools and Function Calling cannot be combined"). Fail
+      // fast with an actionable message instead of a cryptic provider 400.
+      // See egonSchiele/agency-lang#495.
       if (tools.length > 0 && hostedEntries.length > 0) {
+        if (!geminiSupportsToolCirculation(this.getModel())) {
+          throw new SmolError(
+            `${this.getModel()} cannot use the hosted web_search tool together ` +
+              `with function tools in one request. Gemini only allows combining ` +
+              `built-in tools with function calling on Gemini 3+ models. Use a ` +
+              `Gemini 3+ model, switch to a client-side search tool instead of ` +
+              `the hosted web_search, or drop one of the two.`,
+            { status: 400 },
+          );
+        }
         genConfig.toolConfig = {
           ...genConfig.toolConfig,
           includeServerSideToolInvocations: true,
