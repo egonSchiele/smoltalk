@@ -77,6 +77,65 @@ describe("Google: thought_signature round-trip on functionCall parts (error 2)",
     expect(res.value.toolCalls[0].thoughtSignature).toBe("SIG123");
   });
 
+  it("treats an answer part carrying a thoughtSignature as output, not thinking", async () => {
+    const client = makeClient();
+    (client as any).client = {
+      models: {
+        // Gemini 3 rides a thoughtSignature on the final ANSWER part (no
+        // `thought: true`). The text must surface as output, not thinking.
+        generateContent: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: "The answer is 42.", thoughtSignature: "ANSWER_SIG" }],
+              },
+            },
+          ],
+          usageMetadata: {},
+        }),
+      },
+    };
+    const res = await (client as any).__textSync({
+      model: "gemini-3-pro-preview",
+      contents: [],
+      config: {},
+    });
+    expect(res.success).toBe(true);
+    expect(res.value.output).toBe("The answer is 42.");
+    expect(res.value.thinkingBlocks ?? []).toHaveLength(0);
+  });
+
+  it("captures a genuine thought part (thought: true) as a thinking block", async () => {
+    const client = makeClient();
+    (client as any).client = {
+      models: {
+        generateContent: async () => ({
+          candidates: [
+            {
+              content: {
+                parts: [
+                  { text: "Let me reason.", thought: true, thoughtSignature: "THINK_SIG" },
+                  { text: "Final answer.", thoughtSignature: "ANSWER_SIG" },
+                ],
+              },
+            },
+          ],
+          usageMetadata: {},
+        }),
+      },
+    };
+    const res = await (client as any).__textSync({
+      model: "gemini-3-pro-preview",
+      contents: [],
+      config: {},
+    });
+    expect(res.success).toBe(true);
+    expect(res.value.output).toBe("Final answer.");
+    expect(res.value.thinkingBlocks).toHaveLength(1);
+    expect(res.value.thinkingBlocks[0].text).toBe("Let me reason.");
+    expect(res.value.thinkingBlocks[0].signature).toBe("THINK_SIG");
+  });
+
   it("ToolCall.toGoogle() re-emits the thoughtSignature on the part", () => {
     const tc = new ToolCall("", "foo", { x: 1 }, { thoughtSignature: "SIG" });
     expect(tc.toGoogle()).toEqual({
@@ -158,6 +217,69 @@ describe("Google: thought_signature on the streaming path (error 2)", () => {
     expect(toolCallChunk.toolCall.thoughtSignature).toBe("SIG123");
     const done = chunks.find((c) => c.type === "done");
     expect(done.result.toolCalls[0].thoughtSignature).toBe("SIG123");
+  });
+
+  it("treats an answer part carrying a thoughtSignature as text, not thinking", async () => {
+    const client = makeClient();
+    (client as any).client = {
+      models: {
+        // Gemini 3 rides a thoughtSignature on the final ANSWER part (no
+        // `thought: true`). It must stream as text, not as a thinking block.
+        generateContentStream: async () =>
+          streamOf([
+            {
+              candidates: [
+                {
+                  content: {
+                    parts: [{ text: "The answer is 42.", thoughtSignature: "ANSWER_SIG" }],
+                  },
+                },
+              ],
+            },
+          ]),
+      },
+    };
+    const chunks = await collect(
+      (client as any)._textStream({ model: "gemini-3-pro-preview", messages: [] }),
+    );
+    expect(chunks.some((c) => c.type === "thinking")).toBe(false);
+    const textChunk = chunks.find((c) => c.type === "text");
+    expect(textChunk?.text).toBe("The answer is 42.");
+    const done = chunks.find((c) => c.type === "done");
+    expect(done.result.output).toBe("The answer is 42.");
+    expect(done.result.thinkingBlocks ?? []).toHaveLength(0);
+  });
+
+  it("captures a genuine thought part (thought: true) as a thinking block", async () => {
+    const client = makeClient();
+    (client as any).client = {
+      models: {
+        generateContentStream: async () =>
+          streamOf([
+            {
+              candidates: [
+                {
+                  content: {
+                    parts: [
+                      { text: "Let me reason.", thought: true, thoughtSignature: "THINK_SIG" },
+                      { text: "Final answer.", thoughtSignature: "ANSWER_SIG" },
+                    ],
+                  },
+                },
+              ],
+            },
+          ]),
+      },
+    };
+    const chunks = await collect(
+      (client as any)._textStream({ model: "gemini-3-pro-preview", messages: [] }),
+    );
+    const thinking = chunks.find((c) => c.type === "thinking");
+    expect(thinking?.text).toBe("Let me reason.");
+    expect(thinking?.signature).toBe("THINK_SIG");
+    const done = chunks.find((c) => c.type === "done");
+    expect(done.result.output).toBe("Final answer.");
+    expect(done.result.thinkingBlocks).toHaveLength(1);
   });
 
   it("backfills a thoughtSignature that arrives in a later chunk than the functionCall", async () => {

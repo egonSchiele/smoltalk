@@ -37,6 +37,33 @@ describe("geminiSupportsToolCirculation", () => {
   });
 });
 
+describe("SmolGoogle.buildRequest — thinking config", () => {
+  it("requests thought summaries (includeThoughts) when thinking is enabled", () => {
+    const req = build("gemini-3-flash-preview", {
+      thinking: { enabled: true, budgetTokens: 2000 },
+    });
+    expect(req.config.thinkingConfig?.includeThoughts).toBe(true);
+    expect(req.config.thinkingConfig?.thinkingBudget).toBe(2000);
+  });
+
+  it("enables includeThoughts even without an explicit budget", () => {
+    const req = build("gemini-3-flash-preview", { thinking: { enabled: true } });
+    expect(req.config.thinkingConfig?.includeThoughts).toBe(true);
+    expect(req.config.thinkingConfig?.thinkingBudget).toBeUndefined();
+  });
+
+  it("maps reasoningEffort to a budget without includeThoughts when thinking is off", () => {
+    const req = build("gemini-3-flash-preview", { reasoningEffort: "medium" });
+    expect(req.config.thinkingConfig?.thinkingBudget).toBe(8192);
+    expect(req.config.thinkingConfig?.includeThoughts).toBeUndefined();
+  });
+
+  it("sets no thinkingConfig when neither thinking nor reasoningEffort is set", () => {
+    const req = build("gemini-3-flash-preview", {});
+    expect(req.config.thinkingConfig).toBeUndefined();
+  });
+});
+
 describe("SmolGoogle.buildRequest — web_search + function tools", () => {
   it("sets includeServerSideToolInvocations on Gemini 3+", () => {
     const { config } = build("gemini-3-flash-preview", {

@@ -232,7 +232,19 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       genConfig.responseJsonSchema = config.responseFormat.toJSONSchema();
     }
 
-    if (!config.thinking?.enabled && config.reasoningEffort) {
+    if (config.thinking?.enabled) {
+      // Gemini only returns thought-summary parts (parts with `thought: true`,
+      // which populate PromptResult.thinkingBlocks) when includeThoughts is set.
+      // Without it the model still reasons, but returns only the encrypted
+      // thoughtSignature on the answer part — no visible reasoning text — so
+      // thinkingBlocks would come back empty.
+      genConfig.thinkingConfig = {
+        includeThoughts: true,
+        ...(config.thinking.budgetTokens !== undefined && {
+          thinkingBudget: config.thinking.budgetTokens,
+        }),
+      };
+    } else if (config.reasoningEffort) {
       const budgetMap = { low: 2048, medium: 8192, high: 16384 } as const;
       genConfig.thinkingConfig = {
         thinkingBudget: budgetMap[config.reasoningEffort],
@@ -421,13 +433,18 @@ export class SmolGoogle extends BaseClient implements SmolClient {
                 thoughtSignature: part.thoughtSignature,
               }),
             );
-          } else if (part.thoughtSignature) {
-            // Capture thought parts (thought: true indicates a thinking part)
+          } else if (part.thought) {
+            // A thinking part is identified by `thought: true` — NOT merely by
+            // the presence of a thoughtSignature. Gemini 3 also rides a
+            // thoughtSignature on the final answer part (no `thought` flag) for
+            // stateless reasoning continuity; keying on the signature alone
+            // would misfile that answer text as a thinking block and leave the
+            // output empty. See egonSchiele/agency-lang.
             thinkingBlocks.push({
               text: part.text || "",
-              signature: part.thoughtSignature,
+              signature: part.thoughtSignature || "",
             });
-          } else if (typeof part.text === "string" && !part.thought) {
+          } else if (typeof part.text === "string") {
             textContent += part.text;
           }
         });
@@ -548,10 +565,16 @@ export class SmolGoogle extends BaseClient implements SmolClient {
                 existing.name = name;
               }
             }
-          } else if (p.thoughtSignature) {
+          } else if (p.thought) {
+            // A thinking part is identified by `thought: true` — NOT merely by
+            // the presence of a thoughtSignature. Gemini 3 also rides a
+            // thoughtSignature on the final answer part (no `thought` flag) for
+            // stateless reasoning continuity; keying on the signature alone
+            // would misfile that answer text as a thinking block and drop it
+            // from the completion. See egonSchiele/agency-lang.
             const block: ThinkingBlock = {
               text: p.text || "",
-              signature: p.thoughtSignature,
+              signature: p.thoughtSignature || "",
             };
             thinkingBlocks.push(block);
             yield {
