@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { SmolAnthropic, responseFormatToolName } from "./anthropic.js";
+import { SmolAnthropic, anthropicSupportsStructuredOutput } from "./anthropic.js";
 import { userMessage } from "../classes/message/index.js";
 import { z } from "zod";
 
@@ -20,60 +20,40 @@ function build(client: SmolAnthropic, config: any) {
   return (client as any).buildRequest(config);
 }
 
-describe("responseFormatToolName", () => {
-  it("defaults to 'response'", () => {
-    expect(responseFormatToolName({ messages: [] } as any)).toBe("response");
-  });
-  it("sanitizes an invalid user-supplied name to Anthropic's tool-name charset", () => {
-    expect(
-      responseFormatToolName({
-        messages: [],
-        responseFormatOptions: { name: "My Plan!" },
-      } as any),
-    ).toBe("My_Plan_");
+describe("anthropicSupportsStructuredOutput", () => {
+  it("true for Claude 4.x+ / Sonnet 5 / Fable / unknown, false for 3.x and 2.x", () => {
+    expect(anthropicSupportsStructuredOutput("claude-opus-4-8")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("claude-sonnet-4-6")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("claude-haiku-4-5")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("claude-opus-4-5")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("claude-sonnet-5")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("claude-fable-5")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("some-future-model")).toBe(true);
+    expect(anthropicSupportsStructuredOutput("claude-3-7-sonnet-latest")).toBe(false);
+    expect(anthropicSupportsStructuredOutput("claude-3-5-haiku-latest")).toBe(false);
+    expect(anthropicSupportsStructuredOutput("claude-2.1")).toBe(false);
   });
 });
 
-describe("SmolAnthropic.buildRequest — structured output (Defect A)", () => {
-  it("registers the schema as a tool and forces it when no tools/thinking", () => {
+describe("SmolAnthropic.buildRequest — native structured output (Defect A)", () => {
+  it("emits output_config.format json_schema when responseFormat is set", () => {
     const client = makeClient();
-    const { tools, toolChoice, responseFormatToolName: name } = build(client, {
+    const { outputConfig, tools } = build(client, {
       model: "claude-sonnet-4-6",
       messages: [userMessage("classify this")],
       responseFormat: schema,
     });
-    expect(name).toBe("response");
-    const responseTool = tools.find((t: any) => t.name === "response");
-    expect(responseTool).toBeDefined();
-    expect(responseTool.input_schema.type).toBe("object");
-    expect(Object.keys(responseTool.input_schema.properties)).toEqual(
+    expect(outputConfig.format.type).toBe("json_schema");
+    expect(Object.keys(outputConfig.format.schema.properties)).toEqual(
       expect.arrayContaining(["path", "plan"]),
     );
-    // Forced single-tool use guarantees schema-conforming JSON on attempt 1.
-    expect(toolChoice).toEqual({
-      type: "tool",
-      name: "response",
-      disable_parallel_tool_use: true,
-    });
+    // No synthetic tool is added — structured output is not emulated via tools.
+    expect(tools).toBeUndefined();
   });
 
-  it("does NOT force tool_choice when extended thinking is enabled", () => {
-    const client = makeClient("claude-haiku-4-5");
-    const { tools, toolChoice } = build(client, {
-      model: "claude-haiku-4-5",
-      messages: [userMessage("classify this")],
-      responseFormat: schema,
-      thinking: { enabled: true, budgetTokens: 2000 },
-    });
-    // The response tool is still available for the model to call...
-    expect(tools.some((t: any) => t.name === "response")).toBe(true);
-    // ...but Anthropic rejects a forced tool_choice with thinking, so we don't force.
-    expect(toolChoice).toBeUndefined();
-  });
-
-  it("does NOT force tool_choice when the caller has function tools", () => {
+  it("keeps the caller's function tools alongside the format (they compose)", () => {
     const client = makeClient();
-    const { tools, toolChoice } = build(client, {
+    const { outputConfig, tools } = build(client, {
       model: "claude-sonnet-4-6",
       messages: [userMessage("classify this")],
       responseFormat: schema,
@@ -81,40 +61,58 @@ describe("SmolAnthropic.buildRequest — structured output (Defect A)", () => {
         { name: "lookup", description: "look things up", schema: z.object({ q: z.string() }) },
       ],
     });
-    expect(tools.some((t: any) => t.name === "response")).toBe(true);
-    expect(tools.some((t: any) => t.name === "lookup")).toBe(true);
-    // Forcing the response tool would prevent 'lookup' from ever being called.
-    expect(toolChoice).toBeUndefined();
+    // Native structured output + function calling in the same request.
+    expect(outputConfig.format.type).toBe("json_schema");
+    expect(tools).toHaveLength(1);
+    expect(tools[0].name).toBe("lookup");
   });
 
-  it("adds nothing when responseFormat is absent", () => {
+  it("merges effort and format into one output_config", () => {
+    const client = makeClient("claude-sonnet-4-6");
+    const { outputConfig } = build(client, {
+      model: "claude-sonnet-4-6",
+      messages: [userMessage("classify this")],
+      responseFormat: schema,
+      reasoningEffort: "high",
+    });
+    expect(outputConfig.effort).toBe("high");
+    expect(outputConfig.format.type).toBe("json_schema");
+  });
+
+  it("omits the format on legacy claude-3.x models (unsupported)", () => {
+    const client = makeClient("claude-3-7-sonnet-latest");
+    const { outputConfig } = build(client, {
+      model: "claude-3-7-sonnet-latest",
+      messages: [userMessage("classify this")],
+      responseFormat: schema,
+    });
+    // No native support → no output_config at all here (no effort set either).
+    expect(outputConfig).toBeUndefined();
+  });
+
+  it("adds no output_config.format when responseFormat is absent", () => {
     const client = makeClient();
-    const { tools, toolChoice, responseFormatToolName: name } = build(client, {
+    const { outputConfig } = build(client, {
       model: "claude-sonnet-4-6",
       messages: [userMessage("hi")],
     });
-    expect(tools).toBeUndefined();
-    expect(toolChoice).toBeUndefined();
-    expect(name).toBeUndefined();
+    expect(outputConfig).toBeUndefined();
   });
 });
 
-describe("SmolAnthropic._textSync — structured output extraction", () => {
-  it("surfaces the response tool's input as output, not as a tool call", async () => {
+describe("SmolAnthropic._textSync — structured output request wiring", () => {
+  it("sends output_config.format and returns the JSON text as output", async () => {
     const client = makeClient();
-    let sentToolChoice: any;
+    let sentRequest: any;
     (client as any).client = {
       messages: {
         create: async (req: any) => {
-          sentToolChoice = req.tool_choice;
+          sentRequest = req;
           return {
+            // Native structured output comes back as a normal text block whose
+            // content is guaranteed schema-conforming JSON.
             content: [
-              {
-                type: "tool_use",
-                id: "tu_1",
-                name: "response",
-                input: { path: "complex", plan: ["a", "b"] },
-              },
+              { type: "text", text: '{"path":"complex","plan":["a","b"]}' },
             ],
             usage: { input_tokens: 10, output_tokens: 5 },
           };
@@ -127,26 +125,26 @@ describe("SmolAnthropic._textSync — structured output extraction", () => {
       responseFormat: schema,
     });
     expect(res.success).toBe(true);
-    expect(sentToolChoice).toEqual({
-      type: "tool",
-      name: "response",
-      disable_parallel_tool_use: true,
-    });
-    // Structured value is surfaced as (stringified) output; NOT a tool call.
+    expect(sentRequest.output_config.format.type).toBe("json_schema");
+    expect(sentRequest.tool_choice).toBeUndefined();
     expect(res.value.toolCalls).toHaveLength(0);
     expect(JSON.parse(res.value.output)).toEqual({ path: "complex", plan: ["a", "b"] });
   });
 
-  it("still returns genuine (user) tool calls as tool calls", async () => {
+  it("returns genuine tool calls as tool calls (format + tools coexist)", async () => {
     const client = makeClient();
+    let sentRequest: any;
     (client as any).client = {
       messages: {
-        create: async () => ({
-          content: [
-            { type: "tool_use", id: "tu_1", name: "lookup", input: { q: "x" } },
-          ],
-          usage: { input_tokens: 10, output_tokens: 5 },
-        }),
+        create: async (req: any) => {
+          sentRequest = req;
+          return {
+            content: [
+              { type: "tool_use", id: "tu_1", name: "lookup", input: { q: "x" } },
+            ],
+            usage: { input_tokens: 10, output_tokens: 5 },
+          };
+        },
       },
     };
     const res = await (client as any)._textSync({
@@ -158,13 +156,17 @@ describe("SmolAnthropic._textSync — structured output extraction", () => {
       ],
     });
     expect(res.success).toBe(true);
+    // Both the format and the tool were sent on the same request.
+    expect(sentRequest.output_config.format.type).toBe("json_schema");
+    expect(sentRequest.tools).toHaveLength(1);
+    // The model chose to call the tool this turn.
     expect(res.value.toolCalls).toHaveLength(1);
     expect(res.value.toolCalls[0].name).toBe("lookup");
     expect(res.value.output).toBeNull();
   });
 });
 
-describe("SmolAnthropic._textStream — structured output extraction", () => {
+describe("SmolAnthropic._textStream — structured output request wiring", () => {
   function streamOf(events: any[]) {
     return {
       async *[Symbol.asyncIterator]() {
@@ -173,31 +175,34 @@ describe("SmolAnthropic._textStream — structured output extraction", () => {
     };
   }
 
-  it("surfaces the response tool's streamed args as output, not a tool call", async () => {
+  it("sends output_config.format and streams the JSON as text/output", async () => {
     const client = makeClient();
+    let sentRequest: any;
     (client as any).client = {
       messages: {
-        create: async () =>
-          streamOf([
+        create: async (req: any) => {
+          sentRequest = req;
+          return streamOf([
             { type: "message_start", message: { usage: { input_tokens: 3 } } },
             {
               type: "content_block_start",
               index: 0,
-              content_block: { type: "tool_use", id: "tu_1", name: "response" },
+              content_block: { type: "text", text: "" },
             },
             {
               type: "content_block_delta",
               index: 0,
-              delta: { type: "input_json_delta", partial_json: '{"path":"simple",' },
+              delta: { type: "text_delta", text: '{"path":"simple",' },
             },
             {
               type: "content_block_delta",
               index: 0,
-              delta: { type: "input_json_delta", partial_json: '"plan":["x"]}' },
+              delta: { type: "text_delta", text: '"plan":["x"]}' },
             },
             { type: "content_block_stop", index: 0 },
             { type: "message_delta", usage: { output_tokens: 7 } },
-          ]),
+          ]);
+        },
       },
     };
     const chunks: any[] = [];
@@ -208,7 +213,7 @@ describe("SmolAnthropic._textStream — structured output extraction", () => {
     })) {
       chunks.push(c);
     }
-    // No tool_call chunk leaks for the synthetic response tool.
+    expect(sentRequest.output_config.format.type).toBe("json_schema");
     expect(chunks.some((c) => c.type === "tool_call")).toBe(false);
     const done = chunks.find((c) => c.type === "done");
     expect(done.result.toolCalls).toHaveLength(0);
