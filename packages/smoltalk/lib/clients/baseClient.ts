@@ -370,7 +370,12 @@ export class BaseClient implements SmolClient {
           promptConfig.responseFormatOptions?.allowExtraKeys ?? false;
 
         try {
-          const parsed = JSON.parse(output);
+          // Strip any ```json … ``` fence before parsing. Models (notably
+          // Anthropic on the prompt-based path) routinely wrap structured
+          // output in a markdown fence; feeding that straight to JSON.parse
+          // throws and burns a retry. stripCodeFence is a no-op on unfenced
+          // JSON, so this is safe for every provider.
+          const parsed = JSON.parse(stripCodeFence(output));
           const parseResult = this.extractResponse(
             promptConfig,
             parsed,

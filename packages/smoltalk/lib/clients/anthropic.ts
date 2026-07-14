@@ -75,6 +75,22 @@ export function mergeConsecutiveMessages(
   return merged;
 }
 
+/** Default name for the synthetic structured-output tool (mirrors the OpenAI
+ * client's default json_schema name). */
+const RESPONSE_FORMAT_TOOL_FALLBACK = "response";
+
+/**
+ * Derive a valid Anthropic tool name for the synthetic structured-output tool.
+ * Anthropic tool names must match /^[a-zA-Z0-9_-]+$/ and be ≤64 chars; the
+ * user-supplied `responseFormatOptions.name` (which OpenAI accepts more loosely)
+ * is sanitized so a name that works on OpenAI doesn't 400 on Anthropic.
+ */
+export function responseFormatToolName(config: SmolConfig): string {
+  const raw = config.responseFormatOptions?.name || RESPONSE_FORMAT_TOOL_FALLBACK;
+  const sanitized = raw.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 64);
+  return sanitized.length > 0 ? sanitized : RESPONSE_FORMAT_TOOL_FALLBACK;
+}
+
 export function anthropicWebSearchEntries(hostedTools?: string[]): any[] {
   if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
     return [{ type: "web_search_20250305", name: "web_search" }];
@@ -292,6 +308,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     tools: Tool[] | undefined;
     thinking: ThinkingParam | undefined;
     outputConfig: OutputConfig | undefined;
+    toolChoice: { type: "tool"; name: string; disable_parallel_tool_use?: boolean } | undefined;
+    responseFormatToolName: string | undefined;
   } {
     // Split system/developer messages out into the top-level `system` param
     const systemParts = config.messages
@@ -328,7 +346,28 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ) as Tool[])
         : [];
     const hostedEntries = anthropicWebSearchEntries(config.hostedTools);
-    const allTools = [...functionTools, ...hostedEntries] as Tool[];
+
+    // Provider-native structured output. Anthropic has no `response_format`, so
+    // we register the response schema as a synthetic tool: the model returns the
+    // result by calling it, and the tool's `input` is guaranteed to match the
+    // schema — no prose, no markdown fences. This mirrors what the OpenAI client
+    // gets from a native `response_format` json_schema request. Without this,
+    // structured output degrades to "ask in the prompt and hope", which Claude
+    // routinely breaks by wrapping the JSON in a ```json fence.
+    const formatToolName = responseFormatToolName(config);
+    const responseTool: Tool | undefined = config.responseFormat
+      ? zodToAnthropicTool(formatToolName, config.responseFormat, {
+          description:
+            "Return your final answer by calling this tool with the structured " +
+            "result. Respond ONLY via this tool, not with plain text.",
+        })
+      : undefined;
+
+    const allTools = [
+      ...functionTools,
+      ...hostedEntries,
+      ...(responseTool ? [responseTool] : []),
+    ] as Tool[];
     const tools = allTools.length > 0 ? allTools : undefined;
 
     // Normalize the user's provider-agnostic thinking/effort config into the
@@ -336,13 +375,36 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     // `reasoningEffort` are treated as a request to think.
     const { thinking, outputConfig } = this.resolveThinking(config);
 
+    // Force the model to emit structured output via the response tool — but only
+    // when it's safe. Anthropic rejects a forced tool_choice together with
+    // extended thinking (400), and forcing the response tool alongside the
+    // caller's own function tools would stop those tools from ever being called.
+    // In those two cases the response tool is still available but tool_choice
+    // stays on auto; the fence stripper + retry in the base client recover a
+    // plain-text / fenced reply. With neither obstacle, forcing guarantees a
+    // schema-conforming result on the first attempt.
+    const toolChoice =
+      responseTool && thinking === undefined && functionTools.length === 0
+        ? {
+            type: "tool" as const,
+            name: formatToolName,
+            disable_parallel_tool_use: true,
+          }
+        : undefined;
+
     const cachingEnabled = config.caching?.enabled !== false;
     const baseRequest = { system, messages: anthropicMessages, tools };
     const finalRequest = cachingEnabled
       ? applyCacheBreakpoints(baseRequest)
       : baseRequest;
 
-    return { ...finalRequest, thinking, outputConfig };
+    return {
+      ...finalRequest,
+      thinking,
+      outputConfig,
+      toolChoice,
+      responseFormatToolName: responseTool ? formatToolName : undefined,
+    };
   }
 
   /**
@@ -412,7 +474,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
-    const { system, messages, tools, thinking, outputConfig } =
+    const { system, messages, tools, thinking, outputConfig, toolChoice, responseFormatToolName } =
       this.buildRequest(config);
 
     let debugData = {
@@ -423,6 +485,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       tools,
       thinking,
       output_config: outputConfig,
+      tool_choice: toolChoice,
     };
     this.logger.debug("Sending request to Anthropic:", redactAttachments(debugData));
     this.statelogClient?.promptRequest(debugData);
@@ -437,6 +500,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           messages,
           ...(system && { system }),
           ...(tools && { tools }),
+          ...(toolChoice && { tool_choice: toolChoice }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
           ...(config.temperature !== undefined && {
@@ -462,13 +526,22 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       if (block.type === "text") {
         output = (output ?? "") + block.text;
       } else if (block.type === "tool_use") {
-        toolCalls.push(
-          new ToolCall(
-            block.id,
-            block.name,
-            block.input as Record<string, any>,
-          ),
-        );
+        if (responseFormatToolName && block.name === responseFormatToolName) {
+          // Structured output arrived via the synthetic response tool. Surface
+          // its schema-validated `input` as the completion (stringified) so the
+          // base client's existing parse/validate path handles it uniformly —
+          // and do NOT expose it as a tool call, which would make the base
+          // client short-circuit and the caller try to "execute" it.
+          output = JSON.stringify(block.input);
+        } else {
+          toolCalls.push(
+            new ToolCall(
+              block.id,
+              block.name,
+              block.input as Record<string, any>,
+            ),
+          );
+        }
       } else if ((block as any).type === "thinking") {
         const b = block as any;
         thinkingBlocks.push({ text: b.thinking, signature: b.signature });
@@ -501,7 +574,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
-    const { system, messages, tools, thinking, outputConfig } =
+    const { system, messages, tools, thinking, outputConfig, toolChoice, responseFormatToolName } =
       this.buildRequest(config);
 
     const streamDebugData = {
@@ -512,6 +585,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       tools,
       thinking,
       output_config: outputConfig,
+      tool_choice: toolChoice,
     };
     this.logger.debug(
       "Sending streaming request to Anthropic:",
@@ -529,6 +603,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           messages,
           ...(system && { system }),
           ...(tools && { tools }),
+          ...(toolChoice && { tool_choice: toolChoice }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
           ...(config.temperature !== undefined && {
@@ -698,7 +773,15 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     });
 
     const toolCalls: ToolCall[] = [];
+    // Structured output streamed in as the synthetic response tool's arguments
+    // (a JSON string). Surface it as the completion rather than a tool call, so
+    // the caller receives the structured value and doesn't try to execute it.
+    let structuredOutput: string | undefined;
     for (const block of toolBlocks.values()) {
+      if (responseFormatToolName && block.name === responseFormatToolName) {
+        structuredOutput = block.arguments;
+        continue;
+      }
       const toolCall = new ToolCall(block.id, block.name, block.arguments);
       toolCalls.push(toolCall);
       yield { type: "tool_call", toolCall };
@@ -753,7 +836,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     yield {
       type: "done",
       result: {
-        output: content || null,
+        output: structuredOutput ?? (content || null),
         toolCalls,
         ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
         usage,

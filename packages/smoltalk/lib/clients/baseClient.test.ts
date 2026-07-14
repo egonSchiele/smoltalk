@@ -124,6 +124,30 @@ describe("textWithRetry - validation error feedback", () => {
     expect(lastUser.content).toContain("failed validation");
   });
 
+  it("parses a ```json fenced payload on the first attempt (Defect B)", async () => {
+    // Anthropic (prompt-based path) routinely wraps structured output in a
+    // markdown fence. The strict path must strip it before JSON.parse rather
+    // than throwing and burning a retry.
+    const fenced = "```json\n" + JSON.stringify({ name: "Alice", age: 25 }) + "\n```";
+
+    const spy = new SpyClient([
+      { success: true, value: { output: fenced, toolCalls: [], model: "gpt-4o" } },
+    ]);
+
+    const result = await spy.textSync({
+      messages: [userMessage("test")],
+      responseFormat: schema,
+      responseFormatOptions: { strict: true, numRetries: 2 },
+    });
+
+    expect(result.success).toBe(true);
+    // Parsed on the first call — no retry needed.
+    expect(spy.calls).toHaveLength(1);
+    if (result.success) {
+      expect(result.value.output).toEqual({ name: "Alice", age: 25 });
+    }
+  });
+
   it("returns last output when retries are exhausted", async () => {
     const badOutput = JSON.stringify({ name: "Alice", age: -1 });
 
