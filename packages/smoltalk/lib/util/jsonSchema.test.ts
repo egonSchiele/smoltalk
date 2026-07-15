@@ -60,6 +60,35 @@ describe("sanitizeJsonSchema", () => {
     expect(out.properties.b).toEqual({ type: "string" });
   });
 
+  it("sanitizes a single-schema items (z.array(z.any()))", () => {
+    const input = z.array(z.any()).toJSONSchema() as any;
+    const out = sanitizeJsonSchema(input) as any;
+    expect(out.items).toEqual({ type: "string" });
+  });
+
+  it("leaves an assertion position (not) untouched", () => {
+    // `not: {}` means "reject everything"; rewriting it to {type:"string"} would
+    // flip it to "reject only strings".
+    const out = sanitizeJsonSchema({ not: {} }) as any;
+    expect(out.not).toEqual({});
+  });
+
+  it("keeps a __proto__ property as data without polluting the prototype", () => {
+    // Computed key → an OWN "__proto__" property (a plain literal would set the
+    // prototype instead). The sanitized map must carry it as data, not a proto.
+    const input = {
+      type: "object",
+      properties: { ["__proto__"]: {} }, // unconstrained value → sanitized
+    };
+    const out = sanitizeJsonSchema(input) as any;
+    const protoValue = Object.getOwnPropertyDescriptor(
+      out.properties,
+      "__proto__",
+    )?.value;
+    expect(protoValue).toEqual({ type: "string" });
+    expect(({} as any).type).toBeUndefined(); // global prototype untouched
+  });
+
   it("sanitizes an any array element (tuple prefixItems)", () => {
     const input = z.tuple([z.string(), z.any()]).toJSONSchema() as any;
     const out = sanitizeJsonSchema(input) as any;

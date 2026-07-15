@@ -152,6 +152,14 @@ A couple of design decisions to note:
 - The schema for tools and structured outputs is defined using Zod.
 - Parameter names are camel case, as that is the naming convention in TypeScript. They are converted to snake case for you if required by the APIs.
 
+> **`z.any()` in a structured-output schema.** Providers reject an unconstrained
+> ("any") schema, since the point of structured output is that it's structured. A
+> nested `z.any()` field is therefore coerced to a **string** (`{type:"string"}`) —
+> so `z.object({ data: z.any() })` will have the model emit a string for `data`, not
+> an arbitrary object. If the *entire* `responseFormat` is `z.any()`/`z.unknown()`,
+> structured output is dropped and the model returns free text. Use a concrete Zod
+> shape when you need a specific structure.
+
 ## Configuration Options
 
 `SmolConfig` is a single config type passed to `text()`. It contains everything: API keys, model selection, request parameters, hooks, and observability options.

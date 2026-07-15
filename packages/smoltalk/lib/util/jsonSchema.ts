@@ -60,13 +60,16 @@ export function responseFormatToJsonSchema(schema: {
   return sanitizeJsonSchema(schema.toJSONSchema()) as object;
 }
 
-/** Subschema positions holding a single nested schema. */
-const SCHEMA_KEYS = [
-  "items",
-  "not",
-  "contains",
-  "propertyNames",
-] as const;
+/**
+ * Subschema positions holding a single nested value schema (recursed into).
+ *
+ * `not` and `contains` are deliberately excluded: they are *assertions*, not
+ * value slots, so an unconstrained schema there is meaningful and must not be
+ * rewritten — `not: {}` means "reject everything" and would silently become
+ * "reject only strings" if mapped to `{type:"string"}`. Zod never emits either,
+ * so leaving them untouched is both correct and zero-impact in practice.
+ */
+const SCHEMA_KEYS = ["items", "propertyNames"] as const;
 
 /** Subschema positions holding an object map of schemas. */
 const SCHEMA_MAP_KEYS = ["properties", "patternProperties", "$defs", "definitions"] as const;
@@ -105,7 +108,9 @@ export function sanitizeJsonSchema(node: unknown): unknown {
   for (const key of SCHEMA_MAP_KEYS) {
     const map = out[key];
     if (map && typeof map === "object" && !Array.isArray(map)) {
-      const sanitized: Record<string, unknown> = {};
+      // Object.create(null): a property literally named "__proto__" (a legal Zod
+      // key) would otherwise reassign the prototype instead of setting an own key.
+      const sanitized: Record<string, unknown> = Object.create(null);
       for (const [name, sub] of Object.entries(map)) {
         sanitized[name] = sanitizeJsonSchema(sub);
       }
@@ -129,9 +134,12 @@ export function sanitizeJsonSchema(node: unknown): unknown {
 }
 
 /**
- * Sanitize a value that may be a nested schema or a legitimate boolean flag
- * (`items`/`additionalProperties`). Booleans pass through untouched; objects are
- * recursively sanitized.
+ * Sanitize a value at a single-schema position (`items`, `propertyNames`,
+ * `additionalProperties`). These positions may legitimately hold a boolean:
+ * `additionalProperties: false`/`true` and `items: false` are provider-accepted
+ * flags, not any-typed value slots, so booleans pass through untouched and only
+ * an object subschema is recursively sanitized. (Zod does not emit a boolean at
+ * these positions, so `items: true` etc. are theoretical.)
  */
 function sanitizeSubschema(value: unknown): unknown {
   if (typeof value === "boolean") return value;
