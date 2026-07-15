@@ -75,6 +75,19 @@ export function mergeConsecutiveMessages(
   return merged;
 }
 
+/**
+ * Whether a model supports Anthropic's native structured-output request
+ * (`output_config.format` with a json_schema — the direct analog of the OpenAI
+ * client's `response_format`). GA on Claude 4.x+ (Opus 4.5+, Sonnet 4.5+, Haiku
+ * 4.5, and the 4.6/4.7/4.8 / Sonnet 5 / Fable families). The legacy claude-3.x /
+ * 2.x aliases do not support it; there we fall back to prompt-based output plus
+ * the base client's fence stripping. Unknown/future model names default to
+ * supported (forward-looking).
+ */
+export function anthropicSupportsStructuredOutput(model: string): boolean {
+  return !/^claude-(?:3(?:[-.]|$)|2(?:[-.]|$)|instant(?:[-.]|$))/i.test(model);
+}
+
 export function anthropicWebSearchEntries(hostedTools?: string[]): any[] {
   if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
     return [{ type: "web_search_20250305", name: "web_search" }];
@@ -138,8 +151,16 @@ type BudgetThinking = { type: "enabled"; budget_tokens: number };
 /** Modern thinking shape — Opus 4.6/4.7/4.8, Sonnet 4.6. */
 type AdaptiveThinking = { type: "adaptive" };
 type ThinkingParam = BudgetThinking | AdaptiveThinking;
-/** Effort level for adaptive thinking, passed via Anthropic's `output_config`. */
-type OutputConfig = { effort: "low" | "medium" | "high" };
+/**
+ * Anthropic's `output_config` — carries the adaptive-thinking effort level
+ * and/or a native structured-output `format` (json_schema). Both are optional
+ * and independent; they are merged into one object on the request.
+ */
+type OutputFormat = { type: "json_schema"; schema: any };
+type OutputConfig = {
+  effort?: "low" | "medium" | "high";
+  format?: OutputFormat;
+};
 
 /**
  * Which thinking API a model speaks. New flagship Anthropic models (Opus 4.7+)
@@ -334,7 +355,26 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     // Normalize the user's provider-agnostic thinking/effort config into the
     // shape this specific model accepts. Both `thinking.enabled` and
     // `reasoningEffort` are treated as a request to think.
-    const { thinking, outputConfig } = this.resolveThinking(config);
+    const { thinking, outputConfig: effortConfig } = this.resolveThinking(config);
+
+    // Provider-native structured output. Anthropic constrains the response to a
+    // JSON schema via `output_config.format` (grammar-constrained decoding) —
+    // the direct analog of the OpenAI client's `response_format` json_schema,
+    // and it composes with function tools (the model may call a tool OR emit the
+    // structured JSON). GA on Claude 4.x+; on the legacy claude-3.x/2.x aliases
+    // it isn't available, so we omit it and let the base client's fence stripper
+    // + retry recover a prompt-shaped reply.
+    const format: OutputFormat | undefined =
+      config.responseFormat &&
+      anthropicSupportsStructuredOutput(this.getModel())
+        ? { type: "json_schema", schema: config.responseFormat.toJSONSchema() }
+        : undefined;
+
+    // Merge effort + format into one output_config (both optional, independent).
+    const outputConfig: OutputConfig | undefined =
+      effortConfig || format
+        ? { ...effortConfig, ...(format && { format }) }
+        : undefined;
 
     const cachingEnabled = config.caching?.enabled !== false;
     const baseRequest = { system, messages: anthropicMessages, tools };
