@@ -15,6 +15,7 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
+import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import {
   SmolError,
   SmolContentPolicyError,
@@ -229,7 +230,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     if (config.responseFormat) {
       genConfig.responseMimeType = "application/json";
-      genConfig.responseJsonSchema = config.responseFormat.toJSONSchema();
+      genConfig.responseJsonSchema = responseFormatToJsonSchema(config.responseFormat);
     }
 
     if (config.thinking?.enabled) {

@@ -13,6 +13,7 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
+import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { resolveBaseUrl } from "../util/provider.js";
 import { BaseClient } from "./baseClient.js";
@@ -111,7 +112,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
       request.tools = tools.map((t) => ({ type: "function", function: t }));
     }
     if (config.responseFormat) {
-      request.format = config.responseFormat.toJSONSchema();
+      request.format = responseFormatToJsonSchema(config.responseFormat);
     }
     Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
@@ -180,7 +181,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
       request.tools = tools.map((t) => ({ type: "function", function: t }));
     }
     if (config.responseFormat) {
-      request.format = config.responseFormat.toJSONSchema();
+      request.format = responseFormatToJsonSchema(config.responseFormat);
     }
     Object.assign(request, sanitizeAttributes(config.rawAttributes));
 

@@ -26,6 +26,7 @@ import {
 } from "../smolError.js";
 import { extractHttpErrorFields } from "../util/httpError.js";
 import { zodToOpenAITool } from "../util/tool.js";
+import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import { ModelName } from "../models.js";
 import { Model } from "../model.js";
 import { CostEstimate, TokenUsage } from "../types.js";
@@ -169,7 +170,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
         json_schema: {
           name: config.responseFormatOptions?.name || "response",
-          schema: config.responseFormat.toJSONSchema(),
+          schema: responseFormatToJsonSchema(config.responseFormat),
         },
       };
     }

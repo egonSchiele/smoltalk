@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   zodToOpenAITool,
   zodToOpenAIResponsesTool,
+  zodToAnthropicTool,
   openAIToGoogleTool,
   zodToGoogleTool,
 } from "./tool.js";
@@ -189,5 +190,32 @@ describe("zodToGoogleTool", () => {
     const params = google.parametersJsonSchema as Record<string, any>;
     expect(params.properties).toHaveProperty("user");
     expect(params.properties).toHaveProperty("tags");
+  });
+});
+
+describe("any-field sanitization", () => {
+  const anySchema = z.object({ id: z.string(), meta: z.any() });
+
+  it("zodToOpenAITool replaces an any field with {type:string}", () => {
+    const tool = zodToOpenAITool("t", anySchema);
+    expect(tool.function.parameters.properties.meta).toEqual({
+      type: "string",
+    });
+  });
+
+  it("zodToOpenAIResponsesTool replaces an any field with {type:string}", () => {
+    const tool = zodToOpenAIResponsesTool("t", anySchema);
+    expect(tool.parameters.properties.meta).toEqual({ type: "string" });
+  });
+
+  it("zodToAnthropicTool replaces an any field with {type:string}", () => {
+    const tool = zodToAnthropicTool("t", anySchema);
+    expect(tool.input_schema.properties.meta).toEqual({ type: "string" });
+  });
+
+  it("zodToGoogleTool replaces an any field with {type:string}", () => {
+    const tool = zodToGoogleTool("t", anySchema);
+    const params = tool.parametersJsonSchema as Record<string, any>;
+    expect(params.properties.meta).toEqual({ type: "string" });
   });
 });
