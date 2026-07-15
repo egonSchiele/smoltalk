@@ -57,7 +57,9 @@ This is functionality that other packages allow.
       totalCost: 0.00026,
       currency: 'USD'
     },
-    model: 'gpt-5.4'
+    model: 'gpt-5.4',
+    stopReason: 'stop',
+    rawStopReason: 'stop'
   }
 }
 ```
@@ -159,6 +161,41 @@ A couple of design decisions to note:
 > an arbitrary object. If the *entire* `responseFormat` is `z.any()`/`z.unknown()`,
 > structured output is dropped and the model returns free text. Use a concrete Zod
 > shape when you need a specific structure.
+
+## Stop reason
+
+Any result from a model response carries why the turn ended, normalized across
+providers:
+
+- `stopReason` — a unified value: `"stop"` (natural completion), `"length"` (hit
+  max tokens), `"tool_use"` (model wants to call a tool), `"content_filter"`
+  (safety/policy/refusal), `"stop_sequence"`, `"pause"`, or `"other"`.
+- `rawStopReason` — the untouched provider value (e.g. `end_turn`, `MAX_TOKENS`,
+  `tool_calls`), for when you need provider-specific nuance.
+
+```ts
+import { textSync, userMessage } from "smoltalk";
+
+const r = await textSync({
+  model: "claude-sonnet-4-6",
+  maxTokens: 100,
+  messages: [userMessage("Write a long essay about otters.")],
+});
+if (r.success && r.value.stopReason === "length") {
+  // response was truncated — raise maxTokens or continue the turn
+}
+```
+
+Both fields appear on the non-streaming result and on the streaming `done` chunk's
+result. They are optional: a result produced without calling a provider (e.g. a
+tool-loop halt) has neither.
+
+Two provider notes:
+- Google reports `STOP` even for tool-call turns, so `stopReason` is normalized to
+  `"tool_use"` there when tool calls are present (`rawStopReason` still shows `STOP`).
+- The OpenAI Responses API has no single finish-reason field, so its `rawStopReason`
+  is the response *status* (`"completed"`) or the incomplete reason
+  (`"max_output_tokens"`), rather than a chat-style `"stop"`.
 
 ## Configuration Options
 

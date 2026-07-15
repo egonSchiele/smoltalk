@@ -27,6 +27,7 @@ import {
 import { extractHttpErrorFields } from "../util/httpError.js";
 import { zodToOpenAITool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
+import { normalizeOpenAIStopReason } from "../util/stopReason.js";
 import { ModelName } from "../models.js";
 import { Model } from "../model.js";
 import { CostEstimate, TokenUsage } from "../types.js";
@@ -264,14 +265,23 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     const hostedToolResults = this.parseHostedToolResults(completion, config);
 
-    return success({
+    const rawStopReason = completion.choices[0]?.finish_reason ?? undefined;
+
+    const result: PromptResult = {
       output,
       toolCalls,
       usage,
       cost,
       model: this.getModel(),
-      ...(hostedToolResults.length > 0 ? { hostedToolResults } : {}),
-    });
+      stopReason: normalizeOpenAIStopReason(rawStopReason),
+    };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
+    }
+    return success(result);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
@@ -305,8 +315,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     >();
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
+    let rawStopReason: string | undefined;
 
     for await (const chunk of completion) {
+      const chunkFinish = chunk.choices?.[0]?.finish_reason;
+      if (chunkFinish) rawStopReason = chunkFinish;
       // Extract usage from the final chunk
       if (chunk.usage) {
         // Header-based cost (LiteLLM) is unsupported while streaming.
@@ -361,15 +374,18 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        usage,
-        cost,
-        model: this.getModel(),
-      },
+    const result: PromptResult = {
+      output: content || null,
+      toolCalls,
+      usage,
+      cost,
+      model: this.getModel(),
+      stopReason: normalizeOpenAIStopReason(rawStopReason),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+
+    yield { type: "done", result };
   }
 }

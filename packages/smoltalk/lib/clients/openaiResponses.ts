@@ -14,6 +14,7 @@ import { redactAttachments } from "../util/redact.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
+import { normalizeOpenAIResponsesStopReason } from "../util/stopReason.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
@@ -284,13 +285,24 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       this.config.modelData,
     );
 
+    const incompleteReason = (response as any).incomplete_details?.reason;
+    const rawStopReason = incompleteReason ?? response.status ?? undefined;
+
     const result: PromptResult = {
       output,
       toolCalls,
       usage,
       cost: finalCost,
       model: this.getModel(),
+      stopReason: normalizeOpenAIResponsesStopReason(
+        response.status,
+        incompleteReason,
+        toolCalls.length > 0,
+      ),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
     if (hostedToolResults.length > 0) {
       result.hostedToolResults = hostedToolResults;
     }
@@ -323,8 +335,15 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     >();
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
+    let finalResponse: any;
 
     for await (const event of stream as AsyncIterable<ResponseStreamEvent>) {
+      if (
+        event.type === "response.completed" ||
+        event.type === "response.incomplete"
+      ) {
+        finalResponse = (event as any).response;
+      }
       switch (event.type) {
         case "response.output_text.delta": {
           content += event.delta;
@@ -397,15 +416,25 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        usage,
-        cost,
-        model: this.getModel(),
-      },
+    const incompleteReason = finalResponse?.incomplete_details?.reason;
+    const rawStopReason = incompleteReason ?? finalResponse?.status ?? undefined;
+
+    const result: PromptResult = {
+      output: content || null,
+      toolCalls,
+      usage,
+      cost,
+      model: this.getModel(),
+      stopReason: normalizeOpenAIResponsesStopReason(
+        finalResponse?.status,
+        incompleteReason,
+        toolCalls.length > 0,
+      ),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+
+    yield { type: "done", result };
   }
 }
