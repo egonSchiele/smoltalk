@@ -220,3 +220,19 @@ describe("SmolAnthropic._textStream — structured output request wiring", () =>
     expect(JSON.parse(done.result.output)).toEqual({ path: "simple", plan: ["x"] });
   });
 });
+
+describe("SmolAnthropic.buildRequest — any-field sanitization", () => {
+  it("replaces a nested any field with {type:string} in the emitted schema", () => {
+    const client = makeClient();
+    const { outputConfig } = build(client, {
+      model: "claude-sonnet-4-6",
+      messages: [userMessage("classify this")],
+      responseFormat: z.object({ label: z.string(), meta: z.any() }),
+    });
+    expect(outputConfig.format.schema.properties.meta).toEqual({
+      type: "string",
+    });
+    // The emitted schema contains no bare {} node.
+    expect(JSON.stringify(outputConfig.format.schema)).not.toContain("{}");
+  });
+});

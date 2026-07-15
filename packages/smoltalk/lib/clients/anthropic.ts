@@ -25,6 +25,7 @@ import {
 } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { zodToAnthropicTool } from "../util/tool.js";
+import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -367,7 +368,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     const format: OutputFormat | undefined =
       config.responseFormat &&
       anthropicSupportsStructuredOutput(this.getModel())
-        ? { type: "json_schema", schema: config.responseFormat.toJSONSchema() }
+        ? { type: "json_schema", schema: responseFormatToJsonSchema(config.responseFormat) }
         : undefined;
 
     // Merge effort + format into one output_config (both optional, independent).

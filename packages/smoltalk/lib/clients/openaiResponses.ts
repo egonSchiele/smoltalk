@@ -13,6 +13,7 @@ import { getLogger } from "../util/logger.js";
 import { redactAttachments } from "../util/redact.js";
 import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
+import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
@@ -181,7 +182,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
         format: {
           type: "json_schema",
           name: config.responseFormatOptions?.name || "response",
-          schema: config.responseFormat.toJSONSchema(),
+          schema: responseFormatToJsonSchema(config.responseFormat),
         },
       };
     }

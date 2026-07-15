@@ -17,6 +17,7 @@ import { validateHostedTools } from "../util/hostedTools.js";
 import { resolveMessageAttachments, messagesHaveAttachments, DEFAULT_MAX_ATTACHMENT_BYTES } from "./resolveAttachments.js";
 import { validateModalities } from "../util/modalities.js";
 import { resolveProvider } from "../util/provider.js";
+import { isUnconstrainedSchema } from "../util/jsonSchema.js";
 import { z } from "zod";
 
 const DEFAULT_NUM_RETRIES = 2;
@@ -120,7 +121,29 @@ export class BaseClient implements SmolClient {
     return success({ ...config, messages: resolved.value });
   }
 
+  /**
+   * If the entire `responseFormat` schema is unconstrained (`z.any()` /
+   * `z.unknown()`), structured output is meaningless — every provider would
+   * reject it and there is nothing to validate against. Strip it so the call
+   * behaves exactly as if no `responseFormat` were set: no provider sends a
+   * structured-output request (each gates on `config.responseFormat`), and the
+   * strict parse/retry loop in `textWithRetry` is skipped, returning free text.
+   * A *nested* `any` is left alone here — the schema conversion sanitizes it.
+   */
+  protected normalizeResponseFormat(config: SmolConfig): SmolConfig {
+    if (
+      config.responseFormat &&
+      isUnconstrainedSchema(config.responseFormat.toJSONSchema())
+    ) {
+      const { responseFormat, ...rest } = config;
+      return rest;
+    }
+    return config;
+  }
+
   async textSync(promptConfig: SmolConfig): Promise<Result<PromptResult>> {
+    promptConfig = this.normalizeResponseFormat(promptConfig);
+
     const messageLimitResult = this.checkMessageLimit(promptConfig);
     if (messageLimitResult) return messageLimitResult;
 
@@ -428,6 +451,8 @@ export class BaseClient implements SmolClient {
   }
 
   async *textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
+    config = this.normalizeResponseFormat(config);
+
     const messageLimitResult = this.checkMessageLimit(config);
     if (messageLimitResult) {
       yield {

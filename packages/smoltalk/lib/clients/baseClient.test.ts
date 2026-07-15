@@ -369,3 +369,57 @@ describe("BaseClient multimodal wiring", () => {
   });
 });
 
+
+describe("normalizeResponseFormat (whole-schema any)", () => {
+  it("strips responseFormat when the whole schema is z.any()", async () => {
+    const spy = new SpyClient([
+      { success: true, value: { output: "free text", toolCalls: [], model: "gpt-4o" } },
+    ]);
+    await spy.textSync({
+      messages: [userMessage("hi")],
+      responseFormat: z.any(),
+    } as any);
+    expect(spy.calls[0].responseFormat).toBeUndefined();
+  });
+
+  it("keeps responseFormat when the schema is a real object", async () => {
+    const schema = z.object({ answer: z.string() });
+    const spy = new SpyClient([
+      { success: true, value: { output: '{"answer":"x"}', toolCalls: [], model: "gpt-4o" } },
+    ]);
+    await spy.textSync({
+      messages: [userMessage("hi")],
+      responseFormat: schema,
+    } as any);
+    expect(spy.calls[0].responseFormat).toBe(schema);
+  });
+
+  it("returns raw free text (no strict retry) when whole schema is any + strict", async () => {
+    const spy = new SpyClient([
+      { success: true, value: { output: "not json", toolCalls: [], model: "gpt-4o" } },
+    ]);
+    const res = await spy.textSync({
+      messages: [userMessage("hi")],
+      responseFormat: z.any(),
+      responseFormatOptions: { strict: true },
+    } as any);
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.value.output).toBe("not json");
+    // Only one underlying call — the strict parse/retry loop never engaged.
+    expect(spy.calls.length).toBe(1);
+  });
+
+  it("strips responseFormat on the streaming path too", async () => {
+    const spy = new SpyClient([
+      { success: true, value: { output: "free text", toolCalls: [], model: "gpt-4o" } },
+    ]);
+    const chunks: StreamChunk[] = [];
+    for await (const c of spy.textStream({
+      messages: [userMessage("hi")],
+      responseFormat: z.any(),
+    } as any)) {
+      chunks.push(c);
+    }
+    expect(spy.calls[0].responseFormat).toBeUndefined();
+  });
+});

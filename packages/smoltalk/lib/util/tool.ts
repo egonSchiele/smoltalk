@@ -1,6 +1,7 @@
 import { FunctionDeclaration } from "@google/genai";
 import { z } from "zod";
 import { validateToolName } from "./util.js";
+import { sanitizeJsonSchema } from "./jsonSchema.js";
 
 type OpenAIToolParameters = {
   type: "object";
@@ -28,7 +29,9 @@ export function zodToOpenAITool(
 ): OpenAITool {
   validateToolName(name);
   // Convert Zod schema to JSON Schema
-  const jsonSchema = schema.toJSONSchema();
+  const jsonSchema = sanitizeJsonSchema(schema.toJSONSchema()) as ReturnType<
+    z.ZodType["toJSONSchema"]
+  >;
 
   let description: string = "";
   if (options?.description) {
@@ -85,7 +88,9 @@ export function zodToOpenAIResponsesTool(
   }> = {},
 ): OpenAIResponsesFunctionTool {
   validateToolName(name);
-  const jsonSchema = schema.toJSONSchema();
+  const jsonSchema = sanitizeJsonSchema(schema.toJSONSchema()) as ReturnType<
+    z.ZodType["toJSONSchema"]
+  >;
 
   const strict = options?.strict ?? false;
 
@@ -139,7 +144,9 @@ export function zodToAnthropicTool(
   }> = {},
 ): AnthropicTool {
   validateToolName(name);
-  const jsonSchema = schema.toJSONSchema();
+  const jsonSchema = sanitizeJsonSchema(schema.toJSONSchema()) as ReturnType<
+    z.ZodType["toJSONSchema"]
+  >;
 
   let description: string | undefined;
   if (options?.description) {
