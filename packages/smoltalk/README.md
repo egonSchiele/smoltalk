@@ -174,7 +174,13 @@ providers:
   `tool_calls`), for when you need provider-specific nuance.
 
 ```ts
-const r = await text({ messages, model: "claude-sonnet-4-6", maxTokens: 100 });
+import { textSync, userMessage } from "smoltalk";
+
+const r = await textSync({
+  model: "claude-sonnet-4-6",
+  maxTokens: 100,
+  messages: [userMessage("Write a long essay about otters.")],
+});
 if (r.success && r.value.stopReason === "length") {
   // response was truncated — raise maxTokens or continue the turn
 }
