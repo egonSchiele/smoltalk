@@ -1,5 +1,16 @@
 # Changelog
 
+## smoltalk 0.8.2 (2026-07-14)
+
+### Added
+- Anthropic structured output now uses the provider-native `output_config.format` (json_schema) when `responseFormat` is set — the analog of the OpenAI client's `response_format`, and it composes with function tools in the same request. Legacy `claude-3.x`/`2.x` models fall back to prompt-based output.
+- Anthropic streaming now emits web search queries as live `web_search` StreamChunks the moment each search block completes, matching the non-streaming path.
+
+### Fixed
+- Gemini 3: the final answer no longer leaks into `thinkingBlocks`. Thinking parts are now identified by `thought: true` (not the presence of a `thoughtSignature`, which Gemini 3 also puts on the answer). `thinking.enabled` also now requests thought summaries so `thinkingBlocks` is actually populated.
+- Structured-output strict path strips ` ```json ` code fences before `JSON.parse`, so a fenced reply parses on the first attempt instead of burning a retry.
+- Gemini combining hosted web search with function tools is gated by model support: only Gemini 3+ allows it, and older models now get a clear error instead of a cryptic provider 400.
+
 ## smoltalk 0.8.1 (2026-07-02)
 
 ### Fixed
