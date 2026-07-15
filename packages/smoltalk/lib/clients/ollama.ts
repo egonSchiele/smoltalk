@@ -14,6 +14,7 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
+import { normalizeOllamaStopReason } from "../util/stopReason.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { resolveBaseUrl } from "../util/provider.js";
 import { BaseClient } from "./baseClient.js";
@@ -159,8 +160,18 @@ export class SmolOllama extends BaseClient implements SmolClient {
     // Extract usage and calculate cost
     const { usage, cost } = this.calculateUsageAndCost(result);
 
+    const rawStopReason = (result as any).done_reason ?? undefined;
+
     // Return the response, updating the chat history
-    return success({ output, toolCalls, usage, cost, model: this.getModel() });
+    return success({
+      output,
+      toolCalls,
+      usage,
+      cost,
+      model: this.getModel(),
+      stopReason: normalizeOllamaStopReason(rawStopReason),
+      ...(rawStopReason ? { rawStopReason } : {}),
+    });
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
@@ -262,6 +273,8 @@ export class SmolOllama extends BaseClient implements SmolClient {
         yield { type: "tool_call", toolCall };
       }
 
+      const rawStopReason = (lastChunk as any)?.done_reason ?? undefined;
+
       yield {
         type: "done",
         result: {
@@ -270,6 +283,8 @@ export class SmolOllama extends BaseClient implements SmolClient {
           usage,
           cost,
           model: this.getModel(),
+          stopReason: normalizeOllamaStopReason(rawStopReason),
+          ...(rawStopReason ? { rawStopReason } : {}),
         },
       };
     } catch (error) {

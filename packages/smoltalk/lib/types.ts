@@ -10,8 +10,10 @@ import type { ModelDataBlob } from "./modelData.js";
 import { Result } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
+import { StopReason } from "./types/stopReason.js";
 export * from "./types/costEstimate.js";
 export * from "./types/tokenUsage.js";
+export * from "./types/stopReason.js";
 
 export type SmolConfig = {
   /** The model to use. */
@@ -188,6 +190,10 @@ export type PromptResult = {
   cost?: CostEstimate;
   model?: ModelName;
   hostedToolResults?: HostedToolResult[];
+  /** Normalized reason the turn ended, unified across providers. */
+  stopReason?: StopReason;
+  /** The untouched provider finish/stop-reason value (e.g. `end_turn`, `MAX_TOKENS`). */
+  rawStopReason?: string;
 };
 
 export function promptResult({
@@ -198,6 +204,8 @@ export function promptResult({
   cost,
   model,
   hostedToolResults,
+  stopReason,
+  rawStopReason,
 }: Partial<PromptResult>): PromptResult {
   return {
     output: output || null,
@@ -207,6 +215,8 @@ export function promptResult({
     cost,
     model,
     hostedToolResults,
+    stopReason,
+    rawStopReason,
   };
 }
 

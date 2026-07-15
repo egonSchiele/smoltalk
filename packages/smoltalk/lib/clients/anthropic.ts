@@ -26,6 +26,7 @@ import {
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { zodToAnthropicTool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
+import { normalizeAnthropicStopReason } from "../util/stopReason.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -525,13 +526,19 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       this.config.modelData,
     );
 
+    const rawStopReason = response.stop_reason ?? undefined;
+
     const result: PromptResult = {
       output,
       toolCalls,
       usage,
       cost: finalCost,
       model: this.getModel(),
+      stopReason: normalizeAnthropicStopReason(rawStopReason),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
     if (thinkingBlocks.length > 0) {
       result.thinkingBlocks = thinkingBlocks;
     }
@@ -614,6 +621,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     let cacheReadTokens = 0;
     let cacheCreationTokens = 0;
     let outputTokens = 0;
+    let rawStopReason: string | undefined;
 
     for await (const event of stream as any) {
       if (event.type === "message_start") {
@@ -715,6 +723,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           }
         }
       } else if (event.type === "message_delta") {
+        if (event.delta?.stop_reason) {
+          rawStopReason = event.delta.stop_reason;
+        }
         outputTokens = event.usage.output_tokens;
         // Defensive: in practice Anthropic only sends cache fields on
         // message_start, but read them here too so we don't miss an
@@ -800,6 +811,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         usage,
         cost,
         model: this.getModel(),
+        stopReason: normalizeAnthropicStopReason(rawStopReason),
+        ...(rawStopReason && { rawStopReason }),
         ...(hostedToolResults.length > 0 && { hostedToolResults }),
       },
     };

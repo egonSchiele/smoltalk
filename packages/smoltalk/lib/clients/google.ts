@@ -16,6 +16,7 @@ import {
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
+import { normalizeGoogleStopReason } from "../util/stopReason.js";
 import {
   SmolError,
   SmolContentPolicyError,
@@ -384,6 +385,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       usage: addTokenUsage(toolResult.value.usage, responseResult.value.usage),
       cost: addCosts(toolResult.value.cost, responseResult.value.cost),
       model: request.model as ModelName,
+      // The structured-output request is the final turn, so its stop reason wins.
+      stopReason: responseResult.value.stopReason,
+      ...(responseResult.value.rawStopReason && {
+        rawStopReason: responseResult.value.rawStopReason,
+      }),
     });
   }
 
@@ -464,6 +470,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       this.config.modelData,
     );
 
+    const rawStopReason =
+      (result.candidates?.[0] as any)?.finishReason ?? undefined;
+
     // Return the response, updating the chat history
     const promptResult: PromptResult = {
       output,
@@ -471,7 +480,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       usage,
       cost: finalCost,
       model: request.model as ModelName,
+      stopReason: normalizeGoogleStopReason(rawStopReason, toolCalls.length > 0),
     };
+    if (rawStopReason) {
+      promptResult.rawStopReason = rawStopReason;
+    }
     if (thinkingBlocks.length > 0) {
       promptResult.thinkingBlocks = thinkingBlocks;
     }
@@ -523,6 +536,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     const thinkingBlocks: ThinkingBlock[] = [];
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
+    let rawStopReason: string | undefined;
 
     for await (const chunk of stream) {
       // Extract usage metadata from chunks
@@ -534,6 +548,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
       // Iterate raw parts to capture thought signatures and regular content
       for (const candidate of (chunk as any).candidates || []) {
+        if (candidate?.finishReason) rawStopReason = candidate.finishReason;
         for (const part of candidate?.content?.parts || []) {
           const p = part as any;
 
@@ -613,6 +628,8 @@ export class SmolGoogle extends BaseClient implements SmolClient {
         usage,
         cost,
         model: request.model as ModelName,
+        stopReason: normalizeGoogleStopReason(rawStopReason, toolCalls.length > 0),
+        ...(rawStopReason && { rawStopReason }),
       },
     };
   }
