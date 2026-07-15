@@ -33,8 +33,12 @@ describe("normalizeAnthropicStopReason", () => {
     expect(normalizeAnthropicStopReason("pause_turn")).toBe("pause");
   });
 
+  it("maps model_context_window_exceeded to length", () => {
+    expect(normalizeAnthropicStopReason("model_context_window_exceeded")).toBe("length");
+  });
+
   it("falls back to other for unknown/missing", () => {
-    expect(normalizeAnthropicStopReason("model_context_window_exceeded")).toBe("other");
+    expect(normalizeAnthropicStopReason("something_new")).toBe("other");
     expect(normalizeAnthropicStopReason(null)).toBe("other");
   });
 });
@@ -46,6 +50,8 @@ describe("normalizeGoogleStopReason", () => {
     expect(normalizeGoogleStopReason("SAFETY", false)).toBe("content_filter");
     expect(normalizeGoogleStopReason("PROHIBITED_CONTENT", false)).toBe("content_filter");
     expect(normalizeGoogleStopReason("RECITATION", false)).toBe("content_filter");
+    expect(normalizeGoogleStopReason("IMAGE_SAFETY", false)).toBe("content_filter");
+    expect(normalizeGoogleStopReason("LANGUAGE", false)).toBe("content_filter");
   });
 
   it("infers tool_use when finishReason is STOP but tool calls are present", () => {
@@ -90,6 +96,15 @@ describe("normalizeOpenAIResponsesStopReason", () => {
 
   it("maps a plain completed response to stop", () => {
     expect(normalizeOpenAIResponsesStopReason("completed", undefined, false)).toBe("stop");
+  });
+
+  it("infers tool_use when status is unknown but tool calls are present", () => {
+    // e.g. a stream that ended without a completed/incomplete event.
+    expect(normalizeOpenAIResponsesStopReason(undefined, undefined, true)).toBe("tool_use");
+  });
+
+  it("does not infer tool_use for an explicit failure status", () => {
+    expect(normalizeOpenAIResponsesStopReason("failed", undefined, true)).toBe("other");
   });
 
   it("falls back to other for unknown/missing", () => {

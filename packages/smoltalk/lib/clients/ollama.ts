@@ -163,15 +163,18 @@ export class SmolOllama extends BaseClient implements SmolClient {
     const rawStopReason = (result as any).done_reason ?? undefined;
 
     // Return the response, updating the chat history
-    return success({
+    const promptResult: PromptResult = {
       output,
       toolCalls,
       usage,
       cost,
       model: this.getModel(),
       stopReason: normalizeOllamaStopReason(rawStopReason),
-      ...(rawStopReason ? { rawStopReason } : {}),
-    });
+    };
+    if (rawStopReason) {
+      promptResult.rawStopReason = rawStopReason;
+    }
+    return success(promptResult);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
@@ -275,18 +278,18 @@ export class SmolOllama extends BaseClient implements SmolClient {
 
       const rawStopReason = (lastChunk as any)?.done_reason ?? undefined;
 
-      yield {
-        type: "done",
-        result: {
-          output: content || null,
-          toolCalls,
-          usage,
-          cost,
-          model: this.getModel(),
-          stopReason: normalizeOllamaStopReason(rawStopReason),
-          ...(rawStopReason ? { rawStopReason } : {}),
-        },
+      const result: PromptResult = {
+        output: content || null,
+        toolCalls,
+        usage,
+        cost,
+        model: this.getModel(),
+        stopReason: normalizeOllamaStopReason(rawStopReason),
       };
+      if (rawStopReason) {
+        result.rawStopReason = rawStopReason;
+      }
+      yield { type: "done", result };
     } catch (error) {
       this.rethrowAsSmolError(error);
     } finally {

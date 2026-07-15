@@ -267,16 +267,21 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     const rawStopReason = completion.choices[0]?.finish_reason ?? undefined;
 
-    return success({
+    const result: PromptResult = {
       output,
       toolCalls,
       usage,
       cost,
       model: this.getModel(),
       stopReason: normalizeOpenAIStopReason(rawStopReason),
-      ...(rawStopReason ? { rawStopReason } : {}),
-      ...(hostedToolResults.length > 0 ? { hostedToolResults } : {}),
-    });
+    };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
+    }
+    return success(result);
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
@@ -369,17 +374,18 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        usage,
-        cost,
-        model: this.getModel(),
-        stopReason: normalizeOpenAIStopReason(rawStopReason),
-        ...(rawStopReason ? { rawStopReason } : {}),
-      },
+    const result: PromptResult = {
+      output: content || null,
+      toolCalls,
+      usage,
+      cost,
+      model: this.getModel(),
+      stopReason: normalizeOpenAIStopReason(rawStopReason),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+
+    yield { type: "done", result };
   }
 }

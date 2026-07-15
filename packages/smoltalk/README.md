@@ -164,7 +164,8 @@ A couple of design decisions to note:
 
 ## Stop reason
 
-Every result carries why the turn ended, normalized across providers:
+Any result from a model response carries why the turn ended, normalized across
+providers:
 
 - `stopReason` — a unified value: `"stop"` (natural completion), `"length"` (hit
   max tokens), `"tool_use"` (model wants to call a tool), `"content_filter"`
@@ -179,10 +180,16 @@ if (r.success && r.value.stopReason === "length") {
 }
 ```
 
-Both fields are present on the non-streaming result and on the streaming `done`
-chunk's result. Note Google reports `STOP` even for tool-call turns, so `stopReason`
-is normalized to `"tool_use"` there when tool calls are present (`rawStopReason`
-still shows `STOP`).
+Both fields appear on the non-streaming result and on the streaming `done` chunk's
+result. They are optional: a result produced without calling a provider (e.g. a
+tool-loop halt) has neither.
+
+Two provider notes:
+- Google reports `STOP` even for tool-call turns, so `stopReason` is normalized to
+  `"tool_use"` there when tool calls are present (`rawStopReason` still shows `STOP`).
+- The OpenAI Responses API has no single finish-reason field, so its `rawStopReason`
+  is the response *status* (`"completed"`) or the incomplete reason
+  (`"max_output_tokens"`), rather than a chat-style `"stop"`.
 
 ## Configuration Options
 

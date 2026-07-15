@@ -377,7 +377,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       ...(responseResult.value.thinkingBlocks || []),
     ];
 
-    return success({
+    const structuredResult: PromptResult = {
       output: responseResult.value.output,
       // if there were tool calls, we would have returned already, so we know these are empty
       toolCalls: [],
@@ -387,10 +387,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       model: request.model as ModelName,
       // The structured-output request is the final turn, so its stop reason wins.
       stopReason: responseResult.value.stopReason,
-      ...(responseResult.value.rawStopReason && {
-        rawStopReason: responseResult.value.rawStopReason,
-      }),
-    });
+    };
+    if (responseResult.value.rawStopReason) {
+      structuredResult.rawStopReason = responseResult.value.rawStopReason;
+    }
+    return success(structuredResult);
   }
 
   async __textSync(request: GeneratedRequest): Promise<Result<PromptResult>> {
@@ -619,18 +620,19 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
-        usage,
-        cost,
-        model: request.model as ModelName,
-        stopReason: normalizeGoogleStopReason(rawStopReason, toolCalls.length > 0),
-        ...(rawStopReason && { rawStopReason }),
-      },
+    const result: PromptResult = {
+      output: content || null,
+      toolCalls,
+      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
+      usage,
+      cost,
+      model: request.model as ModelName,
+      stopReason: normalizeGoogleStopReason(rawStopReason, toolCalls.length > 0),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+
+    yield { type: "done", result };
   }
 }

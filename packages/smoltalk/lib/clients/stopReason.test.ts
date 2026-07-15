@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SmolAnthropic } from "./anthropic.js";
 import { SmolOpenAi } from "./openai.js";
+import { SmolOpenAiResponses } from "./openaiResponses.js";
 import { SmolOllama } from "./ollama.js";
 import { SmolGoogle } from "./google.js";
 import { userMessage } from "../classes/message/index.js";
@@ -92,6 +93,73 @@ describe("OpenAI stream stopReason", () => {
     );
     expect(done.stopReason).toBe("tool_use");
     expect(done.rawStopReason).toBe("tool_calls");
+  });
+});
+
+describe("OpenAI Responses stopReason", () => {
+  function client() {
+    return new SmolOpenAiResponses({
+      model: "gpt-4o",
+      apiKey: { openAi: "test" },
+      messages: [],
+    });
+  }
+  const usage = { input_tokens: 1, output_tokens: 1, total_tokens: 2 };
+
+  it("_textSync infers tool_use for a completed response with a function call", async () => {
+    const c = client();
+    (c as any).client = {
+      responses: {
+        create: async () => ({
+          output_text: "",
+          output: [
+            { type: "function_call", call_id: "c1", name: "lookup", arguments: "{}" },
+          ],
+          status: "completed",
+          usage,
+        }),
+      },
+    };
+    const res = await c._textSync({ model: "gpt-4o", messages: [userMessage("hi")] } as any);
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.value.stopReason).toBe("tool_use");
+      expect(res.value.rawStopReason).toBe("completed");
+    }
+  });
+
+  it("_textSync maps an incomplete max_output_tokens response to length", async () => {
+    const c = client();
+    (c as any).client = {
+      responses: {
+        create: async () => ({
+          output_text: "partial",
+          output: [],
+          status: "incomplete",
+          incomplete_details: { reason: "max_output_tokens" },
+          usage,
+        }),
+      },
+    };
+    const res = await c._textSync({ model: "gpt-4o", messages: [userMessage("hi")] } as any);
+    if (res.success) {
+      expect(res.value.stopReason).toBe("length");
+      expect(res.value.rawStopReason).toBe("max_output_tokens");
+    }
+  });
+
+  it("_textStream captures the stop reason from the response.completed event", async () => {
+    const c = client();
+    async function* fake() {
+      yield { type: "response.output_text.delta", delta: "hi" };
+      yield { type: "response.completed", response: { status: "completed", usage } };
+    }
+    (c as any).client = { responses: { stream: () => fake() } };
+    const done = await collectDone(
+      c._textStream({ model: "gpt-4o", messages: [userMessage("hi")] } as any),
+    );
+    expect(done.stopReason).toBe("stop");
+    expect(done.rawStopReason).toBe("completed");
   });
 });
 

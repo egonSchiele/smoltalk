@@ -419,21 +419,22 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     const incompleteReason = finalResponse?.incomplete_details?.reason;
     const rawStopReason = incompleteReason ?? finalResponse?.status ?? undefined;
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        usage,
-        cost,
-        model: this.getModel(),
-        stopReason: normalizeOpenAIResponsesStopReason(
-          finalResponse?.status,
-          incompleteReason,
-          toolCalls.length > 0,
-        ),
-        ...(rawStopReason ? { rawStopReason } : {}),
-      },
+    const result: PromptResult = {
+      output: content || null,
+      toolCalls,
+      usage,
+      cost,
+      model: this.getModel(),
+      stopReason: normalizeOpenAIResponsesStopReason(
+        finalResponse?.status,
+        incompleteReason,
+        toolCalls.length > 0,
+      ),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+
+    yield { type: "done", result };
   }
 }

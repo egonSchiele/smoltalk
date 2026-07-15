@@ -802,19 +802,20 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       cost = applied.cost;
     }
 
-    yield {
-      type: "done",
-      result: {
-        output: content || null,
-        toolCalls,
-        ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
-        usage,
-        cost,
-        model: this.getModel(),
-        stopReason: normalizeAnthropicStopReason(rawStopReason),
-        ...(rawStopReason && { rawStopReason }),
-        ...(hostedToolResults.length > 0 && { hostedToolResults }),
-      },
+    const result: PromptResult = {
+      output: content || null,
+      toolCalls,
+      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
+      usage,
+      cost,
+      model: this.getModel(),
+      stopReason: normalizeAnthropicStopReason(rawStopReason),
+      ...(hostedToolResults.length > 0 && { hostedToolResults }),
     };
+    if (rawStopReason) {
+      result.rawStopReason = rawStopReason;
+    }
+
+    yield { type: "done", result };
   }
 }

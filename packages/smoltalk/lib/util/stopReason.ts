@@ -23,6 +23,8 @@ export function normalizeOpenAIStopReason(
 const ANTHROPIC_MAP: Record<string, StopReason> = {
   end_turn: "stop",
   max_tokens: "length",
+  // Ran out of context window — a length-class stop, same bucket as max_tokens.
+  model_context_window_exceeded: "length",
   tool_use: "tool_use",
   stop_sequence: "stop_sequence",
   refusal: "content_filter",
@@ -43,6 +45,8 @@ const GOOGLE_MAP: Record<string, StopReason> = {
   RECITATION: "content_filter",
   BLOCKLIST: "content_filter",
   SPII: "content_filter",
+  IMAGE_SAFETY: "content_filter",
+  LANGUAGE: "content_filter",
 };
 
 export function normalizeGoogleStopReason(
@@ -87,8 +91,15 @@ export function normalizeOpenAIResponsesStopReason(
   if (incompleteReason) {
     return RESPONSES_INCOMPLETE_MAP[incompleteReason] || "other";
   }
+  // Tool-call turns report a generic terminal status, so infer tool_use from the
+  // presence of tool calls. Also treat a missing status (e.g. a stream that ended
+  // without a completed/incomplete event) as "unknown but has tools" rather than
+  // letting a tool-call turn silently degrade to "other".
+  if (hasToolCalls && (status === "completed" || status == null)) {
+    return "tool_use";
+  }
   if (status === "completed") {
-    return hasToolCalls ? "tool_use" : "stop";
+    return "stop";
   }
   return "other";
 }
