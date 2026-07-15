@@ -1,5 +1,13 @@
 # Changelog
 
+## smoltalk 0.8.3 (2026-07-15)
+
+### Added
+- `PromptResult` now carries `stopReason` — a provider-normalized reason the turn ended (`stop`, `length`, `tool_use`, `content_filter`, `stop_sequence`, `pause`, `other`) — plus `rawStopReason` with the untouched provider value. Populated across OpenAI (chat + Responses), Anthropic, Google, and Ollama, on both sync and streaming results.
+
+### Fixed
+- `z.any()`/`z.unknown()` in a structured-output or tool schema no longer sends a bare `{}` that providers reject: a nested `any` is coerced to `{"type":"string"}`, and a whole-schema `any` drops structured output so the model returns free text.
+
 ## smoltalk 0.8.2 (2026-07-14)
 
 ### Added
