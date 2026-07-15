@@ -85,7 +85,7 @@ export function mergeConsecutiveMessages(
  * supported (forward-looking).
  */
 export function anthropicSupportsStructuredOutput(model: string): boolean {
-  return !/^claude-(3[-.]|2[-.]|instant)/.test(model);
+  return !/^claude-(?:3(?:[-.]|$)|2(?:[-.]|$)|instant(?:[-.]|$))/i.test(model);
 }
 
 export function anthropicWebSearchEntries(hostedTools?: string[]): any[] {
