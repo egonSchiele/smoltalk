@@ -335,6 +335,78 @@ a `hostedTools` catalog (`getHostedTools()`); the published file is kept current
 by a daily CI job that translates [models.dev](https://models.dev) into
 smoltalk's shape.
 
+## Custom models & pricing
+
+If you use a model that isn't in smoltalk's baked-in catalog (a self-hosted
+model, a brand-new release, an OpenAI-compatible endpoint), smoltalk has no
+pricing for it and the `cost` field is simply omitted from the result — nothing
+errors, you just get `usage` without `cost`. Teach it the price and cost
+tracking starts working.
+
+**One model — `registerTextModel` (recommended).** Register once at startup:
+
+```ts
+import { registerTextModel, textSync } from "smoltalk";
+
+registerTextModel({
+  modelName: "my-model",
+  provider: "openai-compat", // must match the provider you call with (see below)
+  inputTokenCost: 0.5, // USD per 1M input tokens
+  outputTokenCost: 1.5, // USD per 1M output tokens
+  cachedInputTokenCost: 0.05, // optional
+  cacheCreationInputTokenCost: 0.625, // optional
+  maxInputTokens: 128000, // required by the type, even if you only want pricing
+  maxOutputTokens: 8192,
+});
+
+const res = await textSync({
+  model: "my-model",
+  provider: "openai-compat",
+  baseUrl: { openAiCompat: "https://my-endpoint/v1" },
+  messages,
+});
+// res.value.cost is now populated from the rates above.
+```
+
+**Per-call only — `config.modelData`.** When you can't register globally (e.g.
+per-tenant rates), pass a minimal blob for a single call. It layers over the
+baseline exactly like a refresh blob:
+
+```ts
+import { textSync, type ModelDataBlob } from "smoltalk";
+
+const modelData: ModelDataBlob = {
+  schemaVersion: 1,
+  generatedAt: new Date().toISOString(),
+  hostedTools: [],
+  models: [
+    {
+      type: "text",
+      modelName: "my-model",
+      provider: "openai-compat",
+      maxInputTokens: 128000,
+      maxOutputTokens: 8192,
+      inputTokenCost: 0.5,
+      outputTokenCost: 1.5,
+    },
+  ],
+};
+
+await textSync({ model: "my-model", provider: "openai-compat", messages, modelData });
+```
+
+**The provider must match.** The registry is keyed by `provider:modelName`, so
+the `provider` you register (or put in the blob) has to equal the `provider` you
+pass at call time. Registering `my-model` under `"openai-compat"` but calling it
+with `provider: "openrouter"` looks up a different key, finds no price, and
+silently drops the `cost` field. When in doubt, register under the same provider
+string you call with.
+
+Overriding an entry that *is* in the catalog works the same way — merges are
+field-by-field (see "Refreshing model data" above), so registering just
+`inputTokenCost` / `outputTokenCost` for a known model updates only those fields
+and leaves its limits and capabilities intact.
+
 ## Hosted tools catalog
 
 Each cloud provider offers server-side "hosted" tools (web search, code

@@ -106,6 +106,29 @@ bytes directly, avoiding the ~1.3× base64 round-trip that inline attachments
 `{ kind: "url" }` fetches arbitrary http(s) URLs — do not pass untrusted paths
 or URLs. See `lib/files.ts` and `docs/superpowers/specs/2026-06-30-files-api-design.md`.
 
+## Custom Models & Pricing
+
+Cost tracking reads pricing from the model registry in `lib/models.ts`.
+`Model.calculateCost()` (`lib/model.ts`) computes cost from the merged registry
+entry; an unknown model (or one with no `*TokenCost` fields) returns `null`, and
+`PromptResult.cost` is then omitted — no error.
+
+Three ways to supply pricing for a model not in the baked-in catalog, all public:
+
+- **`registerTextModel({...})`** — append one text model at startup. Needs
+  `modelName`, `provider`, `maxInputTokens`, `maxOutputTokens` (type required)
+  plus the `*TokenCost` fields you want tracked.
+- **`registerModelData(blob)`** — register a full `ModelDataBlob` globally (same
+  blob shape `refreshModels()` returns).
+- **`config.modelData`** — layer a blob over the baseline for a single call.
+
+Precedence: per-call `config.modelData` > `registerModelData` (global) > baked-in
+baseline, deep-merged field-by-field. **The merge key is `provider:modelName`**,
+so the registered `provider` must match the `provider` used at call time or the
+lookup misses and cost is silently dropped. See the "Custom models & pricing"
+section in `packages/smoltalk/README.md` for examples, and `mergeModelData` /
+`getModel` in `lib/models.ts` + `lib/modelData.ts`.
+
 ## Adding a New Provider
 
 There are two paths: **in-tree** (built into smoltalk core, like OpenAI/Anthropic/Google/Ollama) or **external plugin** (a separate package, like `smoltalk-llama-cpp`).

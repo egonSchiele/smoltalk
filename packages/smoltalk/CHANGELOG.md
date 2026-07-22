@@ -1,5 +1,11 @@
 # Changelog
 
+## smoltalk 0.8.4 (2026-07-21)
+
+### Added
+- Claude Sonnet 5 (`claude-sonnet-5`) and Claude Fable 5 (`claude-fable-5`) added to the model catalog, with pricing, 1M context / 128K output limits, and adaptive-thinking metadata.
+- Documented how to price a model that isn't in the baked-in catalog — `registerTextModel`, global `registerModelData`, and per-call `config.modelData` — in a new "Custom models & pricing" README section.
+
 ## smoltalk 0.8.3 (2026-07-15)
 
 ### Added
