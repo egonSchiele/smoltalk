@@ -8,15 +8,6 @@ Smoltalk exposes a common API to different LLM providers, with built-in cost tra
 pnpm install smoltalk
 ```
 
-> **Upgrading to 0.6.x?** The flat API-key/host fields on `SmolConfig` have
-> been removed in favor of nested `apiKey` and `baseUrl` maps. Migration:
-> ```diff
-> -{ openAiApiKey: "sk-...",   googleApiKey: "...", ollamaHost: "http://..." }
-> +{ apiKey: { openAi: "sk-...", google: "..." }, baseUrl: { ollama: "http://..." } }
-> ```
-> Env-var fallbacks are unchanged (`OPENAI_API_KEY`, `GEMINI_API_KEY`,
-> `ANTHROPIC_API_KEY`, `OLLAMA_HOST`).
-
 ## Hello world example
 
 ```typescript
