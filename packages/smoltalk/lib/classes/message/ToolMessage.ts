@@ -131,9 +131,9 @@ export class ToolMessage extends BaseMessage implements MessageClass {
         result: this.content,
       },
     };
-    // Echo the id so Gemini 3.5+ pairs this response to its call by id,
-    // order-free. Only when non-empty: Gemini 3 never issues ids, and an empty
-    // string is noise it rejects or ignores.
+    // Echo the id so Gemini can pair this response to its call by id — the
+    // documented matching mechanism. Only when non-empty: current Gemini 3
+    // preview models issue no ids, and an empty id is not a valid key.
     if (this.tool_call_id !== "") {
       functionResponse.id = this.tool_call_id;
     }

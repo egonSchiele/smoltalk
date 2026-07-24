@@ -113,9 +113,9 @@ export class ToolCall {
       name: this.name,
       args: this.arguments,
     };
-    // Echo the id when we have one so Gemini 3.5+ can pair the returned
-    // functionResponse.id back to this call (order-free). Omit it when empty —
-    // Gemini 3 issues no ids and rejects/ignores one it never sent.
+    // Echo the id when we have one: the Gemini API pairs a functionResponse
+    // back to its functionCall by id when present. Omit it when empty — current
+    // Gemini 3 preview models issue no ids, and an empty id is not a valid key.
     if (this._id !== "") {
       functionCall.id = this._id;
     }
