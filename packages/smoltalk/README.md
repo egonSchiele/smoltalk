@@ -346,7 +346,7 @@ tracking starts working.
 **One model — `registerTextModel` (recommended).** Register once at startup:
 
 ```ts
-import { registerTextModel, textSync } from "smoltalk";
+import { registerTextModel, textSync, userMessage } from "smoltalk";
 
 registerTextModel({
   modelName: "my-model",
@@ -359,6 +359,7 @@ registerTextModel({
   maxOutputTokens: 8192,
 });
 
+const messages = [userMessage("hello")];
 const res = await textSync({
   model: "my-model",
   provider: "openai-compat",
@@ -373,7 +374,7 @@ per-tenant rates), pass a minimal blob for a single call. It layers over the
 baseline exactly like a refresh blob:
 
 ```ts
-import { textSync, type ModelDataBlob } from "smoltalk";
+import { textSync, userMessage, type ModelDataBlob } from "smoltalk";
 
 const modelData: ModelDataBlob = {
   schemaVersion: 1,
@@ -392,6 +393,7 @@ const modelData: ModelDataBlob = {
   ],
 };
 
+const messages = [userMessage("hello")];
 await textSync({ model: "my-model", provider: "openai-compat", messages, modelData });
 ```
 
