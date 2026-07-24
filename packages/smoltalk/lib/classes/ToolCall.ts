@@ -109,17 +109,26 @@ export class ToolCall {
   }
 
   toGoogle(): { functionCall: FunctionCall; thoughtSignature?: string } {
-    return {
-      functionCall: {
-        name: this.name,
-        args: this.arguments,
-      },
-      // Gemini 3 requires the original thought signature echoed back on the
-      // function-call part; omitting it fails validation during tool use.
-      ...(this._thoughtSignature !== undefined && {
-        thoughtSignature: this._thoughtSignature,
-      }),
+    const functionCall: FunctionCall = {
+      name: this.name,
+      args: this.arguments,
     };
+    // Echo the id when we have one: the Gemini API pairs a functionResponse
+    // back to its functionCall by id when present. Omit it when empty — current
+    // Gemini 3 preview models issue no ids, and an empty id is not a valid key.
+    if (this._id !== "") {
+      functionCall.id = this._id;
+    }
+
+    const result: { functionCall: FunctionCall; thoughtSignature?: string } = {
+      functionCall,
+    };
+    // Gemini 3 requires the original thought signature echoed back on the
+    // function-call part; omitting it fails validation during tool use.
+    if (this._thoughtSignature !== undefined) {
+      result.thoughtSignature = this._thoughtSignature;
+    }
+    return result;
   }
 
   toOpenAIResponseInputItem(): ResponseInputItem {

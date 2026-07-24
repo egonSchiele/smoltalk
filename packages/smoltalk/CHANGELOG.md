@@ -1,5 +1,13 @@
 # Changelog
 
+## smoltalk 0.9.0 (2026-07-23)
+
+### Fixed
+- Gemini tool-result pairing: results are now matched to their calls regardless of the order a caller supplies them. Previously a caller whose tool results arrived in completion order (rather than call order) could feed tool A's answer to tool B.
+  - The non-streaming parser keeps `functionCall.id` instead of discarding it, so id-based pairing can round-trip (`ToolCall.tool_call_id` is now populated for non-streaming Gemini — it was always `""` before). It does **not** fall back to the function name as an id.
+  - `ToolCall.toGoogle()` and `ToolMessage.toGoogleMessage()` now echo the id (as `functionCall.id` / `functionResponse.id`) when non-empty — the API's documented call/response matching key. Empty ids are omitted (current Gemini 3 preview models issue none).
+  - The request builder reorders each round's tool results to match call order before sending. Gemini requires parts to be returned in the order received and rides the thought signature on the first parallel call, so this keeps positional pairing and thought-signature validation intact. Pairs by id when available, else by name + occurrence; never drops a result.
+
 ## smoltalk 0.8.4 (2026-07-21)
 
 ### Added

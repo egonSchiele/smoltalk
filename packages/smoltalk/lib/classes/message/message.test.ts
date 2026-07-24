@@ -428,6 +428,21 @@ describe("ToolMessage", () => {
       expect(part.functionResponse.name).toBe("get_weather");
       expect(part.functionResponse.response.result).toBe("result");
     });
+
+    // Change 2: echo the tool_call_id as functionResponse.id so Gemini 3.5+ can
+    // pair the response to its call by id, order-free.
+    it("emits functionResponse.id when tool_call_id is set", () => {
+      const msg = new ToolMessage("result", { tool_call_id: "tc-1", name: "get_weather" });
+      const part = msg.toGoogleMessage().parts[0] as any;
+      expect(part.functionResponse.id).toBe("tc-1");
+    });
+
+    // An empty id is noise Gemini 3 never issued — omit the key entirely.
+    it("omits functionResponse.id when tool_call_id is empty", () => {
+      const msg = new ToolMessage("result", { tool_call_id: "", name: "get_weather" });
+      const part = msg.toGoogleMessage().parts[0] as any;
+      expect("id" in part.functionResponse).toBe(false);
+    });
   });
 
   describe("toOllamaMessage", () => {

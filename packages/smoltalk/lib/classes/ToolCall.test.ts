@@ -84,6 +84,19 @@ describe("ToolCall", () => {
       expect(google.functionCall.args).toEqual({ city: "NYC" });
       expect(typeof google.functionCall.args).toBe("object");
     });
+
+    // Change 2b: id-based pairing is symmetric — Gemini needs functionCall.id in
+    // the replayed model turn to match the functionResponse.id it gets back.
+    it("emits functionCall.id when the id is set", () => {
+      const tc = new ToolCall("call-1", "get_weather", { city: "NYC" });
+      expect(tc.toGoogle().functionCall.id).toBe("call-1");
+    });
+
+    // Never send an empty id: Gemini 3 issues none and rejects/ignores it.
+    it("omits functionCall.id when the id is empty", () => {
+      const tc = new ToolCall("", "get_weather", { city: "NYC" });
+      expect("id" in tc.toGoogle().functionCall).toBe(false);
+    });
   });
 
   describe("toOpenAIResponseInputItem", () => {

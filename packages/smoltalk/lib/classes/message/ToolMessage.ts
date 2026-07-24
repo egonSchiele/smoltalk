@@ -2,7 +2,7 @@ import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
 import { TextPart, TextPartSchema } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
-import { Content } from "@google/genai";
+import { Content, FunctionResponse } from "@google/genai";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 import { getLogger } from "../../util/logger.js";
@@ -125,18 +125,22 @@ export class ToolMessage extends BaseMessage implements MessageClass {
   }
 
   toGoogleMessage(): Content {
+    const functionResponse: FunctionResponse = {
+      name: this.name,
+      response: {
+        result: this.content,
+      },
+    };
+    // Echo the id so Gemini can pair this response to its call by id — the
+    // documented matching mechanism. Only when non-empty: current Gemini 3
+    // preview models issue no ids, and an empty id is not a valid key.
+    if (this.tool_call_id !== "") {
+      functionResponse.id = this.tool_call_id;
+    }
+
     return {
       role: "user",
-      parts: [
-        {
-          functionResponse: {
-            name: this.name,
-            response: {
-              result: this.content,
-            },
-          },
-        },
-      ],
+      parts: [{ functionResponse }],
     };
   }
 

@@ -31,6 +31,7 @@ import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchC
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { Model } from "../model.js";
 import { userMessage } from "../classes/message/index.js";
+import type { Message } from "../classes/message/index.js";
 
 export type SmolGoogleConfig = SmolConfig;
 
@@ -59,6 +60,129 @@ export function geminiSupportsToolCirculation(model: string): boolean {
   const m = /^gemini-(\d+)/.exec(model);
   if (!m) return true;
   return parseInt(m[1], 10) >= 3;
+}
+
+// Reorder each round's tool results to match the order of the calls that
+// produced them. Two documented Gemini behaviors make this necessary:
+//   - A function call carries an optional `id`, and a response is paired back to
+//     its call by echoing that id.
+//     https://ai.google.dev/gemini-api/docs/function-calling
+//   - Parts must be returned in the order received (responses in call order:
+//     FC1,FC2 -> FR1,FR2), and the thought signature rides ONLY the first
+//     function call of a parallel batch; omitting it 400s on Gemini 3. So part
+//     order is load-bearing independent of ids.
+//     https://ai.google.dev/gemini-api/docs/generate-content/thought-signatures
+// Current Gemini 3 preview models are observed to emit no function-call ids, so
+// on them pairing is purely positional. A caller whose results arrive in
+// completion order (rather than call order) would otherwise feed tool A's answer
+// to tool B and break thought-signature validation.
+//
+// For every assistant message that carries toolCalls, the run of ToolMessages
+// immediately following it is reordered. The run ends at the first non-tool
+// message: any results the caller interleaved AFTER a non-tool message are left
+// where they are — moving messages across an interloper is repair, not reorder.
+//   1. By id, when both the call and a response have non-empty ids (order-free,
+//      takes global priority so an id match is never stolen by a name match).
+//   2. By name + occurrence otherwise: the k-th response named X answers the
+//      k-th call named X.
+// NEVER drop a message: a response matching no call (or any surplus) is kept at
+// the end of the run in its original relative order. A reorder that lost a
+// message would turn a mispairing bug into a missing-result bug, which is worse.
+export function reorderToolResultsForGemini(messages: Message[]): Message[] {
+  const out: Message[] = [];
+  let i = 0;
+  while (i < messages.length) {
+    const msg = messages[i];
+    out.push(msg);
+
+    const toolCalls =
+      msg.role === "assistant" ? msg.toolCalls : undefined;
+    if (!toolCalls || toolCalls.length === 0) {
+      i += 1;
+      continue;
+    }
+
+    // Collect the contiguous run of tool results that answers this round.
+    let j = i + 1;
+    const run: Message[] = [];
+    while (j < messages.length && messages[j].role === "tool") {
+      run.push(messages[j]);
+      j += 1;
+    }
+    if (run.length === 0) {
+      i += 1;
+      continue;
+    }
+
+    out.push(...orderRunToMatchCalls(toolCalls, run));
+    i = j;
+  }
+  return out;
+}
+
+function orderRunToMatchCalls(
+  toolCalls: ToolCall[],
+  run: Message[],
+): Message[] {
+  const used = new Array(run.length).fill(false);
+  // assignment[callIndex] = index into `run`, or -1 if that call has no result.
+  const assignment = new Array<number>(toolCalls.length).fill(-1);
+
+  function runId(k: number): string {
+    const m = run[k];
+    if (m.role === "tool") {
+      return m.tool_call_id;
+    }
+    return "";
+  }
+  function runName(k: number): string {
+    const m = run[k];
+    if (m.role === "tool") {
+      return m.name;
+    }
+    return "";
+  }
+
+  // Pass 1: id pairing (both sides non-empty), global priority.
+  toolCalls.forEach((call, ci) => {
+    if (call.id === "") return;
+    const ri = run.findIndex(
+      (_r, k) => !used[k] && runId(k) !== "" && runId(k) === call.id,
+    );
+    if (ri !== -1) {
+      assignment[ci] = ri;
+      used[ri] = true;
+    }
+  });
+
+  // Pass 2: name + occurrence, for calls still unmatched. findIndex takes the
+  // first unused same-name response, so the k-th call named X pairs with the
+  // k-th response named X.
+  //
+  // Garbage-in caveat: if a call and its only same-name response carry DIFFERENT
+  // non-empty ids (one side lost or mangled its id), pass 1 misses and pass 2
+  // pairs them by name — emitting functionCall.id != functionResponse.id in that
+  // slot, which an id-pairing model would see as a contradiction. The input was
+  // already inconsistent; we pair positionally rather than drop the result. Not
+  // a reorder bug.
+  toolCalls.forEach((call, ci) => {
+    if (assignment[ci] !== -1) return;
+    const ri = run.findIndex((_r, k) => !used[k] && runName(k) === call.name);
+    if (ri !== -1) {
+      assignment[ci] = ri;
+      used[ri] = true;
+    }
+  });
+
+  const ordered: Message[] = [];
+  for (const ri of assignment) {
+    if (ri !== -1) ordered.push(run[ri]);
+  }
+  // Never drop: append any unmatched/surplus responses in original order.
+  for (let k = 0; k < run.length; k++) {
+    if (!used[k]) ordered.push(run[k]);
+  }
+  return ordered;
 }
 
 export function parseGoogleHostedTools(
@@ -179,7 +303,12 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       }
       return true;
     });
-    const messages = contentMessages.map((msg) => msg.toGoogleMessage());
+    // Normalize tool-result ordering before conversion: Gemini pairs each
+    // functionResponse to its functionCall (by id on 3.5+, strictly by position
+    // on the Gemini 3 family), so results must leave in call order regardless of
+    // the order the caller supplied them. See reorderToolResultsForGemini.
+    const orderedMessages = reorderToolResultsForGemini(contentMessages);
+    const messages = orderedMessages.map((msg) => msg.toGoogleMessage());
 
     const tools = (config.tools || []).map((tool) => {
       return zodToGoogleTool(tool.name, tool.schema, {
@@ -437,7 +566,11 @@ export class SmolGoogle extends BaseClient implements SmolClient {
             // Gemini 3 rides the thought signature on the same part as the
             // function call; capture it so it can be echoed back during tool use.
             toolCalls.push(
-              new ToolCall("", functionCall.name, functionCall.args, {
+              // Keep functionCall.id so id-based pairing can round-trip. Do NOT
+              // fall back to the name (as the streaming path does for its Map
+              // key): two parallel calls to the same tool would share a fake id
+              // and re-create the pairing bug at the id layer.
+              new ToolCall(functionCall.id || "", functionCall.name, functionCall.args, {
                 thoughtSignature: part.thoughtSignature,
               }),
             );
