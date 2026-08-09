@@ -46,6 +46,11 @@ export type SpeechToTextModel = BaseModel & {
   perMinuteCost?: number;
 };
 
+export type TextToSpeechModel = BaseModel & {
+  type: "text-to-speech";
+  perCharacterCost?: number; // USD per input Unicode code point
+};
+
 export type ImageModel = BaseModel & {
   type: "image";
   costPerImage?: number;
@@ -109,6 +114,7 @@ export type EmbeddingsModel = {
 
 export type ModelType =
   | SpeechToTextModel
+  | TextToSpeechModel
   | TextModel
   | EmbeddingsModel
   | ImageModel;
@@ -116,20 +122,25 @@ export type ModelType =
 export const speechToTextModels = [
   {
     type: "speech-to-text",
-    modelName: "whisper-web",
+    modelName: "whisper-1",
     perMinuteCost: 0.006,
     provider: "openai",
   },
-  // not a speech to text model?
-  /* {
-    type: "speech-to-text",
-    modelName: "gpt-4o-audio-preview",
-    description:
-      "This is a preview release of the GPT-4o Audio models. These models accept audio inputs and outputs, and can be used in the Chat Completions REST API. Learn more. The knowledge cutoff for GPT-4o Audio models is October, 2023.",
-    inputTokenCost: 2.5,
-    outputTokenCost: 10,
+] as const;
+
+export const textToSpeechModels = [
+  {
+    type: "text-to-speech",
+    modelName: "tts-1",
+    perCharacterCost: 0.000015,
     provider: "openai",
-  }, */
+  },
+  {
+    type: "text-to-speech",
+    modelName: "tts-1-hd",
+    perCharacterCost: 0.00003,
+    provider: "openai",
+  },
 ] as const;
 
 export const textModels = [
@@ -1709,6 +1720,19 @@ export const textModels = [
     temperatureSupported: false,
     provider: "openai-responses",
   },
+  {
+    type: "text",
+    modelName: "gpt-audio-1.5",
+    description: "OpenAI GA audio chat model (Chat Completions). Text+audio in, text+audio out.",
+    provider: "openai",
+    modalities: { input: ["text", "audio"], output: ["text", "audio"] },
+    inputTokenCost: 2.5,
+    outputTokenCost: 10,
+    inputAudioTokenCost: 32,
+    outputAudioTokenCost: 64,
+    maxInputTokens: 128000,
+    maxOutputTokens: 16384,
+  },
 ] as const;
 
 export const imageModels = [
@@ -1806,6 +1830,8 @@ export type TextModelName = (typeof textModels)[number]["modelName"];
 export type ImageModelName = (typeof imageModels)[number]["modelName"];
 export type SpeechToTextModelName =
   (typeof speechToTextModels)[number]["modelName"];
+export type TextToSpeechModelName =
+  (typeof textToSpeechModels)[number]["modelName"];
 export type EmbeddingsModelName =
   (typeof embeddingsModels)[number]["modelName"];
 export type ModelName = string; // TextModelName | ImageModelName | SpeechToTextModelName;
@@ -1952,6 +1978,7 @@ function baselineModels(): ModelType[] {
     ...textModels,
     ...imageModels,
     ...speechToTextModels,
+    ...textToSpeechModels,
     ...registeredTextModels,
     ...embeddingsModels,
   ] as ModelType[];
@@ -1982,6 +2009,22 @@ export function getModel(
 ): ModelType | undefined {
   return getAllModels(requestData).find(
     (model) => model.modelName === modelName,
+  );
+}
+
+/**
+ * Like `getModel`, but also matches on `provider`. Use this whenever a
+ * modelName may collide across providers (the merge key everywhere else in
+ * this module is `provider:modelName`) — plain `getModel` returns whichever
+ * matching entry comes first and can silently pick the wrong provider.
+ */
+export function getModelForProvider(
+  provider: string,
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): ModelType | undefined {
+  return getAllModels(requestData).find(
+    (model) => model.modelName === modelName && model.provider === provider,
   );
 }
 
@@ -2083,6 +2126,11 @@ export function isSpeechToTextModel(
   model: ModelType,
 ): model is SpeechToTextModel {
   return model.type === "speech-to-text";
+}
+export function isTextToSpeechModel(
+  model: ModelType,
+): model is TextToSpeechModel {
+  return model.type === "text-to-speech";
 }
 export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";
