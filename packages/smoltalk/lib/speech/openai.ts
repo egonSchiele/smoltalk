@@ -10,6 +10,16 @@ import { BaseSpeechClient } from "./baseSpeechClient.js";
 import type { SpeechResult } from "../speech.js";
 
 export class OpenAISpeechClient extends BaseSpeechClient {
+  /** Build the OpenAI SDK client. Subclasses override to point at a compatible base URL. */
+  protected makeClient(): OpenAI {
+    return new OpenAI({ apiKey: this.config.apiKey });
+  }
+
+  /** Provider default used when the declarative call omits format. */
+  protected defaultFormat(): SpeakFormat {
+    return "mp3";
+  }
+
   // No try/catch here: BaseSpeechClient.speak() is the single
   // redacting/logging exception boundary.
   protected async _speak(text: string): Promise<Result<SpeechResult>> {
@@ -19,7 +29,7 @@ export class OpenAISpeechClient extends BaseSpeechClient {
 
     // The shared contract carries format as a plain string; narrow to OpenAI's
     // closed union at runtime before indexing the MIME table.
-    const requestedFormat = this.config.format ?? "mp3";
+    const requestedFormat = this.config.format ?? this.defaultFormat();
     if (!isSpeakFormat(requestedFormat)) {
       return failure(
         `Format "${requestedFormat}" is not a supported OpenAI speech format. ` +
@@ -29,7 +39,7 @@ export class OpenAISpeechClient extends BaseSpeechClient {
     const format: SpeakFormat = requestedFormat;
     const mimeType = SPEECH_FORMAT_TO_MIME[format];
 
-    const client = new OpenAI({ apiKey: this.config.apiKey });
+    const client = this.makeClient();
     const params: SpeechCreateParams = {
       model: this.config.model,
       voice: this.config.voice as SpeechCreateParams["voice"],

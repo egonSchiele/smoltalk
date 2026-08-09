@@ -17,6 +17,11 @@ type OpenAITranscriptionResponse = {
 };
 
 export class OpenAITranscriptionClient extends BaseTranscriptionClient {
+  /** Build the OpenAI SDK client. Subclasses override to point at a compatible base URL. */
+  protected makeClient(): OpenAI {
+    return new OpenAI({ apiKey: this.config.apiKey });
+  }
+
   // No try/catch here: BaseTranscriptionClient.transcribe() is the single
   // redacting/logging exception boundary.
   protected async _transcribe(
@@ -31,7 +36,7 @@ export class OpenAITranscriptionClient extends BaseTranscriptionClient {
     // operation contract. Derive the synthetic name from the normalized MIME.
     const filename = transcriptionAudioType(mimeType)?.filename ?? "audio.bin";
 
-    const client = new OpenAI({ apiKey: this.config.apiKey });
+    const client = this.makeClient();
     const file = await toFile(data, filename, { type: mimeType });
 
     const granularities: ("segment" | "word")[] = [];
