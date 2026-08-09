@@ -509,11 +509,43 @@ the provider call. Embeddings and images are one-shot functions.
 
 ## Audio (STT/TTS)
 
-Three audio primitives, all OpenAI-only in v1. `transcribe()` (speech-to-text)
-and `speak()` (text-to-speech) are async and return `Result<T>` (never throw).
-`audioPart()` (attach audio to a chat message) is different: it's a
-synchronous plain-object constructor, not a `Result`-returning call — see
-"Audio in chat" below.
+Three audio primitives. `transcribe()` (speech-to-text) and `speak()`
+(text-to-speech) are async and return `Result<T>` (never throw). `audioPart()`
+(attach audio to a chat message) is different: it's a synchronous plain-object
+constructor, not a `Result`-returning call — see "Audio in chat" below.
+
+`transcribe()` and `speak()` support **OpenAI**, **Groq** (OpenAI-compatible
+endpoints), and **Google Gemini** (native multimodal). For any other provider
+that exposes OpenAI-shaped `/audio/*` endpoints, use the generic
+**`openai-compat`** provider with `baseUrl` (mirrors the chat client). Anthropic,
+OpenRouter, and Ollama have no audio endpoints and return a `Failure`.
+
+```ts
+// example: skip-typecheck
+// Groq STT (OpenAI-compatible; provider inferred from the model)
+await transcribe(src, { model: "whisper-large-v3" });
+
+// Gemini STT (native multimodal — a general Gemini model transcribes)
+await transcribe(src, { model: "gemini-2.5-flash", provider: "google" });
+
+// Groq TTS → WAV by default
+await speak("Hello", { model: "canopylabs/orpheus-v1-english", voice: "troy" });
+
+// Gemini TTS → raw PCM by default; format: "wav" wraps it in a WAV header.
+// Gemini has no numeric `speed` (rejected) and produces PCM/WAV only.
+await speak("Hello", {
+  model: "gemini-2.5-flash-preview-tts", voice: "Kore",
+  provider: "google", format: "wav",
+});
+
+// Any OpenAI-compatible /audio endpoint (vLLM, LiteLLM, a proxy, …)
+await transcribe(src, {
+  model: "whisper-1",
+  provider: "openai-compat",
+  apiKey: { openAiCompat: "..." },       // or OPENAI_COMPAT_API_KEY
+  baseUrl: { openAiCompat: "https://my-proxy/v1" }, // or OPENAI_COMPAT_BASE_URL
+});
+```
 
 ### Speech-to-text
 
@@ -529,7 +561,9 @@ if (result.success) {
 }
 ```
 
-`whisper-1` is the only baked-in model in v1. Options: `language`, `prompt`,
+Baked-in STT models: `whisper-1` (OpenAI) and `whisper-large-v3` /
+`whisper-large-v3-turbo` (Groq); Gemini transcribes with a general model such as
+`gemini-2.5-flash`. Options: `language`, `prompt`,
 `timestampGranularity` (`"segment"` | `"word"`), `maxBytes` (a safety limit —
 the effective cap is the smaller of your limit and the model's declared upload
 cap, 25 MB for `whisper-1`). The result carries `text` plus optional

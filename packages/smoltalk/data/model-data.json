@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-09T16:40:55.428Z",
+  "generatedAt": "2026-08-09T19:59:05.416Z",
   "models": [
     {
       "type": "text",
@@ -1456,6 +1456,15 @@
           "text"
         ]
       },
+      "supportedMimeTypes": [
+        "audio/wav",
+        "audio/mpeg",
+        "audio/aac",
+        "audio/ogg",
+        "audio/flac",
+        "audio/aiff"
+      ],
+      "maxBytes": 14000000,
       "knowledge": "2025-01",
       "releaseDate": "2025-06-17",
       "lastUpdated": "2025-06-17",
@@ -2125,6 +2134,40 @@
       "maxBytes": 26214400
     },
     {
+      "type": "speech-to-text",
+      "modelName": "whisper-large-v3",
+      "provider": "groq",
+      "perMinuteCost": 0.00185,
+      "minimumBillableSeconds": 10,
+      "supportedMimeTypes": [
+        "audio/flac",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/ogg",
+        "audio/wav",
+        "audio/webm"
+      ],
+      "maxBytes": 26214400
+    },
+    {
+      "type": "speech-to-text",
+      "modelName": "whisper-large-v3-turbo",
+      "provider": "groq",
+      "perMinuteCost": 0.000667,
+      "minimumBillableSeconds": 10,
+      "supportedMimeTypes": [
+        "audio/flac",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/ogg",
+        "audio/wav",
+        "audio/webm"
+      ],
+      "maxBytes": 26214400
+    },
+    {
       "type": "text-to-speech",
       "modelName": "tts-1",
       "perCharacterCost": 0.000015,
@@ -2160,6 +2203,48 @@
         "flac",
         "wav",
         "pcm"
+      ]
+    },
+    {
+      "type": "text-to-speech",
+      "modelName": "canopylabs/orpheus-v1-english",
+      "provider": "groq",
+      "perCharacterCost": 0.000022,
+      "maxInputChars": 200,
+      "formats": [
+        "wav"
+      ]
+    },
+    {
+      "type": "text-to-speech",
+      "modelName": "canopylabs/orpheus-arabic-saudi",
+      "provider": "groq",
+      "perCharacterCost": 0.00004,
+      "maxInputChars": 200,
+      "formats": [
+        "wav"
+      ]
+    },
+    {
+      "type": "text-to-speech",
+      "modelName": "gemini-2.5-flash-preview-tts",
+      "provider": "google",
+      "inputTokenCost": 0.5,
+      "outputAudioTokenCost": 10,
+      "formats": [
+        "pcm",
+        "wav"
+      ]
+    },
+    {
+      "type": "text-to-speech",
+      "modelName": "gemini-2.5-pro-preview-tts",
+      "provider": "google",
+      "inputTokenCost": 1,
+      "outputAudioTokenCost": 20,
+      "formats": [
+        "pcm",
+        "wav"
       ]
     },
     {

@@ -3,6 +3,8 @@ import {
   transcriptionAudioType,
   chatAudioFormat,
   SPEECH_FORMAT_TO_MIME,
+  googleAudioWireMime,
+  pcmToWav,
   type SpeakFormat,
 } from "./audioMime.js";
 
@@ -118,5 +120,41 @@ describe("audioMime", () => {
       expect(chatAudioFormat("audio/webm")).toBeNull();
       expect(chatAudioFormat("audio/mp4")).toBeNull();
     });
+  });
+});
+
+describe("pcmToWav", () => {
+  it("prepends a valid 44-byte WAV header for 24kHz mono s16le", () => {
+    const pcm = new Uint8Array([1, 2, 3, 4]);
+    const wav = pcmToWav(pcm, { sampleRateHz: 24000, channels: 1, bitsPerSample: 16 });
+
+    expect(wav.length).toBe(44 + pcm.length);
+    const ascii = (a: Uint8Array, i: number, n: number) =>
+      String.fromCharCode(...a.slice(i, i + n));
+    expect(ascii(wav, 0, 4)).toBe("RIFF");
+    expect(ascii(wav, 8, 4)).toBe("WAVE");
+    expect(ascii(wav, 12, 4)).toBe("fmt ");
+    expect(ascii(wav, 36, 4)).toBe("data");
+
+    const view = new DataView(wav.buffer, wav.byteOffset, wav.byteLength);
+    expect(view.getUint32(4, true)).toBe(36 + pcm.length); // chunk size
+    expect(view.getUint16(22, true)).toBe(1); // channels
+    expect(view.getUint32(24, true)).toBe(24000); // sample rate
+    expect(view.getUint32(28, true)).toBe(24000 * 1 * 2); // byte rate
+    expect(view.getUint16(34, true)).toBe(16); // bits/sample
+    expect(view.getUint32(40, true)).toBe(pcm.length); // data size
+    expect(Array.from(wav.slice(44))).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("googleAudioWireMime", () => {
+  it("maps MP3 aliases and the canonical MIME to Google's wire value", () => {
+    expect(googleAudioWireMime("audio/mpeg")).toBe("audio/mp3");
+    expect(googleAudioWireMime("audio/mp3")).toBe("audio/mp3");
+  });
+
+  it("normalizes supported non-MP3 audio MIME values", () => {
+    expect(googleAudioWireMime("AUDIO/AAC")).toBe("audio/aac");
+    expect(googleAudioWireMime("audio/aiff")).toBe("audio/aiff");
   });
 });

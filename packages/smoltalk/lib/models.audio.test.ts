@@ -8,10 +8,25 @@ import {
   modelSupportsInputModality,
   registerModelData,
   clearModelData,
+  ProviderSchema,
 } from "./models.js";
 import type { ModelDataBlob } from "./modelData.js";
 
 describe("audio model registry", () => {
+  it("recognizes groq as a built-in provider", () => {
+    expect(ProviderSchema.parse("groq")).toBe("groq");
+  });
+
+  it("registers Groq Whisper STT models under the groq provider", () => {
+    const m = getModelForProvider("groq", "whisper-large-v3");
+    expect(m).toBeDefined();
+    if (!m || !isSpeechToTextModel(m)) throw new Error("expected groq STT model");
+    expect(m.perMinuteCost).toBe(0.00185);
+    expect(m.maxBytes).toBe(25 * 1024 * 1024);
+    expect(m.supportedMimeTypes).toContain("audio/wav");
+  });
+
+
   it("has the verified STT/TTS prices, providers, and registry inclusion", () => {
     const m = getModel("whisper-1")!;
     expect(isSpeechToTextModel(m)).toBe(true);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Model } from "./model.js";
+import { round } from "./util/util.js";
 import type { ModelDataBlob } from "./modelData.js";
 
 const modelData: ModelDataBlob = {
@@ -150,6 +151,35 @@ describe("calculateCost with audio tokens", () => {
     expect(cost.outputCost).toBe(1.5);
     expect(cost.totalCost).toBe(2.5);
   });
+
+  it("prices token-based TTS through the same four-bucket engine", () => {
+    const ttsData: ModelDataBlob = {
+      schemaVersion: 1,
+      generatedAt: "test",
+      hostedTools: [],
+      models: [{
+        type: "text-to-speech",
+        modelName: "gem-tts",
+        provider: "google",
+        inputTokenCost: 0.5,
+        outputAudioTokenCost: 10,
+        formats: ["pcm", "wav"],
+      }],
+    };
+    const model = new Model("gem-tts", "google", ttsData);
+    expect(
+      model.calculateCost({
+        inputTokens: 1_000_000, outputTokens: 0, outputAudioTokens: 1_000_000,
+      }),
+    ).toEqual({
+      inputCost: 0.5,
+      outputCost: 10,
+      cachedInputCost: undefined,
+      cacheCreationInputCost: undefined,
+      totalCost: 10.5,
+      currency: "USD",
+    });
+  });
 });
 
 import { calculateTranscriptionCost, calculateSpeechCost } from "./model.js";
@@ -171,6 +201,24 @@ describe("calculateTranscriptionCost", () => {
     expect(calculateTranscriptionCost({ ...sttModel, perMinuteCost: undefined }, 120)).toBeUndefined();
     expect(calculateTranscriptionCost(sttModel, undefined)).toBeUndefined();
     expect(calculateTranscriptionCost(undefined, 120)).toBeUndefined();
+  });
+
+  it("applies a provider minimum billable duration to short clips", () => {
+    const groqModel = { ...sttModel, perMinuteCost: 0.00185, minimumBillableSeconds: 10 } as const;
+    // A 4s clip is billed as 10s: (10/60) * 0.00185
+    expect(calculateTranscriptionCost(groqModel, 4)).toEqual({
+      inputCost: round((10 / 60) * 0.00185, 6),
+      outputCost: 0,
+      totalCost: round((10 / 60) * 0.00185, 6),
+      currency: "USD",
+    });
+    // A 30s clip exceeds the minimum and bills its real duration.
+    expect(calculateTranscriptionCost(groqModel, 30)).toEqual({
+      inputCost: round((30 / 60) * 0.00185, 6),
+      outputCost: 0,
+      totalCost: round((30 / 60) * 0.00185, 6),
+      currency: "USD",
+    });
   });
 });
 

@@ -33,6 +33,7 @@ describe("resolveApiKey", () => {
     delete process.env.DEEPINFRA_API_KEY;
     delete process.env.LITELLM_API_KEY;
     delete process.env.OPENAI_COMPAT_API_KEY;
+    delete process.env.GROQ_API_KEY;
   });
 
   afterEach(() => {
@@ -104,6 +105,14 @@ describe("resolveApiKey", () => {
     expect(resolveApiKey("deepinfra", {})).toBe("di-env");
     expect(resolveApiKey("litellm", {})).toBe("ll-env");
     expect(resolveApiKey("openai-compat", {})).toBe("oc-env");
+  });
+
+  it("resolves the groq key from config then GROQ_API_KEY", () => {
+    expect(resolveApiKey("groq", { apiKey: { groq: "gk-explicit" } })).toBe(
+      "gk-explicit",
+    );
+    process.env.GROQ_API_KEY = "gk-env";
+    expect(resolveApiKey("groq", {})).toBe("gk-env");
   });
 
   it("no longer reads the old flat fields", () => {
