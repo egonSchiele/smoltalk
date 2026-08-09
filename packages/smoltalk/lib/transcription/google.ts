@@ -49,7 +49,13 @@ export class GoogleTranscriptionClient extends BaseTranscriptionClient {
     }
 
     const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
-    const res = await ai.models.generateContent(request);
+    // Signal is passed at call time (not part of `request`) so the encoded-size
+    // check above measures only the payload. Gemini's abortSignal is client-only:
+    // it tears down the request but does not stop server-side billing.
+    const res = await ai.models.generateContent({
+      ...request,
+      config: { abortSignal: this.config.abortSignal },
+    });
     const usage = normalizeGoogleAudioUsage(res.usageMetadata, "input");
 
     const result: TranscriptionResult = {

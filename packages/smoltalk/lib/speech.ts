@@ -25,6 +25,8 @@ export type SpeakOptions = {
   format?: string;
   speed?: number;
   metadata?: Record<string, unknown>;
+  /** Abort the in-flight provider request when this signal fires. */
+  abortSignal?: AbortSignal;
 };
 
 export type PcmAudioMetadata = {

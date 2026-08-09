@@ -66,6 +66,7 @@ export class OpenAITranscriptionClient extends BaseTranscriptionClient {
 
     const res = (await client.audio.transcriptions.create(
       requestBody as unknown as Parameters<typeof client.audio.transcriptions.create>[0],
+      { signal: this.config.abortSignal },
     )) as unknown as OpenAITranscriptionResponse;
 
     const result: TranscriptionResult = { text: res.text, raw: res };

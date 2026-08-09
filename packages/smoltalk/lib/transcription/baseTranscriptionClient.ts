@@ -30,6 +30,8 @@ export type TranscriptionClientConfig = {
   timestampGranularity?: "segment" | "word";
   maxBytes?: number;
   metadata?: Record<string, unknown>;
+  /** Abort the in-flight provider request when this signal fires. */
+  abortSignal?: AbortSignal;
 };
 
 /** Validate the declarative STT constraint block once before consuming it. */
@@ -95,6 +97,10 @@ export abstract class BaseTranscriptionClient {
   }
 
   async transcribe(source: BlobRef): Promise<Result<TranscriptionResult>> {
+    // Already-aborted signal: stop before doing any paid work.
+    if (this.config.abortSignal?.aborted) {
+      return failure("Request was aborted");
+    }
     try {
       const model = getModelForProvider(this.config.provider, this.config.model, this.config.modelData);
       // A model is a valid transcription target if it is a dedicated STT model,
@@ -165,6 +171,11 @@ export abstract class BaseTranscriptionClient {
       }
       return result;
     } catch (err) {
+      // Caller-initiated cancellation surfaces as a distinguishable failure
+      // (matching the chat path), not a redacted provider error.
+      if (this.config.abortSignal?.aborted) {
+        return failure("Request was aborted");
+      }
       let msg = "transcribe() failed";
       if (err instanceof Error) {
         msg = err.message;

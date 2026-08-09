@@ -29,6 +29,8 @@ export type TranscribeOptions = {
   timestampGranularity?: "segment" | "word";
   maxBytes?: number;
   metadata?: Record<string, unknown>;
+  /** Abort the in-flight provider request when this signal fires. */
+  abortSignal?: AbortSignal;
 };
 
 export type TranscriptionSegment = { start: number; end: number; text: string };

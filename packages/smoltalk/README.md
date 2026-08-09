@@ -566,8 +566,15 @@ Baked-in STT models: `whisper-1` (OpenAI) and `whisper-large-v3` /
 `gemini-2.5-flash`. Options: `language`, `prompt`,
 `timestampGranularity` (`"segment"` | `"word"`), `maxBytes` (a safety limit —
 the effective cap is the smaller of your limit and the model's declared upload
-cap, 25 MB for `whisper-1`). The result carries `text` plus optional
-`language`, `durationSeconds`, `segments`, `words`, `usage`, and `cost`.
+cap, 25 MB for `whisper-1`), and `abortSignal` (see Cancellation below). The
+result carries `text` plus optional `language`, `durationSeconds`, `segments`,
+`words`, `usage`, and `cost`.
+
+**Cancellation.** Both `transcribe()` and `speak()` accept an `abortSignal`;
+firing it aborts the underlying provider request. On abort they return
+`failure("Request was aborted")` (they never throw) — the same shape the chat
+path uses. (For Gemini this is client-only: the request is torn down but the
+provider may still bill server-side work.)
 
 Model constraints (accepted MIME types, upload cap, per-minute price) live in
 the model registry, not in code — a model you add via `registerModelData` /

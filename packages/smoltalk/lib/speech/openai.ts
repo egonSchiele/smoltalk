@@ -54,7 +54,7 @@ export class OpenAISpeechClient extends BaseSpeechClient {
     if (this.config.speed !== undefined) {
       params.speed = this.config.speed;
     }
-    const res = await client.audio.speech.create(params);
+    const res = await client.audio.speech.create(params, { signal: this.config.abortSignal });
     const audio = new Uint8Array(await res.arrayBuffer());
 
     const result: SpeechResult = { audio, mimeType };
