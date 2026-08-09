@@ -164,6 +164,36 @@ describe("transcribe() dispatch", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("redacts the RESOLVED provider's key (not an openai guess) when provider is inferred from the model", async () => {
+    const secret = "google-secret-abc123";
+    const md = {
+      schemaVersion: 1,
+      generatedAt: "t",
+      hostedTools: [],
+      models: [{ type: "speech-to-text", modelName: "custom-google-model", provider: "google" }],
+    } satisfies ModelDataBlob;
+    registerTranscriptionProvider("google", {
+      async transcribe() {
+        throw new Error(`upstream rejected request signed with ${secret}`);
+      },
+    });
+    const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});
+    const r = await transcribe(src, {
+      model: "custom-google-model",
+      modelData: md,
+      apiKey: { google: secret },
+    });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).not.toContain(secret);
+      expect(r.error).toContain("[redacted]");
+    }
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    const loggedArgs = errorSpy.mock.calls[0];
+    expect(loggedArgs.join(" ")).not.toContain(secret);
+    errorSpy.mockRestore();
+  });
+
   it("converts a rejected OpenAI SDK promise into a single redacted, logged Failure", async () => {
     create.mockRejectedValue(new Error("upstream exploded near sk-x"));
     const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});

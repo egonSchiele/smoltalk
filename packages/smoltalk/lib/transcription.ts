@@ -82,7 +82,10 @@ export async function transcribe(
   source: BlobRef,
   opts: TranscribeOptions,
 ): Promise<Result<TranscriptionResult>> {
-  const apiKeyForRedaction = resolveApiKey(opts.provider ?? "openai", opts) ?? "";
+  // Populated once the dispatch provider is known, so the catch below redacts
+  // whichever provider's key actually got sent, not a guess made before
+  // resolveProvider() ran.
+  let apiKeyForRedaction = "";
   try {
     let provider: string;
     try {
@@ -90,6 +93,7 @@ export async function transcribe(
     } catch (err) {
       return failure(err instanceof Error ? err.message : "Failed to resolve provider");
     }
+    apiKeyForRedaction = resolveApiKey(provider, opts) ?? "";
 
     const maxBytes = opts.maxBytes ?? DEFAULT_TRANSCRIBE_BYTES;
     let loaded: { data: Uint8Array; mimeType?: string };
