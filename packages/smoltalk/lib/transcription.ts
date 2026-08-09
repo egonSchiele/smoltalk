@@ -1,13 +1,19 @@
 import type { ModelDataBlob } from "./modelData.js";
 import type { SmolConfig } from "./types.js";
-import { Result, failure } from "./types/result.js";
+import { Result, success, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { BlobRef, loadBlob } from "./util/blobRef.js";
-import { resolveProvider, resolveApiKey } from "./util/provider.js";
+import { BlobRef } from "./util/blobRef.js";
 import { redactSecret } from "./util/redact.js";
 import { getLogger } from "./util/logger.js";
-import { openaiTranscribe } from "./transcription/openai.js";
+import { resolveProvider, resolveApiKey } from "./util/provider.js";
+import {
+  BaseTranscriptionClient,
+  TranscriptionClientConfig,
+} from "./transcription/baseTranscriptionClient.js";
+import { OpenAITranscriptionClient } from "./transcription/openai.js";
+
+export { DEFAULT_TRANSCRIBE_BYTES } from "./transcription/baseTranscriptionClient.js";
 
 export type TranscribeOptions = {
   model: string;
@@ -18,7 +24,7 @@ export type TranscribeOptions = {
   prompt?: string;
   timestampGranularity?: "segment" | "word";
   maxBytes?: number;
-  filename?: string;
+  metadata?: Record<string, unknown>;
 };
 
 export type TranscriptionSegment = { start: number; end: number; text: string };
@@ -35,35 +41,23 @@ export type TranscriptionResult = {
   raw?: unknown;
 };
 
-/** Provider-facing options: same as {@link TranscribeOptions} minus the caller's `apiKey`. */
-export type TranscriptionProviderOptions = Omit<TranscribeOptions, "apiKey">;
+export type TranscriptionClientClass = new (
+  config: TranscriptionClientConfig,
+) => BaseTranscriptionClient;
 
-/**
- * Carries the resolved key plus provider options with the caller's `apiKey`
- * stripped, so a plugin gets a single secret source rather than two.
- */
-export type TranscriptionProviderContext = {
-  apiKey: string;
-  opts: TranscriptionProviderOptions;
-};
-
-export type TranscriptionProvider = {
-  transcribe(
-    data: Uint8Array,
-    mimeType: string,
-    ctx: TranscriptionProviderContext,
-  ): Promise<Result<TranscriptionResult>>;
-};
-
-export const OPENAI_TRANSCRIBE_MODELS = new Set(["whisper-1"]);
-export const DEFAULT_TRANSCRIBE_BYTES = 25 * 1024 * 1024;
+// Checked before the user registry so a registered "openai" can't hijack the built-in.
+const builtinClients: Record<string, TranscriptionClientClass> = Object.create(null);
+builtinClients["openai"] = OpenAITranscriptionClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.
-const registered: Record<string, TranscriptionProvider> = Object.create(null);
+const registered: Record<string, TranscriptionClientClass> = Object.create(null);
 
-export function registerTranscriptionProvider(name: string, impl: TranscriptionProvider): void {
-  registered[name] = impl;
+export function registerTranscriptionProvider(
+  name: string,
+  cls: TranscriptionClientClass,
+): void {
+  registered[name] = cls;
 }
 
 /** Test-only: clear all registered custom providers so registrations don't leak across tests. */
@@ -73,62 +67,49 @@ export function _resetForTests(): void {
   }
 }
 
-function providerContext(apiKey: string, opts: TranscribeOptions): TranscriptionProviderContext {
-  const { apiKey: _callerKey, ...providerOptions } = opts;
-  return { apiKey, opts: providerOptions };
+/**
+ * Resolve provider + API key and instantiate the matching transcription client
+ * for the declarative transcribe() operation. Never throws: a custom client
+ * class's constructor can throw, and this internal factory's catch redacts the
+ * resolved key so a constructor error cannot leak through the public wrapper.
+ */
+export function getTranscriptionClient(
+  opts: TranscribeOptions,
+): Result<BaseTranscriptionClient> {
+  let apiKeyForRedaction = "";
+  try {
+    const provider = resolveProvider(opts.model, opts.provider, opts.modelData);
+
+    const ClientClass = builtinClients[provider] ?? registered[provider];
+    if (ClientClass === undefined) {
+      return failure(
+        `Provider "${provider}" has no transcription API. Register one with registerTranscriptionProvider(name, ClientClass).`,
+      );
+    }
+
+    const apiKey = resolveApiKey(provider, opts) ?? "";
+    apiKeyForRedaction = apiKey;
+    const { apiKey: _callerKeys, ...clientOpts } = opts;
+    const config: TranscriptionClientConfig = { ...clientOpts, provider, apiKey };
+    return success(new ClientClass(config));
+  } catch (err) {
+    let msg = "getTranscriptionClient() failed";
+    if (err instanceof Error) {
+      msg = err.message;
+    }
+    const redacted = redactSecret(msg, apiKeyForRedaction);
+    getLogger().error("getTranscriptionClient() failed:", redacted);
+    return failure(redacted);
+  }
 }
 
 export async function transcribe(
   source: BlobRef,
   opts: TranscribeOptions,
 ): Promise<Result<TranscriptionResult>> {
-  // Populated once the dispatch provider is known, so the catch below redacts
-  // whichever provider's key actually got sent, not a guess made before
-  // resolveProvider() ran.
-  let apiKeyForRedaction = "";
-  try {
-    let provider: string;
-    try {
-      provider = resolveProvider(opts.model, opts.provider, opts.modelData);
-    } catch (err) {
-      return failure(err instanceof Error ? err.message : "Failed to resolve provider");
-    }
-    apiKeyForRedaction = resolveApiKey(provider, opts) ?? "";
-
-    const maxBytes = opts.maxBytes ?? DEFAULT_TRANSCRIBE_BYTES;
-    let loaded: { data: Uint8Array; mimeType?: string };
-    try {
-      loaded = await loadBlob(source, { maxBytes });
-    } catch (err) {
-      return failure(`Failed to load audio for transcription: ${(err as Error).message}`);
-    }
-    const mimeType = loaded.mimeType ?? "application/octet-stream";
-
-    if (provider === "openai") {
-      if (!OPENAI_TRANSCRIBE_MODELS.has(opts.model)) {
-        return failure(
-          `Model "${opts.model}" is not a supported OpenAI transcription model in v1 (supported: ${[...OPENAI_TRANSCRIBE_MODELS].join(", ")}).`,
-        );
-      }
-      const apiKey = resolveApiKey("openai", opts);
-      if (!apiKey) {
-        return failure("No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.");
-      }
-      return await openaiTranscribe(loaded.data, mimeType, providerContext(apiKey, opts));
-    }
-
-    const custom = registered[provider];
-    if (custom) {
-      const apiKey = resolveApiKey(provider, opts) ?? "";
-      return await custom.transcribe(loaded.data, mimeType, providerContext(apiKey, opts));
-    }
-    return failure(
-      `Provider "${provider}" has no transcription API. Register one with registerTranscriptionProvider(name, impl).`,
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "transcribe() failed";
-    const redacted = redactSecret(msg, apiKeyForRedaction);
-    getLogger().error("transcribe() provider failed:", redacted);
-    return failure(redacted);
+  const client = getTranscriptionClient(opts);
+  if (!client.success) {
+    return client;
   }
+  return client.value.transcribe(source);
 }

@@ -42,12 +42,15 @@ describe("public exports", () => {
     expect(ttsName).toBe("tts-1");
   });
 
-  it("exports the transcription API and keeps _resetForTests internal", () => {
+  it("exports the transcription API and keeps internal machinery private", () => {
     expect(typeof smoltalk.transcribe).toBe("function");
     expect(typeof smoltalk.registerTranscriptionProvider).toBe("function");
-    expect(smoltalk.OPENAI_TRANSCRIBE_MODELS).toBeInstanceOf(Set);
-    expect(smoltalk.OPENAI_TRANSCRIBE_MODELS.has("whisper-1")).toBe(true);
+    expect(typeof smoltalk.BaseTranscriptionClient).toBe("function");
     expect(typeof smoltalk.DEFAULT_TRANSCRIBE_BYTES).toBe("number");
+    // Internal lifecycle machinery stays off the package root.
+    expect("getTranscriptionClient" in smoltalk).toBe(false);
+    expect("OpenAITranscriptionClient" in smoltalk).toBe(false);
+    expect("OPENAI_TRANSCRIBE_MODELS" in smoltalk).toBe(false);
     expect("_resetForTests" in smoltalk).toBe(false);
   });
 

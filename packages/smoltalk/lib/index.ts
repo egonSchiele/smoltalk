@@ -19,11 +19,10 @@ export type { BlobRef } from "./util/blobRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
 export type { LogLevel } from "./util/logger.js";
 export { redactAttachments } from "./util/redact.js";
-// Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
+// Explicit (not `export *`) so internal factories and test helpers stay private.
 export {
   transcribe,
   registerTranscriptionProvider,
-  OPENAI_TRANSCRIBE_MODELS,
   DEFAULT_TRANSCRIBE_BYTES,
 } from "./transcription.js";
 export type {
@@ -31,10 +30,10 @@ export type {
   TranscriptionSegment,
   TranscriptionWord,
   TranscriptionResult,
-  TranscriptionProviderOptions,
-  TranscriptionProviderContext,
-  TranscriptionProvider,
+  TranscriptionClientClass,
 } from "./transcription.js";
+export { BaseTranscriptionClient } from "./transcription/baseTranscriptionClient.js";
+export type { TranscriptionClientConfig } from "./transcription/baseTranscriptionClient.js";
 // Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
 export {
   speak,
