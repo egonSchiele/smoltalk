@@ -206,6 +206,24 @@ export const textToSpeechModels = [
     maxInputChars: 200,
     formats: ["wav"],
   },
+  // Gemini TTS is token-billed (text input + audio output). No maxInputChars:
+  // Gemini documents a 32k-token context, and characters are not a sound proxy.
+  {
+    type: "text-to-speech",
+    modelName: "gemini-2.5-flash-preview-tts",
+    provider: "google",
+    inputTokenCost: 0.5, // $/1M text-input tokens, verified 2026-08-09
+    outputAudioTokenCost: 10.0, // $/1M audio-output tokens
+    formats: ["pcm", "wav"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "gemini-2.5-pro-preview-tts",
+    provider: "google",
+    inputTokenCost: 1.0, // $/1M text-input tokens, verified 2026-08-09
+    outputAudioTokenCost: 20.0, // $/1M audio-output tokens
+    formats: ["pcm", "wav"],
+  },
 ] as const;
 
 export const textModels = [

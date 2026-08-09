@@ -300,25 +300,25 @@ describe("speak() dispatch", () => {
   });
 
   it("redacts the RESOLVED provider's key (not an openai guess) when provider is inferred from the model, with no explicit opts.provider", async () => {
-    const secret = "google-secret-abc123";
+    const secret = "acme-secret-abc123";
     const md = {
       schemaVersion: 1,
       generatedAt: "t",
       hostedTools: [],
-      models: [{ type: "text-to-speech", modelName: "custom-google-model", provider: "google" }],
+      models: [{ type: "text-to-speech", modelName: "custom-acme-model", provider: "acme-tts" }],
     } satisfies ModelDataBlob;
-    class GoogleTts extends BaseSpeechClient {
+    class AcmeTts extends BaseSpeechClient {
       protected async _speak(): Promise<Result<SpeechResult>> {
         throw new Error(`upstream rejected request signed with ${secret}`);
       }
     }
-    registerSpeechProvider("google", GoogleTts);
+    registerSpeechProvider("acme-tts", AcmeTts);
     const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});
     const r = await speak("hi", {
-      model: "custom-google-model",
+      model: "custom-acme-model",
       voice: "v",
       modelData: md,
-      apiKey: { google: secret },
+      apiKey: { "acme-tts": secret },
     });
     expect(r.success).toBe(false);
     if (!r.success) {
