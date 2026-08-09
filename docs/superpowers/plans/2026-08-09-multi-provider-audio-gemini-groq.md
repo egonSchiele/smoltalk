@@ -4,7 +4,7 @@
 
 **Goal:** Extend `transcribe()` (speech-to-text) and `speak()` (text-to-speech) beyond OpenAI to Google Gemini (native multimodal) and Groq (OpenAI-compatible), with no change to the public call surface.
 
-**Architecture:** Groq reuses the existing OpenAI audio clients with a different base URL (one small refactor + two tiny subclasses). Gemini uses the already-present `@google/genai` SDK's `generateContent`: STT sends audio inline + an instruction and reads text back; TTS requests an `AUDIO` response modality and returns raw PCM (optionally WAV-wrapped). A reframed STT guard ("can this model accept audio input?") and a token-priced cost path make Gemini a first-class citizen.
+**Architecture:** Groq reuses the existing OpenAI audio clients through protected base-URL and default-format hooks; its subclasses select Groq's URL and WAV default without leaking those details to callers. Gemini uses the already-present `@google/genai` SDK's `generateContent`: STT sends bounded inline audio plus an instruction and reads text back; TTS requests an `AUDIO` response modality and returns raw PCM (optionally WAV-wrapped). Existing declarative modality and token-pricing abstractions are extended rather than duplicated.
 
 **Tech Stack:** TypeScript (ESM, `.js` import extensions), vitest, `openai` SDK, `@google/genai` SDK, Zod. pnpm workspace.
 
@@ -13,11 +13,24 @@
 - ES Modules: every internal import uses a `.js` extension. Package is `"type": "module"`.
 - Strict TypeScript (`strict: true`). No `any` leaking into public types.
 - Public audio operations always return `Result<T>` — never throw. The base template method and the internal factory are the only exception boundaries; provider subclasses (`_transcribe`/`_speak`) never `try/catch` and never compute cost.
-- Model constraints are **data** in `lib/models.ts`, never hardcoded in client logic. MIME values in model records are **canonical** (`audio/mpeg`, `audio/wav`, …), never aliases.
+- Model capabilities and per-model constraints are **data** in `lib/models.ts`,
+  never hardcoded in client logic. Provider transport-envelope checks (such as
+  Gemini's total encoded request size) remain encapsulated in the provider
+  client. MIME values in model records are **canonical** (`audio/mpeg`,
+  `audio/wav`, …), never aliases.
 - Tests live beside implementation with a `.test.ts` suffix; use `vitest` (`pnpm test`).
 - Run from `packages/smoltalk/`. `pnpm typecheck` must pass after every task.
 - No new runtime dependencies (`openai` and `@google/genai` are already present).
 - Do not edit `data/model-data.json` by hand — regenerate with `pnpm seed-data`.
+- Provider facts and prices below were verified 2026-08-09 against:
+  [Groq STT](https://console.groq.com/docs/speech-to-text),
+  [Groq TTS](https://console.groq.com/docs/text-to-speech),
+  [Groq models/pricing](https://console.groq.com/docs/models),
+  [Gemini audio](https://ai.google.dev/gemini-api/docs/audio),
+  [Gemini TTS](https://ai.google.dev/gemini-api/docs/speech-generation), and
+  [Gemini pricing](https://ai.google.dev/gemini-api/docs/pricing).
+- Gemini STT remains inline-only in this plan. It never silently uploads to the
+  Files API, because upload lifecycle and cleanup are caller-owned concerns.
 
 ---
 
@@ -25,28 +38,31 @@
 
 ```
 lib/transcription/openai.ts     MODIFY  extract makeClient()
-lib/speech/openai.ts            MODIFY  extract makeClient()
+lib/speech/openai.ts            MODIFY  extract makeClient() + defaultFormat()
 lib/transcription/groq.ts       CREATE  GroqTranscriptionClient
 lib/speech/groq.ts              CREATE  GroqSpeechClient
 lib/transcription/google.ts     CREATE  GoogleTranscriptionClient
 lib/speech/google.ts            CREATE  GoogleSpeechClient
+lib/googleAudioUsage.ts         CREATE  typed Gemini usage normalization
 lib/transcription.ts            MODIFY  register "groq"+"google" builtins
 lib/speech.ts                   MODIFY  register "groq"+"google"; SpeechResult.usage
-lib/util/provider.ts            MODIFY  resolveApiKey case "groq"
-lib/util/audioMime.ts           MODIFY  pcmToWav() helper
-lib/transcription/baseTranscriptionClient.ts  MODIFY  B1 guard + audioInputConstraints; token cost
+lib/types.ts                    MODIFY  named groq API-key field
+lib/util/provider.ts            MODIFY  named groq key + env fallback
+lib/util/mime.ts                MODIFY  canonical AAC/AIFF formats
+lib/util/audioMime.ts           MODIFY  pcmToWav() + Gemini wire MIME adapter
+lib/transcription/baseTranscriptionClient.ts  MODIFY  reuse modality guard + audioInputConstraints; token cost
 lib/speech/baseSpeechClient.ts  MODIFY  token cost path
-lib/models.ts                   MODIFY  modelAcceptsAudioInput(); audioInputConstraints();
-                                        TextModel audio-input fields; TextToSpeechModel audio
-                                        token fields; groq + gemini model records
-lib/model.ts                    MODIFY  calculateAudioTokenCost()
+lib/models.ts                   MODIFY  add groq provider; audioInputConstraints();
+                                        shared audio token fields; TextModel audio-input fields;
+                                        groq + gemini model records
+lib/model.ts                    MODIFY  extend Model.calculateCost() to token-priced TTS
 data/model-data.json            REGEN   pnpm seed-data
 docs/dev/audio.md, README.md    MODIFY  document Gemini + Groq
 ```
 
 ---
 
-## Task 1: Make the OpenAI audio SDK client overridable
+## Task 1: Make OpenAI-compatible client defaults overridable
 
 **Files:**
 - Modify: `lib/transcription/openai.ts`
@@ -55,6 +71,9 @@ docs/dev/audio.md, README.md    MODIFY  document Gemini + Groq
 
 **Interfaces:**
 - Produces: `protected makeClient(): OpenAI` on both `OpenAITranscriptionClient` and `OpenAISpeechClient`. Default returns `new OpenAI({ apiKey: this.config.apiKey })`. Groq subclasses (Tasks 2–3) override it.
+- Produces: `protected defaultFormat(): SpeakFormat` on `OpenAISpeechClient`.
+  OpenAI returns `"mp3"`; Groq overrides it with `"wav"` so omitted-format
+  behavior remains declarative and provider-neutral.
 
 - [ ] **Step 1: Run the existing audio tests to confirm a green baseline**
 
@@ -84,7 +103,7 @@ export class OpenAITranscriptionClient extends BaseTranscriptionClient {
     // ...rest unchanged...
 ```
 
-- [ ] **Step 3: Extract `makeClient()` in the speech client**
+- [ ] **Step 3: Extract `makeClient()` and `defaultFormat()` in the speech client**
 
 In `lib/speech/openai.ts`, same change:
 
@@ -95,8 +114,14 @@ export class OpenAISpeechClient extends BaseSpeechClient {
     return new OpenAI({ apiKey: this.config.apiKey });
   }
 
+  /** Provider default used when the declarative call omits format. */
+  protected defaultFormat(): SpeakFormat {
+    return "mp3";
+  }
+
   protected async _speak(text: string): Promise<Result<SpeechResult>> {
-    // ...unchanged preflight...
+    const requestedFormat = this.config.format ?? this.defaultFormat();
+    // ...existing isSpeakFormat narrowing uses requestedFormat...
     const client = this.makeClient();   // was: new OpenAI({ apiKey: this.config.apiKey })
     // ...rest unchanged...
 ```
@@ -110,7 +135,7 @@ Expected: PASS, unchanged behavior.
 
 ```bash
 git add lib/transcription/openai.ts lib/speech/openai.ts
-git commit -m "refactor: extract makeClient() hook in OpenAI audio clients"
+git commit -m "refactor: expose OpenAI-compatible audio client defaults"
 ```
 
 ---
@@ -120,13 +145,17 @@ git commit -m "refactor: extract makeClient() hook in OpenAI audio clients"
 **Files:**
 - Create: `lib/transcription/groq.ts`
 - Modify: `lib/transcription.ts` (register `"groq"`)
+- Modify: `lib/types.ts` (named `apiKey.groq`)
 - Modify: `lib/util/provider.ts` (`resolveApiKey` case `"groq"`)
-- Modify: `lib/models.ts` (append Groq STT model records)
+- Modify: `lib/models.ts` (built-in provider + Groq STT records)
 - Test: `lib/transcription/groq.test.ts`
+- Test: `lib/util/provider.test.ts`, `lib/models.audio.test.ts`
 
 **Interfaces:**
 - Consumes: `OpenAITranscriptionClient.makeClient()` (Task 1); `builtinClients` map in `lib/transcription.ts`.
-- Produces: `class GroqTranscriptionClient extends OpenAITranscriptionClient`; provider name `"groq"` resolvable by the transcription factory; env fallback `GROQ_API_KEY`.
+- Produces: `class GroqTranscriptionClient extends OpenAITranscriptionClient`;
+  typed built-in provider name `"groq"`; named `apiKey.groq`; env fallback
+  `GROQ_API_KEY`; model-driven provider inference.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -170,6 +199,17 @@ describe("GroqTranscriptionClient", () => {
     const create = (new (OpenAI as unknown as new () => { audio: { transcriptions: { create: ReturnType<typeof vi.fn> } } })()).audio.transcriptions.create;
     expect(create).toHaveBeenCalled();
   });
+
+  it("infers Groq from the registered model when provider is omitted", async () => {
+    const res = await transcribe(
+      { kind: "bytes", bytes: new Uint8Array([1]), mimeType: "audio/wav" },
+      { model: "whisper-large-v3", apiKey: { groq: "gk-test" } },
+    );
+    expect(res.success).toBe(true);
+    expect(OpenAI).toHaveBeenCalledWith(expect.objectContaining({
+      baseURL: "https://api.groq.com/openai/v1",
+    }));
+  });
 });
 ```
 
@@ -200,7 +240,7 @@ export class GroqTranscriptionClient extends OpenAITranscriptionClient {
 }
 ```
 
-- [ ] **Step 4: Register the provider and env-var fallback**
+- [ ] **Step 4: Register Groq as a typed built-in and add key resolution**
 
 In `lib/transcription.ts`, import and register:
 
@@ -219,11 +259,27 @@ returns `config.apiKey?.[provider]`, so only the env fallback is new):
       return k?.groq || process.env.GROQ_API_KEY;
 ```
 
+Also add `"groq"` to `providers` in `lib/models.ts`, and add `groq?: string` to
+both `SmolConfig.apiKey` in `lib/types.ts` and `NestedKeyConfig.apiKey` in
+`lib/util/provider.ts`. Extend the existing provider tests:
+
+```typescript
+expect(ProviderSchema.parse("groq")).toBe("groq");
+
+vi.stubEnv("GROQ_API_KEY", "gk-env");
+expect(resolveApiKey("groq", {})).toBe("gk-env");
+expect(resolveApiKey("groq", { apiKey: { groq: "gk-explicit" } })).toBe("gk-explicit");
+```
+
 - [ ] **Step 5: Add Groq STT model records**
 
-In `lib/models.ts`, append to the `speechToTextModels` array (verify per-minute
-prices against Groq's pricing page at implementation time — values below are
-Groq's published rates as of 2026-08):
+In `lib/models.ts`, append to `speechToTextModels`. These standard rates were
+verified 2026-08-09: $0.111/hour and $0.04/hour. `maxBytes` deliberately uses
+the free-tier/direct-attachment 25 MB cap; Groq's developer tier allows 100 MB,
+but a single baked-in model record cannot vary by account tier. Groq applies a
+10-second minimum billable duration, which must be documented but is not
+estimated client-side because the result reports actual media duration rather
+than provider-rounded billing duration.
 
 ```typescript
   {
@@ -235,7 +291,7 @@ Groq's published rates as of 2026-08):
       "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a",
       "audio/ogg", "audio/wav", "audio/webm",
     ],
-    maxBytes: 25 * 1024 * 1024,    // Groq free-tier upload cap; confirm current value
+    maxBytes: 25 * 1024 * 1024,
   },
   {
     type: "speech-to-text",
@@ -252,13 +308,13 @@ Groq's published rates as of 2026-08):
 
 - [ ] **Step 6: Run tests and typecheck**
 
-Run: `pnpm typecheck && pnpm test -- groq.test`
+Run: `pnpm typecheck && pnpm test -- groq.test provider.test models.audio.test`
 Expected: PASS.
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add lib/transcription/groq.ts lib/transcription.ts lib/util/provider.ts lib/models.ts lib/transcription/groq.test.ts
+git add lib/transcription/groq.ts lib/transcription.ts lib/types.ts lib/util/provider.ts lib/models.ts lib/transcription/groq.test.ts lib/util/provider.test.ts lib/models.audio.test.ts
 git commit -m "feat: Groq speech-to-text (OpenAI-compatible)"
 ```
 
@@ -269,12 +325,14 @@ git commit -m "feat: Groq speech-to-text (OpenAI-compatible)"
 **Files:**
 - Create: `lib/speech/groq.ts`
 - Modify: `lib/speech.ts` (register `"groq"`)
-- Modify: `lib/models.ts` (append Groq TTS model record)
+- Modify: `lib/models.ts` (append both Groq Orpheus TTS records)
 - Test: `lib/speech/groq.test.ts`
 
 **Interfaces:**
-- Consumes: `OpenAISpeechClient.makeClient()` (Task 1); `resolveApiKey` case `"groq"` (Task 2).
-- Produces: `class GroqSpeechClient extends OpenAISpeechClient`; `"groq"` resolvable by the speech factory.
+- Consumes: `OpenAISpeechClient.makeClient()` and `.defaultFormat()` (Task 1);
+  typed Groq provider/key support (Task 2).
+- Produces: `class GroqSpeechClient extends OpenAISpeechClient`; Groq's URL and
+  WAV default remain encapsulated; model-driven provider inference works.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -298,22 +356,43 @@ vi.mock("openai", () => {
 describe("GroqSpeechClient", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("routes to the Groq base URL and returns audio bytes", async () => {
+  it("infers Groq and uses wav when format is omitted", async () => {
     const res = await speak("hello", {
-      model: "playai-tts",
-      voice: "Fritz-PlayAI",
-      provider: "groq",
+      model: "canopylabs/orpheus-v1-english",
+      voice: "troy",
       apiKey: { groq: "gk-test" },
     });
 
     expect(res.success).toBe(true);
     if (res.success) {
       expect(Array.from(res.value.audio)).toEqual([9, 9, 9]);
+      expect(res.value.mimeType).toBe("audio/wav");
     }
     expect((OpenAI as unknown as { mock: { calls: unknown[][] } }).mock.calls[0][0]).toMatchObject({
       apiKey: "gk-test",
       baseURL: "https://api.groq.com/openai/v1",
     });
+    const create = (new (OpenAI as unknown as new () => {
+      audio: { speech: { create: ReturnType<typeof vi.fn> } };
+    })()).audio.speech.create;
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      model: "canopylabs/orpheus-v1-english",
+      response_format: "wav",
+    }));
+  });
+
+  it("rejects an explicit non-wav format before dispatch", async () => {
+    const res = await speak("hello", {
+      model: "canopylabs/orpheus-v1-english",
+      voice: "troy",
+      format: "mp3",
+      apiKey: { groq: "gk-test" },
+    });
+    expect(res.success).toBe(false);
+    const create = (new (OpenAI as unknown as new () => {
+      audio: { speech: { create: ReturnType<typeof vi.fn> } };
+    })()).audio.speech.create;
+    expect(create).not.toHaveBeenCalled();
   });
 });
 ```
@@ -332,8 +411,7 @@ import OpenAI from "openai";
 import { OpenAISpeechClient } from "./openai.js";
 
 /**
- * Groq exposes an OpenAI-compatible /audio/speech endpoint (PlayAI TTS).
- * Everything but the base URL is inherited.
+ * Groq exposes OpenAI-compatible Orpheus TTS and supports WAV only.
  */
 export class GroqSpeechClient extends OpenAISpeechClient {
   protected override makeClient(): OpenAI {
@@ -342,8 +420,14 @@ export class GroqSpeechClient extends OpenAISpeechClient {
       baseURL: "https://api.groq.com/openai/v1",
     });
   }
+
+  protected override defaultFormat(): SpeakFormat {
+    return "wav";
+  }
 }
 ```
+
+Import `SpeakFormat` from `../util/audioMime.js` as a type.
 
 - [ ] **Step 4: Register the provider**
 
@@ -356,26 +440,32 @@ builtinClients["openai"] = OpenAISpeechClient;
 builtinClients["groq"] = GroqSpeechClient;   // add
 ```
 
-- [ ] **Step 5: Add the Groq TTS model record**
+- [ ] **Step 5: Add the verified Groq Orpheus model records**
 
-In `lib/models.ts`, append to `textToSpeechModels` (verify id/voices/formats/price
-against Groq docs at implementation time; Groq's PlayAI TTS returns `wav`):
+In `lib/models.ts`, append to `textToSpeechModels`. Groq documents a 200-code-
+point input cap, WAV-only output, and prices of $22/$40 per million characters:
 
 ```typescript
   {
     type: "text-to-speech",
-    modelName: "playai-tts",
+    modelName: "canopylabs/orpheus-v1-english",
     provider: "groq",
-    perCharacterCost: 0.00005,     // confirm current PlayAI rate
-    maxInputChars: 10000,          // confirm current limit
+    perCharacterCost: 0.000022,
+    maxInputChars: 200,
+    formats: ["wav"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "canopylabs/orpheus-arabic-saudi",
+    provider: "groq",
+    perCharacterCost: 0.00004,
+    maxInputChars: 200,
     formats: ["wav"],
   },
 ```
 
-Note: Groq TTS reuses `OpenAISpeechClient._speak`, which narrows `format` to
-OpenAI's `SpeakFormat` union via `isSpeakFormat`. `wav` is in that union, so
-default (mp3) callers must pass `format: "wav"` for Groq; the model record's
-`formats: ["wav"]` makes the base reject other formats with a clear message.
+The model records reject explicit non-WAV requests in the base. The subclass's
+`defaultFormat()` ensures an omitted format also resolves to WAV.
 
 - [ ] **Step 6: Run tests and typecheck**
 
@@ -391,14 +481,21 @@ git commit -m "feat: Groq text-to-speech (OpenAI-compatible)"
 
 ---
 
-## Task 4: `pcmToWav` helper
+## Task 4: Complete canonical audio MIME data and add WAV/wire adapters
 
 **Files:**
+- Modify: `lib/util/mime.ts`
 - Modify: `lib/util/audioMime.ts`
-- Test: `lib/util/audioMime.test.ts` (create if absent)
+- Test: `lib/util/mime.test.ts`, `lib/util/audioMime.test.ts` (create if absent)
 
 **Interfaces:**
-- Produces: `export function pcmToWav(pcm: Uint8Array, opts: { sampleRateHz: number; channels: number; bitsPerSample: number }): Uint8Array` — prepends a 44-byte RIFF/WAVE header for signed-integer little-endian PCM. Used by `GoogleSpeechClient` (Task 8).
+- Produces: canonical AAC (`audio/aac`) and AIFF (`audio/aiff`) entries in
+  `AUDIO_FORMATS`, preserving that table as the only alias source.
+- Produces: `export function googleAudioWireMime(mimeType: string): string`,
+  which normalizes aliases and maps canonical MP3 `audio/mpeg` to Google's
+  documented wire value `audio/mp3`.
+- Produces: `export type PcmWavOptions` and
+  `pcmToWav(pcm: Uint8Array, opts: PcmWavOptions): Uint8Array`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -406,7 +503,7 @@ Create/append `lib/util/audioMime.test.ts`:
 
 ```typescript
 import { describe, it, expect } from "vitest";
-import { pcmToWav } from "./audioMime.js";
+import { googleAudioWireMime, pcmToWav } from "./audioMime.js";
 
 describe("pcmToWav", () => {
   it("prepends a valid 44-byte WAV header for 24kHz mono s16le", () => {
@@ -431,26 +528,62 @@ describe("pcmToWav", () => {
     expect(Array.from(wav.slice(44))).toEqual([1, 2, 3, 4]);
   });
 });
+
+describe("googleAudioWireMime", () => {
+  it("maps MP3 aliases and the canonical MIME to Google's wire value", () => {
+    expect(googleAudioWireMime("audio/mpeg")).toBe("audio/mp3");
+    expect(googleAudioWireMime("audio/mp3")).toBe("audio/mp3");
+  });
+
+  it("normalizes supported non-MP3 audio MIME values", () => {
+    expect(googleAudioWireMime("AUDIO/AAC")).toBe("audio/aac");
+    expect(googleAudioWireMime("audio/aiff")).toBe("audio/aiff");
+  });
+});
 ```
+
+In `lib/util/mime.test.ts`, assert `audioFormatForMime("audio/aac")` and
+`audioFormatForMime("audio/aiff")` return their canonical entries.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `pnpm test -- audioMime.test`
-Expected: FAIL — `pcmToWav is not a function`.
+Expected: FAIL — the helpers/formats are not defined yet.
 
-- [ ] **Step 3: Implement `pcmToWav`**
+- [ ] **Step 3: Add canonical AAC/AIFF formats and implement the helpers**
+
+Add to `AUDIO_FORMATS` in `lib/util/mime.ts`:
+
+```typescript
+  { extension: "aac", mimeType: "audio/aac", aliasMimeTypes: [], aliasExtensions: [] },
+  { extension: "aiff", mimeType: "audio/aiff", aliasMimeTypes: ["audio/x-aiff"], aliasExtensions: ["aif"] },
+```
 
 Append to `lib/util/audioMime.ts`:
 
 ```typescript
+import { audioFormatForMime, canonicalizeMime } from "./mime.js";
+
 /**
  * Wrap raw signed-integer little-endian PCM in a 44-byte RIFF/WAVE header so it
  * becomes a directly-playable .wav. Pure function, no dependency. Used for
  * Gemini TTS output, which is only ever raw PCM.
  */
+export type PcmWavOptions = {
+  sampleRateHz: number;
+  channels: number;
+  bitsPerSample: number;
+};
+
+export function googleAudioWireMime(mimeType: string): string {
+  const format = audioFormatForMime(mimeType);
+  const canonical = format?.mimeType ?? canonicalizeMime(mimeType);
+  return canonical === "audio/mpeg" ? "audio/mp3" : canonical;
+}
+
 export function pcmToWav(
   pcm: Uint8Array,
-  opts: { sampleRateHz: number; channels: number; bitsPerSample: number },
+  opts: PcmWavOptions,
 ): Uint8Array {
   const { sampleRateHz, channels, bitsPerSample } = opts;
   const blockAlign = (channels * bitsPerSample) / 8;
@@ -482,31 +615,31 @@ export function pcmToWav(
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `pnpm typecheck && pnpm test -- audioMime.test`
+Run: `pnpm typecheck && pnpm test -- audioMime.test mime.test`
 Expected: PASS.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add lib/util/audioMime.ts lib/util/audioMime.test.ts
-git commit -m "feat: pcmToWav helper for wrapping raw PCM"
+git add lib/util/mime.ts lib/util/mime.test.ts lib/util/audioMime.ts lib/util/audioMime.test.ts
+git commit -m "feat: add Gemini audio MIME and WAV adapters"
 ```
 
 ---
 
-## Task 5: Reframe the STT guard (B1) — "can this model accept audio input?"
+## Task 5: Reuse the declarative modality guard for multimodal STT
 
 **Files:**
-- Modify: `lib/models.ts` (add `modelAcceptsAudioInput`, `audioInputConstraints`; add `supportedMimeTypes?` / `maxBytes?` to `TextModel`)
+- Modify: `lib/models.ts` (add `audioInputConstraints`; add `supportedMimeTypes?` / `maxBytes?` to `TextModel`)
 - Modify: `lib/transcription/baseTranscriptionClient.ts` (use the new predicate + constraints)
 - Test: `lib/transcription.guard.test.ts`
 
 **Interfaces:**
 - Produces:
-  - `export function modelAcceptsAudioInput(model: ModelType): boolean` — `true` for `type === "speech-to-text"`, or `type === "text"` whose `modalities.input` includes `"audio"`.
   - `export function audioInputConstraints(model: ModelType): { maxBytes?: number; supportedMimeTypes?: readonly string[] }`.
   - `TextModel` gains optional `supportedMimeTypes?: readonly string[]` and `maxBytes?: number`.
-- Consumes: `getModelForProvider` (existing).
+- Consumes: existing `modelSupportsInputModality(modelName, "audio", modelData,
+  provider)`; do not introduce a duplicate capability predicate.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -537,12 +670,15 @@ describe("transcribe() audio-input guard (B1)", () => {
 
   it("accepts a multimodal text model that lists audio input", async () => {
     const modelData: ModelDataBlob = {
-      textModels: [{
+      schemaVersion: 1,
+      generatedAt: "test",
+      hostedTools: [],
+      models: [{
         type: "text", modelName: "fake-mm", provider: "fake",
         maxInputTokens: 1000, maxOutputTokens: 1000,
         modalities: { input: ["text", "audio"], output: ["text"] },
       }],
-    } as unknown as ModelDataBlob;
+    };
 
     const res = await transcribe(src, { model: "fake-mm", provider: "fake", modelData });
     expect(res.success).toBe(true);
@@ -550,12 +686,15 @@ describe("transcribe() audio-input guard (B1)", () => {
 
   it("rejects a text model that does NOT list audio input", async () => {
     const modelData: ModelDataBlob = {
-      textModels: [{
+      schemaVersion: 1,
+      generatedAt: "test",
+      hostedTools: [],
+      models: [{
         type: "text", modelName: "fake-textonly", provider: "fake",
         maxInputTokens: 1000, maxOutputTokens: 1000,
         modalities: { input: ["text"], output: ["text"] },
       }],
-    } as unknown as ModelDataBlob;
+    };
 
     const res = await transcribe(src, { model: "fake-textonly", provider: "fake", modelData });
     expect(res.success).toBe(false);
@@ -574,7 +713,7 @@ describe("transcribe() audio-input guard (B1)", () => {
 Run: `pnpm test -- transcription.guard.test`
 Expected: FAIL — the multimodal-text case returns "is not a speech-to-text model".
 
-- [ ] **Step 3: Add the predicate, constraints reader, and TextModel fields**
+- [ ] **Step 3: Add the constraints reader and TextModel fields**
 
 In `lib/models.ts`, add optional fields to `TextModel`:
 
@@ -588,17 +727,10 @@ export type TextModel = BaseModel & {
 };
 ```
 
-Add near the other `is*Model` guards:
+Add the constraints adapter near the existing model guards. Capability remains
+owned by the existing `modelSupportsInputModality` query:
 
 ```typescript
-/** Whether a model is a valid transcription target: a dedicated STT model, or a
- *  multimodal text model that accepts audio input (e.g. Gemini). */
-export function modelAcceptsAudioInput(model: ModelType): boolean {
-  if (model.type === "speech-to-text") return true;
-  if (model.type === "text") return model.modalities?.input?.includes("audio") ?? false;
-  return false;
-}
-
 /** Audio-input constraints, readable off either a dedicated STT model or a
  *  multimodal text model. Empty for any other model type. */
 export function audioInputConstraints(
@@ -620,9 +752,9 @@ Update imports:
 ```typescript
 import {
   getModelForProvider,
-  modelAcceptsAudioInput,
+  isSpeechToTextModel,
+  modelSupportsInputModality,
   audioInputConstraints,
-  type SpeechToTextModel,
 } from "../models.js";
 ```
 
@@ -630,7 +762,16 @@ Replace the guard (was `!isSpeechToTextModel(model)`):
 
 ```typescript
       const model = getModelForProvider(this.config.provider, this.config.model, this.config.modelData);
-      if (model !== undefined && !modelAcceptsAudioInput(model)) {
+      const acceptsAudio =
+        model === undefined ||
+        isSpeechToTextModel(model) ||
+        modelSupportsInputModality(
+          this.config.model,
+          "audio",
+          this.config.modelData,
+          this.config.provider,
+        ) === true;
+      if (!acceptsAudio) {
         return failure(
           `Model "${this.config.model}" cannot accept audio input (not a transcription model).`,
         );
@@ -706,10 +847,8 @@ function resolveTranscriptionMaxBytes(
 }
 ```
 
-Also add a `type-not-transcription` check preserved for dedicated models: if the
-model IS a `speech-to-text` model but malformed, the same path applies — no extra
-code needed. Remove the now-unused `isSpeechToTextModel` import if nothing else
-uses it.
+Unknown models still pass because `model === undefined`; known text-only models
+fail; dedicated STT models remain accepted without requiring `modalities`.
 
 - [ ] **Step 5: Run tests and typecheck**
 
@@ -728,156 +867,94 @@ git commit -m "feat: accept multimodal models as transcription targets (B1 guard
 ## Task 6: Token-priced cost path for STT and TTS
 
 **Files:**
-- Modify: `lib/model.ts` (add `calculateAudioTokenCost`)
-- Modify: `lib/models.ts` (add `inputAudioTokenCost?` / `outputAudioTokenCost?` to `TextToSpeechModel`)
+- Modify: `lib/model.ts` (extend the existing `Model.calculateCost` engine)
+- Modify: `lib/models.ts` (move audio token rates to `BaseModel`)
 - Modify: `lib/speech.ts` (add `usage?: TokenUsage` to `SpeechResult`)
-- Modify: `lib/transcription/baseTranscriptionClient.ts` and `lib/speech/baseSpeechClient.ts` (fall back to token cost)
-- Test: `lib/model.audioTokenCost.test.ts`
+- Modify: `lib/transcription/baseTranscriptionClient.ts` and `lib/speech/baseSpeechClient.ts` (reuse `Model.calculateCost`)
+- Test: existing `lib/model.audioCost.test.ts`
 
 **Interfaces:**
-- Produces: `export function calculateAudioTokenCost(model: ModelType | undefined, usage: TokenUsage | undefined): CostEstimate | undefined` in `lib/model.ts`. Prices four disjoint buckets (text/audio × in/out) from a model's optional token-cost fields; returns `undefined` when the model has no token rates or `usage` is absent.
-- Consumes: `TokenUsage` (`lib/types/tokenUsage.ts`), `CostEstimate` (`lib/types/costEstimate.ts`), `round` (`lib/util/util.ts`).
+- Produces: one declarative token-rate shape on `BaseModel`: text and audio
+  input/output rates all mean USD per million tokens.
+- Produces: `Model.calculateCost()` accepts any registry model with at least one
+  token rate, including `TextToSpeechModel`; its existing four-bucket arithmetic
+  remains the sole token-cost engine.
+- Consumes: existing `Model`, `TokenUsage`, and `model.audioCost.test.ts`.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `lib/model.audioTokenCost.test.ts`:
+Append to `lib/model.audioCost.test.ts`:
 
 ```typescript
-import { describe, it, expect } from "vitest";
-import { calculateAudioTokenCost } from "./model.js";
-import type { ModelType } from "./models.js";
-
-describe("calculateAudioTokenCost", () => {
-  it("prices STT audio-input tokens at the audio rate", () => {
-    const model = {
-      type: "text", modelName: "gem-stt", provider: "google",
-      maxInputTokens: 1, maxOutputTokens: 1,
-      inputTokenCost: 0.30, outputTokenCost: 2.50, inputAudioTokenCost: 1.00,
-    } as unknown as ModelType;
-
-    const cost = calculateAudioTokenCost(model, {
-      inputTokens: 100, inputAudioTokens: 1_000_000, outputTokens: 50,
-    });
-    // inputAudio: 1,000,000/1e6 * 1.00 = 1.00 ; input text 100/1e6*0.30 ≈ 0.00003
-    // output: 50/1e6 * 2.50 ≈ 0.000125
-    expect(cost).toEqual({
-      inputCost: 1.00003,
-      outputCost: 0.000125,
-      totalCost: 1.000155,
-      currency: "USD",
-    });
-  });
-
-  it("prices TTS text-in + audio-out tokens", () => {
-    const model = {
-      type: "text-to-speech", modelName: "gem-tts", provider: "google",
-      inputTokenCost: 0.50, outputAudioTokenCost: 10.0,
-    } as unknown as ModelType;
-
-    const cost = calculateAudioTokenCost(model, {
+it("prices token-based TTS through the same four-bucket engine", () => {
+  const ttsData: ModelDataBlob = {
+    schemaVersion: 1,
+    generatedAt: "test",
+    hostedTools: [],
+    models: [{
+      type: "text-to-speech",
+      modelName: "gem-tts",
+      provider: "google",
+      inputTokenCost: 0.5,
+      outputAudioTokenCost: 10,
+      formats: ["pcm", "wav"],
+    }],
+  };
+  const model = new Model("gem-tts", "google", ttsData);
+  expect(
+    model.calculateCost({
       inputTokens: 1_000_000, outputTokens: 0, outputAudioTokens: 1_000_000,
-    });
-    expect(cost).toEqual({
-      inputCost: 0.5, outputCost: 10.0, totalCost: 10.5, currency: "USD",
-    });
-  });
-
-  it("returns undefined when the model has no token rates", () => {
-    const model = {
-      type: "text-to-speech", modelName: "x", provider: "p", perCharacterCost: 0.001,
-    } as unknown as ModelType;
-    expect(calculateAudioTokenCost(model, { inputTokens: 5, outputTokens: 5 })).toBeUndefined();
-  });
-
-  it("returns undefined when usage is missing", () => {
-    const model = { type: "text", modelName: "y", provider: "p", inputTokenCost: 1 } as unknown as ModelType;
-    expect(calculateAudioTokenCost(model, undefined)).toBeUndefined();
+    }),
+  ).toEqual({
+    inputCost: 0.5,
+    outputCost: 10,
+    cachedInputCost: undefined,
+    cacheCreationInputCost: undefined,
+    totalCost: 10.5,
+    currency: "USD",
   });
 });
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `pnpm test -- audioTokenCost.test`
-Expected: FAIL — `calculateAudioTokenCost is not a function`.
+Run: `pnpm test -- model.audioCost.test`
+Expected: FAIL — `Model.calculateCost()` returns `null` for the TTS model.
 
-- [ ] **Step 3: Add the audio-token fields to `TextToSpeechModel`**
+- [ ] **Step 3: Put audio token rates on the shared model shape**
 
-In `lib/models.ts`:
+Move the existing audio fields from `TextModel` to `BaseModel`, beside the text
+token rates. All token-priced model kinds can then declare the same fields:
 
 ```typescript
-export type TextToSpeechModel = BaseModel & {
-  type: "text-to-speech";
-  perCharacterCost?: number;
-  // Token-based pricing (e.g. Gemini TTS): text input + audio output.
-  inputAudioTokenCost?: number;   // per 1M audio-input tokens
-  outputAudioTokenCost?: number;  // per 1M audio-output tokens
-  maxInputChars?: number;
-  speedRange?: { min: number; max: number };
-  formats?: readonly string[];
+export type BaseModel = {
+  // existing fields
+  inputTokenCost?: number;
+  outputTokenCost?: number;
+  inputAudioTokenCost?: number;
+  outputAudioTokenCost?: number;
 };
 ```
 
-(`inputTokenCost` / `outputTokenCost` are already on `BaseModel`.)
+- [ ] **Step 4: Extend `Model.calculateCost()` without duplicating its arithmetic**
 
-- [ ] **Step 4: Implement `calculateAudioTokenCost`**
-
-Append to `lib/model.ts`:
+In `lib/model.ts`, replace the text-only guard with a token-rate guard, then
+leave the existing cache/audio bucket arithmetic unchanged:
 
 ```typescript
-import type { TokenUsage } from "./types/tokenUsage.js";
-
-/**
- * Token-based audio cost for providers that bill by tokens (Gemini), priced
- * across four disjoint buckets (text/audio × in/out). Audio buckets fall back to
- * the text rate when no audio rate is set, so totals stay honest. Returns
- * undefined when the model carries no token rates or usage is absent — same
- * omit-don't-error semantics as the per-minute/per-char helpers.
- */
-export function calculateAudioTokenCost(
-  model: ModelType | undefined,
-  usage: TokenUsage | undefined,
-): CostEstimate | undefined {
-  if (model === undefined || usage === undefined) {
-    return undefined;
-  }
-  const m = model as {
-    inputTokenCost?: number;
-    outputTokenCost?: number;
-    inputAudioTokenCost?: number;
-    outputAudioTokenCost?: number;
-  };
-  const hasRates =
-    m.inputTokenCost !== undefined ||
-    m.outputTokenCost !== undefined ||
-    m.inputAudioTokenCost !== undefined ||
-    m.outputAudioTokenCost !== undefined;
-  if (!hasRates) {
-    return undefined;
-  }
-
-  const U = 1_000_000;
-  const inputAudioRate = m.inputAudioTokenCost ?? m.inputTokenCost ?? 0;
-  const outputAudioRate = m.outputAudioTokenCost ?? m.outputTokenCost ?? 0;
-
-  const inputCost = round(
-    ((usage.inputTokens || 0) * (m.inputTokenCost ?? 0) +
-      (usage.inputAudioTokens || 0) * inputAudioRate) / U,
-    6,
-  );
-  const outputCost = round(
-    ((usage.outputTokens || 0) * (m.outputTokenCost ?? 0) +
-      (usage.outputAudioTokens || 0) * outputAudioRate) / U,
-    6,
-  );
-  return {
-    inputCost,
-    outputCost,
-    totalCost: round(inputCost + outputCost, 6),
-    currency: "USD",
-  };
+const hasTokenRates =
+  model !== undefined &&
+  (model.inputTokenCost !== undefined ||
+    model.outputTokenCost !== undefined ||
+    model.inputAudioTokenCost !== undefined ||
+    model.outputAudioTokenCost !== undefined);
+if (!hasTokenRates) {
+  return null;
 }
 ```
+
+Remove the now-unused `isTextModel` import only if no other code in
+`lib/model.ts` uses it. Do not create `calculateAudioTokenCost`.
 
 - [ ] **Step 5: Add `usage` to `SpeechResult` and wire the cost fallback into both bases**
 
@@ -899,11 +976,15 @@ export type SpeechResult = {
 In `lib/transcription/baseTranscriptionClient.ts`, import and update the cost step:
 
 ```typescript
-import { calculateTranscriptionCost, calculateAudioTokenCost } from "../model.js";
+import { Model, calculateTranscriptionCost } from "../model.js";
 // ...after `const result = await this._transcribe(...)` success check:
       let cost = calculateTranscriptionCost(model, result.value.durationSeconds);
-      if (cost === undefined) {
-        cost = calculateAudioTokenCost(model, result.value.usage);
+      if (cost === undefined && result.value.usage !== undefined) {
+        cost = new Model(
+          this.config.model,
+          this.config.provider,
+          this.config.modelData,
+        ).calculateCost(result.value.usage) ?? undefined;
       }
       if (cost !== undefined) {
         result.value.cost = cost;
@@ -913,11 +994,15 @@ import { calculateTranscriptionCost, calculateAudioTokenCost } from "../model.js
 In `lib/speech/baseSpeechClient.ts`, import and update the cost step:
 
 ```typescript
-import { calculateSpeechCost, calculateAudioTokenCost } from "../model.js";
+import { Model, calculateSpeechCost } from "../model.js";
 // ...after `const result = await this._speak(text)` success check:
       let cost = calculateSpeechCost(model, [...text].length);
-      if (cost === undefined) {
-        cost = calculateAudioTokenCost(model, result.value.usage);
+      if (cost === undefined && result.value.usage !== undefined) {
+        cost = new Model(
+          this.config.model,
+          this.config.provider,
+          this.config.modelData,
+        ).calculateCost(result.value.usage) ?? undefined;
       }
       if (cost !== undefined) {
         result.value.cost = cost;
@@ -926,13 +1011,13 @@ import { calculateSpeechCost, calculateAudioTokenCost } from "../model.js";
 
 - [ ] **Step 6: Run tests and typecheck**
 
-Run: `pnpm typecheck && pnpm test -- audioTokenCost.test speech.test transcription.test`
+Run: `pnpm typecheck && pnpm test -- model.audioCost.test speech.test transcription.test`
 Expected: PASS. Existing OpenAI/Groq cost behavior is unchanged (per-minute/per-char still resolves first; the token fallback only fires when the primary returns undefined).
 
 - [ ] **Step 7: Commit**
 
 ```bash
-git add lib/model.ts lib/models.ts lib/speech.ts lib/transcription/baseTranscriptionClient.ts lib/speech/baseSpeechClient.ts lib/model.audioTokenCost.test.ts
+git add lib/model.ts lib/models.ts lib/speech.ts lib/transcription/baseTranscriptionClient.ts lib/speech/baseSpeechClient.ts lib/model.audioCost.test.ts
 git commit -m "feat: token-priced cost path for audio (Gemini)"
 ```
 
@@ -942,13 +1027,19 @@ git commit -m "feat: token-priced cost path for audio (Gemini)"
 
 **Files:**
 - Create: `lib/transcription/google.ts`
+- Create: `lib/googleAudioUsage.ts`
 - Modify: `lib/transcription.ts` (register `"google"`)
-- Modify: `lib/models.ts` (Gemini STT model record)
+- Modify: `lib/models.ts` (augment existing Gemini text model constraints)
 - Test: `lib/transcription/google.test.ts`
+- Test: `lib/googleAudioUsage.test.ts`
 
 **Interfaces:**
-- Consumes: `BaseTranscriptionClient` (base template method + guard from Task 5); `loadBlob` (`lib/util/blobRef.ts`); `TranscriptionResult` (`lib/transcription.ts`).
-- Produces: `class GoogleTranscriptionClient extends BaseTranscriptionClient` implementing `_transcribe`; provider `"google"` resolvable by the transcription factory.
+- Consumes: `BaseTranscriptionClient` (Task 5), `googleAudioWireMime`
+  (Task 4), and `Model.calculateCost` support (Task 6).
+- Produces: `normalizeGoogleAudioUsage(metadata, audioDirection): TokenUsage`
+  in `lib/googleAudioUsage.ts`, shared with Task 8.
+- Produces: `class GoogleTranscriptionClient`; typed SDK mapping; exact inline
+  request-size enforcement; explicit rejection of unsupported timestamps.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -984,7 +1075,7 @@ describe("GoogleTranscriptionClient", () => {
 
     const res = await transcribe(
       { kind: "bytes", bytes: new Uint8Array([1, 2, 3]), mimeType: "audio/wav" },
-      { model: "gemini-2.5-flash", provider: "google", apiKey: { google: "gk" }, language: "en" },
+      { model: "gemini-2.5-flash", apiKey: { google: "gk" }, language: "en" },
     );
 
     expect(res.success).toBe(true);
@@ -1009,6 +1100,47 @@ describe("GoogleTranscriptionClient", () => {
     );
     expect(res.success).toBe(false);
   });
+
+  it("maps canonical MP3 MIME to Google's documented wire MIME", async () => {
+    gc().mockResolvedValue({ text: "ok" });
+    await transcribe(
+      { kind: "bytes", bytes: new Uint8Array([1]), mimeType: "audio/mpeg" },
+      { model: "gemini-2.5-flash", apiKey: { google: "gk" } },
+    );
+    expect(gc().mock.calls[0][0].contents[0].parts[0].inlineData.mimeType).toBe("audio/mp3");
+  });
+
+  it("rejects timestamps without dispatching", async () => {
+    const res = await transcribe(
+      { kind: "bytes", bytes: new Uint8Array([1]), mimeType: "audio/wav" },
+      {
+        model: "gemini-2.5-flash",
+        apiKey: { google: "gk" },
+        timestampGranularity: "word",
+      },
+    );
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/timestamp/i);
+    expect(gc()).not.toHaveBeenCalled();
+  });
+
+  it("rejects a total encoded request over the inline limit", async () => {
+    const res = await transcribe(
+      {
+        kind: "bytes",
+        bytes: new Uint8Array(14_000_000),
+        mimeType: "audio/wav",
+      },
+      {
+        model: "gemini-2.5-flash",
+        apiKey: { google: "gk" },
+        prompt: "x".repeat(1_500_000),
+      },
+    );
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/20 MB inline request limit/i);
+    expect(gc()).not.toHaveBeenCalled();
+  });
 });
 ```
 
@@ -1017,7 +1149,54 @@ describe("GoogleTranscriptionClient", () => {
 Run: `pnpm test -- transcription/google.test`
 Expected: FAIL — `Provider "google" has no transcription API`.
 
-- [ ] **Step 3: Create the Gemini transcription client**
+- [ ] **Step 3: Create the shared typed Gemini usage mapper**
+
+Create `lib/googleAudioUsage.ts` and its focused test. Use the SDK's exported
+usage type instead of converting it to `Record<string, unknown>`:
+
+```typescript
+import type { GenerateContentResponseUsageMetadata } from "@google/genai";
+import type { TokenUsage } from "./types/tokenUsage.js";
+
+export type GoogleAudioDirection = "input" | "output";
+
+function modalityTokens(
+  details: GenerateContentResponseUsageMetadata["promptTokensDetails"],
+  modality: string,
+): number {
+  return (details ?? [])
+    .filter((detail) => detail.modality === modality)
+    .reduce((sum, detail) => sum + (detail.tokenCount ?? 0), 0);
+}
+
+export function normalizeGoogleAudioUsage(
+  metadata: GenerateContentResponseUsageMetadata | undefined,
+  audioDirection: GoogleAudioDirection,
+): TokenUsage | undefined {
+  if (metadata === undefined) {
+    return undefined;
+  }
+  const prompt = metadata.promptTokenCount ?? 0;
+  const candidates = metadata.candidatesTokenCount ?? 0;
+  const audio = audioDirection === "input"
+    ? modalityTokens(metadata.promptTokensDetails, "AUDIO")
+    : modalityTokens(metadata.candidatesTokensDetails, "AUDIO") || candidates;
+  return {
+    inputTokens: audioDirection === "input" ? Math.max(0, prompt - audio) : prompt,
+    outputTokens: audioDirection === "output" ? Math.max(0, candidates - audio) : candidates,
+    ...(audioDirection === "input" && audio > 0 ? { inputAudioTokens: audio } : {}),
+    ...(audioDirection === "output" && audio > 0 ? { outputAudioTokens: audio } : {}),
+    ...(metadata.totalTokenCount !== undefined
+      ? { totalTokens: metadata.totalTokenCount }
+      : {}),
+  };
+}
+```
+
+The test must cover STT disjoint prompt/audio buckets, TTS audio output,
+missing metadata, and missing detail arrays.
+
+- [ ] **Step 4: Create the Gemini transcription client**
 
 Create `lib/transcription/google.ts`:
 
@@ -1026,20 +1205,10 @@ import { GoogleGenAI } from "@google/genai";
 import { Result, success, failure } from "../types/result.js";
 import { BaseTranscriptionClient } from "./baseTranscriptionClient.js";
 import type { TranscriptionResult } from "../transcription.js";
-import type { TokenUsage } from "../types/tokenUsage.js";
+import { normalizeGoogleAudioUsage } from "../googleAudioUsage.js";
+import { googleAudioWireMime } from "../util/audioMime.js";
 
-/** Sum token counts for a given modality from Gemini usage-detail arrays. */
-function modalityTokens(details: unknown, modality: string): number {
-  if (!Array.isArray(details)) return 0;
-  let sum = 0;
-  for (const d of details) {
-    if (d && typeof d === "object" && (d as { modality?: string }).modality === modality) {
-      const n = (d as { tokenCount?: number }).tokenCount;
-      if (typeof n === "number") sum += n;
-    }
-  }
-  return sum;
-}
+const GOOGLE_INLINE_REQUEST_MAX_BYTES = 20_000_000;
 
 export class GoogleTranscriptionClient extends BaseTranscriptionClient {
   // No try/catch: BaseTranscriptionClient.transcribe() is the exception boundary.
@@ -1049,6 +1218,9 @@ export class GoogleTranscriptionClient extends BaseTranscriptionClient {
   ): Promise<Result<TranscriptionResult>> {
     if (!this.config.apiKey) {
       return failure("No Google API key provided. Set apiKey.google or GEMINI_API_KEY.");
+    }
+    if (this.config.timestampGranularity !== undefined) {
+      return failure("Gemini transcription does not support timestampGranularity.");
     }
 
     let instruction =
@@ -1061,33 +1233,27 @@ export class GoogleTranscriptionClient extends BaseTranscriptionClient {
     }
 
     const base64 = Buffer.from(data).toString("base64");
-    const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
-    const res = await ai.models.generateContent({
+    const request = {
       model: this.config.model,
       contents: [{
         role: "user",
         parts: [
-          { inlineData: { mimeType, data: base64 } },
+          { inlineData: { mimeType: googleAudioWireMime(mimeType), data: base64 } },
           { text: instruction },
         ],
       }],
-    });
-
-    const meta = (res as { usageMetadata?: Record<string, unknown> }).usageMetadata;
-    let usage: TokenUsage | undefined;
-    if (meta) {
-      const prompt = (meta.promptTokenCount as number) || 0;
-      const audioIn = modalityTokens(meta.promptTokensDetails, "AUDIO");
-      usage = {
-        inputTokens: Math.max(0, prompt - audioIn),
-        outputTokens: (meta.candidatesTokenCount as number) || 0,
-        totalTokens: meta.totalTokenCount as number | undefined,
-      };
-      if (audioIn > 0) usage.inputAudioTokens = audioIn;
+    };
+    if (Buffer.byteLength(JSON.stringify(request), "utf8") > GOOGLE_INLINE_REQUEST_MAX_BYTES) {
+      return failure(
+        "Audio and instructions exceed Gemini's 20 MB inline request limit; use a smaller source.",
+      );
     }
+    const ai = new GoogleGenAI({ apiKey: this.config.apiKey });
+    const res = await ai.models.generateContent(request);
+    const usage = normalizeGoogleAudioUsage(res.usageMetadata, "input");
 
     const result: TranscriptionResult = {
-      text: (res as { text?: string }).text ?? "",
+      text: res.text ?? "",
       raw: res,
     };
     if (usage) result.usage = usage;
@@ -1096,7 +1262,7 @@ export class GoogleTranscriptionClient extends BaseTranscriptionClient {
 }
 ```
 
-- [ ] **Step 4: Register the provider**
+- [ ] **Step 5: Register the provider**
 
 In `lib/transcription.ts`:
 
@@ -1106,42 +1272,35 @@ import { GoogleTranscriptionClient } from "./transcription/google.js";
 builtinClients["google"] = GoogleTranscriptionClient;   // add
 ```
 
-- [ ] **Step 5: Add the Gemini STT model record**
+- [ ] **Step 6: Augment the existing Gemini STT-capable model record**
 
-In `lib/models.ts`, append to `textModels` a record for the transcription model, OR
-augment the existing `gemini-2.5-flash` text record if present. It must declare
-`audio` as an input modality and carry audio-input constraints + token rates
-(verify prices against Gemini's pricing page at implementation time):
+Modify the existing `google:gemini-2.5-flash` entry; do not add a duplicate.
+Its audio modality and verified standard rates already exist. Add canonical
+supported MIME values and a conservative 14,000,000-byte raw cap. The cap leaves
+room for base64 expansion, instructions, and SDK envelope under Gemini's
+20,000,000-byte total inline request limit; the client still performs the exact
+request check because caller prompts vary.
 
 ```typescript
   {
     type: "text",
     modelName: "gemini-2.5-flash",
     provider: "google",
-    maxInputTokens: 1_048_576,
-    maxOutputTokens: 65_536,
-    modalities: { input: ["text", "image", "pdf", "audio"], output: ["text"] },
-    inputTokenCost: 0.30,
-    outputTokenCost: 2.50,
-    inputAudioTokenCost: 1.00,
+    // existing fields remain unchanged
     supportedMimeTypes: ["audio/wav", "audio/mpeg", "audio/aac", "audio/ogg", "audio/flac", "audio/aiff"],
-    maxBytes: 20 * 1024 * 1024,   // Gemini inline request ceiling; confirm current value
+    maxBytes: 14_000_000,
   },
 ```
 
-If `gemini-2.5-flash` already exists in `textModels`, MODIFY that entry instead of
-adding a duplicate (the registry key is `provider:modelName`): add `"audio"` to
-`modalities.input`, and add `inputAudioTokenCost`, `supportedMimeTypes`, `maxBytes`.
+- [ ] **Step 7: Run tests and typecheck**
 
-- [ ] **Step 6: Run tests and typecheck**
-
-Run: `pnpm typecheck && pnpm test -- transcription/google.test transcription.guard.test`
+Run: `pnpm typecheck && pnpm test -- googleAudioUsage.test transcription/google.test transcription.guard.test`
 Expected: PASS (the guard now accepts `gemini-2.5-flash` because it lists `audio` input).
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add lib/transcription/google.ts lib/transcription.ts lib/models.ts lib/transcription/google.test.ts
+git add lib/googleAudioUsage.ts lib/googleAudioUsage.test.ts lib/transcription/google.ts lib/transcription.ts lib/models.ts lib/transcription/google.test.ts
 git commit -m "feat: Gemini speech-to-text (native generateContent)"
 ```
 
@@ -1156,8 +1315,10 @@ git commit -m "feat: Gemini speech-to-text (native generateContent)"
 - Test: `lib/speech/google.test.ts`
 
 **Interfaces:**
-- Consumes: `BaseSpeechClient`; `pcmToWav` (Task 4); `SpeechResult` (`lib/speech.ts`).
-- Produces: `class GoogleSpeechClient extends BaseSpeechClient` implementing `_speak`; provider `"google"` resolvable by the speech factory.
+- Consumes: `BaseSpeechClient`, `pcmToWav` (Task 4), shared
+  `normalizeGoogleAudioUsage` (Task 7), and token pricing (Task 6).
+- Produces: `class GoogleSpeechClient extends BaseSpeechClient`; provider is
+  inferred from model data; transport details remain internal.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -1198,7 +1359,7 @@ describe("GoogleSpeechClient", () => {
     mockAudioResponse();
     const res = await speak("hi", {
       model: "gemini-2.5-flash-preview-tts", voice: "Kore",
-      provider: "google", apiKey: { google: "gk" },
+      apiKey: { google: "gk" },
     });
     expect(res.success).toBe(true);
     if (res.success) {
@@ -1240,6 +1401,17 @@ describe("GoogleSpeechClient", () => {
     expect(speedy.success).toBe(false);
     if (!speedy.success) expect(speedy.error).toMatch(/speed/i);
   });
+
+  it("does not invent an 8,000-character limit for a 32k-token context", async () => {
+    mockAudioResponse();
+    const res = await speak("a".repeat(8_001), {
+      model: "gemini-2.5-flash-preview-tts",
+      voice: "Kore",
+      apiKey: { google: "gk" },
+    });
+    expect(res.success).toBe(true);
+    expect(gc()).toHaveBeenCalledOnce();
+  });
 });
 ```
 
@@ -1256,23 +1428,11 @@ Create `lib/speech/google.ts`:
 import { GoogleGenAI } from "@google/genai";
 import { Result, success, failure } from "../types/result.js";
 import { pcmToWav } from "../util/audioMime.js";
+import { normalizeGoogleAudioUsage } from "../googleAudioUsage.js";
 import { BaseSpeechClient } from "./baseSpeechClient.js";
 import type { SpeechResult, PcmAudioMetadata } from "../speech.js";
-import type { TokenUsage } from "../types/tokenUsage.js";
 
 const GEMINI_PCM: PcmAudioMetadata = { sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 };
-
-function modalityTokens(details: unknown, modality: string): number {
-  if (!Array.isArray(details)) return 0;
-  let sum = 0;
-  for (const d of details) {
-    if (d && typeof d === "object" && (d as { modality?: string }).modality === modality) {
-      const n = (d as { tokenCount?: number }).tokenCount;
-      if (typeof n === "number") sum += n;
-    }
-  }
-  return sum;
-}
 
 export class GoogleSpeechClient extends BaseSpeechClient {
   // No try/catch: BaseSpeechClient.speak() is the exception boundary.
@@ -1305,9 +1465,9 @@ export class GoogleSpeechClient extends BaseSpeechClient {
       },
     });
 
-    const dataB64 = (res as {
-      candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[];
-    }).candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const dataB64 = res.candidates?.[0]?.content?.parts?.find(
+      (part) => part.inlineData?.data !== undefined,
+    )?.inlineData?.data;
     if (!dataB64) {
       return failure("Gemini returned no audio data.");
     }
@@ -1320,19 +1480,7 @@ export class GoogleSpeechClient extends BaseSpeechClient {
       mimeType = "audio/wav";
     }
 
-    const meta = (res as { usageMetadata?: Record<string, unknown> }).usageMetadata;
-    let usage: TokenUsage | undefined;
-    if (meta) {
-      const audioOut =
-        modalityTokens(meta.candidatesTokensDetails, "AUDIO") ||
-        ((meta.candidatesTokenCount as number) || 0);
-      usage = {
-        inputTokens: (meta.promptTokenCount as number) || 0,
-        outputTokens: 0,
-        outputAudioTokens: audioOut,
-        totalTokens: meta.totalTokenCount as number | undefined,
-      };
-    }
+    const usage = normalizeGoogleAudioUsage(res.usageMetadata, "output");
 
     const result: SpeechResult = { audio, mimeType, raw: res };
     if (format === "pcm") result.pcm = GEMINI_PCM;
@@ -1354,26 +1502,25 @@ builtinClients["google"] = GoogleSpeechClient;   // add
 
 - [ ] **Step 5: Add the Gemini TTS model records**
 
-In `lib/models.ts`, append to `textToSpeechModels` (verify ids/limits/prices against
-Gemini docs at implementation time):
+In `lib/models.ts`, append to `textToSpeechModels`. Standard prices were
+verified 2026-08-09. Do **not** set `maxInputChars`: Gemini documents a 32k-token
+context, and character count is not a sound token-limit proxy.
 
 ```typescript
   {
     type: "text-to-speech",
     modelName: "gemini-2.5-flash-preview-tts",
     provider: "google",
-    inputTokenCost: 0.50,          // per 1M text-input tokens; confirm
-    outputAudioTokenCost: 10.0,    // per 1M audio-output tokens; confirm
-    maxInputChars: 8000,           // confirm current limit
+    inputTokenCost: 0.50,
+    outputAudioTokenCost: 10.0,
     formats: ["pcm", "wav"],
   },
   {
     type: "text-to-speech",
     modelName: "gemini-2.5-pro-preview-tts",
     provider: "google",
-    inputTokenCost: 1.0,           // confirm
-    outputAudioTokenCost: 20.0,    // confirm
-    maxInputChars: 8000,
+    inputTokenCost: 1.0,
+    outputAudioTokenCost: 20.0,
     formats: ["pcm", "wav"],
   },
 ```
@@ -1412,10 +1559,12 @@ Expected: PASS.
 - [ ] **Step 2: Regenerate the published seed data**
 
 Run: `pnpm seed-data`
-Then confirm the diff only adds the new Groq/Gemini records:
+The diff must contain the new Groq/Gemini TTS/STT records, changes to the
+existing `google:gemini-2.5-flash` record, and `generatedAt`. Inspect any other
+model changes separately rather than assuming an additions-only diff:
 
 Run: `git diff --stat data/model-data.json`
-Expected: `data/model-data.json` changed (additions only).
+Expected: `data/model-data.json` changed; no unrelated model record changed.
 
 - [ ] **Step 3: Extend the seed-data test to the new constraint fields**
 
@@ -1423,9 +1572,14 @@ In `tests/seed-model-data.test.ts`, add assertions that the committed
 `data/model-data.json` carries the new records with their audio constraint/cost
 fields — mirror the existing per-model comparison style already in that file for
 `whisper-1` / `tts-1`. Add cases for: `whisper-large-v3` (`perMinuteCost`,
-`supportedMimeTypes`, `maxBytes`), `playai-tts` (`formats`), `gemini-2.5-flash`
+`supportedMimeTypes`, `maxBytes`), both `canopylabs/orpheus-*` models
+(`perCharacterCost`, `maxInputChars`, `formats`), `gemini-2.5-flash`
 (`modalities.input` includes `"audio"`, `supportedMimeTypes`, `inputAudioTokenCost`),
 and `gemini-2.5-flash-preview-tts` (`formats`, `outputAudioTokenCost`).
+
+Compare each committed record with `getModelForProvider(provider, modelName)`;
+this semantic parity assertion is the source of truth and is intentionally
+insensitive to record ordering or the regenerated timestamp.
 
 - [ ] **Step 4: Update the developer docs**
 
@@ -1433,12 +1587,16 @@ In `docs/dev/audio.md`:
 - Update the "Scope (v1)" section: audio STT/TTS now covers OpenAI, **Groq**
   (OpenAI-compatible), and **Google Gemini** (native `generateContent`).
 - Add a short subsection "Provider shapes" describing: (a) OpenAI-compatible via
-  `makeClient()` base-URL override (Groq); (b) Gemini native multimodal — STT =
+  `makeClient()` plus provider default-format overrides (Groq); (b) Gemini native multimodal — STT =
   inline audio + instruction; TTS = `responseModalities: ["AUDIO"]` → raw PCM,
   optional WAV wrap; no numeric `speed`.
-- Document the B1 guard change (`modelAcceptsAudioInput`) and the token-priced
-  cost path (`calculateAudioTokenCost`) alongside the existing per-minute/per-char
-  helpers.
+- Document reuse of `modelSupportsInputModality` for the B1 guard and reuse of
+  `Model.calculateCost()` for token-priced audio alongside the existing
+  per-minute/per-character helpers.
+- Document Gemini's inline-only 20 MB total request behavior, conservative raw
+  cap, unsupported timestamps, and 32k-token TTS context (no character preflight).
+- Document Groq's 25 MB conservative upload cap, tier-dependent 100 MB maximum,
+  10-second minimum billing, 200-character Orpheus limit, and WAV default.
 
 In `packages/smoltalk/README.md`, extend the audio section with Gemini and Groq
 usage examples:
@@ -1449,6 +1607,11 @@ await transcribe(src, { model: "whisper-large-v3", provider: "groq" });
 
 // Gemini STT (native)
 await transcribe(src, { model: "gemini-2.5-flash", provider: "google" });
+
+// Groq TTS → WAV by default (provider inferred from model)
+await speak("Hello", {
+  model: "canopylabs/orpheus-v1-english", voice: "troy",
+});
 
 // Gemini TTS → WAV
 await speak("Hello", {
@@ -1481,20 +1644,235 @@ git commit -m "docs+data: seed data and docs for Gemini + Groq audio"
 - File layout (spec Part 5) → matches File Structure above. ✅
 - Testing (spec Part 6) → per-task tests + Task 9 seed/docs. ✅
 - Out-of-scope items (spec Part F) → none implemented (correct). ✅
-- Spec "open items to confirm" (Groq ids/prices, Gemini byte cap/prices, TTS field
-  wiring) → surfaced inline in Tasks 2/3/7/8 with concrete starting values and a
-  verify note, and resolved in Task 6 (`inputTokenCost`+`outputAudioTokenCost`). ✅
+- Provider facts → verified against the authoritative sources linked in Global
+  Constraints on 2026-08-09; no guessed runtime constraints remain. ✅
 
-**Placeholder scan:** No "TBD"/"handle edge cases"/"similar to Task N". Pricing
-numbers are concrete with an explicit "confirm current value" instruction — real
-values, not placeholders.
+**Placeholder scan:** The executable Tasks 1–9 contain no unresolved provider
+facts. Optional fields without an authoritative value are deliberately omitted.
 
-**Type consistency:** `makeClient()`, `modelAcceptsAudioInput`,
-`audioInputConstraints`, `calculateAudioTokenCost`, `pcmToWav`, `SpeechResult.usage`
-are defined in one task and consumed with matching signatures downstream.
-`TranscriptionResult.usage` already exists; `SpeechResult.usage` added in Task 6
-before the Gemini TTS client (Task 8) uses it.
+**Type consistency:** `makeClient()`, `defaultFormat()`,
+`audioInputConstraints()`, `googleAudioWireMime()`, `pcmToWav()`,
+`normalizeGoogleAudioUsage()`, and `SpeechResult.usage` are defined before use.
+Capability queries reuse `modelSupportsInputModality()` and all token cost paths
+reuse `Model.calculateCost()`.
 
 **Ordering note:** Task 5 (guard) and Task 6 (token cost) precede the Gemini
 clients (Tasks 7–8), which depend on both. Groq (Tasks 1–3) is independent and
 comes first as the simplest slice.
+
+---
+
+## Historical Review (resolved in Tasks 1–9)
+
+<details>
+<summary>Original review retained for traceability; it is not an implementation checklist.</summary>
+
+All findings below have been incorporated into the executable plan above.
+
+### Verdict
+
+The overall boundary is good: callers continue to describe **what** they want
+through `transcribe()` / `speak()`, while provider subclasses encapsulate SDK
+calls and response mapping. That is the right declarative public interface.
+
+The plan is not ready to execute literally, however. It contains two live-API
+blockers, duplicates two existing abstractions, and encodes several guessed
+limits as authoritative model data. Resolve the P0 and P1 items below first.
+
+### P0 — implementation blockers
+
+#### 1. Task 3 uses a retired/unsupported Groq TTS model
+
+The plan registers and tests `playai-tts`. Groq's current TTS documentation
+lists these models instead:
+
+- `canopylabs/orpheus-v1-english`
+- `canopylabs/orpheus-arabic-saudi`
+
+Executing Task 3 as written would publish a built-in provider whose only TTS
+model cannot be called. Replace the model, fixture, comments, seed assertion,
+and README example with records for the two Orpheus models. Do not carry the
+unverified PlayAI price or `maxInputChars` forward under the new names; first
+verify and cite the current Orpheus values.
+
+Source: <https://console.groq.com/docs/text-to-speech>
+
+#### 2. Groq's omitted-format path sends `mp3`, although Groq TTS uses `wav`
+
+Task 3's test omits `format`, but inherited
+`OpenAISpeechClient._speak()` resolves an omitted format to `mp3` and sends it as
+`response_format`. The model record cannot prevent this because the base checks
+`formats` only when the caller explicitly supplies a format. The mock therefore
+passes while the real request is invalid.
+
+Requiring callers to know that Groq needs `format: "wav"` would also leak a
+transport default through an otherwise provider-neutral API. In Task 1, add a
+small protected default-format hook: OpenAI returns `mp3`; Groq overrides it to
+`wav`. Task 3 must assert that an omitted format sends `response_format: "wav"`,
+returns `audio/wav`, and rejects an explicit unsupported format before calling
+the SDK.
+
+### P1 — correctness and architecture
+
+#### 3. Task 7 treats Gemini's encoded request limit as a raw-file limit
+
+Gemini's limit is **20 MB for the total request**, including prompt and inline
+files. `maxBytes: 20 * 1024 * 1024` is instead applied to raw bytes before Task 7
+base64-encodes them. Base64 expands data by roughly 4/3, so a file accepted by
+the base can exceed the API limit before JSON and instructions are counted.
+
+Use a named conservative raw inline cap below 15 MB in model data, then have
+`GoogleTranscriptionClient` check the actual encoded request size before
+dispatch. This second check is provider transport-envelope enforcement, not a
+public API concern, so it belongs behind the declarative client boundary. Add a
+test proving an encoded-over-limit request returns `Failure` without calling
+the SDK. Keep the behavior inline-only; do not silently upload through the
+Files API unless ownership and cleanup are added to the design.
+
+Source: <https://ai.google.dev/gemini-api/docs/audio>
+
+#### 4. Task 8 invents an 8,000-character Gemini TTS limit
+
+The current Gemini documentation specifies a 32k-token context, not an
+8,000-character cap. `BaseSpeechClient` would enforce the proposed
+`maxInputChars: 8000` as a hard limit and reject valid requests.
+
+Remove `maxInputChars` from the Gemini TTS records. Do not approximate a token
+limit with characters. Let Gemini enforce its token context unless a real token
+counting preflight is deliberately designed later. Add a regression test that
+an input longer than 8,000 characters reaches the mocked SDK.
+
+Source: <https://ai.google.dev/gemini-api/docs/speech-generation>
+
+#### 5. Task 6 duplicates the existing audio-aware cost implementation
+
+`calculateAudioTokenCost()` repeats `Model.calculateCost()`'s disjoint
+text/audio input/output buckets, fallback rates, rounding, and result assembly.
+It also casts `ModelType` to an ad hoc structural type, masking rather than
+expressing the supported model contract. This is the catalog's “duplicating
+existing code” anti-pattern and creates two pricing engines that can drift.
+
+Use one declarative pricing interface instead:
+
+1. Put `inputAudioTokenCost?` / `outputAudioTokenCost?` on the shared token-rate
+   model shape (`BaseModel`, beside its text token rates).
+2. Extend `Model.calculateCost()` to accept any model carrying token rates,
+   including `TextToSpeechModel`, rather than rejecting non-`TextModel` entries.
+3. Have both audio bases use that existing engine as the token-usage fallback
+   after per-minute/per-character pricing.
+4. Add the TTS text-in/audio-out case to the existing
+   `model.audioCost.test.ts`; do not add a parallel cost helper/test suite.
+
+#### 6. Task 5 duplicates the existing modality abstraction
+
+`modelAcceptsAudioInput()` restates `modelSupportsInputModality()`, which already
+performs provider-aware lookup and is used by the attachment path. Keep the
+dedicated STT case, but reuse the existing declarative capability query:
+
+```typescript
+const acceptsAudio =
+  isSpeechToTextModel(model) ||
+  modelSupportsInputModality(
+    this.config.model,
+    "audio",
+    this.config.modelData,
+    this.config.provider,
+  ) === true;
+```
+
+Preserve unknown-model passthrough. An `audioInputConstraints()` adapter can
+still be useful because STT and multimodal text records store the same
+constraints on different union members, but do not add a second modality
+predicate. Build complete `ModelDataBlob` fixtures in the tests instead of
+using `as unknown as ModelDataBlob`.
+
+#### 7. Task 7 silently ignores a public option
+
+Gemini STT does not implement `timestampGranularity`, yet the option remains
+accepted without warning. That is inconsistent with Task 8's explicit rejection
+of unsupported `speed` and makes the declarative contract misleading.
+
+For v1, return `Failure` when `timestampGranularity` is supplied to Gemini and
+test that the SDK is not called. Structured timestamp prompting/parsing can be
+a separate feature.
+
+#### 8. Canonical MIME data needs a provider-wire adapter and complete formats
+
+The plan correctly requires canonical MIME values in model data, but Task 7
+passes the source MIME directly to Gemini. Gemini documents MP3 as `audio/mp3`,
+while this repository canonicalizes it to `audio/mpeg`. Tasks 7/8 also propose
+AAC/AIFF even though `AUDIO_FORMATS` currently has no AAC/AIFF entries.
+
+Keep model data canonical, add AAC and AIFF to `AUDIO_FORMATS`, and make the
+Google subclass translate canonical MIME to the provider's accepted wire value
+where necessary. Test an MP3 alias and both newly supported formats. Do not
+scatter MIME aliases into model records.
+
+#### 9. “Confirm at implementation time” values are unresolved requirements
+
+Tasks 2, 3, 7, and 8 contain guessed prices, limits, formats, and model IDs while
+the Self-Review claims there are no placeholders. These values drive runtime
+rejection and user-visible cost estimates, so an implementer cannot safely
+“confirm” them after writing tests around the guesses.
+
+Add an explicit research/verification step before model-record tests, cite the
+authoritative source and retrieval date, and replace every `confirm` comment
+with a verified value or omit the optional field. In particular, account for
+Groq's tier-dependent 25 MB/100 MB upload limits and 10-second minimum billing;
+a single 25 MB model cap is conservative but should be described as such.
+
+### P2 — maintainability and coverage
+
+#### 10. Groq should be modeled consistently as a built-in provider
+
+The string index means `apiKey.groq` works at runtime, but the plan leaves Groq
+out of the exported `ProviderSchema`/`Provider` list and lacks a named `groq?`
+key. Add `"groq"` to the built-in provider schema, add the named key to public
+and local key shapes, and test both schema acceptance and `GROQ_API_KEY`
+fallback. A built-in should not look like an anonymous custom provider in the
+public types.
+
+#### 11. Gemini usage parsing is duplicated and unnecessarily untyped
+
+Tasks 7 and 8 copy `modalityTokens()` verbatim and cast typed SDK responses to
+`Record<string, unknown>`. The installed SDK already exports typed usage
+metadata and modality token details.
+
+Create one internal typed Google usage-normalization helper shared by STT and
+TTS. Its declarative result should be `TokenUsage`; it should not calculate
+cost. This keeps provider response mechanics encapsulated without duplicating
+imperative loops.
+
+#### 12. Add tests for the actual declarative dispatch path
+
+All proposed provider tests pass an explicit `provider`, so they do not prove
+that model metadata selects the correct built-in. Add tests omitting `provider`
+for at least one Groq STT model, one Groq TTS model, and one Gemini model. Also
+cover the Groq `wav` default, Gemini encoded-size failure, Gemini's unsupported
+timestamp option, and absence of the false 8,000-character rejection.
+
+#### 13. Task 9's expected seed diff is internally inconsistent
+
+Regeneration cannot be “additions only”: Task 7 also modifies the existing
+`google:gemini-2.5-flash` record, and `generatedAt` changes. Replace that
+expectation with a semantic parity check for all affected `provider:modelName`
+records and inspect unrelated model changes separately.
+
+### Declarative-interface assessment
+
+After the corrections above, the architecture will satisfy the intended
+declarative/imperative split:
+
+- **Declarative:** `transcribe()` / `speak()`, model capability and constraint
+  records, provider registration, and one shared token-pricing interface.
+- **Imperative but encapsulated:** OpenAI-compatible request construction,
+  Groq defaults, Gemini MIME translation and encoded-size enforcement, SDK
+  calls, PCM extraction/WAV wrapping, and typed usage normalization.
+
+As currently written, the public operation surface is declarative, but Tasks 5,
+6, 7, and 8 undermine the internal abstraction quality through duplicate
+predicates, duplicate pricing logic, duplicate response parsing, and leaked
+provider defaults. The fixes above preserve the good public interface while
+making the internals match it.
+
+</details>
