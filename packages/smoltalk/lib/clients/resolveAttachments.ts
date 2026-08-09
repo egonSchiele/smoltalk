@@ -7,7 +7,7 @@ import {
 } from "../classes/message/contentParts.js";
 import { normalizeBlob, BlobRef } from "../util/blobRef.js";
 import { fileFamily } from "../util/attachments.js";
-import { chatAudioFormat } from "../util/audioMime.js";
+import { audioFormatForMime } from "../util/mime.js";
 import { Result, success, failure } from "../types.js";
 
 export const DEFAULT_MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -23,7 +23,12 @@ const URL_IMAGE_PROVIDERS = new Set([
 ]);
 const URL_PDF_PROVIDERS = new Set(["openai-responses", "anthropic"]);
 
-type ResolveOptions = { provider: string; maxBytes: number };
+type ResolveOptions = {
+  provider: string;
+  maxBytes: number;
+  /** Audio containers (by primary extension) the target client accepts inline. */
+  audioFormats: readonly string[];
+};
 
 /** Whether any user message carries an image/file attachment part. */
 export function messagesHaveAttachments(messages: Message[]): boolean {
@@ -85,8 +90,12 @@ async function resolveAudioPart(
 ): Promise<Result<UserContentPart>> {
   try {
     const source = await toBase64Source(part.source, ["audio/"], options.maxBytes);
-    if (chatAudioFormat(source.mimeType) === null) {
-      return failure(`Chat audio input supports only mp3/wav; got "${source.mimeType}".`);
+    const audioFormat = audioFormatForMime(source.mimeType);
+    if (audioFormat === null || !options.audioFormats.includes(audioFormat.extension)) {
+      return failure(
+        `Audio input for provider "${options.provider}" supports only ` +
+          `${options.audioFormats.join(", ")}; got "${source.mimeType}".`,
+      );
     }
     const resolved: UserContentPart = { type: "audio", source };
     if (part.filename !== undefined) {

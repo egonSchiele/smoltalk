@@ -16,7 +16,7 @@ describe("files pipeline (mocked provider, no keys)", () => {
     if (!up.success) return;
 
     // fileFamily("fake") is null → the resolver rejects it (proves the guard runs end-to-end).
-    const res = await resolveMessageAttachments([userMessage([filePart(up.value)])], { provider: "fake", maxBytes: 1 });
+    const res = await resolveMessageAttachments([userMessage([filePart(up.value)])], { provider: "fake", maxBytes: 1, audioFormats: [] });
     expect(res.success).toBe(false);
     if (!res.success) expect(res.error).toMatch(/file family/i);
   });

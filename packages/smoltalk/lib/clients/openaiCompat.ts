@@ -1,4 +1,5 @@
 import { SmolOpenAi } from "./openai.js";
+import type { ClientAttachmentCapabilities } from "./baseClient.js";
 import type { SmolConfig } from "../types.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 
@@ -16,6 +17,12 @@ import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
  * cost stays undefined — that's expected for arbitrary backends).
  */
 export class SmolOpenAiCompat extends SmolOpenAi {
+  // Compat endpoints speak the Chat Completions wire format but do not get
+  // OpenAI's input_audio handling — declare no audio support.
+  protected override attachmentCapabilities(): ClientAttachmentCapabilities {
+    return { inputModalities: ["image", "pdf"], audioFormats: [] };
+  }
+
   protected resolveClientOptions(config: SmolConfig): {
     apiKey: string;
     baseURL: string;

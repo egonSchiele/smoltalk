@@ -299,7 +299,7 @@ describe("audio-in-chat (public sync/stream API)", () => {
       if (result.success) {
         throw new Error("expected a Failure");
       }
-      expect(result.error).toMatch(/only supported on the "openai" provider/);
+      expect(result.error).toMatch(/Audio input is not supported by the "custom-text" provider/);
       expect(FakeCustomClient.syncSpy).not.toHaveBeenCalled();
       expect(FakeCustomClient.streamSpy).not.toHaveBeenCalled();
       expect(create).not.toHaveBeenCalled();
@@ -325,7 +325,7 @@ describe("audio-in-chat (public sync/stream API)", () => {
       if (result.success) {
         throw new Error("expected a Failure");
       }
-      expect(result.error).toMatch(/only supported on the "openai" provider/);
+      expect(result.error).toMatch(/Audio input is not supported by the "custom-text-dup" provider/);
       expect(firstSyncSpy).not.toHaveBeenCalled();
       expect(FakeCustomClient.syncSpy).not.toHaveBeenCalled();
       expect(FakeCustomClient.streamSpy).not.toHaveBeenCalled();

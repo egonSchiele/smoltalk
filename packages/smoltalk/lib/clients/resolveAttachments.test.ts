@@ -2,14 +2,14 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { resolveMessageAttachments, acceptsRemoteUrl } from "./resolveAttachments.js";
 import { userMessage, imagePart, filePart } from "../classes/message/index.js";
 
-const opts = { provider: "openai", maxBytes: 20 * 1024 * 1024 };
+const opts = { provider: "openai", maxBytes: 20 * 1024 * 1024, audioFormats: ["mp3", "wav"] };
 
 describe("resolveMessageAttachments — providerFile", () => {
   const g = { kind: "providerFile", provider: "google", id: "files/a", uri: "u", mimeType: "application/pdf" } as const;
   const oa = { kind: "providerFile", provider: "openai", id: "file-1", mimeType: "application/pdf" } as const;
   const oaImg = { kind: "providerFile", provider: "openai", id: "file-1", mimeType: "image/png" } as const;
   const call = (msgs: any[], provider: string) =>
-    resolveMessageAttachments(msgs, { provider, maxBytes: 20 * 1024 * 1024 });
+    resolveMessageAttachments(msgs, { provider, maxBytes: 20 * 1024 * 1024, audioFormats: [] });
 
   it("passes a matching google ref through untouched", async () => {
     const res = await call([userMessage([filePart(g)])], "google");
@@ -104,7 +104,7 @@ describe("resolveMessageAttachments", () => {
     const data = new Uint8Array(100);
     const res = await resolveMessageAttachments(
       [userMessage([imagePart({ kind: "bytes", data, mimeType: "image/png" })])],
-      { provider: "openai", maxBytes: 10 },
+      { provider: "openai", maxBytes: 10, audioFormats: [] },
     );
     expect(res.success).toBe(false);
   });
@@ -141,7 +141,7 @@ describe("resolveMessageAttachments", () => {
     );
     const res = await resolveMessageAttachments(
       [userMessage([imagePart({ kind: "url", url: "https://x/y.png" })])],
-      { provider: "google", maxBytes: 20 * 1024 * 1024 },
+      { provider: "google", maxBytes: 20 * 1024 * 1024, audioFormats: [] },
     );
     expect(res.success).toBe(true);
     if (res.success) {

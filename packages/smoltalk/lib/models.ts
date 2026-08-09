@@ -2058,8 +2058,14 @@ export function modelSupportsInputModality(
   modelName: ModelName,
   modality: string,
   requestData?: ModelDataBlob,
+  provider?: string,
 ): boolean | undefined {
-  const model = getModel(modelName, requestData);
+  let model: ModelType | undefined;
+  if (provider !== undefined) {
+    model = getModelForProvider(provider, modelName, requestData);
+  } else {
+    model = getModel(modelName, requestData);
+  }
   if (!model || model.type !== "text") {
     return undefined;
   }

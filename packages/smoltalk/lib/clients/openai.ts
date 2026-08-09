@@ -18,7 +18,7 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { isFunctionToolCall, sanitizeAttributes } from "../util/util.js";
 import { getLogger } from "../util/logger.js";
 import { redactAttachments } from "../util/redact.js";
-import { BaseClient } from "./baseClient.js";
+import { BaseClient, type ClientAttachmentCapabilities } from "./baseClient.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -44,6 +44,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     this.client = new OpenAI(options);
     this.logger = getLogger();
     this.model = new Model(config.model, config.provider, config.modelData);
+  }
+
+  protected override attachmentCapabilities(): ClientAttachmentCapabilities {
+    // Chat Completions input_audio accepts inline mp3/wav only.
+    return { inputModalities: ["image", "pdf"], audioFormats: ["mp3", "wav"] };
   }
 
   /**

@@ -25,7 +25,7 @@ describe("audio attachment resolution", () => {
         filename: "clip.wav",
       },
     ]);
-    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000 });
+    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -39,7 +39,7 @@ describe("audio attachment resolution", () => {
   });
 
   it("omits the filename key entirely when no filename was provided", async () => {
-    const r = await resolveMessageAttachments([mk("audio/wav")], { provider: "openai", maxBytes: 1_000_000 });
+    const r = await resolveMessageAttachments([mk("audio/wav")], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -60,7 +60,7 @@ describe("audio attachment resolution", () => {
         filename: "clip.wav",
       },
     ]);
-    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000 });
+    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -74,7 +74,7 @@ describe("audio attachment resolution", () => {
   });
 
   it("fails during preparation for a non-mp3/wav chat MIME", async () => {
-    const r = await resolveMessageAttachments([mk("audio/ogg")], { provider: "openai", maxBytes: 1_000_000 });
+    const r = await resolveMessageAttachments([mk("audio/ogg")], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
     expect(r.success).toBe(false);
   });
 
@@ -94,7 +94,7 @@ describe("audio attachment resolution", () => {
       const bytes = new Uint8Array([9, 8, 7]);
       await writeFile(filePath, bytes);
       const message = new UserMessage([{ type: "audio", source: { kind: "path", path: filePath } }]);
-      const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000 });
+      const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
       expect(r.success).toBe(true);
       if (!r.success) {
         throw new Error(r.error);
@@ -112,7 +112,7 @@ describe("audio attachment resolution", () => {
       const bytes = new Uint8Array([5, 4, 3]);
       await writeFile(filePath, bytes);
       const message = new UserMessage([{ type: "audio", source: { kind: "path", path: filePath } }]);
-      const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000 });
+      const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
       expect(r.success).toBe(true);
       if (!r.success) {
         throw new Error(r.error);
@@ -132,7 +132,7 @@ describe("audio attachment resolution", () => {
       const message = new UserMessage([
         { type: "audio", source: { kind: "url", url: "https://example.com/clip.mp3" } },
       ]);
-      const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000 });
+      const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000, audioFormats: ["mp3", "wav"] });
       expect(r.success).toBe(true);
       if (!r.success) {
         throw new Error(r.error);
@@ -148,7 +148,7 @@ describe("audio attachment resolution", () => {
   it("rejects an attachment that exceeds maxBytes with the exact error", async () => {
     const data = new Uint8Array(100);
     const message = new UserMessage([{ type: "audio", source: { kind: "bytes", data, mimeType: "audio/wav" } }]);
-    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 10 });
+    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 10, audioFormats: ["mp3", "wav"] });
     expect(r.success).toBe(false);
     if (r.success) {
       throw new Error("expected failure");
