@@ -35,3 +35,20 @@ export type {
   TranscriptionProviderContext,
   TranscriptionProvider,
 } from "./transcription.js";
+// Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
+export {
+  speak,
+  registerSpeechProvider,
+  OPENAI_SPEECH_MODELS,
+  MAX_TTS_CHARS,
+  MIN_OPENAI_TTS_SPEED,
+  MAX_OPENAI_TTS_SPEED,
+} from "./speech.js";
+export type {
+  SpeakOptions,
+  PcmAudioMetadata,
+  SpeechResult,
+  SpeechProviderOptions,
+  SpeechProviderContext,
+  SpeechProvider,
+} from "./speech.js";

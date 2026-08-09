@@ -50,4 +50,16 @@ describe("public exports", () => {
     expect(typeof smoltalk.DEFAULT_TRANSCRIBE_BYTES).toBe("number");
     expect("_resetForTests" in smoltalk).toBe(false);
   });
+
+  it("exports the speech (TTS) API and keeps _resetForTests internal", () => {
+    expect(typeof smoltalk.speak).toBe("function");
+    expect(typeof smoltalk.registerSpeechProvider).toBe("function");
+    expect(smoltalk.OPENAI_SPEECH_MODELS).toBeInstanceOf(Set);
+    expect(smoltalk.OPENAI_SPEECH_MODELS.has("tts-1")).toBe(true);
+    expect(smoltalk.OPENAI_SPEECH_MODELS.has("tts-1-hd")).toBe(true);
+    expect(smoltalk.MAX_TTS_CHARS).toBe(4096);
+    expect(smoltalk.MIN_OPENAI_TTS_SPEED).toBe(0.25);
+    expect(smoltalk.MAX_OPENAI_TTS_SPEED).toBe(4);
+    expect("_resetForTests" in smoltalk).toBe(false);
+  });
 });
