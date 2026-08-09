@@ -65,6 +65,15 @@ export async function resolveMessageAttachments(
         resolvedParts.push(part);
         continue;
       }
+      // Audio attachment resolution (base64/bytes/path/url -> prepared base64,
+      // plus mp3/wav validation) is not implemented yet; a future task wires it
+      // through this same pipeline so `OpenAIChatRenderer.audio()` always
+      // receives a prepared source.
+      if (part.type === "audio") {
+        return failure(
+          `Audio attachment preparation is not implemented yet for provider "${options.provider}".`,
+        );
+      }
       // Provider file references are validated and passed through (no download/cap).
       if (part.source.kind === "providerFile") {
         const family = fileFamily(options.provider);

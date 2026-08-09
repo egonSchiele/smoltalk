@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ImageRef } from "../../util/imageRef.js";
+import type { ImageRef, BlobRef } from "../../util/imageRef.js";
 
 export type TextPart = {
   type: "text";
@@ -17,7 +17,13 @@ export type FilePart = {
   filename?: string;
 };
 
-export type UserContentPart = TextPart | ImagePart | FilePart;
+export type AudioPart = {
+  type: "audio";
+  source: BlobRef;
+  filename?: string;
+};
+
+export type UserContentPart = TextPart | ImagePart | FilePart | AudioPart;
 
 /** Normalized user-message content: a plain string or an array of typed parts. */
 export type UserContent = string | UserContentPart[];
@@ -79,10 +85,17 @@ export const FilePartSchema = z.object({
   filename: z.string().optional(),
 });
 
+export const AudioPartSchema = z.object({
+  type: z.literal("audio"),
+  source: z.discriminatedUnion("kind", [...ImageRefSchema.options]),
+  filename: z.string().optional(),
+});
+
 export const UserContentPartSchema = z.discriminatedUnion("type", [
   TextPartSchema,
   ImagePartSchema,
   FilePartSchema,
+  AudioPartSchema,
 ]);
 
 export const UserContentSchema = z.union([z.string(), z.array(UserContentPartSchema)]);
