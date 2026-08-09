@@ -28,6 +28,15 @@ const mdNoRate = {
   models: [{ type: "text-to-speech", modelName: "tts-1-no-rate", provider: "openai" }],
 } satisfies ModelDataBlob;
 
+// A distinct model name with an explicit zero rate: cost must still be
+// reported (not suppressed) when perCharacterCost is exactly 0.
+const mdZeroRate = {
+  schemaVersion: 1,
+  generatedAt: "t",
+  hostedTools: [],
+  models: [{ type: "text-to-speech", modelName: "tts-1-zero-rate", provider: "openai", perCharacterCost: 0 }],
+} satisfies ModelDataBlob;
+
 beforeEach(() => create.mockReset());
 const okResponse = () => ({ arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer });
 
@@ -157,6 +166,19 @@ describe("openaiSpeak", () => {
       throw new Error(r.error);
     }
     expect(r.value.cost).toBeUndefined();
+  });
+
+  it("reports a present zero cost when the model's perCharacterCost is exactly 0", async () => {
+    create.mockResolvedValue(okResponse());
+    const r = await openaiSpeak("hello", {
+      apiKey: "sk-x",
+      opts: { model: "tts-1-zero-rate", voice: "alloy", modelData: mdZeroRate },
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) {
+      throw new Error(r.error);
+    }
+    expect(r.value.cost).toEqual({ inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" });
   });
 
   it("omits cost when the model is unknown to the registry", async () => {

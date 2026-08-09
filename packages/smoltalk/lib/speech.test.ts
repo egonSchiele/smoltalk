@@ -146,6 +146,24 @@ describe("speak() dispatch", () => {
     });
   });
 
+  it("passes a custom provider's apiKey, keyed by its exact registered name, through to ctx.apiKey", async () => {
+    let seenCtx: unknown;
+    registerSpeechProvider("acme", {
+      async speak(_text, ctx) {
+        seenCtx = ctx;
+        return { success: true, value: { audio: new Uint8Array([1]), mimeType: "audio/mpeg" } };
+      },
+    });
+    const r = await speak("hi", {
+      model: "custom-1",
+      voice: "v",
+      provider: "acme",
+      apiKey: { acme: "secret-123" },
+    });
+    expect(r.success).toBe(true);
+    expect((seenCtx as { apiKey: string }).apiKey).toBe("secret-123");
+  });
+
   it("does not subject a custom provider to OpenAI's speed/char limits", async () => {
     registerSpeechProvider("mytts", {
       async speak() {

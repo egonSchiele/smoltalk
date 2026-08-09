@@ -88,7 +88,7 @@ export async function openaiTranscribe(
     }));
   }
 
-  if (model && isSpeechToTextModel(model) && model.perMinuteCost && result.durationSeconds != null) {
+  if (model && isSpeechToTextModel(model) && model.perMinuteCost !== undefined && result.durationSeconds != null) {
     const inputCost = round((result.durationSeconds / 60) * model.perMinuteCost, 6);
     result.cost = { inputCost, outputCost: 0, totalCost: inputCost, currency: "USD" };
   }

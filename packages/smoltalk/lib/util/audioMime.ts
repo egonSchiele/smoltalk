@@ -11,6 +11,7 @@ const TRANSCRIBE_MIME_TO_EXT: Readonly<Record<string, string>> = {
   "audio/wav": "wav",
   "audio/x-wav": "wav",
   "audio/webm": "webm",
+  "video/mp4": "mp4",
 };
 
 export type TranscriptionAudioType = {
@@ -18,8 +19,15 @@ export type TranscriptionAudioType = {
   filename: string;
 };
 
+// Strips parameters (e.g. ";codecs=opus") and normalizes case, so MediaRecorder-
+// style MIME strings like "audio/webm;codecs=opus" or "AUDIO/MPEG" still match.
+function canonicalizeMime(mime: string): string {
+  return mime.split(";")[0].trim().toLowerCase();
+}
+
 export function transcriptionAudioType(mime: string): TranscriptionAudioType | null {
-  const extension = TRANSCRIBE_MIME_TO_EXT[mime];
+  const canonical = canonicalizeMime(mime);
+  const extension = TRANSCRIBE_MIME_TO_EXT[canonical];
   if (extension === undefined) {
     return null;
   }
@@ -27,10 +35,11 @@ export function transcriptionAudioType(mime: string): TranscriptionAudioType | n
 }
 
 export function chatAudioFormat(mime: string): "mp3" | "wav" | null {
-  if (mime === "audio/mpeg" || mime === "audio/mp3") {
+  const canonical = canonicalizeMime(mime);
+  if (canonical === "audio/mpeg" || canonical === "audio/mp3") {
     return "mp3";
   }
-  if (mime === "audio/wav" || mime === "audio/x-wav") {
+  if (canonical === "audio/wav" || canonical === "audio/x-wav") {
     return "wav";
   }
   return null;

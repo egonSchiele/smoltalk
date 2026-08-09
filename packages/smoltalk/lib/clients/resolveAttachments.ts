@@ -77,15 +77,18 @@ export async function resolveMessageAttachments(
           if (chatAudioFormat(mimeType) === null) {
             return failure(`Chat audio input supports only mp3/wav; got "${mimeType}".`);
           }
-          resolvedParts.push({
+          const resolvedAudioPart: UserContentPart = {
             type: "audio",
             source: {
               kind: "base64",
               base64: Buffer.from(data).toString("base64"),
               mimeType,
             },
-            filename: part.filename,
-          });
+          };
+          if (part.filename !== undefined) {
+            resolvedAudioPart.filename = part.filename;
+          }
+          resolvedParts.push(resolvedAudioPart);
         } catch (err) {
           return failure(`Failed to load audio attachment: ${(err as Error).message}`);
         }

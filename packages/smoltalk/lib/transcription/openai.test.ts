@@ -31,6 +31,15 @@ const mdNoRate = {
   models: [{ type: "speech-to-text", modelName: "whisper-1-no-rate", provider: "openai" }],
 } satisfies ModelDataBlob;
 
+// A distinct model name with an explicit zero rate: cost must still be
+// reported (not suppressed) when perMinuteCost is exactly 0.
+const mdZeroRate = {
+  schemaVersion: 1,
+  generatedAt: "t",
+  hostedTools: [],
+  models: [{ type: "speech-to-text", modelName: "whisper-1-zero-rate", provider: "openai", perMinuteCost: 0 }],
+} satisfies ModelDataBlob;
+
 const mdWrongCapability = {
   schemaVersion: 1,
   generatedAt: "t",
@@ -116,6 +125,19 @@ describe("openaiTranscribe", () => {
       throw new Error(r.error);
     }
     expect(r.value.cost).toBeUndefined();
+  });
+
+  it("reports a present zero cost when the model's perMinuteCost is exactly 0", async () => {
+    create.mockResolvedValue({ text: "hello", duration: 120 });
+    const r = await openaiTranscribe(new Uint8Array([1]), "audio/wav", {
+      apiKey: "sk-x",
+      opts: { model: "whisper-1-zero-rate", modelData: mdZeroRate },
+    });
+    expect(r.success).toBe(true);
+    if (!r.success) {
+      throw new Error(r.error);
+    }
+    expect(r.value.cost).toEqual({ inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" });
   });
 
   it("forwards language and prompt when provided", async () => {

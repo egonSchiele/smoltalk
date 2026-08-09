@@ -101,6 +101,23 @@ describe("transcribe() dispatch", () => {
     });
   });
 
+  it("passes a custom provider's apiKey, keyed by its exact registered name, through to ctx.apiKey", async () => {
+    let seenCtx: unknown;
+    registerTranscriptionProvider("acme", {
+      async transcribe(_data, _mimeType, ctx) {
+        seenCtx = ctx;
+        return { success: true, value: { text: "hi" } };
+      },
+    });
+    const r = await transcribe(src, {
+      model: "custom-1",
+      provider: "acme",
+      apiKey: { acme: "secret-123" },
+    });
+    expect(r.success).toBe(true);
+    expect((seenCtx as { apiKey: string }).apiKey).toBe("secret-123");
+  });
+
   it("does not let a registered provider override the built-in openai handling", async () => {
     registerTranscriptionProvider("openai", { async transcribe() { return { success: true, value: { text: "hijacked" } }; } });
     const r = await transcribe(src, { model: "gpt-4o-transcribe", provider: "openai", apiKey: { openAi: "sk-x" } });

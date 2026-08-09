@@ -35,7 +35,7 @@ export async function openaiSpeak(
   }
 
   const model = getModelForProvider("openai", opts.model, opts.modelData);
-  if (model && isTextToSpeechModel(model) && model.perCharacterCost) {
+  if (model && isTextToSpeechModel(model) && model.perCharacterCost !== undefined) {
     const inputCost = round([...text].length * model.perCharacterCost, 6);
     result.cost = { inputCost, outputCost: 0, totalCost: inputCost, currency: "USD" };
   }

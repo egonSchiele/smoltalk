@@ -38,6 +38,41 @@ describe("audio attachment resolution", () => {
     });
   });
 
+  it("omits the filename key entirely when no filename was provided", async () => {
+    const r = await resolveMessageAttachments([mk("audio/wav")], { provider: "openai", maxBytes: 1_000_000 });
+    expect(r.success).toBe(true);
+    if (!r.success) {
+      throw new Error(r.error);
+    }
+    const part = (r.value[0] as UserMessage).getContentParts()![0];
+    expect("filename" in part).toBe(false);
+    expect(part).toStrictEqual({
+      type: "audio",
+      source: { kind: "base64", base64: "AAAA", mimeType: "audio/wav" },
+    });
+  });
+
+  it("preserves a provided filename on the resolved audio part", async () => {
+    const message = new UserMessage([
+      {
+        type: "audio",
+        source: { kind: "base64", base64: "AAAA", mimeType: "audio/wav" },
+        filename: "clip.wav",
+      },
+    ]);
+    const r = await resolveMessageAttachments([message], { provider: "openai", maxBytes: 1_000_000 });
+    expect(r.success).toBe(true);
+    if (!r.success) {
+      throw new Error(r.error);
+    }
+    const part = (r.value[0] as UserMessage).getContentParts()![0];
+    expect(part).toStrictEqual({
+      type: "audio",
+      source: { kind: "base64", base64: "AAAA", mimeType: "audio/wav" },
+      filename: "clip.wav",
+    });
+  });
+
   it("fails during preparation for a non-mp3/wav chat MIME", async () => {
     const r = await resolveMessageAttachments([mk("audio/ogg")], { provider: "openai", maxBytes: 1_000_000 });
     expect(r.success).toBe(false);

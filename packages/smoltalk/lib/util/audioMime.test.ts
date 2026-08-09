@@ -75,6 +75,32 @@ describe("audioMime", () => {
     }
   });
 
+  describe("MIME canonicalization (parameters + case)", () => {
+    it("strips codec parameters for transcriptionAudioType", () => {
+      expect(transcriptionAudioType("audio/webm;codecs=opus")).toEqual({
+        extension: "webm",
+        filename: "audio.webm",
+      });
+      expect(transcriptionAudioType("audio/wav; codecs=1")).toEqual({
+        extension: "wav",
+        filename: "audio.wav",
+      });
+    });
+
+    it("accepts video/mp4 as an MP4 audio-container alias for transcription", () => {
+      expect(transcriptionAudioType("video/mp4")).toEqual({ extension: "mp4", filename: "audio.mp4" });
+    });
+
+    it("is case-insensitive for transcriptionAudioType", () => {
+      expect(transcriptionAudioType("AUDIO/MPEG")).toEqual({ extension: "mp3", filename: "audio.mp3" });
+    });
+
+    it("strips codec parameters for chatAudioFormat", () => {
+      expect(chatAudioFormat("audio/wav; codecs=1")).toBe("wav");
+      expect(chatAudioFormat("audio/mpeg;codecs=mp3")).toBe("mp3");
+    });
+  });
+
   describe("chatAudioFormat: all aliases plus OGG rejection", () => {
     it("accepts every mp3 alias", () => {
       expect(chatAudioFormat("audio/mpeg")).toBe("mp3");

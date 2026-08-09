@@ -3,6 +3,7 @@ import { getClient, registerProvider } from "./client.js";
 import { BaseClient } from "./clients/baseClient.js";
 import { SmolConfig, PromptResult, promptResult, success } from "./types.js";
 import { Result } from "./types/result.js";
+import type { ModelDataBlob } from "./modelData.js";
 
 describe("getClient", () => {
   it("throws on unrecognized model name", () => {
@@ -144,6 +145,40 @@ describe("getClient", () => {
         baseUrl: { openAiCompat: "https://h.test/v1" },
       }).constructor.name,
     ).toBe("SmolOpenAiCompat");
+  });
+  it("resolves the constructed client's Model to the INFERRED provider, not a hardcoded default", () => {
+    // "custom-litellm-model" is declared only under "litellm" in modelData.
+    // Caller omits `provider`, so getClient() infers "litellm" via
+    // resolveProvider() and dispatches to SmolLiteLlm. The client's internal
+    // Model must record provider "litellm" (not "openai" / undefined) so
+    // registry-fallback pricing looks up the right provider entry.
+    const modelData = {
+      schemaVersion: 1,
+      generatedAt: "t",
+      hostedTools: [],
+      models: [
+        {
+          type: "text",
+          modelName: "custom-litellm-model",
+          provider: "litellm",
+          maxInputTokens: 8000,
+          maxOutputTokens: 2000,
+          inputTokenCost: 1,
+          outputTokenCost: 2,
+        },
+      ],
+    } satisfies ModelDataBlob;
+    const client = getClient({
+      model: "custom-litellm-model" as any,
+      apiKey: { liteLlm: "k" },
+      baseUrl: { liteLlm: "http://localhost:4000" },
+      modelData,
+    });
+    expect(client.constructor.name).toBe("SmolLiteLlm");
+    const model = (client as any).model;
+    expect(model.getProvider()).toBe("litellm");
+    const cost = model.calculateCost({ inputTokens: 1_000_000, outputTokens: 1_000_000 });
+    expect(cost?.totalCost).toBe(3);
   });
 });
 

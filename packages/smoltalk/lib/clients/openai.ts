@@ -43,7 +43,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     const options = this.resolveClientOptions(config);
     this.client = new OpenAI(options);
     this.logger = getLogger();
-    this.model = new Model(config.model, config.provider ?? "openai", config.modelData);
+    this.model = new Model(config.model, config.provider, config.modelData);
   }
 
   /**
