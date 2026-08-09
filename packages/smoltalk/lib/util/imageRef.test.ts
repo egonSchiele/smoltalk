@@ -248,3 +248,41 @@ describe("normalizeImageRef MIME prefix + size options", () => {
     fetchSpy.mockRestore();
   });
 });
+
+describe("EXT_TO_MIME: audio extension inference", () => {
+  const cases: Array<{ extension: string; mimeType: string }> = [
+    { extension: ".mp3", mimeType: "audio/mpeg" },
+    { extension: ".mpeg", mimeType: "audio/mpeg" },
+    { extension: ".mpga", mimeType: "audio/mpeg" },
+    { extension: ".wav", mimeType: "audio/wav" },
+    { extension: ".m4a", mimeType: "audio/m4a" },
+    { extension: ".mp4", mimeType: "audio/mp4" },
+    { extension: ".ogg", mimeType: "audio/ogg" },
+    { extension: ".flac", mimeType: "audio/flac" },
+    { extension: ".webm", mimeType: "audio/webm" },
+  ];
+
+  for (const testCase of cases) {
+    it(`infers ${testCase.mimeType} from a path ending in ${testCase.extension}`, async () => {
+      const path = join(tmpdir(), `smoltalk-audio-test-${Date.now()}-${Math.random()}${testCase.extension}`);
+      writeFileSync(path, Buffer.from([1, 2, 3]));
+      try {
+        const out = await loadBlob({ kind: "path", path });
+        expect(out.mimeType).toBe(testCase.mimeType);
+      } finally {
+        unlinkSync(path);
+      }
+    });
+  }
+
+  it("lowercases the extension before lookup, so an uppercase .WAV still infers audio/wav", async () => {
+    const path = join(tmpdir(), `smoltalk-audio-test-${Date.now()}-upper.WAV`);
+    writeFileSync(path, Buffer.from([1, 2, 3]));
+    try {
+      const out = await loadBlob({ kind: "path", path });
+      expect(out.mimeType).toBe("audio/wav");
+    } finally {
+      unlinkSync(path);
+    }
+  });
+});

@@ -34,6 +34,15 @@ const EXT_TO_MIME: Record<string, string> = {
   ".webp": "image/webp",
   ".gif": "image/gif",
   ".pdf": "application/pdf",
+  ".mp3": "audio/mpeg",
+  ".mpeg": "audio/mpeg",
+  ".mpga": "audio/mpeg",
+  ".wav": "audio/wav",
+  ".m4a": "audio/m4a",
+  ".mp4": "audio/mp4",
+  ".ogg": "audio/ogg",
+  ".flac": "audio/flac",
+  ".webm": "audio/webm",
 };
 
 function isAllowedMime(mimeType: string, allowedPrefixes: string[]): boolean {
