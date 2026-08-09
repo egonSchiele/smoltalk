@@ -2,6 +2,7 @@ import { Message, UserMessage } from "../classes/message/index.js";
 import { UserContentPart } from "../classes/message/contentParts.js";
 import { normalizeImageRef, ImageRef } from "../util/imageRef.js";
 import { fileFamily } from "../util/attachments.js";
+import { chatAudioFormat } from "../util/audioMime.js";
 import { Result, success, failure } from "../types.js";
 
 export const DEFAULT_MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024;
@@ -28,7 +29,7 @@ export function messagesHaveAttachments(messages: Message[]): boolean {
       continue;
     }
     for (const part of parts) {
-      if (part.type === "image" || part.type === "file") {
+      if (part.type === "image" || part.type === "file" || part.type === "audio") {
         return true;
       }
     }
@@ -65,16 +66,33 @@ export async function resolveMessageAttachments(
         resolvedParts.push(part);
         continue;
       }
-      // Audio attachment resolution (base64/bytes/path/url -> prepared base64,
-      // plus mp3/wav validation) is not implemented yet; a future task wires it
-      // through this same pipeline so `OpenAIChatRenderer.audio()` always
-      // receives a prepared source.
+      // Audio has no providerFile/URL passthrough: Chat input_audio requires
+      // inline base64, so every audio source is normalized below.
       if (part.type === "audio") {
-        return failure(
-          `Audio attachment preparation is not implemented yet for provider "${options.provider}".`,
-        );
+        try {
+          const { data, mimeType } = await normalizeImageRef(part.source, {
+            allowedMimePrefixes: ["audio/"],
+            maxBytes: options.maxBytes,
+          });
+          if (chatAudioFormat(mimeType) === null) {
+            return failure(`Chat audio input supports only mp3/wav; got "${mimeType}".`);
+          }
+          resolvedParts.push({
+            type: "audio",
+            source: {
+              kind: "base64",
+              base64: Buffer.from(data).toString("base64"),
+              mimeType,
+            },
+            filename: part.filename,
+          });
+        } catch (err) {
+          return failure(`Failed to load audio attachment: ${(err as Error).message}`);
+        }
+        continue;
       }
       // Provider file references are validated and passed through (no download/cap).
+      // (`part` is narrowed to image/file here — audio already exited via `continue` above.)
       if (part.source.kind === "providerFile") {
         const family = fileFamily(options.provider);
         if (family === null || part.source.provider !== family) {
