@@ -22,6 +22,11 @@ export class OpenAITranscriptionClient extends BaseTranscriptionClient {
     return new OpenAI({ apiKey: this.config.apiKey });
   }
 
+  /** Provider-specific diagnostic when no API key is resolved. Subclasses override. */
+  protected noKeyMessage(): string {
+    return "No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.";
+  }
+
   // No try/catch here: BaseTranscriptionClient.transcribe() is the single
   // redacting/logging exception boundary.
   protected async _transcribe(
@@ -29,7 +34,7 @@ export class OpenAITranscriptionClient extends BaseTranscriptionClient {
     mimeType: string,
   ): Promise<Result<TranscriptionResult>> {
     if (!this.config.apiKey) {
-      return failure("No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.");
+      return failure(this.noKeyMessage());
     }
 
     // Filename is an OpenAI upload detail, not part of the provider-neutral

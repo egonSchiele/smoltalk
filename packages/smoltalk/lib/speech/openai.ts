@@ -20,11 +20,16 @@ export class OpenAISpeechClient extends BaseSpeechClient {
     return "mp3";
   }
 
+  /** Provider-specific diagnostic when no API key is resolved. Subclasses override. */
+  protected noKeyMessage(): string {
+    return "No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.";
+  }
+
   // No try/catch here: BaseSpeechClient.speak() is the single
   // redacting/logging exception boundary.
   protected async _speak(text: string): Promise<Result<SpeechResult>> {
     if (!this.config.apiKey) {
-      return failure("No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.");
+      return failure(this.noKeyMessage());
     }
 
     // The shared contract carries format as a plain string; narrow to OpenAI's

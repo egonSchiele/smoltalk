@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { Result, success, failure } from "../types/result.js";
 import { BaseTranscriptionClient } from "./baseTranscriptionClient.js";
 import type { TranscriptionResult } from "../transcription.js";
-import { normalizeGoogleAudioUsage } from "../googleAudioUsage.js";
+import { normalizeGoogleAudioUsage } from "../util/googleAudioUsage.js";
 import { googleAudioWireMime } from "../util/audioMime.js";
 
 // Gemini's inline request cap is 20 MB for the *entire* request (audio bytes,

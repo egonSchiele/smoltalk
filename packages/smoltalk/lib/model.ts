@@ -197,7 +197,10 @@ export function calculateTranscriptionCost(
   if (model.perMinuteCost === undefined || durationSeconds === undefined || durationSeconds === null) {
     return undefined;
   }
-  const inputCost = round((durationSeconds / 60) * model.perMinuteCost, 6);
+  // Providers may bill a minimum duration regardless of actual length
+  // (e.g. Groq rounds up to 10s), so a shorter clip isn't understated.
+  const billedSeconds = Math.max(durationSeconds, model.minimumBillableSeconds ?? 0);
+  const inputCost = round((billedSeconds / 60) * model.perMinuteCost, 6);
   return { inputCost, outputCost: 0, totalCost: inputCost, currency: "USD" };
 }
 

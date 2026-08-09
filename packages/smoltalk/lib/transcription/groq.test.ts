@@ -46,6 +46,16 @@ describe("GroqTranscriptionClient", () => {
     expect(create).toHaveBeenCalled();
   });
 
+  it("directs users to the Groq key when none is resolved", async () => {
+    delete process.env.GROQ_API_KEY;
+    const res = await transcribe(
+      { kind: "bytes", data: new Uint8Array([1]), mimeType: "audio/wav" },
+      { model: "whisper-large-v3", provider: "groq", apiKey: {} },
+    );
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/apiKey\.groq or GROQ_API_KEY/);
+  });
+
   it("infers Groq from the registered model when provider is omitted", async () => {
     const res = await transcribe(
       { kind: "bytes", data: new Uint8Array([1]), mimeType: "audio/wav" },

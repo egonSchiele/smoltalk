@@ -12,4 +12,8 @@ export class GroqTranscriptionClient extends OpenAITranscriptionClient {
       baseURL: "https://api.groq.com/openai/v1",
     });
   }
+
+  protected override noKeyMessage(): string {
+    return "No Groq API key provided. Set apiKey.groq or GROQ_API_KEY.";
+  }
 }

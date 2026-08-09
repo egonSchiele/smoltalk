@@ -19,4 +19,8 @@ export class OpenAiCompatTranscriptionClient extends OpenAITranscriptionClient {
     }
     return new OpenAI({ apiKey: this.config.apiKey, baseURL });
   }
+
+  protected override noKeyMessage(): string {
+    return "No API key provided. Set apiKey.openAiCompat or OPENAI_COMPAT_API_KEY.";
+  }
 }

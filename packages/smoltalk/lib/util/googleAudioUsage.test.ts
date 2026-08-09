@@ -47,6 +47,47 @@ describe("normalizeGoogleAudioUsage", () => {
     expect(usage?.outputTokens).toBe(0);
   });
 
+  it("trusts a present details array with no AUDIO entry (does not misprice text as audio)", () => {
+    const meta = {
+      promptTokenCount: 5,
+      candidatesTokenCount: 150,
+      candidatesTokensDetails: [{ modality: "TEXT", tokenCount: 150 }],
+      totalTokenCount: 155,
+    } as unknown as GenerateContentResponseUsageMetadata;
+
+    const usage = normalizeGoogleAudioUsage(meta, "output");
+    expect(usage?.outputAudioTokens).toBeUndefined();
+    expect(usage?.outputTokens).toBe(150);
+  });
+
+  it("adds thinking tokens to the text-output bucket for STT", () => {
+    const meta = {
+      promptTokenCount: 1100,
+      promptTokensDetails: [{ modality: "AUDIO", tokenCount: 1000 }],
+      candidatesTokenCount: 20,
+      thoughtsTokenCount: 30,
+      totalTokenCount: 1150,
+    } as unknown as GenerateContentResponseUsageMetadata;
+
+    const usage = normalizeGoogleAudioUsage(meta, "input");
+    expect(usage?.inputAudioTokens).toBe(1000);
+    expect(usage?.outputTokens).toBe(50); // 20 candidates + 30 thoughts
+  });
+
+  it("keeps thinking tokens out of the audio-output bucket for TTS", () => {
+    const meta = {
+      promptTokenCount: 10,
+      candidatesTokenCount: 200,
+      candidatesTokensDetails: [{ modality: "AUDIO", tokenCount: 200 }],
+      thoughtsTokenCount: 15,
+      totalTokenCount: 225,
+    } as unknown as GenerateContentResponseUsageMetadata;
+
+    const usage = normalizeGoogleAudioUsage(meta, "output");
+    expect(usage?.outputAudioTokens).toBe(200);
+    expect(usage?.outputTokens).toBe(15); // audio split out, thoughts stay text
+  });
+
   it("returns undefined when metadata is missing", () => {
     expect(normalizeGoogleAudioUsage(undefined, "input")).toBeUndefined();
   });

@@ -16,4 +16,8 @@ export class GroqSpeechClient extends OpenAISpeechClient {
   protected override defaultFormat(): SpeakFormat {
     return "wav";
   }
+
+  protected override noKeyMessage(): string {
+    return "No Groq API key provided. Set apiKey.groq or GROQ_API_KEY.";
+  }
 }

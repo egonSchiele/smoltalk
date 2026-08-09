@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Model } from "./model.js";
+import { round } from "./util/util.js";
 import type { ModelDataBlob } from "./modelData.js";
 
 const modelData: ModelDataBlob = {
@@ -200,6 +201,24 @@ describe("calculateTranscriptionCost", () => {
     expect(calculateTranscriptionCost({ ...sttModel, perMinuteCost: undefined }, 120)).toBeUndefined();
     expect(calculateTranscriptionCost(sttModel, undefined)).toBeUndefined();
     expect(calculateTranscriptionCost(undefined, 120)).toBeUndefined();
+  });
+
+  it("applies a provider minimum billable duration to short clips", () => {
+    const groqModel = { ...sttModel, perMinuteCost: 0.00185, minimumBillableSeconds: 10 } as const;
+    // A 4s clip is billed as 10s: (10/60) * 0.00185
+    expect(calculateTranscriptionCost(groqModel, 4)).toEqual({
+      inputCost: round((10 / 60) * 0.00185, 6),
+      outputCost: 0,
+      totalCost: round((10 / 60) * 0.00185, 6),
+      currency: "USD",
+    });
+    // A 30s clip exceeds the minimum and bills its real duration.
+    expect(calculateTranscriptionCost(groqModel, 30)).toEqual({
+      inputCost: round((30 / 60) * 0.00185, 6),
+      outputCost: 0,
+      totalCost: round((30 / 60) * 0.00185, 6),
+      currency: "USD",
+    });
   });
 });
 

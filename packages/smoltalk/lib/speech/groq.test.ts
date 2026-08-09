@@ -48,6 +48,15 @@ describe("GroqSpeechClient", () => {
     );
   });
 
+  it("directs users to the Groq key when none is resolved", async () => {
+    delete process.env.GROQ_API_KEY;
+    const res = await speak("hi", {
+      model: "canopylabs/orpheus-v1-english", voice: "troy", provider: "groq", apiKey: {},
+    });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/apiKey\.groq or GROQ_API_KEY/);
+  });
+
   it("rejects an explicit non-wav format before dispatch", async () => {
     const res = await speak("hello", {
       model: "canopylabs/orpheus-v1-english",

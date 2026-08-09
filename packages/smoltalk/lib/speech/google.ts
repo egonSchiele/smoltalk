@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { Result, success, failure } from "../types/result.js";
 import { pcmToWav } from "../util/audioMime.js";
-import { normalizeGoogleAudioUsage } from "../googleAudioUsage.js";
+import { normalizeGoogleAudioUsage } from "../util/googleAudioUsage.js";
 import { BaseSpeechClient } from "./baseSpeechClient.js";
 import type { SpeechResult, PcmAudioMetadata } from "../speech.js";
 

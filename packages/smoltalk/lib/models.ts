@@ -47,6 +47,8 @@ export type BaseModel = {
 export type SpeechToTextModel = BaseModel & {
   type: "speech-to-text";
   perMinuteCost?: number;
+  /** Provider's minimum billable duration in seconds (e.g. Groq bills >= 10s). */
+  minimumBillableSeconds?: number;
   /** Canonical MIME types accepted after alias normalization through AUDIO_FORMATS. */
   supportedMimeTypes?: readonly string[];
   /** Provider upload cap in bytes. */
@@ -150,6 +152,7 @@ export const speechToTextModels = [
     modelName: "whisper-large-v3",
     provider: "groq",
     perMinuteCost: 0.00185, // $0.111/hr, verified 2026-08-09
+    minimumBillableSeconds: 10, // Groq bills a 10s minimum per request
     supportedMimeTypes: [
       "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
       "audio/wav", "audio/webm",
@@ -163,6 +166,7 @@ export const speechToTextModels = [
     modelName: "whisper-large-v3-turbo",
     provider: "groq",
     perMinuteCost: 0.000667, // $0.04/hr, verified 2026-08-09
+    minimumBillableSeconds: 10, // Groq bills a 10s minimum per request
     supportedMimeTypes: [
       "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
       "audio/wav", "audio/webm",

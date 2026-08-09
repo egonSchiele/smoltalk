@@ -68,8 +68,9 @@ nothing. Audio-token rates (`inputAudioTokenCost`/`outputAudioTokenCost`) live o
 `BaseModel`, and `Model.calculateCost()` prices any text or text-to-speech model
 carrying token rates (image/embeddings keep their own paths). Gemini usage is
 normalized once by the shared `normalizeGoogleAudioUsage` helper
-(`lib/googleAudioUsage.ts`), which splits the audio-modality token bucket out of
-prompt (STT) or candidate (TTS) tokens.
+(`lib/util/googleAudioUsage.ts`), which splits the audio-modality token bucket out
+of prompt (STT) or candidate (TTS) tokens and folds thinking tokens
+(`thoughtsTokenCount`) into the text-output bucket.
 
 ## Architecture: declarative operations over class-based providers
 

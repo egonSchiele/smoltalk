@@ -521,6 +521,7 @@ that exposes OpenAI-shaped `/audio/*` endpoints, use the generic
 OpenRouter, and Ollama have no audio endpoints and return a `Failure`.
 
 ```ts
+// example: skip-typecheck
 // Groq STT (OpenAI-compatible; provider inferred from the model)
 await transcribe(src, { model: "whisper-large-v3" });
 
