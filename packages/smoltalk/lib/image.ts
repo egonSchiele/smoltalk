@@ -2,7 +2,7 @@ import type { ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { ImageRef } from "./util/imageRef.js";
+import { ImageRef } from "./util/blobRef.js";
 import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
 import { openaiImage } from "./image/openai.js";
 import { googleImage } from "./image/google.js";

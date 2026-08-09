@@ -3,7 +3,7 @@ import type { SmolConfig } from "./types.js";
 import { Result, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { BlobRef, loadBlob } from "./util/imageRef.js";
+import { BlobRef, loadBlob } from "./util/blobRef.js";
 import { resolveProvider, resolveApiKey } from "./util/provider.js";
 import { redactSecret } from "./util/redact.js";
 import { getLogger } from "./util/logger.js";

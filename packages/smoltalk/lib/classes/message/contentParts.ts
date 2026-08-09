@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { ImageRef, BlobRef } from "../../util/imageRef.js";
+import type { ImageRef, BlobRef } from "../../util/blobRef.js";
 
 export type TextPart = {
   type: "text";

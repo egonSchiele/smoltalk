@@ -7,12 +7,12 @@ import type {
 } from "./index.js";
 
 describe("public exports", () => {
-  it("exports builders and normalizeImageRef", () => {
+  it("exports builders and normalizeBlob", () => {
     expect(typeof smoltalk.imagePart).toBe("function");
     expect(typeof smoltalk.filePart).toBe("function");
     expect(typeof smoltalk.textPart).toBe("function");
     expect(typeof smoltalk.userMessage).toBe("function");
-    expect(typeof smoltalk.normalizeImageRef).toBe("function");
+    expect(typeof smoltalk.normalizeBlob).toBe("function");
   });
 
   it("exports the files API", () => {

@@ -2,7 +2,7 @@ import type { PartRenderer } from "./PartRenderer.js";
 import type { TextPart, ImagePart, FilePart, AudioPart } from "../contentParts.js";
 import { refToBase64, toDataUri, openAiImageUrl, attachmentFilename } from "../../../util/attachments.js";
 import { chatAudioFormat } from "../../../util/audioMime.js";
-import type { BlobRef } from "../../../util/imageRef.js";
+import type { BlobRef } from "../../../util/blobRef.js";
 
 /**
  * `AudioPart` whose source has already been resolved to base64. `resolveMessageAttachments`

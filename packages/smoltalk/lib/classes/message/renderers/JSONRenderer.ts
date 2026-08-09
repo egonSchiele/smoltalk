@@ -1,6 +1,6 @@
 import type { PartRenderer } from "./PartRenderer.js";
 import type { TextPart, ImagePart, FilePart, AudioPart, UserContentPart, AttachmentSource } from "../contentParts.js";
-import type { BlobRef } from "../../../util/imageRef.js";
+import type { BlobRef } from "../../../util/blobRef.js";
 import { refToBase64 } from "../../../util/attachments.js";
 
 /** In-memory `bytes` don't survive JSON, so materialize them as base64; other sources pass through. */

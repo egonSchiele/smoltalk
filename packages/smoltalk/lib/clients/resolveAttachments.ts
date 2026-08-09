@@ -1,6 +1,6 @@
 import { Message, UserMessage } from "../classes/message/index.js";
 import { UserContentPart } from "../classes/message/contentParts.js";
-import { normalizeImageRef, ImageRef } from "../util/imageRef.js";
+import { normalizeBlob, ImageRef } from "../util/blobRef.js";
 import { fileFamily } from "../util/attachments.js";
 import { chatAudioFormat } from "../util/audioMime.js";
 import { Result, success, failure } from "../types.js";
@@ -70,7 +70,7 @@ export async function resolveMessageAttachments(
       // inline base64, so every audio source is normalized below.
       if (part.type === "audio") {
         try {
-          const { data, mimeType } = await normalizeImageRef(part.source, {
+          const { data, mimeType } = await normalizeBlob(part.source, {
             allowedMimePrefixes: ["audio/"],
             maxBytes: options.maxBytes,
           });
@@ -124,7 +124,7 @@ export async function resolveMessageAttachments(
         allowed = ["application/pdf"];
       }
       try {
-        const { data, mimeType } = await normalizeImageRef(part.source, {
+        const { data, mimeType } = await normalizeBlob(part.source, {
           allowedMimePrefixes: allowed,
           maxBytes: options.maxBytes,
         });

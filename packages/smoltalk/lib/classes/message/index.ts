@@ -17,7 +17,7 @@ import {
   FilePart,
   AudioPart,
 } from "../../types.js";
-import type { ImageRef, BlobRef } from "../../util/imageRef.js";
+import type { ImageRef, BlobRef } from "../../util/blobRef.js";
 
 export * from "./AssistantMessage.js";
 export * from "./BaseMessage.js";

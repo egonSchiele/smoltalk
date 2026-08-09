@@ -1,4 +1,4 @@
-import type { ImageRef } from "./imageRef.js";
+import type { ImageRef } from "./blobRef.js";
 
 /** Filename sent to providers that require one when a file part omits its own. */
 export const DEFAULT_ATTACHMENT_FILENAME = "attachment.pdf";
