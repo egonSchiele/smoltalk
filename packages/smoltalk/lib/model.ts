@@ -1,15 +1,24 @@
-import { ModelName, getModel, isTextModel, ModelNameSchema, Provider } from "./models.js";
+import {
+  ModelName,
+  getModel,
+  getModelForProvider,
+  isTextModel,
+  ModelNameSchema,
+  ModelType,
+} from "./models.js";
 import { SmolError } from "./smolError.js";
 import { ModelLike } from "./types.js";
 import type { ModelDataBlob } from "./modelData.js";
 import { round } from "./util/util.js";
 
+const TOKEN_COST_UNIT = 1_000_000;
+
 export class Model {
   private model: ModelName;
-  private provider?: Provider;
+  private provider?: string;
   private modelData?: ModelDataBlob;
 
-  constructor(model: ModelName, provider?: Provider, modelData?: ModelDataBlob) {
+  constructor(model: ModelName, provider?: string, modelData?: ModelDataBlob) {
     if (!ModelNameSchema.safeParse(model).success) {
       throw new SmolError(
         `Model ${JSON.stringify(model)} is not recognized. Please specify a known model name.`,
@@ -24,13 +33,13 @@ export class Model {
     return this.model;
   }
 
-  getProvider(): Provider | undefined {
+  getProvider(): string | undefined {
     return this.provider;
   }
 
-  private lookupProvider(): Provider | undefined {
+  private lookupProvider(): string | undefined {
     const modelInfo = getModel(this.model, this.modelData);
-    return modelInfo ? (modelInfo.provider as Provider) : undefined;
+    return modelInfo ? modelInfo.provider : undefined;
   }
 
   calculateCost(usage: {
@@ -38,6 +47,8 @@ export class Model {
     outputTokens: number;
     cachedInputTokens?: number;
     cacheCreationInputTokens?: number;
+    inputAudioTokens?: number;
+    outputAudioTokens?: number;
   }): {
     inputCost: number;
     outputCost: number;
@@ -46,7 +57,12 @@ export class Model {
     totalCost: number;
     currency: string;
   } | null {
-    const model = getModel(this.model, this.modelData);
+    let model: ModelType | undefined;
+    if (this.provider !== undefined) {
+      model = getModelForProvider(this.provider, this.model, this.modelData);
+    } else {
+      model = getModel(this.model, this.modelData);
+    }
     if (!model || !isTextModel(model)) {
       return null;
     }
@@ -62,13 +78,21 @@ export class Model {
       model.cacheCreationInputTokenCost ?? model.inputTokenCost ?? 0;
 
     const inputCost = round(
-      (usage.inputTokens * (model.inputTokenCost || 0)) / 1_000_000,
+      (usage.inputTokens * (model.inputTokenCost || 0)) / TOKEN_COST_UNIT,
       6,
     );
     const outputCost = round(
-      (usage.outputTokens * (model.outputTokenCost || 0)) / 1_000_000,
+      (usage.outputTokens * (model.outputTokenCost || 0)) / TOKEN_COST_UNIT,
       6,
     );
+
+    const audioInTokens = usage.inputAudioTokens ?? 0;
+    const audioOutTokens = usage.outputAudioTokens ?? 0;
+    // Fall back to the text rate if no audio rate is defined so the total stays honest.
+    const audioInRate = model.inputAudioTokenCost ?? model.inputTokenCost ?? 0;
+    const audioOutRate = model.outputAudioTokenCost ?? model.outputTokenCost ?? 0;
+    const audioInCost = round((audioInTokens * audioInRate) / TOKEN_COST_UNIT, 6);
+    const audioOutCost = round((audioOutTokens * audioOutRate) / TOKEN_COST_UNIT, 6);
 
     // Only expose cachedInputCost / cacheCreationInputCost when the model
     // actually has a distinct discount price. Otherwise, fold those dollars
@@ -95,10 +119,11 @@ export class Model {
       }
     }
 
-    const finalInputCost = round(inputCost + foldedInputDollars, 6);
+    const finalInputCost = round(inputCost + foldedInputDollars + audioInCost, 6);
+    const finalOutputCost = round(outputCost + audioOutCost, 6);
     const totalCost = round(
       finalInputCost +
-        outputCost +
+        finalOutputCost +
         (cachedInputCost || 0) +
         (cacheCreationInputCost || 0),
       6,
@@ -106,7 +131,7 @@ export class Model {
 
     return {
       inputCost: finalInputCost,
-      outputCost,
+      outputCost: finalOutputCost,
       cachedInputCost,
       cacheCreationInputCost,
       totalCost,
@@ -122,7 +147,7 @@ export class Model {
     return this.model;
   }
 
-  static create(model: ModelLike, provider?: Provider, modelData?: ModelDataBlob): Model {
+  static create(model: ModelLike, provider?: string, modelData?: ModelDataBlob): Model {
     if (model instanceof Model) {
       return model;
     }
