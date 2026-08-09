@@ -18,6 +18,7 @@ export const providers = [
   "deepinfra",
   "litellm",
   "openai-compat",
+  "groq",
 ] as const;
 export const ProviderSchema = z.enum(providers);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -135,6 +136,30 @@ export const speechToTextModels = [
     modelName: "whisper-1",
     perMinuteCost: 0.006,
     provider: "openai",
+    supportedMimeTypes: [
+      "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
+      "audio/wav", "audio/webm",
+    ],
+    maxBytes: 25 * 1024 * 1024,
+  },
+  {
+    type: "speech-to-text",
+    modelName: "whisper-large-v3",
+    provider: "groq",
+    perMinuteCost: 0.00185, // $0.111/hr, verified 2026-08-09
+    supportedMimeTypes: [
+      "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
+      "audio/wav", "audio/webm",
+    ],
+    // Conservative free-tier / direct-attachment cap; Groq's developer tier
+    // allows 100 MB, but a single baked-in record cannot vary by account tier.
+    maxBytes: 25 * 1024 * 1024,
+  },
+  {
+    type: "speech-to-text",
+    modelName: "whisper-large-v3-turbo",
+    provider: "groq",
+    perMinuteCost: 0.000667, // $0.04/hr, verified 2026-08-09
     supportedMimeTypes: [
       "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
       "audio/wav", "audio/webm",

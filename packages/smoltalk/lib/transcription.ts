@@ -12,6 +12,7 @@ import {
   TranscriptionClientConfig,
 } from "./transcription/baseTranscriptionClient.js";
 import { OpenAITranscriptionClient } from "./transcription/openai.js";
+import { GroqTranscriptionClient } from "./transcription/groq.js";
 
 export { DEFAULT_TRANSCRIBE_BYTES } from "./transcription/baseTranscriptionClient.js";
 
@@ -48,6 +49,7 @@ export type TranscriptionClientClass = new (
 // Checked before the user registry so a registered "openai" can't hijack the built-in.
 const builtinClients: Record<string, TranscriptionClientClass> = Object.create(null);
 builtinClients["openai"] = OpenAITranscriptionClient;
+builtinClients["groq"] = GroqTranscriptionClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.
