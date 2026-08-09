@@ -43,7 +43,7 @@ describe("transcribe() dispatch", () => {
     const r = await transcribe(src, { model: "gpt-4o-mini", provider: "openai", apiKey: { openAi: "sk-x" } });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(r.error).toContain("not a speech-to-text model");
+      expect(r.error).toContain("cannot accept audio input");
     }
   });
 

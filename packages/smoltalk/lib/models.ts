@@ -101,6 +101,9 @@ export type TextModel = BaseModel & {
     outputsSignatures?: boolean;
   };
   modalities?: { input: string[]; output: string[] };
+  /** Audio-input constraints when this multimodal model is used for transcription. */
+  supportedMimeTypes?: readonly string[];
+  maxBytes?: number;
   structuredOutput?: boolean;
   temperatureSupported?: boolean;
   inputAudioTokenCost?: number; // per 1M audio-input tokens
@@ -2199,6 +2202,17 @@ export function isTextToSpeechModel(
   model: ModelType,
 ): model is TextToSpeechModel {
   return model.type === "text-to-speech";
+}
+
+/** Audio-input constraints, readable off either a dedicated STT model or a
+ *  multimodal text model. Empty for any other model type. */
+export function audioInputConstraints(
+  model: ModelType,
+): { maxBytes?: number; supportedMimeTypes?: readonly string[] } {
+  if (model.type === "speech-to-text" || model.type === "text") {
+    return { maxBytes: model.maxBytes, supportedMimeTypes: model.supportedMimeTypes };
+  }
+  return {};
 }
 export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";
