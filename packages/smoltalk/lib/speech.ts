@@ -10,6 +10,7 @@ import {
   SpeechClientConfig,
 } from "./speech/baseSpeechClient.js";
 import { OpenAISpeechClient } from "./speech/openai.js";
+import { GroqSpeechClient } from "./speech/groq.js";
 
 export type SpeakOptions = {
   model: string;
@@ -42,6 +43,7 @@ export type SpeechClientClass = new (config: SpeechClientConfig) => BaseSpeechCl
 // Checked before the user registry so a registered "openai" can't hijack the built-in.
 const builtinClients: Record<string, SpeechClientClass> = Object.create(null);
 builtinClients["openai"] = OpenAISpeechClient;
+builtinClients["groq"] = GroqSpeechClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.

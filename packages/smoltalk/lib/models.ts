@@ -187,6 +187,22 @@ export const textToSpeechModels = [
     speedRange: { min: 0.25, max: 4 },
     formats: ["mp3", "opus", "aac", "flac", "wav", "pcm"],
   },
+  {
+    type: "text-to-speech",
+    modelName: "canopylabs/orpheus-v1-english",
+    provider: "groq",
+    perCharacterCost: 0.000022, // $22 / 1M chars, verified 2026-08-09
+    maxInputChars: 200,
+    formats: ["wav"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "canopylabs/orpheus-arabic-saudi",
+    provider: "groq",
+    perCharacterCost: 0.00004, // $40 / 1M chars, verified 2026-08-09
+    maxInputChars: 200,
+    formats: ["wav"],
+  },
 ] as const;
 
 export const textModels = [
