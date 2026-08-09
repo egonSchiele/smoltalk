@@ -14,32 +14,60 @@ models (`gpt-4o-transcribe`, `gpt-4o-mini-tts`, …), Gemini/OpenRouter/local
 providers, assistant audio *output*, speech translation, an SSRF guard for URL
 sources, and voice discovery.
 
-## Why STT/TTS live outside `SmolClient`
+## Architecture: declarative operations over class-based providers
 
-Chat flows through `SmolClient` → `text/textSync/textStream` → `PromptResult` /
-`StreamChunk`, and `getClient()` deliberately rejects non-text models. STT and TTS
-are not chat turns — they have no messages, tool calls, or streaming-chunk shape.
-So they follow the **capability-function pattern** already used by
-`lib/embed.ts` and `lib/files.ts`: a top-level function backed by a small provider
-registry, taking `model: string` + optional `modelData`. `SmolClient` /
-`getClient()` are untouched. Audio-*in-chat* is the exception — it rides the
-existing text pipeline (see below).
+STT and TTS mirror text generation's architecture exactly, one layer per
+responsibility:
+
+- **Public operations** — `transcribe(source, opts)` and `speak(text, opts)`
+  express intent. They are thin wrappers, always return `Result<T>`, and are
+  the only package-root call surface.
+- **Internal factories** — `getTranscriptionClient()` / `getSpeechClient()`
+  (module exports of `lib/transcription.ts` / `lib/speech.ts`, deliberately
+  *not* re-exported from `lib/index.ts`) own lifecycle: resolve the provider,
+  resolve the API key, pick the client class (built-ins first, then the
+  registry), strip the caller's `apiKey` map, and construct the client. The
+  factory itself is a redacting exception boundary — a throwing custom
+  constructor becomes a `Failure` with the resolved key scrubbed.
+- **Base template methods** — `BaseTranscriptionClient.transcribe()` and
+  `BaseSpeechClient.speak()` own everything shared: blob loading, runtime
+  validation of the model's declarative constraint block, cost attachment, and
+  the single redacting/logging exception boundary around the provider call.
+- **Provider subclasses** — `OpenAITranscriptionClient._transcribe()` /
+  `OpenAISpeechClient._speak()` are only the SDK call + response mapping. They
+  do not try/catch (the base is the boundary) and do not compute cost.
+- **Model records** — constraints are data in `lib/models.ts`, not code:
+  `SpeechToTextModel` declares `supportedMimeTypes` (canonical values only)
+  and `maxBytes`; `TextToSpeechModel` declares `maxInputChars`, `speedRange`,
+  and `formats`. The base clients validate the block's shape before consuming
+  it (malformed model data → `Failure`, not a crash) and then enforce it.
+  A model with no registry entry skips validation — the provider is then the
+  authority, matching how cost is silently omitted for unknown models.
+
+Chat (`SmolClient` → `text/textSync/textStream`) is untouched; `getClient()`
+still rejects non-text models. Audio-*in-chat* rides the existing text
+pipeline (see below).
 
 ## Files
 
 ```
-lib/transcription.ts          transcribe() + TranscriptionProvider registry
-lib/transcription/openai.ts   openaiTranscribe() — whisper-1
-lib/speech.ts                 speak() + SpeechProvider registry
-lib/speech/openai.ts          openaiSpeak() — tts-1 / tts-1-hd
-lib/util/audioMime.ts         MIME↔extension maps + format derivation
-lib/classes/message/contentParts.ts   AudioPart type + schema
-lib/classes/message/index.ts          audioPart() helper
-lib/classes/message/renderers/*       audio() on every PartRenderer
-lib/clients/resolveAttachments.ts     audio → inline base64 (+ mp3/wav gate)
-lib/util/modalities.ts                audio input-modality gate
+lib/transcription.ts                      transcribe() + registry + internal factory
+lib/transcription/baseTranscriptionClient.ts  BaseTranscriptionClient template method
+lib/transcription/openai.ts               OpenAITranscriptionClient — whisper-1
+lib/speech.ts                             speak() + registry + internal factory
+lib/speech/baseSpeechClient.ts            BaseSpeechClient template method
+lib/speech/openai.ts                      OpenAISpeechClient — tts-1 / tts-1-hd
+lib/util/mime.ts                          AUDIO_FORMATS — the single ext↔MIME source
+lib/util/audioMime.ts                     format derivations over AUDIO_FORMATS
+lib/util/blobRef.ts                       BlobRef + loadBlob/normalizeBlob (ex-imageRef)
+lib/classes/message/contentParts.ts       AudioPart type + schema
+lib/classes/message/index.ts              audioPart() helper
+lib/classes/message/renderers/*           audio() on every PartRenderer
+lib/clients/resolveAttachments.ts         per-part resolvers; audio → inline base64
+lib/clients/baseClient.ts                 attachmentCapabilities() + modality gate
+lib/util/modalities.ts                    neededInputModalities() collector
 lib/types/tokenUsage.ts + lib/model.ts + lib/clients/openai.ts   audio-token cost
-lib/models.ts                 whisper-1, tts-1/-hd, gpt-audio-1.5, getModelForProvider
+lib/models.ts                             whisper-1, tts-1/-hd, gpt-audio-1.5 + constraints
 ```
 
 ## `transcribe()` — speech-to-text
@@ -47,34 +75,51 @@ lib/models.ts                 whisper-1, tts-1/-hd, gpt-audio-1.5, getModelForPr
 `transcribe(source: BlobRef, opts): Promise<Result<TranscriptionResult>>`.
 
 - Input is a `BlobRef` (`bytes | base64 | path | url`) loaded via the shared
-  `loadBlob` in `lib/util/imageRef.ts` — same size cap and SSRF caveat as file
-  uploads.
-- v1 built-in model allowlist is a literal set: `OPENAI_TRANSCRIBE_MODELS =
-  { "whisper-1" }`. This is checked **independently of the registry**, so injected
-  `modelData` cannot smuggle in a token-priced OpenAI STT model that v1 defers.
-- The OpenAI adapter requests `response_format: "verbose_json"` (needed for both
-  `duration` → cost and timestamps) and forwards `timestamp_granularities` when
-  `timestampGranularity` is set. `"segment"` fills `segments`; `"word"` fills
-  `words` (separate arrays, not one projected onto the other).
-- Cost: `whisper-1` is per-minute → `inputCost = (durationSeconds/60) *
-  perMinuteCost`. Gated on `perMinuteCost !== undefined` (a `0` rate reports a
-  present zero cost, not omitted).
+  `loadBlob` in `lib/util/blobRef.ts` — same SSRF caveat as file uploads.
+- **Size cap:** the effective limit is the *minimum* of the caller's
+  `opts.maxBytes` (a safety limit, validated as a positive finite number) and
+  the model's declared `maxBytes` (the provider's hard cap — a caller can
+  tighten it but never bypass it), defaulting to `DEFAULT_TRANSCRIBE_BYTES`
+  (25 MB) when neither is present.
+- **MIME allowlist:** model records carry *canonical* MIME values only
+  (`audio/mpeg`, `audio/wav`, …). The base normalizes the incoming MIME
+  through `AUDIO_FORMATS` aliases (`audio/mp3`, `audio/x-wav`, `video/mp4`,
+  `;codecs=` parameters, case) before checking, so aliases live in exactly one
+  place.
+- There is no code-level model allowlist anymore: the registry entry (baked-in
+  or injected via `registerModelData`/`config.modelData`) *is* the allowlist,
+  keyed `provider:modelName` via `getModelForProvider`.
+- The OpenAI subclass requests `response_format: "verbose_json"` (needed for
+  both `duration` → cost and timestamps) and forwards
+  `timestamp_granularities` when `timestampGranularity` is set. `"segment"`
+  fills `segments`; `"word"` fills `words`. The multipart filename is derived
+  from the normalized MIME — it is an OpenAI upload detail, not part of the
+  public options.
+- Cost: computed by the base via `calculateTranscriptionCost(model,
+  durationSeconds)` (`lib/model.ts`) — `inputCost = (durationSeconds/60) *
+  perMinuteCost`, gated on `!== undefined` (a `0` rate reports a present zero
+  cost, not omitted).
 
 ## `speak()` — text-to-speech
 
 `speak(text: string, opts): Promise<Result<SpeechResult>>`.
 
-- v1 allowlist `OPENAI_SPEECH_MODELS = { "tts-1", "tts-1-hd" }`, same registry-
-  independent check.
-- OpenAI-specific preflight (speed ∈ `[0.25, 4.0]`, 4096 **code-point** cap via
-  `MAX_TTS_CHARS`) runs **only on the OpenAI branch, after provider resolution** —
-  custom providers are never subjected to OpenAI's limits.
-- `format` → exact MIME via `SPEECH_FORMAT_TO_MIME`. `pcm` maps to
-  `application/octet-stream` (not `audio/L16`, whose RFC definition is big-endian
-  while OpenAI returns signed-16-bit little-endian); the real contract is carried
-  in `SpeechResult.pcm = { sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`.
-- Cost: per-character where "character" = Unicode code points (`[...text].length`),
-  gated on `perCharacterCost !== undefined`.
+- All limits come from the model record and are enforced by the base:
+  `maxInputChars` (Unicode **code points**, `[...text].length`), `speedRange`,
+  and `formats`. Custom providers with unregistered models are never subjected
+  to another provider's limits.
+- `format` is a plain `string` in the shared contract (a custom provider can
+  expose e.g. `"mulaw"`). The OpenAI subclass narrows to its closed
+  `SpeakFormat` union at runtime via `isSpeakFormat()` — an `Object.hasOwn`
+  guard, so prototype keys like `"toString"`/`"__proto__"` can't pass — before
+  indexing `SPEECH_FORMAT_TO_MIME`.
+- `pcm` maps to `application/octet-stream` (not `audio/L16`, whose RFC
+  definition is big-endian while OpenAI returns signed-16-bit little-endian);
+  the real contract is carried in `SpeechResult.pcm` (for OpenAI:
+  `{ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`). The type is
+  provider-neutral (`number`/`string` fields), not OpenAI literals.
+- Cost: `calculateSpeechCost(model, codePoints)` in `lib/model.ts`, same
+  `!== undefined` gating as transcription.
 
 ## Audio-in-chat: the `AudioPart` pipeline
 
@@ -85,21 +130,31 @@ provider-file/URL passthrough branches in attachment resolution.
 
 End-to-end, an audio part passes through these stages before hitting the wire:
 
-1. **Modality gate** — `validateModalities()` (`lib/util/modalities.ts`), run inside
-   `BaseClient.prepareAttachments` before both sync and stream serialize. The audio
-   arm is **positive and provider-aware**: it resolves the effective provider,
-   requires `provider === "openai"` (rejecting `openai-responses`, Google,
-   Anthropic, Ollama, and custom providers), then requires the
-   `getModelForProvider(provider, model, modelData)`-keyed model to list `"audio"`
-   in `modalities.input`. The check is `!== true`, so an unknown/unannotated model
-   fails closed. Only `gpt-audio-1.5` qualifies in v1.
-2. **Attachment resolution** — `resolveMessageAttachments()`
-   (`lib/clients/resolveAttachments.ts`) normalizes the source to inline base64
-   (`normalizeImageRef` with `allowedMimePrefixes: ["audio/"]` + the byte cap) and
-   rejects non-mp3/wav here (`chatAudioFormat(mime) === null` → `Failure`) so the
-   failure surfaces as a `Result`, not a thrown renderer error.
-3. **Rendering** — `OpenAIChatRenderer.audio()` emits
-   `{ type: "input_audio", input_audio: { data: <base64>, format: "mp3"|"wav" } }`.
+1. **Client capability gate** — each `BaseClient` subclass declares
+   `attachmentCapabilities(): { inputModalities, audioFormats }`. Audio support
+   is *solely* a non-empty `audioFormats` list (no separate boolean to
+   contradict it). `SmolOpenAi` declares `["mp3", "wav"]`; `SmolOpenAiCompat`
+   (and thus openrouter/deepinfra/litellm) overrides back to none; every other
+   client inherits the audio-less base default. `prepareAttachments` collects
+   the needed modalities from the messages (`neededInputModalities`, a
+   provider-agnostic collector in `lib/util/modalities.ts`) and rejects any
+   the client doesn't declare.
+2. **Model modality gate** — still inside `prepareAttachments`:
+   `modelSupportsInputModality(model, modality, modelData, provider)` (now
+   provider-aware via `getModelForProvider`) must not be `false`, and for
+   audio (listed in `MODALITIES_REQUIRING_DECLARATION`) it must be positively
+   `true` — an unknown/unannotated model fails closed. Only `gpt-audio-1.5`
+   qualifies in v1.
+3. **Attachment resolution** — `resolveMessageAttachments()`
+   (`lib/clients/resolveAttachments.ts`, split into per-part resolvers)
+   normalizes the source to inline base64 (`normalizeBlob` with
+   `allowedMimePrefixes: ["audio/"]` + the byte cap) and checks the container
+   against the *client's declared* `audioFormats` (threaded through
+   `ResolveOptions`) so the failure surfaces as a `Result`, not a thrown
+   renderer error. A custom client that declares `["flac"]` accepts FLAC here.
+4. **Rendering** — `OpenAIChatRenderer.audio()` emits
+   `{ type: "input_audio", input_audio: { data: <base64>, format: "mp3"|"wav" } }`
+   (via `chatAudioFormat`, which survives for this wire-format derivation).
 
 Because the failing gates run during preparation, `textSync()` returns a `Failure`
 and `textStream()` emits an `error` chunk — never an uncaught throw.
@@ -149,78 +204,116 @@ every client constructs its `Model` from `config.provider`. This matters for
 the `Model` must be keyed `litellm:<name>` (not `openai:<name>`) or streaming — which
 has no provider cost header — would silently return no cost.
 
-## Exception boundary & secret redaction
+## Exception boundaries & secret redaction
 
-`transcribe()` and `speak()` are the **single** redacting + logging boundary. The
-OpenAI adapters (`openaiTranscribe`, `openaiSpeak`) deliberately do **not**
-try/catch SDK errors — the public function wraps provider resolution, input loading,
-and the `await`ed provider dispatch in one try/catch. On a caught throw it calls
-`getLogger().error(...)` with a `redactSecret(message, apiKey)`-scrubbed message and
-returns the same redacted text as a `Failure`.
+There are exactly two redacting boundaries per capability, and nothing else
+catches:
+
+- **The base template method** (`BaseTranscriptionClient.transcribe()` /
+  `BaseSpeechClient.speak()`) wraps loading, validation, and the `await`ed
+  `_transcribe`/`_speak` call. On a caught throw it logs
+  `redactSecret(message, this.config.apiKey)` and returns the same redacted
+  text as a `Failure`. Subclasses deliberately do **not** try/catch.
+- **The internal factory** (`getTranscriptionClient` / `getSpeechClient`)
+  wraps provider resolution, class lookup, key resolution, and
+  `new ClientClass(config)` — a throwing custom *constructor* also becomes a
+  redacted `Failure` rather than escaping the public `Result` contract.
 
 Two correctness points that are easy to get wrong:
 
-- **`await` the dispatched provider call inside the try.** Returning the promise
+- **`await` the provider call inside the try.** Returning the promise
   unawaited lets a rejection escape the boundary.
-- **Redact with the *resolved* provider's key**, not `opts.provider ?? "openai"`.
-  Resolve the provider first, then compute the redaction key from it — otherwise a
-  custom/inferred provider's secret can slip past `redactSecret` and leak into the
-  log and the `Failure`.
+- **Redact with the *resolved* provider's key.** The config's `apiKey` is
+  resolved from the resolved provider before construction, so a
+  custom/inferred provider's secret can't slip past `redactSecret`.
 
-Expected preflight failures (unsupported model/MIME, missing key, over-limit input)
-return a `Failure` directly and are **not** logged.
+Expected preflight failures (wrong capability, unsupported MIME, missing key,
+over-limit input, malformed constraint blocks) return a `Failure` directly and
+are **not** logged.
 
 ## Extension points (custom providers)
 
-`registerTranscriptionProvider(name, impl)` and `registerSpeechProvider(name, impl)`
-add providers keyed by name; built-ins win, custom registrations are the fallback
-for unknown provider names. A provider receives a context carrying the resolved API
-key (with the caller `apiKey` stripped from the options) plus the request options.
+`registerTranscriptionProvider(name, ClientClass)` and
+`registerSpeechProvider(name, ClientClass)` register **classes** extending
+`BaseTranscriptionClient` / `BaseSpeechClient` — same shape as
+`registerProvider(name, ClientClass)` for text. Built-ins win; the registry is
+the fallback for unknown provider names. A subclass sees its fully resolved
+`this.config` (`provider`, `apiKey`, model, options — with the caller's
+`apiKey` *map* stripped) and implements only the SDK mapping hook.
 
-Custom-provider keys go through the same `resolveApiKey`: `SmolConfig.apiKey` carries
-an index signature (`[provider: string]?: string`) alongside the named aliases, and
+Custom-provider keys go through the same `resolveApiKey`: `SmolConfig.apiKey`
+(and `EmbedConfig.apiKey`) carry an index signature
+(`[provider: string]?: string`) alongside the named aliases, and
 `resolveApiKey`'s default branch returns `apiKey?.[provider]`, so
-`registerSpeechProvider("acme", …)` receives `apiKey.acme`. Built-in provider aliases
-(e.g. `openAi` → `openai`) and their env fallbacks are unchanged.
+`registerSpeechProvider("acme", …)` receives `apiKey.acme`. Built-in provider
+aliases (e.g. `openAi` → `openai`) and their env fallbacks are unchanged.
+
+Custom model constraints ride in as data: register the model under your
+provider name via `registerModelData` (global) or `config.modelData`
+(per-call) with whatever `maxBytes`/`supportedMimeTypes`/`maxInputChars`/
+`speedRange`/`formats` apply, and the base clients enforce them.
+
+For audio-in-chat, a custom *text* client declares its own audio policy by
+overriding `BaseClient.attachmentCapabilities()` — the returned `audioFormats`
+both enables audio and states which containers resolve.
 
 ## MIME contracts
 
-Three distinct surfaces, all in `lib/util/audioMime.ts`:
+`lib/util/mime.ts` is the single source of ext↔MIME truth: `AUDIO_FORMATS`
+maps each container to its primary extension, canonical MIME, alias MIMEs
+(`audio/mp3`, `audio/x-wav`, `video/mp4`, …), and alias extensions. Everything
+else derives from it:
 
-- **Transcription upload** (`transcriptionAudioType(mime) → { extension, filename }
-  | null`): FLAC, MP3, MP4 (incl. `video/mp4`), M4A, OGG, WAV, WebM. Returns the
-  canonical extension/filename for the multipart upload; `null` for unsupported.
-- **Chat `input_audio`** (`chatAudioFormat(mime) → "mp3" | "wav" | null`): only
-  those two, per the OpenAI Chat contract.
-- **Speech output** (`SPEECH_FORMAT_TO_MIME`): the six `speak()` formats → exact
-  output MIME.
-
-All lookups **canonicalize** first — `split(";")[0].trim().toLowerCase()` — so
-parameterized values like `audio/webm;codecs=opus` (MediaRecorder) and
-`audio/wav; codecs=1` resolve correctly.
+- `EXT_TO_MIME` (path-based inference in `blobRef.ts`) is built from
+  `AUDIO_FORMATS` plus the image/PDF entries — the forward and inverse maps
+  cannot drift.
+- `audioFormatForMime(mime)` canonicalizes (`split(";")[0].trim().toLowerCase()`,
+  so `audio/webm;codecs=opus` and `AUDIO/WAV; codecs=1` resolve) and matches
+  canonical + alias MIMEs. STT MIME validation and chat-audio format checks
+  both normalize through it; model records and capability declarations carry
+  canonical values only, never aliases.
+- `lib/util/audioMime.ts` layers the audio-specific derivations on top:
+  `transcriptionAudioType` (upload filename), `chatAudioFormat` (the
+  `input_audio.format` wire field), `SPEECH_FORMAT_TO_MIME` + `isSpeakFormat`
+  (OpenAI TTS output formats).
 
 ## Registry / seed data
 
 `data/model-data.json` is generated from `lib/models.ts` by
-`scripts/seed-model-data.ts` (it spreads the model arrays; it fetches nothing) and
-is published for `refreshModels()` to consume. It is derived data — regenerate it
-with the seed script after changing the model catalog rather than editing it by
-hand. `tests/seed-model-data.test.ts` validates `buildSeedBlob()` output, not the
-committed file.
+`scripts/seed-model-data.ts` (it spreads the model arrays; it fetches nothing)
+and is published for `refreshModels()` to consume. It is derived data —
+regenerate it with `pnpm seed-data` after changing the model catalog rather
+than editing it by hand. `tests/seed-model-data.test.ts` validates both
+`buildSeedBlob()` output **and the committed file**: it reads
+`data/model-data.json` and compares every STT/TTS constraint field against the
+baked registry, so a stale generated file fails CI instead of silently
+disagreeing with the built-ins.
 
 ## Testing patterns
 
-- **Provider adapters** (`lib/transcription/openai.test.ts`,
-  `lib/speech/openai.test.ts`) use `vi.mock("openai")` — the adapters instantiate
-  the SDK directly, so a module mock is the clean seam. Assert the exact request
-  shape (`toFile` filename/type, `response_format`, `timestamp_granularities`,
+- **Provider subclasses** (`lib/transcription/openai.test.ts`,
+  `lib/speech/openai.test.ts`) use `vi.mock("openai")` — the subclasses
+  instantiate the SDK directly, so a module mock is the clean seam. Tests
+  construct the client (`new OpenAITranscriptionClient({...})`) and call the
+  public template method; assert the exact request shape (`toFile`
+  filename/type, `response_format`, `timestamp_granularities`,
   voice/format/speed) and that preflight rejections never call the SDK.
+- **Dispatch/boundary tests** (`lib/transcription.test.ts`, `lib/speech.test.ts`)
+  register fake subclasses and drive the public `transcribe()`/`speak()`:
+  built-in non-shadowing, resolved-key delivery, throwing constructors and
+  provider hooks (one redacted log, no key leakage), maxBytes cap resolution
+  (caller-below/caller-above/model-only/global-registry), alias-MIME
+  normalization, and malformed constraint blocks.
 - **Audio-in-chat end-to-end** (`lib/clients/openai.audioChat.test.ts`) drives the
   **public** `textSync()` / consumed `textStream()` with a full `vi.mock("openai")`
   that reproduces the client's real SDK usage — sync `.withResponse()` returning
   `{ data, response }`, and the stream as an async iterable with usage on the final
   chunk. Getting the mock shape wrong makes the test pass without exercising the
   real serialization/usage code, so mirror `lib/clients/openai.ts` exactly.
+- **Capability-gate tests** (`lib/util/modalities*.test.ts`) construct real
+  clients via `getClient()` and call `prepareAttachments` directly — no SDK
+  mock needed — including a custom `BaseClient` subclass proving a non-OpenAI
+  audio policy (FLAC) is honored.
 - **Cost math** injects rates via `satisfies ModelDataBlob` fixtures and asserts
   exact numbers (not `> 0`), including 0-rate and mixed text+audio cases.
 - Cost tests confirm sync/stream parity by asserting the `done` chunk's

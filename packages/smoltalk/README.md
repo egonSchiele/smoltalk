@@ -464,19 +464,25 @@ On Google, web search can't be combined with structured output in one call.
 
 ## Registering custom providers
 
-Smoltalk has three registration entry points — one per capability:
+Smoltalk has one registration entry point per capability:
 
 ```ts
 // example: skip-typecheck
 import {
-  success,                    // Result helper
-  registerProvider,           // text generation (a class extending BaseClient)
-  registerEmbeddingProvider,  // embeddings (a function)
-  registerImageProvider,      // images (a function)
+  success,                         // Result helper
+  registerProvider,                // text generation (a class extending BaseClient)
+  registerTranscriptionProvider,   // speech-to-text (a class extending BaseTranscriptionClient)
+  registerSpeechProvider,          // text-to-speech (a class extending BaseSpeechClient)
+  registerEmbeddingProvider,       // embeddings (a function)
+  registerImageProvider,           // images (a function)
 } from "smoltalk";
 
 // Text: a class extending BaseClient (implements _textSync / _textStream)
 registerProvider("my-llm", MyTextClient);
+
+// STT/TTS: classes extending the audio base clients (see "Audio (STT/TTS)")
+registerTranscriptionProvider("my-asr", MyTranscriptionClient);
+registerSpeechProvider("my-tts", MySpeechClient);
 
 // Embeddings: a function
 registerEmbeddingProvider("my-embed", async (inputs, config) => {
@@ -497,8 +503,9 @@ precedence; a registered name that collides with a built-in is ignored. Custom
 providers receive the full `config` and read their own credentials from it
 (e.g. `config.metadata`).
 
-Text is a class (it needs retries, tool-loop detection, streaming); embeddings
-and images are one-shot functions.
+Text, transcription, and speech are classes: a base class owns the shared
+behavior (validation, cost, error handling) and the subclass implements only
+the provider call. Embeddings and images are one-shot functions.
 
 ## Audio (STT/TTS)
 
@@ -522,11 +529,38 @@ if (result.success) {
 }
 ```
 
-`whisper-1` is the only supported model in v1. Options: `language`, `prompt`,
-`timestampGranularity` (`"segment"` | `"word"`), `maxBytes` (default 25 MB),
-`filename`. The result carries `text` plus optional `language`,
-`durationSeconds`, `segments`, `words`, `usage`, and `cost`. Register a custom
-provider with `registerTranscriptionProvider(name, impl)`.
+`whisper-1` is the only baked-in model in v1. Options: `language`, `prompt`,
+`timestampGranularity` (`"segment"` | `"word"`), `maxBytes` (a safety limit —
+the effective cap is the smaller of your limit and the model's declared upload
+cap, 25 MB for `whisper-1`). The result carries `text` plus optional
+`language`, `durationSeconds`, `segments`, `words`, `usage`, and `cost`.
+
+Model constraints (accepted MIME types, upload cap, per-minute price) live in
+the model registry, not in code — a model you add via `registerModelData` /
+`config.modelData` is validated against whatever its data block declares, and
+a model with no registry entry skips validation entirely (the provider is then
+the authority).
+
+Register a custom provider as a class:
+
+```ts
+// example: skip-typecheck
+import { BaseTranscriptionClient, registerTranscriptionProvider, success } from "smoltalk";
+
+class AcmeTranscription extends BaseTranscriptionClient {
+  protected async _transcribe(data: Uint8Array, mimeType: string) {
+    // call your API with this.config.apiKey; map the response
+    return success({ text: "..." });
+  }
+}
+registerTranscriptionProvider("acme", AcmeTranscription);
+
+// then: transcribe(source, { model: "acme-1", provider: "acme", apiKey: { acme: "..." } })
+```
+
+The base class owns blob loading, model-data validation, cost, and the
+redacting error boundary; `_transcribe()` is only the SDK call + response
+mapping.
 
 ### Text-to-speech
 
@@ -543,15 +577,35 @@ if (result.success) {
 }
 ```
 
-`tts-1` and `tts-1-hd` are the only supported models in v1. `voice` is
-required. Options: `format` (`"mp3"` | `"opus"` | `"aac"` | `"flac"` | `"wav"`
-| `"pcm"`, default `"mp3"`) and `speed` (0.25–4.0, OpenAI-specific). Input text
-is capped at 4096 Unicode code points on the OpenAI provider; longer input
-returns a `Failure`. The
-returned `audio` is a `Uint8Array` you own — write it to disk, stream it,
-whatever you like. When `format` is `"pcm"`, `result.pcm` describes the raw
-stream (`{ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`).
-Register a custom provider with `registerSpeechProvider(name, impl)`.
+`tts-1` and `tts-1-hd` are the only baked-in models in v1. `voice` is
+required. Options: `format` (OpenAI accepts `"mp3"` | `"opus"` | `"aac"` |
+`"flac"` | `"wav"` | `"pcm"`, default `"mp3"`; a custom provider may accept
+other strings) and `speed`. Limits are declared per model in the registry —
+for `tts-1`/`tts-1-hd` that's a 4096-code-point input cap, a 0.25–4.0 speed
+range, and the format list above; exceeding any of them returns a `Failure`
+before the request is sent. The returned `audio` is a `Uint8Array` you own —
+write it to disk, stream it, whatever you like. When `format` is `"pcm"`,
+`result.pcm` describes the raw stream (for OpenAI:
+`{ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`).
+
+Register a custom provider as a class, mirroring transcription:
+
+```ts
+// example: skip-typecheck
+import { BaseSpeechClient, registerSpeechProvider, success } from "smoltalk";
+
+class AcmeSpeech extends BaseSpeechClient {
+  protected async _speak(text: string) {
+    // call your API with this.config.apiKey / this.config.voice
+    return success({ audio: new Uint8Array(), mimeType: "audio/mpeg" });
+  }
+}
+registerSpeechProvider("acme", AcmeSpeech);
+```
+
+As with transcription, per-model constraints come from the model registry
+(`registerModelData` / `config.modelData`), so a custom model's caps, speed
+range, and formats are data, not code.
 
 ### Audio in chat
 
