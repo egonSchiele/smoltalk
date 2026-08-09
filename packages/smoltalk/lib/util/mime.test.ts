@@ -39,4 +39,10 @@ describe("EXT_TO_MIME", () => {
       expect(EXT_TO_MIME[`.${format.extension}`]).toBe(format.mimeType);
     }
   });
+
+  it("recognizes canonical AAC and AIFF entries", () => {
+    expect(audioFormatForMime("audio/aac")?.mimeType).toBe("audio/aac");
+    expect(audioFormatForMime("audio/aiff")?.mimeType).toBe("audio/aiff");
+    expect(audioFormatForMime("audio/x-aiff")?.mimeType).toBe("audio/aiff");
+  });
 });
