@@ -502,9 +502,11 @@ and images are one-shot functions.
 
 ## Audio (STT/TTS)
 
-Three audio primitives, all OpenAI-only in v1 and all returning `Result<T>`
-(never throw): `transcribe()` (speech-to-text), `speak()` (text-to-speech), and
-`audioPart()` (attach audio to a chat message).
+Three audio primitives, all OpenAI-only in v1. `transcribe()` (speech-to-text)
+and `speak()` (text-to-speech) are async and return `Result<T>` (never throw).
+`audioPart()` (attach audio to a chat message) is different: it's a
+synchronous plain-object constructor, not a `Result`-returning call — see
+"Audio in chat" below.
 
 ### Speech-to-text
 
@@ -543,7 +545,9 @@ if (result.success) {
 
 `tts-1` and `tts-1-hd` are the only supported models in v1. `voice` is
 required. Options: `format` (`"mp3"` | `"opus"` | `"aac"` | `"flac"` | `"wav"`
-| `"pcm"`, default `"mp3"`) and `speed` (0.25–4.0, OpenAI-specific). The
+| `"pcm"`, default `"mp3"`) and `speed` (0.25–4.0, OpenAI-specific). Input text
+is capped at 4096 Unicode code points on the OpenAI provider; longer input
+returns a `Failure`. The
 returned `audio` is a `Uint8Array` you own — write it to disk, stream it,
 whatever you like. When `format` is `"pcm"`, `result.pcm` describes the raw
 stream (`{ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`).
@@ -552,7 +556,9 @@ Register a custom provider with `registerSpeechProvider(name, impl)`.
 ### Audio in chat
 
 `audioPart()` attaches an audio clip to a `userMessage`, for models that
-accept audio input directly (as opposed to transcribing it first):
+accept audio input directly (as opposed to transcribing it first).
+`audioPart()` itself is a synchronous constructor that builds a content part
+— it always returns an `AudioPart`, never a `Result`, and it can't fail:
 
 ```ts
 import { textSync, userMessage, audioPart } from "smoltalk";
@@ -568,9 +574,11 @@ const resp = await textSync({ messages, model: "gpt-audio-1.5" });
 ```
 
 In v1 this only works with `gpt-audio-1.5` on the OpenAI Chat Completions
-provider (not `openai-responses`, and not other providers) — unsupported
-combinations return a `Failure` before any request is sent. Audio must be
-`mp3` or `wav`; it's inlined as base64, not uploaded via the Files API.
+provider (not `openai-responses`, and not other providers). Validation
+happens later, when the message is sent via `textSync`/`textStream` — an
+unsupported provider, a model without audio input, or audio that isn't
+`mp3`/`wav` surfaces as a `Failure` from that call, not from `audioPart()`
+itself. Audio is inlined as base64, not uploaded via the Files API.
 
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
