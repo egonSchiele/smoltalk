@@ -41,7 +41,10 @@ describe("OpenAiCompatSpeechClient", () => {
       expect.objectContaining({ apiKey: "oc-key", baseURL: "https://compat.test/v1" }),
     );
     // Inherited OpenAI default format (mp3) applies for a generic compat endpoint.
-    expect(create).toHaveBeenCalledWith(expect.objectContaining({ response_format: "mp3" }));
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({ response_format: "mp3" }),
+      { signal: undefined },
+    );
   });
 
   it("fails with a clear message when no base URL is configured", async () => {

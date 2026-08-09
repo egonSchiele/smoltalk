@@ -289,6 +289,34 @@ Expected preflight failures (wrong capability, unsupported MIME, missing key,
 over-limit input, malformed constraint blocks) return a `Failure` directly and
 are **not** logged.
 
+## Cancellation
+
+`TranscribeOptions` / `SpeakOptions` accept an optional `abortSignal`
+(matching `SmolConfig.abortSignal` on the chat path). It threads through the
+client config and reaches the provider SDK so aborting tears down the actual
+in-flight request:
+
+- **OpenAI / Groq / openai-compat** — passed as the second `.create(body, {
+  signal })` argument (Groq and openai-compat inherit this from the OpenAI
+  clients for free).
+- **Gemini** — passed as `config.abortSignal` on `generateContent`. Note the
+  `@google/genai` SDK documents this as **client-only**: it tears down the
+  client request but does not stop server-side processing/billing.
+
+Behavior on abort mirrors the chat path exactly (shape "B" — never throws):
+
+- An **already-aborted** signal short-circuits at the top of the base
+  `transcribe()` / `speak()` template method, returning
+  `failure("Request was aborted")` before any blob load or SDK round-trip.
+- A **mid-flight** abort is detected in the base's `catch` (via
+  `this.config.abortSignal?.aborted`) and returned as the same
+  `failure("Request was aborted")` — a distinguishable, non-redacted outcome —
+  rather than a redacted provider error.
+- A **non-abort** provider error is unchanged: still a redacted `Failure`.
+
+Callers distinguish cancellation either by the stable `"Request was aborted"`
+string or (more robustly) by checking their own controller's `signal.aborted`.
+
 ## Extension points (custom providers)
 
 `registerTranscriptionProvider(name, ClientClass)` and

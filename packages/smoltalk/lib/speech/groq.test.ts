@@ -45,6 +45,7 @@ describe("GroqSpeechClient", () => {
         model: "canopylabs/orpheus-v1-english",
         response_format: "wav",
       }),
+      { signal: undefined },
     );
   });
 

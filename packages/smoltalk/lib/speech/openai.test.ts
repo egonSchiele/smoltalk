@@ -58,13 +58,16 @@ describe("OpenAISpeechClient", () => {
   it("sends the exact SDK request shape", async () => {
     create.mockResolvedValue(okResponse());
     await run("hello", { format: "wav", speed: 1.5 });
-    expect(create).toHaveBeenCalledWith({
-      model: "tts-1",
-      voice: "alloy",
-      input: "hello",
-      response_format: "wav",
-      speed: 1.5,
-    });
+    expect(create).toHaveBeenCalledWith(
+      {
+        model: "tts-1",
+        voice: "alloy",
+        input: "hello",
+        response_format: "wav",
+        speed: 1.5,
+      },
+      { signal: undefined },
+    );
   });
 
   it("omits speed from the SDK request when not provided", async () => {

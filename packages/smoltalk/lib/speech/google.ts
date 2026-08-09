@@ -35,6 +35,9 @@ export class GoogleSpeechClient extends BaseSpeechClient {
         speechConfig: {
           voiceConfig: { prebuiltVoiceConfig: { voiceName: this.config.voice } },
         },
+        // Client-only cancellation: tears down the request, but Gemini still
+        // bills server-side work.
+        abortSignal: this.config.abortSignal,
       },
     });
 

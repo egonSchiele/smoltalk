@@ -25,6 +25,8 @@ export type SpeechClientConfig = {
   format?: string;
   speed?: number;
   metadata?: Record<string, unknown>;
+  /** Abort the in-flight provider request when this signal fires. */
+  abortSignal?: AbortSignal;
 };
 
 /** Validate the declarative TTS constraint block once before consuming it. */
@@ -84,6 +86,10 @@ export abstract class BaseSpeechClient {
   }
 
   async speak(text: string): Promise<Result<SpeechResult>> {
+    // Already-aborted signal: stop before doing any paid work.
+    if (this.config.abortSignal?.aborted) {
+      return failure("Request was aborted");
+    }
     try {
       const model = getModelForProvider(this.config.provider, this.config.model, this.config.modelData);
       if (model !== undefined && !isTextToSpeechModel(model)) {
@@ -118,6 +124,11 @@ export abstract class BaseSpeechClient {
         }
       }
 
+      // Re-check after preflight validation: the signal may have fired during
+      // it, and we must not dispatch a request once cancelled.
+      if (this.config.abortSignal?.aborted) {
+        return failure("Request was aborted");
+      }
       const result = await this._speak(text);
       if (!result.success) {
         return result;
@@ -137,6 +148,11 @@ export abstract class BaseSpeechClient {
       }
       return result;
     } catch (err) {
+      // Caller-initiated cancellation surfaces as a distinguishable failure
+      // (matching the chat path), not a redacted provider error.
+      if (this.config.abortSignal?.aborted) {
+        return failure("Request was aborted");
+      }
       let msg = "speak() failed";
       if (err instanceof Error) {
         msg = err.message;
