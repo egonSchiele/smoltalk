@@ -2,6 +2,7 @@ import type { ModelDataBlob } from "./modelData.js";
 import type { SmolConfig } from "./types.js";
 import { Result, success, failure } from "./types/result.js";
 import { CostEstimate } from "./types/costEstimate.js";
+import { TokenUsage } from "./types/tokenUsage.js";
 import { redactSecret } from "./util/redact.js";
 import { getLogger } from "./util/logger.js";
 import { resolveProvider, resolveApiKey } from "./util/provider.js";
@@ -34,6 +35,7 @@ export type SpeechResult = {
   audio: Uint8Array;
   mimeType: string;
   pcm?: PcmAudioMetadata;
+  usage?: TokenUsage;
   cost?: CostEstimate;
   raw?: unknown;
 };

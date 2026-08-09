@@ -5,7 +5,7 @@ import {
   modelSupportsInputModality,
   audioInputConstraints,
 } from "../models.js";
-import { calculateTranscriptionCost } from "../model.js";
+import { Model, calculateTranscriptionCost } from "../model.js";
 import { Result, success, failure } from "../types/result.js";
 import { BlobRef, loadBlob } from "../util/blobRef.js";
 import { audioFormatForMime, canonicalizeMime } from "../util/mime.js";
@@ -147,7 +147,16 @@ export abstract class BaseTranscriptionClient {
       if (!result.success) {
         return result;
       }
-      const cost = calculateTranscriptionCost(model, result.value.durationSeconds);
+      let cost = calculateTranscriptionCost(model, result.value.durationSeconds);
+      if (cost === undefined && result.value.usage !== undefined) {
+        // Token-billed providers (Gemini) price through the shared cost engine.
+        cost =
+          new Model(
+            this.config.model,
+            this.config.provider,
+            this.config.modelData,
+          ).calculateCost(result.value.usage) ?? undefined;
+      }
       if (cost !== undefined) {
         result.value.cost = cost;
       }

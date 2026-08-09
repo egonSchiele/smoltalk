@@ -4,7 +4,7 @@ import {
   isTextToSpeechModel,
   type TextToSpeechModel,
 } from "../models.js";
-import { calculateSpeechCost } from "../model.js";
+import { Model, calculateSpeechCost } from "../model.js";
 import { Result, failure } from "../types/result.js";
 import { redactSecret } from "../util/redact.js";
 import { getLogger } from "../util/logger.js";
@@ -119,7 +119,16 @@ export abstract class BaseSpeechClient {
       if (!result.success) {
         return result;
       }
-      const cost = calculateSpeechCost(model, [...text].length);
+      let cost = calculateSpeechCost(model, [...text].length);
+      if (cost === undefined && result.value.usage !== undefined) {
+        // Token-billed providers (Gemini) price through the shared cost engine.
+        cost =
+          new Model(
+            this.config.model,
+            this.config.provider,
+            this.config.modelData,
+          ).calculateCost(result.value.usage) ?? undefined;
+      }
       if (cost !== undefined) {
         result.value.cost = cost;
       }

@@ -150,6 +150,35 @@ describe("calculateCost with audio tokens", () => {
     expect(cost.outputCost).toBe(1.5);
     expect(cost.totalCost).toBe(2.5);
   });
+
+  it("prices token-based TTS through the same four-bucket engine", () => {
+    const ttsData: ModelDataBlob = {
+      schemaVersion: 1,
+      generatedAt: "test",
+      hostedTools: [],
+      models: [{
+        type: "text-to-speech",
+        modelName: "gem-tts",
+        provider: "google",
+        inputTokenCost: 0.5,
+        outputAudioTokenCost: 10,
+        formats: ["pcm", "wav"],
+      }],
+    };
+    const model = new Model("gem-tts", "google", ttsData);
+    expect(
+      model.calculateCost({
+        inputTokens: 1_000_000, outputTokens: 0, outputAudioTokens: 1_000_000,
+      }),
+    ).toEqual({
+      inputCost: 0.5,
+      outputCost: 10,
+      cachedInputCost: undefined,
+      cacheCreationInputCost: undefined,
+      totalCost: 10.5,
+      currency: "USD",
+    });
+  });
 });
 
 import { calculateTranscriptionCost, calculateSpeechCost } from "./model.js";

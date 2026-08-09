@@ -3,7 +3,6 @@ import {
   getModel,
   getModelForProvider,
   isSpeechToTextModel,
-  isTextModel,
   isTextToSpeechModel,
   ModelNameSchema,
   ModelType,
@@ -66,7 +65,32 @@ export class Model {
     } else {
       model = getModel(this.model, this.modelData);
     }
-    if (!model || !isTextModel(model)) {
+    if (!model) {
+      return null;
+    }
+    // This token engine prices text generation and token-billed audio models
+    // (e.g. Gemini TTS). Image and embeddings models have their own cost paths,
+    // so they are never priced here even if they carry text-token rates.
+    if (model.type === "image" || model.type === "embeddings") {
+      return null;
+    }
+    // BaseModel token-rate fields, read structurally across the model union.
+    const rates = model as {
+      inputTokenCost?: number;
+      cachedInputTokenCost?: number;
+      cacheCreationInputTokenCost?: number;
+      outputTokenCost?: number;
+      inputAudioTokenCost?: number;
+      outputAudioTokenCost?: number;
+    };
+    // Price only models that carry at least one token rate; those without
+    // (per-minute STT, per-char TTS) return null so their dedicated helpers apply.
+    if (
+      rates.inputTokenCost === undefined &&
+      rates.outputTokenCost === undefined &&
+      rates.inputAudioTokenCost === undefined &&
+      rates.outputAudioTokenCost === undefined
+    ) {
       return null;
     }
 
@@ -76,24 +100,24 @@ export class Model {
     // Disjoint buckets. If a discount price isn't defined for this model,
     // the tokens were still billed by the provider — charge them at the
     // full input rate so totalCost stays honest.
-    const cachedRate = model.cachedInputTokenCost ?? model.inputTokenCost ?? 0;
+    const cachedRate = rates.cachedInputTokenCost ?? rates.inputTokenCost ?? 0;
     const cacheCreationRate =
-      model.cacheCreationInputTokenCost ?? model.inputTokenCost ?? 0;
+      rates.cacheCreationInputTokenCost ?? rates.inputTokenCost ?? 0;
 
     const inputCost = round(
-      (usage.inputTokens * (model.inputTokenCost || 0)) / TOKEN_COST_UNIT,
+      (usage.inputTokens * (rates.inputTokenCost || 0)) / TOKEN_COST_UNIT,
       6,
     );
     const outputCost = round(
-      (usage.outputTokens * (model.outputTokenCost || 0)) / TOKEN_COST_UNIT,
+      (usage.outputTokens * (rates.outputTokenCost || 0)) / TOKEN_COST_UNIT,
       6,
     );
 
     const audioInTokens = usage.inputAudioTokens ?? 0;
     const audioOutTokens = usage.outputAudioTokens ?? 0;
     // Fall back to the text rate if no audio rate is defined so the total stays honest.
-    const audioInRate = model.inputAudioTokenCost ?? model.inputTokenCost ?? 0;
-    const audioOutRate = model.outputAudioTokenCost ?? model.outputTokenCost ?? 0;
+    const audioInRate = rates.inputAudioTokenCost ?? rates.inputTokenCost ?? 0;
+    const audioOutRate = rates.outputAudioTokenCost ?? rates.outputTokenCost ?? 0;
     const audioInCost = round((audioInTokens * audioInRate) / TOKEN_COST_UNIT, 6);
     const audioOutCost = round((audioOutTokens * audioOutRate) / TOKEN_COST_UNIT, 6);
 
@@ -106,7 +130,7 @@ export class Model {
 
     if (cachedTokens > 0) {
       const dollars = (cachedTokens * cachedRate) / 1_000_000;
-      if (model.cachedInputTokenCost != null) {
+      if (rates.cachedInputTokenCost != null) {
         cachedInputCost = round(dollars, 6);
       } else {
         foldedInputDollars += dollars;
@@ -115,7 +139,7 @@ export class Model {
 
     if (cacheCreationTokens > 0) {
       const dollars = (cacheCreationTokens * cacheCreationRate) / 1_000_000;
-      if (model.cacheCreationInputTokenCost != null) {
+      if (rates.cacheCreationInputTokenCost != null) {
         cacheCreationInputCost = round(dollars, 6);
       } else {
         foldedInputDollars += dollars;

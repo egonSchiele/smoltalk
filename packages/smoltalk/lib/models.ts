@@ -32,6 +32,8 @@ export type BaseModel = {
   cachedInputTokenCost?: number;
   cacheCreationInputTokenCost?: number;
   outputTokenCost?: number;
+  inputAudioTokenCost?: number; // per 1M audio-input tokens
+  outputAudioTokenCost?: number; // per 1M audio-output tokens
   disabled?: boolean;
   costUnit?: "tokens" | "characters" | "minutes";
   // Commodity metadata (adopted from models.dev).
@@ -106,8 +108,6 @@ export type TextModel = BaseModel & {
   maxBytes?: number;
   structuredOutput?: boolean;
   temperatureSupported?: boolean;
-  inputAudioTokenCost?: number; // per 1M audio-input tokens
-  outputAudioTokenCost?: number; // per 1M audio-output tokens
   /** Pricing that applies above a context-size threshold (e.g. Gemini >200k). */
   longContext?: {
     thresholdTokens: number;
