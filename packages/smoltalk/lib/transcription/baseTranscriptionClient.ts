@@ -1,10 +1,12 @@
 import type { ModelDataBlob } from "../modelData.js";
+import type { SmolConfig } from "../types.js";
 import {
   getModelForProvider,
   isSpeechToTextModel,
-  type SpeechToTextModel,
+  modelSupportsInputModality,
+  audioInputConstraints,
 } from "../models.js";
-import { calculateTranscriptionCost } from "../model.js";
+import { Model, calculateTranscriptionCost } from "../model.js";
 import { Result, success, failure } from "../types/result.js";
 import { BlobRef, loadBlob } from "../util/blobRef.js";
 import { audioFormatForMime, canonicalizeMime } from "../util/mime.js";
@@ -20,6 +22,8 @@ export type TranscriptionClientConfig = {
   provider: string;
   /** Resolved API key; empty string when none was found. */
   apiKey: string;
+  /** Base-URL map (for OpenAI-compatible providers); read via resolveBaseUrl. */
+  baseUrl?: SmolConfig["baseUrl"];
   modelData?: ModelDataBlob;
   language?: string;
   prompt?: string;
@@ -29,21 +33,24 @@ export type TranscriptionClientConfig = {
 };
 
 /** Validate the declarative STT constraint block once before consuming it. */
-function transcriptionConstraintError(model: SpeechToTextModel): string | null {
-  const modelMaxBytes: unknown = model.maxBytes;
+function transcriptionConstraintError(
+  modelName: string,
+  c: { maxBytes?: number; supportedMimeTypes?: readonly string[] },
+): string | null {
+  const modelMaxBytes: unknown = c.maxBytes;
   if (
     modelMaxBytes !== undefined &&
     (typeof modelMaxBytes !== "number" || !Number.isFinite(modelMaxBytes) || modelMaxBytes <= 0)
   ) {
-    return `Model "${model.modelName}" has an invalid maxBytes value.`;
+    return `Model "${modelName}" has an invalid maxBytes value.`;
   }
-  const supportedMimeTypes: unknown = model.supportedMimeTypes;
+  const supportedMimeTypes: unknown = c.supportedMimeTypes;
   if (
     supportedMimeTypes !== undefined &&
     (!Array.isArray(supportedMimeTypes) ||
       !supportedMimeTypes.every((mime): mime is string => typeof mime === "string"))
   ) {
-    return `Model "${model.modelName}" has invalid supportedMimeTypes.`;
+    return `Model "${modelName}" has invalid supportedMimeTypes.`;
   }
   return null;
 }
@@ -53,7 +60,7 @@ function transcriptionConstraintError(model: SpeechToTextModel): string | null {
 // can tighten the limit but never bypass the provider cap.
 function resolveTranscriptionMaxBytes(
   callerMaxBytes: number | undefined,
-  model: SpeechToTextModel | undefined,
+  modelMaxBytes: number | undefined,
 ): Result<number> {
   if (
     callerMaxBytes !== undefined &&
@@ -65,8 +72,8 @@ function resolveTranscriptionMaxBytes(
   if (callerMaxBytes !== undefined) {
     limits.push(callerMaxBytes);
   }
-  if (model?.maxBytes !== undefined) {
-    limits.push(model.maxBytes);
+  if (modelMaxBytes !== undefined) {
+    limits.push(modelMaxBytes);
   }
   if (limits.length === 0) {
     return success(DEFAULT_TRANSCRIBE_BYTES);
@@ -90,17 +97,32 @@ export abstract class BaseTranscriptionClient {
   async transcribe(source: BlobRef): Promise<Result<TranscriptionResult>> {
     try {
       const model = getModelForProvider(this.config.provider, this.config.model, this.config.modelData);
-      if (model !== undefined && !isSpeechToTextModel(model)) {
-        return failure(`Model "${this.config.model}" is not a speech-to-text model.`);
+      // A model is a valid transcription target if it is a dedicated STT model,
+      // or a multimodal text model that accepts audio input (e.g. Gemini). An
+      // unknown model (undefined) flows through — the provider is authority.
+      const acceptsAudio =
+        model === undefined ||
+        isSpeechToTextModel(model) ||
+        modelSupportsInputModality(
+          this.config.model,
+          "audio",
+          this.config.modelData,
+          this.config.provider,
+        ) === true;
+      if (!acceptsAudio) {
+        return failure(
+          `Model "${this.config.model}" cannot accept audio input (not a transcription model).`,
+        );
       }
 
+      const constraints = model !== undefined ? audioInputConstraints(model) : {};
       if (model !== undefined) {
-        const constraintError = transcriptionConstraintError(model);
+        const constraintError = transcriptionConstraintError(this.config.model, constraints);
         if (constraintError !== null) {
           return failure(constraintError);
         }
       }
-      const effectiveLimit = resolveTranscriptionMaxBytes(this.config.maxBytes, model);
+      const effectiveLimit = resolveTranscriptionMaxBytes(this.config.maxBytes, constraints.maxBytes);
       if (!effectiveLimit.success) {
         return effectiveLimit;
       }
@@ -113,13 +135,13 @@ export abstract class BaseTranscriptionClient {
       }
       const mimeType = loaded.mimeType ?? "application/octet-stream";
 
-      if (model !== undefined && model.supportedMimeTypes !== undefined) {
+      if (constraints.supportedMimeTypes !== undefined) {
         const audioFormat = audioFormatForMime(mimeType);
         const normalizedMime = audioFormat?.mimeType ?? canonicalizeMime(mimeType);
-        if (!model.supportedMimeTypes.includes(normalizedMime)) {
+        if (!constraints.supportedMimeTypes.includes(normalizedMime)) {
           return failure(
             `Unsupported audio type "${mimeType}" for model "${this.config.model}". ` +
-              `Supported: ${model.supportedMimeTypes.join(", ")}.`,
+              `Supported: ${constraints.supportedMimeTypes.join(", ")}.`,
           );
         }
       }
@@ -128,7 +150,16 @@ export abstract class BaseTranscriptionClient {
       if (!result.success) {
         return result;
       }
-      const cost = calculateTranscriptionCost(model, result.value.durationSeconds);
+      let cost = calculateTranscriptionCost(model, result.value.durationSeconds);
+      if (cost === undefined && result.value.usage !== undefined) {
+        // Token-billed providers (Gemini) price through the shared cost engine.
+        cost =
+          new Model(
+            this.config.model,
+            this.config.provider,
+            this.config.modelData,
+          ).calculateCost(result.value.usage) ?? undefined;
+      }
       if (cost !== undefined) {
         result.value.cost = cost;
       }

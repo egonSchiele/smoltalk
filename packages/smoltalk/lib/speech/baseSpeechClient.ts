@@ -1,10 +1,11 @@
 import type { ModelDataBlob } from "../modelData.js";
+import type { SmolConfig } from "../types.js";
 import {
   getModelForProvider,
   isTextToSpeechModel,
   type TextToSpeechModel,
 } from "../models.js";
-import { calculateSpeechCost } from "../model.js";
+import { Model, calculateSpeechCost } from "../model.js";
 import { Result, failure } from "../types/result.js";
 import { redactSecret } from "../util/redact.js";
 import { getLogger } from "../util/logger.js";
@@ -16,6 +17,8 @@ export type SpeechClientConfig = {
   provider: string;
   /** Resolved API key; empty string when none was found. */
   apiKey: string;
+  /** Base-URL map (for OpenAI-compatible providers); read via resolveBaseUrl. */
+  baseUrl?: SmolConfig["baseUrl"];
   voice: string;
   modelData?: ModelDataBlob;
   /** Output format; provider-specific vocabulary (OpenAI: mp3/opus/aac/flac/wav/pcm). */
@@ -119,7 +122,16 @@ export abstract class BaseSpeechClient {
       if (!result.success) {
         return result;
       }
-      const cost = calculateSpeechCost(model, [...text].length);
+      let cost = calculateSpeechCost(model, [...text].length);
+      if (cost === undefined && result.value.usage !== undefined) {
+        // Token-billed providers (Gemini) price through the shared cost engine.
+        cost =
+          new Model(
+            this.config.model,
+            this.config.provider,
+            this.config.modelData,
+          ).calculateCost(result.value.usage) ?? undefined;
+      }
       if (cost !== undefined) {
         result.value.cost = cost;
       }

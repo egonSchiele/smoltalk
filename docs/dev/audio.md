@@ -6,13 +6,71 @@ the "how it fits together" companion to the user-facing section in
 `packages/smoltalk/README.md` and the design spec in
 `docs/superpowers/specs/2026-08-08-audio-stt-tts-design.md`.
 
-## Scope (v1)
+## Scope
 
-OpenAI-only. Every other provider returns a `Failure` for audio. Deferred to
-follow-ups: streaming STT/TTS, the token-priced GPT dedicated audio endpoint
-models (`gpt-4o-transcribe`, `gpt-4o-mini-tts`, …), Gemini/OpenRouter/local
-providers, assistant audio *output*, speech translation, an SSRF guard for URL
-sources, and voice discovery.
+STT (`transcribe`) and TTS (`speak`) now cover three providers:
+
+- **OpenAI** — dedicated `/audio/transcriptions` and `/audio/speech` endpoints.
+- **Groq** — the same OpenAI-compatible endpoints at a different base URL
+  (Whisper `large-v3`/`-turbo` for STT; `canopylabs/orpheus-*` for TTS).
+- **Google Gemini** — native multimodal `generateContent` (no dedicated audio
+  endpoints): STT sends inline audio + an instruction; TTS requests an `AUDIO`
+  response modality and returns raw PCM (optionally WAV-wrapped).
+
+Anthropic, OpenRouter, and Ollama have no audio endpoints and still return a
+`Failure`. Deferred to follow-ups: streaming STT/TTS, the token-priced GPT
+dedicated audio endpoint models (`gpt-4o-transcribe`, `gpt-4o-mini-tts`, …),
+Gemini transcription timestamps and multi-speaker TTS, the Gemini Files API for
+large audio (inline-only today), assistant audio *output*, speech translation,
+an SSRF guard for URL sources, and voice discovery.
+
+## Provider shapes
+
+Two architectural shapes sit behind the one declarative `transcribe()`/`speak()`
+surface:
+
+- **OpenAI-compatible (Groq + generic).** `OpenAITranscriptionClient`/
+  `OpenAISpeechClient` expose two protected hooks: `makeClient()` (base URL) and
+  `defaultFormat()` (the format used when the call omits one).
+  `GroqTranscriptionClient`/`GroqSpeechClient` override only these — Groq points at
+  `https://api.groq.com/openai/v1` and defaults TTS output to `wav`. For any other
+  OpenAI-shaped endpoint, `OpenAiCompatTranscriptionClient`/`OpenAiCompatSpeechClient`
+  (registered under `"openai-compat"`) resolve the base URL from
+  `config.baseUrl.openAiCompat` / `OPENAI_COMPAT_BASE_URL` (and the key from
+  `config.apiKey.openAiCompat` / `OPENAI_COMPAT_API_KEY`) via the shared
+  `resolveBaseUrl`/`resolveApiKey`, mirroring the chat `SmolOpenAiCompat` client;
+  a missing base URL fails clearly through the base's redacting boundary. To carry
+  the base URL, `TranscribeOptions`/`SpeakOptions` (and the client configs) gained
+  an optional `baseUrl` map. Everything else (request shaping, response mapping) is
+  inherited, so no transport detail leaks into the caller-facing API.
+- **Gemini native multimodal.** `GoogleTranscriptionClient._transcribe` sends
+  `{ inlineData, text: instruction }` and reads `res.text`; `opts.language` is
+  folded into the instruction, and `timestampGranularity` is rejected (Gemini
+  can't do it). It enforces Gemini's **20 MB total-request** limit by checking
+  the encoded request size before dispatch — a transport-envelope concern kept
+  inside the client, distinct from the model record's conservative raw
+  `maxBytes`. `GoogleSpeechClient._speak` requests `responseModalities:
+  ["AUDIO"]` + a `speechConfig` voice, returns raw PCM (24 kHz s16le mono) by
+  default, wraps it via `pcmToWav` when `format: "wav"`, and rejects `speed`
+  (Gemini has no numeric speed control) and non-PCM/WAV formats.
+
+The B1 STT guard accepts a model that is either a dedicated `speech-to-text`
+model **or** a multimodal text model whose `modalities.input` includes `"audio"`
+— reusing the existing `modelSupportsInputModality` query rather than a new
+predicate, so Gemini's `gemini-2.5-flash` is a valid transcription target.
+Unknown models still flow through (provider is authority).
+
+Cost: OpenAI/Groq price per-minute (STT) / per-character (TTS) via
+`calculateTranscriptionCost`/`calculateSpeechCost`. Gemini is token-billed, so
+the base clients fall back to the shared `Model.calculateCost()` four-bucket
+engine when the result carries `usage` and per-minute/per-char pricing returns
+nothing. Audio-token rates (`inputAudioTokenCost`/`outputAudioTokenCost`) live on
+`BaseModel`, and `Model.calculateCost()` prices any text or text-to-speech model
+carrying token rates (image/embeddings keep their own paths). Gemini usage is
+normalized once by the shared `normalizeGoogleAudioUsage` helper
+(`lib/util/googleAudioUsage.ts`), which splits the audio-modality token bucket out
+of prompt (STT) or candidate (TTS) tokens and folds thinking tokens
+(`thoughtsTokenCount`) into the text-output bucket.
 
 ## Architecture: declarative operations over class-based providers
 

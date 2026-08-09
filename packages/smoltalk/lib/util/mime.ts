@@ -23,6 +23,8 @@ export const AUDIO_FORMATS: readonly AudioFormat[] = [
   { extension: "ogg", mimeType: "audio/ogg", aliasMimeTypes: [], aliasExtensions: [] },
   { extension: "flac", mimeType: "audio/flac", aliasMimeTypes: [], aliasExtensions: [] },
   { extension: "webm", mimeType: "audio/webm", aliasMimeTypes: [], aliasExtensions: [] },
+  { extension: "aac", mimeType: "audio/aac", aliasMimeTypes: [], aliasExtensions: [] },
+  { extension: "aiff", mimeType: "audio/aiff", aliasMimeTypes: ["audio/x-aiff"], aliasExtensions: ["aif"] },
 ];
 
 const IMAGE_AND_DOCUMENT_EXT_TO_MIME: Record<string, string> = {

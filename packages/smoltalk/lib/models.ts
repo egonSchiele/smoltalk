@@ -18,6 +18,7 @@ export const providers = [
   "deepinfra",
   "litellm",
   "openai-compat",
+  "groq",
 ] as const;
 export const ProviderSchema = z.enum(providers);
 export type Provider = z.infer<typeof ProviderSchema>;
@@ -31,6 +32,8 @@ export type BaseModel = {
   cachedInputTokenCost?: number;
   cacheCreationInputTokenCost?: number;
   outputTokenCost?: number;
+  inputAudioTokenCost?: number; // per 1M audio-input tokens
+  outputAudioTokenCost?: number; // per 1M audio-output tokens
   disabled?: boolean;
   costUnit?: "tokens" | "characters" | "minutes";
   // Commodity metadata (adopted from models.dev).
@@ -44,6 +47,8 @@ export type BaseModel = {
 export type SpeechToTextModel = BaseModel & {
   type: "speech-to-text";
   perMinuteCost?: number;
+  /** Provider's minimum billable duration in seconds (e.g. Groq bills >= 10s). */
+  minimumBillableSeconds?: number;
   /** Canonical MIME types accepted after alias normalization through AUDIO_FORMATS. */
   supportedMimeTypes?: readonly string[];
   /** Provider upload cap in bytes. */
@@ -100,10 +105,11 @@ export type TextModel = BaseModel & {
     outputsSignatures?: boolean;
   };
   modalities?: { input: string[]; output: string[] };
+  /** Audio-input constraints when this multimodal model is used for transcription. */
+  supportedMimeTypes?: readonly string[];
+  maxBytes?: number;
   structuredOutput?: boolean;
   temperatureSupported?: boolean;
-  inputAudioTokenCost?: number; // per 1M audio-input tokens
-  outputAudioTokenCost?: number; // per 1M audio-output tokens
   /** Pricing that applies above a context-size threshold (e.g. Gemini >200k). */
   longContext?: {
     thresholdTokens: number;
@@ -141,6 +147,32 @@ export const speechToTextModels = [
     ],
     maxBytes: 25 * 1024 * 1024,
   },
+  {
+    type: "speech-to-text",
+    modelName: "whisper-large-v3",
+    provider: "groq",
+    perMinuteCost: 0.00185, // $0.111/hr, verified 2026-08-09
+    minimumBillableSeconds: 10, // Groq bills a 10s minimum per request
+    supportedMimeTypes: [
+      "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
+      "audio/wav", "audio/webm",
+    ],
+    // Conservative free-tier / direct-attachment cap; Groq's developer tier
+    // allows 100 MB, but a single baked-in record cannot vary by account tier.
+    maxBytes: 25 * 1024 * 1024,
+  },
+  {
+    type: "speech-to-text",
+    modelName: "whisper-large-v3-turbo",
+    provider: "groq",
+    perMinuteCost: 0.000667, // $0.04/hr, verified 2026-08-09
+    minimumBillableSeconds: 10, // Groq bills a 10s minimum per request
+    supportedMimeTypes: [
+      "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
+      "audio/wav", "audio/webm",
+    ],
+    maxBytes: 25 * 1024 * 1024,
+  },
 ] as const;
 
 export const textToSpeechModels = [
@@ -161,6 +193,40 @@ export const textToSpeechModels = [
     maxInputChars: 4096,
     speedRange: { min: 0.25, max: 4 },
     formats: ["mp3", "opus", "aac", "flac", "wav", "pcm"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "canopylabs/orpheus-v1-english",
+    provider: "groq",
+    perCharacterCost: 0.000022, // $22 / 1M chars, verified 2026-08-09
+    maxInputChars: 200,
+    formats: ["wav"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "canopylabs/orpheus-arabic-saudi",
+    provider: "groq",
+    perCharacterCost: 0.00004, // $40 / 1M chars, verified 2026-08-09
+    maxInputChars: 200,
+    formats: ["wav"],
+  },
+  // Gemini TTS is token-billed (text input + audio output). No maxInputChars:
+  // Gemini documents a 32k-token context, and characters are not a sound proxy.
+  {
+    type: "text-to-speech",
+    modelName: "gemini-2.5-flash-preview-tts",
+    provider: "google",
+    inputTokenCost: 0.5, // $/1M text-input tokens, verified 2026-08-09
+    outputAudioTokenCost: 10.0, // $/1M audio-output tokens
+    formats: ["pcm", "wav"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "gemini-2.5-pro-preview-tts",
+    provider: "google",
+    inputTokenCost: 1.0, // $/1M text-input tokens, verified 2026-08-09
+    outputAudioTokenCost: 20.0, // $/1M audio-output tokens
+    formats: ["pcm", "wav"],
   },
 ] as const;
 
@@ -1265,6 +1331,11 @@ export const textModels = [
       input: ["text", "image", "audio", "video", "pdf"],
       output: ["text"],
     },
+    // Audio-input (transcription) constraints. maxBytes is a conservative raw cap
+    // leaving room for base64 expansion + instructions under Gemini's 20 MB total
+    // inline request limit; the client also checks the encoded request size.
+    supportedMimeTypes: ["audio/wav", "audio/mpeg", "audio/aac", "audio/ogg", "audio/flac", "audio/aiff"],
+    maxBytes: 14_000_000,
     knowledge: "2025-01",
     releaseDate: "2025-06-17",
     lastUpdated: "2025-06-17",
@@ -2158,6 +2229,17 @@ export function isTextToSpeechModel(
   model: ModelType,
 ): model is TextToSpeechModel {
   return model.type === "text-to-speech";
+}
+
+/** Audio-input constraints, readable off either a dedicated STT model or a
+ *  multimodal text model. Empty for any other model type. */
+export function audioInputConstraints(
+  model: ModelType,
+): { maxBytes?: number; supportedMimeTypes?: readonly string[] } {
+  if (model.type === "speech-to-text" || model.type === "text") {
+    return { maxBytes: model.maxBytes, supportedMimeTypes: model.supportedMimeTypes };
+  }
+  return {};
 }
 export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";

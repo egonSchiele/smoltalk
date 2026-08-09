@@ -37,6 +37,7 @@ type NestedKeyConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    groq?: string;
     /** Arbitrary provider names, for keys targeting a custom-registered provider. */
     [provider: string]: string | undefined;
   };
@@ -75,6 +76,8 @@ export function resolveApiKey(
       return k?.liteLlm || process.env.LITELLM_API_KEY;
     case "openai-compat":
       return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
+    case "groq":
+      return k?.groq || process.env.GROQ_API_KEY;
     default:
       return config.apiKey?.[provider];
   }

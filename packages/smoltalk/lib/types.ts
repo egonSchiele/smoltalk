@@ -33,6 +33,7 @@ export type SmolConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    groq?: string;
     /** Arbitrary provider names, for keys targeting a custom-registered provider
      *  (e.g. registerProvider("acme", ...)), keyed by the exact registered name. */
     [provider: string]: string | undefined;
