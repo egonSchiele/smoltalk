@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- `transcribe()` — OpenAI speech-to-text (`whisper-1`), returning `text` plus optional `language`, `durationSeconds`, `segments`, `words`, `usage`, and `cost`. `registerTranscriptionProvider()` registers a custom provider.
+- `speak()` — OpenAI text-to-speech (`tts-1`, `tts-1-hd`), returning caller-owned audio bytes (`mp3`/`opus`/`aac`/`flac`/`wav`/`pcm`, default `mp3`) plus `cost`. `registerSpeechProvider()` registers a custom provider.
+- `audioPart()` / `AudioPart` — attach an mp3/wav audio clip to a `userMessage` for audio-in-chat, supported in v1 only on OpenAI's `gpt-audio-1.5` Chat Completions model; unsupported provider/model combinations return a clear `Failure`.
+
 ## smoltalk 0.9.0 (2026-07-24)
 
 ### Fixed

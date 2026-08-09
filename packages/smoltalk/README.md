@@ -500,6 +500,78 @@ providers receive the full `config` and read their own credentials from it
 Text is a class (it needs retries, tool-loop detection, streaming); embeddings
 and images are one-shot functions.
 
+## Audio (STT/TTS)
+
+Three audio primitives, all OpenAI-only in v1 and all returning `Result<T>`
+(never throw): `transcribe()` (speech-to-text), `speak()` (text-to-speech), and
+`audioPart()` (attach audio to a chat message).
+
+### Speech-to-text
+
+```ts
+import { transcribe } from "smoltalk";
+
+const result = await transcribe(
+  { kind: "path", path: "./meeting.mp3" },
+  { model: "whisper-1" },
+);
+if (result.success) {
+  console.log(result.value.text);
+}
+```
+
+`whisper-1` is the only supported model in v1. Options: `language`, `prompt`,
+`timestampGranularity` (`"segment"` | `"word"`), `maxBytes` (default 25 MB),
+`filename`. The result carries `text` plus optional `language`,
+`durationSeconds`, `segments`, `words`, `usage`, and `cost`. Register a custom
+provider with `registerTranscriptionProvider(name, impl)`.
+
+### Text-to-speech
+
+```ts
+import { speak } from "smoltalk";
+import { writeFile } from "node:fs/promises";
+
+const result = await speak("Hello from smoltalk.", {
+  model: "tts-1",
+  voice: "alloy",
+});
+if (result.success) {
+  await writeFile("out.mp3", result.value.audio); // caller owns the bytes
+}
+```
+
+`tts-1` and `tts-1-hd` are the only supported models in v1. `voice` is
+required. Options: `format` (`"mp3"` | `"opus"` | `"aac"` | `"flac"` | `"wav"`
+| `"pcm"`, default `"mp3"`) and `speed` (0.25–4.0, OpenAI-specific). The
+returned `audio` is a `Uint8Array` you own — write it to disk, stream it,
+whatever you like. When `format` is `"pcm"`, `result.pcm` describes the raw
+stream (`{ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`).
+Register a custom provider with `registerSpeechProvider(name, impl)`.
+
+### Audio in chat
+
+`audioPart()` attaches an audio clip to a `userMessage`, for models that
+accept audio input directly (as opposed to transcribing it first):
+
+```ts
+import { textSync, userMessage, audioPart } from "smoltalk";
+
+const messages = [
+  userMessage([
+    "What's being said in this clip?",
+    audioPart({ kind: "path", path: "./clip.wav" }),
+  ]),
+];
+
+const resp = await textSync({ messages, model: "gpt-audio-1.5" });
+```
+
+In v1 this only works with `gpt-audio-1.5` on the OpenAI Chat Completions
+provider (not `openai-responses`, and not other providers) — unsupported
+combinations return a `Failure` before any request is sent. Audio must be
+`mp3` or `wav`; it's inlined as base64, not uploaded via the Files API.
+
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
 
