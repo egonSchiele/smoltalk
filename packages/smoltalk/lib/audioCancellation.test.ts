@@ -82,6 +82,31 @@ describe("audio cancellation — abort outcome", () => {
     expect(oaiTranscribe).not.toHaveBeenCalled();
   });
 
+  it("re-checks abort after async preflight, before dispatching the SDK", async () => {
+    // Signal reads false at the top-of-method check, then true at the
+    // pre-dispatch check (simulating an abort during the awaited blob load).
+    let reads = 0;
+    const signal = {
+      get aborted() {
+        reads += 1;
+        return reads >= 2;
+      },
+      addEventListener() {},
+      removeEventListener() {},
+      dispatchEvent() {
+        return false;
+      },
+      onabort: null,
+      reason: undefined,
+      throwIfAborted() {},
+    } as unknown as AbortSignal;
+
+    const r = await transcribe(src, { model: "whisper-1", provider: "openai", apiKey: { openAi: "sk" }, abortSignal: signal });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toBe("Request was aborted");
+    expect(oaiTranscribe).not.toHaveBeenCalled();
+  });
+
   it("maps a mid-flight abort to a distinguishable 'Request was aborted' failure", async () => {
     const c = new AbortController();
     oaiSpeech.mockImplementation(async () => {

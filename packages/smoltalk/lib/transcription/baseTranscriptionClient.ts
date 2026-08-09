@@ -152,6 +152,11 @@ export abstract class BaseTranscriptionClient {
         }
       }
 
+      // Re-check after the async preflight (blob load / MIME validation): the
+      // signal may have fired during it, and we must not dispatch a request.
+      if (this.config.abortSignal?.aborted) {
+        return failure("Request was aborted");
+      }
       const result = await this._transcribe(loaded.data, mimeType);
       if (!result.success) {
         return result;

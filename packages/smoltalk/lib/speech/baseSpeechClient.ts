@@ -124,6 +124,11 @@ export abstract class BaseSpeechClient {
         }
       }
 
+      // Re-check after preflight validation: the signal may have fired during
+      // it, and we must not dispatch a request once cancelled.
+      if (this.config.abortSignal?.aborted) {
+        return failure("Request was aborted");
+      }
       const result = await this._speak(text);
       if (!result.success) {
         return result;
