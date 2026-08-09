@@ -1,5 +1,8 @@
 # Changelog
 
+## smoltalk 0.10.1 (2026-08-09)
+- Audio: cancellation (abortSignal) for transcribe / speak
+
 ## smoltalk 0.10.0 (2026-08-09)
 
 ### Added
