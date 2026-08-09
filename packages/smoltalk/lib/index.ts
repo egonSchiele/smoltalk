@@ -19,3 +19,19 @@ export type { BlobRef } from "./util/imageRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
 export type { LogLevel } from "./util/logger.js";
 export { redactAttachments } from "./util/redact.js";
+// Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
+export {
+  transcribe,
+  registerTranscriptionProvider,
+  OPENAI_TRANSCRIBE_MODELS,
+  DEFAULT_TRANSCRIBE_BYTES,
+} from "./transcription.js";
+export type {
+  TranscribeOptions,
+  TranscriptionSegment,
+  TranscriptionWord,
+  TranscriptionResult,
+  TranscriptionProviderOptions,
+  TranscriptionProviderContext,
+  TranscriptionProvider,
+} from "./transcription.js";

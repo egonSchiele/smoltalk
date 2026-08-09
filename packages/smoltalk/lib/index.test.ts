@@ -41,4 +41,13 @@ describe("public exports", () => {
     expect(sttName).toBe("whisper-1");
     expect(ttsName).toBe("tts-1");
   });
+
+  it("exports the transcription API and keeps _resetForTests internal", () => {
+    expect(typeof smoltalk.transcribe).toBe("function");
+    expect(typeof smoltalk.registerTranscriptionProvider).toBe("function");
+    expect(smoltalk.OPENAI_TRANSCRIBE_MODELS).toBeInstanceOf(Set);
+    expect(smoltalk.OPENAI_TRANSCRIBE_MODELS.has("whisper-1")).toBe(true);
+    expect(typeof smoltalk.DEFAULT_TRANSCRIBE_BYTES).toBe("number");
+    expect("_resetForTests" in smoltalk).toBe(false);
+  });
 });
