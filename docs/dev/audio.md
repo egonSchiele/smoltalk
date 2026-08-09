@@ -29,13 +29,20 @@ an SSRF guard for URL sources, and voice discovery.
 Two architectural shapes sit behind the one declarative `transcribe()`/`speak()`
 surface:
 
-- **OpenAI-compatible (Groq).** `OpenAITranscriptionClient`/`OpenAISpeechClient`
-  expose two protected hooks: `makeClient()` (base URL) and `defaultFormat()`
-  (the format used when the call omits one). `GroqTranscriptionClient` and
-  `GroqSpeechClient` override only these — Groq points at
-  `https://api.groq.com/openai/v1` and defaults TTS output to `wav`. Everything
-  else (request shaping, response mapping) is inherited, so no transport detail
-  leaks into the caller-facing API.
+- **OpenAI-compatible (Groq + generic).** `OpenAITranscriptionClient`/
+  `OpenAISpeechClient` expose two protected hooks: `makeClient()` (base URL) and
+  `defaultFormat()` (the format used when the call omits one).
+  `GroqTranscriptionClient`/`GroqSpeechClient` override only these — Groq points at
+  `https://api.groq.com/openai/v1` and defaults TTS output to `wav`. For any other
+  OpenAI-shaped endpoint, `OpenAiCompatTranscriptionClient`/`OpenAiCompatSpeechClient`
+  (registered under `"openai-compat"`) resolve the base URL from
+  `config.baseUrl.openAiCompat` / `OPENAI_COMPAT_BASE_URL` (and the key from
+  `config.apiKey.openAiCompat` / `OPENAI_COMPAT_API_KEY`) via the shared
+  `resolveBaseUrl`/`resolveApiKey`, mirroring the chat `SmolOpenAiCompat` client;
+  a missing base URL fails clearly through the base's redacting boundary. To carry
+  the base URL, `TranscribeOptions`/`SpeakOptions` (and the client configs) gained
+  an optional `baseUrl` map. Everything else (request shaping, response mapping) is
+  inherited, so no transport detail leaks into the caller-facing API.
 - **Gemini native multimodal.** `GoogleTranscriptionClient._transcribe` sends
   `{ inlineData, text: instruction }` and reads `res.text`; `opts.language` is
   folded into the instruction, and `timestampGranularity` is rejected (Gemini

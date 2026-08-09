@@ -515,8 +515,10 @@ Three audio primitives. `transcribe()` (speech-to-text) and `speak()`
 constructor, not a `Result`-returning call — see "Audio in chat" below.
 
 `transcribe()` and `speak()` support **OpenAI**, **Groq** (OpenAI-compatible
-endpoints), and **Google Gemini** (native multimodal). Anthropic, OpenRouter,
-and Ollama have no audio endpoints and return a `Failure`.
+endpoints), and **Google Gemini** (native multimodal). For any other provider
+that exposes OpenAI-shaped `/audio/*` endpoints, use the generic
+**`openai-compat`** provider with `baseUrl` (mirrors the chat client). Anthropic,
+OpenRouter, and Ollama have no audio endpoints and return a `Failure`.
 
 ```ts
 // Groq STT (OpenAI-compatible; provider inferred from the model)
@@ -533,6 +535,14 @@ await speak("Hello", { model: "canopylabs/orpheus-v1-english", voice: "troy" });
 await speak("Hello", {
   model: "gemini-2.5-flash-preview-tts", voice: "Kore",
   provider: "google", format: "wav",
+});
+
+// Any OpenAI-compatible /audio endpoint (vLLM, LiteLLM, a proxy, …)
+await transcribe(src, {
+  model: "whisper-1",
+  provider: "openai-compat",
+  apiKey: { openAiCompat: "..." },       // or OPENAI_COMPAT_API_KEY
+  baseUrl: { openAiCompat: "https://my-proxy/v1" }, // or OPENAI_COMPAT_BASE_URL
 });
 ```
 

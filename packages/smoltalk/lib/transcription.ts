@@ -14,6 +14,7 @@ import {
 import { OpenAITranscriptionClient } from "./transcription/openai.js";
 import { GroqTranscriptionClient } from "./transcription/groq.js";
 import { GoogleTranscriptionClient } from "./transcription/google.js";
+import { OpenAiCompatTranscriptionClient } from "./transcription/openaiCompat.js";
 
 export { DEFAULT_TRANSCRIBE_BYTES } from "./transcription/baseTranscriptionClient.js";
 
@@ -22,6 +23,7 @@ export type TranscribeOptions = {
   provider?: string;
   modelData?: ModelDataBlob;
   apiKey?: SmolConfig["apiKey"];
+  baseUrl?: SmolConfig["baseUrl"];
   language?: string;
   prompt?: string;
   timestampGranularity?: "segment" | "word";
@@ -52,6 +54,7 @@ const builtinClients: Record<string, TranscriptionClientClass> = Object.create(n
 builtinClients["openai"] = OpenAITranscriptionClient;
 builtinClients["groq"] = GroqTranscriptionClient;
 builtinClients["google"] = GoogleTranscriptionClient;
+builtinClients["openai-compat"] = OpenAiCompatTranscriptionClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.

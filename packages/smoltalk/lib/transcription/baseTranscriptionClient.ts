@@ -1,4 +1,5 @@
 import type { ModelDataBlob } from "../modelData.js";
+import type { SmolConfig } from "../types.js";
 import {
   getModelForProvider,
   isSpeechToTextModel,
@@ -21,6 +22,8 @@ export type TranscriptionClientConfig = {
   provider: string;
   /** Resolved API key; empty string when none was found. */
   apiKey: string;
+  /** Base-URL map (for OpenAI-compatible providers); read via resolveBaseUrl. */
+  baseUrl?: SmolConfig["baseUrl"];
   modelData?: ModelDataBlob;
   language?: string;
   prompt?: string;
