@@ -249,24 +249,24 @@ describe("transcribe() dispatch", () => {
   });
 
   it("redacts the RESOLVED provider's key (not an openai guess) when provider is inferred from the model", async () => {
-    const secret = "google-secret-abc123";
+    const secret = "acme-secret-abc123";
     const md = {
       schemaVersion: 1,
       generatedAt: "t",
       hostedTools: [],
-      models: [{ type: "speech-to-text", modelName: "custom-google-model", provider: "google" }],
+      models: [{ type: "speech-to-text", modelName: "custom-acme-model", provider: "acme-asr" }],
     } satisfies ModelDataBlob;
-    class GoogleAsr extends BaseTranscriptionClient {
+    class AcmeAsr extends BaseTranscriptionClient {
       protected async _transcribe(): Promise<Result<TranscriptionResult>> {
         throw new Error(`upstream rejected request signed with ${secret}`);
       }
     }
-    registerTranscriptionProvider("google", GoogleAsr);
+    registerTranscriptionProvider("acme-asr", AcmeAsr);
     const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});
     const r = await transcribe(src, {
-      model: "custom-google-model",
+      model: "custom-acme-model",
       modelData: md,
-      apiKey: { google: secret },
+      apiKey: { "acme-asr": secret },
     });
     expect(r.success).toBe(false);
     if (!r.success) {

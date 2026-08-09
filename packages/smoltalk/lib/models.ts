@@ -1309,6 +1309,11 @@ export const textModels = [
       input: ["text", "image", "audio", "video", "pdf"],
       output: ["text"],
     },
+    // Audio-input (transcription) constraints. maxBytes is a conservative raw cap
+    // leaving room for base64 expansion + instructions under Gemini's 20 MB total
+    // inline request limit; the client also checks the encoded request size.
+    supportedMimeTypes: ["audio/wav", "audio/mpeg", "audio/aac", "audio/ogg", "audio/flac", "audio/aiff"],
+    maxBytes: 14_000_000,
     knowledge: "2025-01",
     releaseDate: "2025-06-17",
     lastUpdated: "2025-06-17",
