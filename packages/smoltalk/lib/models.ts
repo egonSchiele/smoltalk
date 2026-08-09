@@ -44,11 +44,21 @@ export type BaseModel = {
 export type SpeechToTextModel = BaseModel & {
   type: "speech-to-text";
   perMinuteCost?: number;
+  /** Canonical MIME types accepted after alias normalization through AUDIO_FORMATS. */
+  supportedMimeTypes?: readonly string[];
+  /** Provider upload cap in bytes. */
+  maxBytes?: number;
 };
 
 export type TextToSpeechModel = BaseModel & {
   type: "text-to-speech";
   perCharacterCost?: number; // USD per input Unicode code point
+  /** Input cap in Unicode code points. */
+  maxInputChars?: number;
+  /** Accepted values for the speed option. */
+  speedRange?: { min: number; max: number };
+  /** Output formats the provider can render for this model. */
+  formats?: readonly string[];
 };
 
 export type ImageModel = BaseModel & {
@@ -125,6 +135,11 @@ export const speechToTextModels = [
     modelName: "whisper-1",
     perMinuteCost: 0.006,
     provider: "openai",
+    supportedMimeTypes: [
+      "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
+      "audio/wav", "audio/webm",
+    ],
+    maxBytes: 25 * 1024 * 1024,
   },
 ] as const;
 
@@ -134,12 +149,18 @@ export const textToSpeechModels = [
     modelName: "tts-1",
     perCharacterCost: 0.000015,
     provider: "openai",
+    maxInputChars: 4096,
+    speedRange: { min: 0.25, max: 4 },
+    formats: ["mp3", "opus", "aac", "flac", "wav", "pcm"],
   },
   {
     type: "text-to-speech",
     modelName: "tts-1-hd",
     perCharacterCost: 0.00003,
     provider: "openai",
+    maxInputChars: 4096,
+    speedRange: { min: 0.25, max: 4 },
+    formats: ["mp3", "opus", "aac", "flac", "wav", "pcm"],
   },
 ] as const;
 

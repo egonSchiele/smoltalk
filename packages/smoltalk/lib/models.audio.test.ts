@@ -123,3 +123,28 @@ describe("audio model registry", () => {
     });
   });
 });
+
+describe("audio model constraint data", () => {
+  // Throw (don't just skip assertions) when the guard fails, so a wrong type
+  // or missing entry fails the test instead of silently passing it.
+  it("whisper-1 declares its MIME allowlist and 25MB cap", () => {
+    const model = getModelForProvider("openai", "whisper-1");
+    if (model === undefined || !isSpeechToTextModel(model)) {
+      throw new Error("expected a speech-to-text registry entry for openai:whisper-1");
+    }
+    expect(model.supportedMimeTypes).toContain("audio/mpeg");
+    expect(model.supportedMimeTypes).toContain("audio/mp4");
+    expect(model.supportedMimeTypes).not.toContain("video/mp4");
+    expect(model.maxBytes).toBe(25 * 1024 * 1024);
+  });
+
+  it("tts-1 declares char cap, speed range, and formats", () => {
+    const model = getModelForProvider("openai", "tts-1");
+    if (model === undefined || !isTextToSpeechModel(model)) {
+      throw new Error("expected a text-to-speech registry entry for openai:tts-1");
+    }
+    expect(model.maxInputChars).toBe(4096);
+    expect(model.speedRange).toEqual({ min: 0.25, max: 4 });
+    expect(model.formats).toEqual(["mp3", "opus", "aac", "flac", "wav", "pcm"]);
+  });
+});

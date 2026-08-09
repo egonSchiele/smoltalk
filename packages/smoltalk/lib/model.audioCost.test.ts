@@ -151,3 +151,38 @@ describe("calculateCost with audio tokens", () => {
     expect(cost.totalCost).toBe(2.5);
   });
 });
+
+import { calculateTranscriptionCost, calculateSpeechCost } from "./model.js";
+
+describe("calculateTranscriptionCost", () => {
+  const sttModel = { type: "speech-to-text", modelName: "m", provider: "p", perMinuteCost: 0.006 } as const;
+  it("prices by the minute", () => {
+    expect(calculateTranscriptionCost(sttModel, 120)).toEqual({
+      inputCost: 0.012, outputCost: 0, totalCost: 0.012, currency: "USD",
+    });
+  });
+  it("reports a present zero cost for a 0 rate", () => {
+    const free = { ...sttModel, perMinuteCost: 0 };
+    expect(calculateTranscriptionCost(free, 120)).toEqual({
+      inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD",
+    });
+  });
+  it("returns undefined without a rate, a duration, or a model", () => {
+    expect(calculateTranscriptionCost({ ...sttModel, perMinuteCost: undefined }, 120)).toBeUndefined();
+    expect(calculateTranscriptionCost(sttModel, undefined)).toBeUndefined();
+    expect(calculateTranscriptionCost(undefined, 120)).toBeUndefined();
+  });
+});
+
+describe("calculateSpeechCost", () => {
+  const ttsModel = { type: "text-to-speech", modelName: "m", provider: "p", perCharacterCost: 0.000015 } as const;
+  it("prices per code point", () => {
+    expect(calculateSpeechCost(ttsModel, 1000)).toEqual({
+      inputCost: 0.015, outputCost: 0, totalCost: 0.015, currency: "USD",
+    });
+  });
+  it("returns undefined for a non-TTS model or missing rate", () => {
+    expect(calculateSpeechCost(undefined, 10)).toBeUndefined();
+    expect(calculateSpeechCost({ ...ttsModel, perCharacterCost: undefined }, 10)).toBeUndefined();
+  });
+});

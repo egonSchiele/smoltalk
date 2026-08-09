@@ -2,13 +2,16 @@ import {
   ModelName,
   getModel,
   getModelForProvider,
+  isSpeechToTextModel,
   isTextModel,
+  isTextToSpeechModel,
   ModelNameSchema,
   ModelType,
 } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { ModelLike } from "./types.js";
 import type { ModelDataBlob } from "./modelData.js";
+import type { CostEstimate } from "./types/costEstimate.js";
 import { round } from "./util/util.js";
 
 const TOKEN_COST_UNIT = 1_000_000;
@@ -153,4 +156,38 @@ export class Model {
     }
     return new Model(model, provider, modelData);
   }
+}
+
+/**
+ * Per-minute STT pricing from a registry entry. Returns undefined (cost
+ * omitted, no error) when the model, rate, or duration is unknown — a rate of
+ * 0 still yields a present zero cost.
+ */
+export function calculateTranscriptionCost(
+  model: ModelType | undefined,
+  durationSeconds: number | undefined,
+): CostEstimate | undefined {
+  if (model === undefined || !isSpeechToTextModel(model)) {
+    return undefined;
+  }
+  if (model.perMinuteCost === undefined || durationSeconds === undefined || durationSeconds === null) {
+    return undefined;
+  }
+  const inputCost = round((durationSeconds / 60) * model.perMinuteCost, 6);
+  return { inputCost, outputCost: 0, totalCost: inputCost, currency: "USD" };
+}
+
+/** Per-code-point TTS pricing from a registry entry; same omission semantics. */
+export function calculateSpeechCost(
+  model: ModelType | undefined,
+  charCount: number,
+): CostEstimate | undefined {
+  if (model === undefined || !isTextToSpeechModel(model)) {
+    return undefined;
+  }
+  if (model.perCharacterCost === undefined) {
+    return undefined;
+  }
+  const inputCost = round(charCount * model.perCharacterCost, 6);
+  return { inputCost, outputCost: 0, totalCost: inputCost, currency: "USD" };
 }

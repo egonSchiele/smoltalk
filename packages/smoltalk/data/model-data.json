@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-09T04:03:50.487Z",
+  "generatedAt": "2026-08-09T16:40:55.428Z",
   "models": [
     {
       "type": "text",
@@ -2112,19 +2112,55 @@
       "type": "speech-to-text",
       "modelName": "whisper-1",
       "perMinuteCost": 0.006,
-      "provider": "openai"
+      "provider": "openai",
+      "supportedMimeTypes": [
+        "audio/flac",
+        "audio/mpeg",
+        "audio/mp4",
+        "audio/m4a",
+        "audio/ogg",
+        "audio/wav",
+        "audio/webm"
+      ],
+      "maxBytes": 26214400
     },
     {
       "type": "text-to-speech",
       "modelName": "tts-1",
       "perCharacterCost": 0.000015,
-      "provider": "openai"
+      "provider": "openai",
+      "maxInputChars": 4096,
+      "speedRange": {
+        "min": 0.25,
+        "max": 4
+      },
+      "formats": [
+        "mp3",
+        "opus",
+        "aac",
+        "flac",
+        "wav",
+        "pcm"
+      ]
     },
     {
       "type": "text-to-speech",
       "modelName": "tts-1-hd",
       "perCharacterCost": 0.00003,
-      "provider": "openai"
+      "provider": "openai",
+      "maxInputChars": 4096,
+      "speedRange": {
+        "min": 0.25,
+        "max": 4
+      },
+      "formats": [
+        "mp3",
+        "opus",
+        "aac",
+        "flac",
+        "wav",
+        "pcm"
+      ]
     },
     {
       "type": "embeddings",
