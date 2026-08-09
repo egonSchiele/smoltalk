@@ -4,6 +4,8 @@ export type TokenUsage = {
   outputTokens: number;
   cachedInputTokens?: number;
   cacheCreationInputTokens?: number;
+  inputAudioTokens?: number;
+  outputAudioTokens?: number;
   totalTokens?: number;
 };
 
@@ -12,6 +14,8 @@ export const TokenUsageSchema = z.object({
   outputTokens: z.number(),
   cachedInputTokens: z.number().optional(),
   cacheCreationInputTokens: z.number().optional(),
+  inputAudioTokens: z.number().optional(),
+  outputAudioTokens: z.number().optional(),
   totalTokens: z.number().optional(),
 });
 
@@ -29,6 +33,8 @@ export function addTokenUsage(_a?: TokenUsage, _b?: TokenUsage): TokenUsage {
     cachedInputTokens: (a.cachedInputTokens || 0) + (b.cachedInputTokens || 0),
     cacheCreationInputTokens:
       (a.cacheCreationInputTokens || 0) + (b.cacheCreationInputTokens || 0),
+    inputAudioTokens: (a.inputAudioTokens || 0) + (b.inputAudioTokens || 0),
+    outputAudioTokens: (a.outputAudioTokens || 0) + (b.outputAudioTokens || 0),
     totalTokens: (a.totalTokens || 0) + (b.totalTokens || 0),
   };
 }

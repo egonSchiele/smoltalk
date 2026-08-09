@@ -1,5 +1,6 @@
 import type { PartRenderer } from "./PartRenderer.js";
-import type { TextPart, ImagePart, FilePart, UserContentPart, AttachmentSource } from "../contentParts.js";
+import type { TextPart, ImagePart, FilePart, AudioPart, UserContentPart, AttachmentSource } from "../contentParts.js";
+import type { BlobRef } from "../../../util/blobRef.js";
 import { refToBase64 } from "../../../util/attachments.js";
 
 /** In-memory `bytes` don't survive JSON, so materialize them as base64; other sources pass through. */
@@ -23,5 +24,10 @@ export class JSONRenderer implements PartRenderer<UserContentPart> {
 
   file(part: FilePart): UserContentPart {
     return { type: "file", source: bytesToBase64(part.source), filename: part.filename };
+  }
+
+  audio(part: AudioPart): UserContentPart {
+    // bytesToBase64 only converts `bytes`; other kinds pass through, all within BlobRef.
+    return { type: "audio", source: bytesToBase64(part.source) as BlobRef, filename: part.filename };
   }
 }

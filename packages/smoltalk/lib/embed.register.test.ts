@@ -54,3 +54,16 @@ describe("registerEmbeddingProvider", () => {
     if (!result.success) expect(result.error).toContain("registerEmbeddingProvider");
   });
 });
+
+describe("custom-provider apiKey typing", () => {
+  it("accepts and passes through a custom provider's apiKey by registered name", async () => {
+    let seenKey: string | undefined;
+    registerEmbeddingProvider("acme", async (inputs, config) => {
+      seenKey = config.apiKey?.acme;
+      return success({ embeddings: inputs.map(() => [1]), model: config.model });
+    });
+    const r = await embed("hi", { model: "acme-embed", provider: "acme", apiKey: { acme: "k-123" } });
+    expect(r.success).toBe(true);
+    expect(seenKey).toBe("k-123");
+  });
+});

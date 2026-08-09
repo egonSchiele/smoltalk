@@ -134,6 +134,9 @@ export class UserMessage extends BaseMessage implements MessageClass {
         images.push(refToBase64(part.source).base64);
         continue;
       }
+      if (part.type === "audio") {
+        throw new Error("Ollama does not support audio input.");
+      }
       if (part.source.kind === "providerFile") {
         throw new Error("Ollama does not support provider file references.");
       }

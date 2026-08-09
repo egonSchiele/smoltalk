@@ -9,7 +9,7 @@ import {
 import { Result, success, failure } from "../types/result.js";
 import { getModel, isImageModel } from "../models.js";
 import type { ModelDataBlob } from "../modelData.js";
-import { normalizeImageRef, NormalizedImage } from "../util/imageRef.js";
+import { normalizeBlob, NormalizedBlob } from "../util/blobRef.js";
 import {
   COST_DECIMAL_PLACES,
   omitUndefined,
@@ -87,12 +87,12 @@ async function callEdit(
 ): Promise<any> {
   const imageFiles = await Promise.all(
     (normalized.images ?? []).map(async (ref, i) => {
-      const n = await normalizeImageRef(ref);
+      const n = await normalizeBlob(ref);
       return toFileFor(n, `image-${i}`);
     }),
   );
   const maskFile = normalized.mask
-    ? await toFileFor(await normalizeImageRef(normalized.mask), "mask")
+    ? await toFileFor(await normalizeBlob(normalized.mask), "mask")
     : undefined;
 
   return (client.images.edit as any)(
@@ -104,7 +104,7 @@ async function callEdit(
   );
 }
 
-async function toFileFor(img: NormalizedImage, baseName: string) {
+async function toFileFor(img: NormalizedBlob, baseName: string) {
   return toFile(img.data, `${baseName}.${extFromMime(img.mimeType)}`, {
     type: img.mimeType,
   });

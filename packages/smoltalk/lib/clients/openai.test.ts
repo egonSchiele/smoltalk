@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { SmolOpenAi } from "./openai.js";
 import type { SmolConfig } from "../types.js";
+import type { ModelDataBlob } from "../modelData.js";
 
 class FakeProvider extends SmolOpenAi {
   protected resolveClientOptions() {
@@ -100,6 +101,93 @@ describe("SmolOpenAi seams", () => {
     } as SmolConfig);
     expect(req.usage).toEqual({ include: true });
     expect(req.custom_flag).toBe(42);
+  });
+});
+
+const audioModelData: ModelDataBlob = {
+  schemaVersion: 1,
+  generatedAt: "test",
+  models: [
+    {
+      type: "text",
+      modelName: "audio-test-multi",
+      provider: "openai",
+      maxInputTokens: 128_000,
+      maxOutputTokens: 16_384,
+      inputTokenCost: 2,
+      outputTokenCost: 10,
+      inputAudioTokenCost: 32,
+      outputAudioTokenCost: 64,
+    },
+    {
+      type: "text",
+      modelName: "audio-test-multi",
+      provider: "acme",
+      maxInputTokens: 128_000,
+      maxOutputTokens: 16_384,
+      inputTokenCost: 1,
+      outputTokenCost: 1,
+      inputAudioTokenCost: 1,
+      outputAudioTokenCost: 1,
+    },
+  ],
+  hostedTools: [],
+};
+
+class AudioSeamProvider extends SmolOpenAi {
+  protected resolveClientOptions() {
+    return { apiKey: "k" };
+  }
+  // Expose protected method for tests
+  publicCalc(usage: any, rawResponse?: Response) {
+    return (this as any).calculateUsageAndCost(usage, rawResponse);
+  }
+}
+
+class OverrideCostProvider extends AudioSeamProvider {
+  protected resolveCostUsd() {
+    return 12.34;
+  }
+}
+
+describe("SmolOpenAi audio token cost seam", () => {
+  it("parses disjoint audio buckets and prices them via the openai-provider registry entry, not acme's", () => {
+    const c = new AudioSeamProvider({
+      model: "audio-test-multi",
+      provider: "openai",
+      messages: [],
+      modelData: audioModelData,
+    });
+    const { usage, cost } = c.publicCalc({
+      prompt_tokens: 2_000_000,
+      completion_tokens: 2_000_000,
+      total_tokens: 4_000_000,
+      prompt_tokens_details: { audio_tokens: 1_000_000 },
+      completion_tokens_details: { audio_tokens: 1_000_000 },
+    });
+    expect(usage?.inputTokens).toBe(1_000_000);
+    expect(usage?.outputTokens).toBe(1_000_000);
+    expect(usage?.inputAudioTokens).toBe(1_000_000);
+    expect(usage?.outputAudioTokens).toBe(1_000_000);
+    expect(cost?.inputCost).toBe(34);
+    expect(cost?.outputCost).toBe(74);
+    expect(cost?.totalCost).toBe(108);
+  });
+
+  it("still lets provider-supplied cost override registry math when audio tokens are present", () => {
+    const c = new OverrideCostProvider({
+      model: "audio-test-multi",
+      provider: "openai",
+      messages: [],
+      modelData: audioModelData,
+    });
+    const { cost } = c.publicCalc({
+      prompt_tokens: 2_000_000,
+      completion_tokens: 2_000_000,
+      prompt_tokens_details: { audio_tokens: 1_000_000 },
+      completion_tokens_details: { audio_tokens: 1_000_000 },
+    });
+    expect(cost?.totalCost).toBe(12.34);
   });
 });
 

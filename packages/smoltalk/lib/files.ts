@@ -1,7 +1,7 @@
 import { Result, failure } from "./types/result.js";
 import type { SmolConfig } from "./types.js";
 import { ProviderFileRef } from "./classes/message/contentParts.js";
-import { BlobRef, loadBlob } from "./util/imageRef.js";
+import { BlobRef, loadBlob } from "./util/blobRef.js";
 import { fileFamily } from "./util/attachments.js";
 import { resolveApiKey } from "./util/provider.js";
 import { openaiFileProvider } from "./files/openai.js";

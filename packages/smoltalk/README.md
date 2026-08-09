@@ -464,19 +464,25 @@ On Google, web search can't be combined with structured output in one call.
 
 ## Registering custom providers
 
-Smoltalk has three registration entry points — one per capability:
+Smoltalk has one registration entry point per capability:
 
 ```ts
 // example: skip-typecheck
 import {
-  success,                    // Result helper
-  registerProvider,           // text generation (a class extending BaseClient)
-  registerEmbeddingProvider,  // embeddings (a function)
-  registerImageProvider,      // images (a function)
+  success,                         // Result helper
+  registerProvider,                // text generation (a class extending BaseClient)
+  registerTranscriptionProvider,   // speech-to-text (a class extending BaseTranscriptionClient)
+  registerSpeechProvider,          // text-to-speech (a class extending BaseSpeechClient)
+  registerEmbeddingProvider,       // embeddings (a function)
+  registerImageProvider,           // images (a function)
 } from "smoltalk";
 
 // Text: a class extending BaseClient (implements _textSync / _textStream)
 registerProvider("my-llm", MyTextClient);
+
+// STT/TTS: classes extending the audio base clients (see "Audio (STT/TTS)")
+registerTranscriptionProvider("my-asr", MyTranscriptionClient);
+registerSpeechProvider("my-tts", MySpeechClient);
 
 // Embeddings: a function
 registerEmbeddingProvider("my-embed", async (inputs, config) => {
@@ -497,8 +503,136 @@ precedence; a registered name that collides with a built-in is ignored. Custom
 providers receive the full `config` and read their own credentials from it
 (e.g. `config.metadata`).
 
-Text is a class (it needs retries, tool-loop detection, streaming); embeddings
-and images are one-shot functions.
+Text, transcription, and speech are classes: a base class owns the shared
+behavior (validation, cost, error handling) and the subclass implements only
+the provider call. Embeddings and images are one-shot functions.
+
+## Audio (STT/TTS)
+
+Three audio primitives, all OpenAI-only in v1. `transcribe()` (speech-to-text)
+and `speak()` (text-to-speech) are async and return `Result<T>` (never throw).
+`audioPart()` (attach audio to a chat message) is different: it's a
+synchronous plain-object constructor, not a `Result`-returning call — see
+"Audio in chat" below.
+
+### Speech-to-text
+
+```ts
+import { transcribe } from "smoltalk";
+
+const result = await transcribe(
+  { kind: "path", path: "./meeting.mp3" },
+  { model: "whisper-1" },
+);
+if (result.success) {
+  console.log(result.value.text);
+}
+```
+
+`whisper-1` is the only baked-in model in v1. Options: `language`, `prompt`,
+`timestampGranularity` (`"segment"` | `"word"`), `maxBytes` (a safety limit —
+the effective cap is the smaller of your limit and the model's declared upload
+cap, 25 MB for `whisper-1`). The result carries `text` plus optional
+`language`, `durationSeconds`, `segments`, `words`, `usage`, and `cost`.
+
+Model constraints (accepted MIME types, upload cap, per-minute price) live in
+the model registry, not in code — a model you add via `registerModelData` /
+`config.modelData` is validated against whatever its data block declares, and
+a model with no registry entry skips validation entirely (the provider is then
+the authority).
+
+Register a custom provider as a class:
+
+```ts
+// example: skip-typecheck
+import { BaseTranscriptionClient, registerTranscriptionProvider, success } from "smoltalk";
+
+class AcmeTranscription extends BaseTranscriptionClient {
+  protected async _transcribe(data: Uint8Array, mimeType: string) {
+    // call your API with this.config.apiKey; map the response
+    return success({ text: "..." });
+  }
+}
+registerTranscriptionProvider("acme", AcmeTranscription);
+
+// then: transcribe(source, { model: "acme-1", provider: "acme", apiKey: { acme: "..." } })
+```
+
+The base class owns blob loading, model-data validation, cost, and the
+redacting error boundary; `_transcribe()` is only the SDK call + response
+mapping.
+
+### Text-to-speech
+
+```ts
+import { speak } from "smoltalk";
+import { writeFile } from "node:fs/promises";
+
+const result = await speak("Hello from smoltalk.", {
+  model: "tts-1",
+  voice: "alloy",
+});
+if (result.success) {
+  await writeFile("out.mp3", result.value.audio); // caller owns the bytes
+}
+```
+
+`tts-1` and `tts-1-hd` are the only baked-in models in v1. `voice` is
+required. Options: `format` (OpenAI accepts `"mp3"` | `"opus"` | `"aac"` |
+`"flac"` | `"wav"` | `"pcm"`, default `"mp3"`; a custom provider may accept
+other strings) and `speed`. Limits are declared per model in the registry —
+for `tts-1`/`tts-1-hd` that's a 4096-code-point input cap, a 0.25–4.0 speed
+range, and the format list above; exceeding any of them returns a `Failure`
+before the request is sent. The returned `audio` is a `Uint8Array` you own —
+write it to disk, stream it, whatever you like. When `format` is `"pcm"`,
+`result.pcm` describes the raw stream (for OpenAI:
+`{ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 }`).
+
+Register a custom provider as a class, mirroring transcription:
+
+```ts
+// example: skip-typecheck
+import { BaseSpeechClient, registerSpeechProvider, success } from "smoltalk";
+
+class AcmeSpeech extends BaseSpeechClient {
+  protected async _speak(text: string) {
+    // call your API with this.config.apiKey / this.config.voice
+    return success({ audio: new Uint8Array(), mimeType: "audio/mpeg" });
+  }
+}
+registerSpeechProvider("acme", AcmeSpeech);
+```
+
+As with transcription, per-model constraints come from the model registry
+(`registerModelData` / `config.modelData`), so a custom model's caps, speed
+range, and formats are data, not code.
+
+### Audio in chat
+
+`audioPart()` attaches an audio clip to a `userMessage`, for models that
+accept audio input directly (as opposed to transcribing it first).
+`audioPart()` itself is a synchronous constructor that builds a content part
+— it always returns an `AudioPart`, never a `Result`, and it can't fail:
+
+```ts
+import { textSync, userMessage, audioPart } from "smoltalk";
+
+const messages = [
+  userMessage([
+    "What's being said in this clip?",
+    audioPart({ kind: "path", path: "./clip.wav" }),
+  ]),
+];
+
+const resp = await textSync({ messages, model: "gpt-audio-1.5" });
+```
+
+In v1 this only works with `gpt-audio-1.5` on the OpenAI Chat Completions
+provider (not `openai-responses`, and not other providers). Validation
+happens later, when the message is sent via `textSync`/`textStream` — an
+unsupported provider, a model without audio input, or audio that isn't
+`mp3`/`wav` surfaces as a `Failure` from that call, not from `audioPart()`
+itself. Audio is inlined as base64, not uploaded via the Files API.
 
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:

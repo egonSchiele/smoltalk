@@ -76,6 +76,7 @@ export function getClient(config: SmolClientConfig) {
     ...config,
     apiKey: { ...resolvedKeys, ...config.apiKey },
     model: modelName,
+    provider,
   };
   switch (provider) {
     case "anthropic":

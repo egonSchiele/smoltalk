@@ -22,6 +22,8 @@ export type EmbedConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    /** Arbitrary provider names, for keys targeting a custom-registered provider. */
+    [provider: string]: string | undefined;
   };
 
   /** Custom base URLs, nested by provider. */
@@ -30,6 +32,8 @@ export type EmbedConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    /** Arbitrary provider names, for URLs targeting a custom-registered provider. */
+    [provider: string]: string | undefined;
   };
 
   // Plugin support

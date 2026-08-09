@@ -37,6 +37,8 @@ type NestedKeyConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    /** Arbitrary provider names, for keys targeting a custom-registered provider. */
+    [provider: string]: string | undefined;
   };
   baseUrl?: {
     ollama?: string;
@@ -74,7 +76,7 @@ export function resolveApiKey(
     case "openai-compat":
       return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
     default:
-      return undefined;
+      return config.apiKey?.[provider];
   }
 }
 

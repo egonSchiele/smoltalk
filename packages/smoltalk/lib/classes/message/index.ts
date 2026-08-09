@@ -15,8 +15,9 @@ import {
   UserContentInput,
   ImagePart,
   FilePart,
+  AudioPart,
 } from "../../types.js";
-import type { ImageRef } from "../../util/imageRef.js";
+import type { ImageRef, BlobRef } from "../../util/blobRef.js";
 
 export * from "./AssistantMessage.js";
 export * from "./BaseMessage.js";
@@ -62,6 +63,14 @@ export function filePart(source: ImageRef, options: { filename?: string } = {}):
     return { type: "file", source };
   }
   return { type: "file", source, filename: options.filename };
+}
+
+export function audioPart(source: BlobRef, options: { filename?: string } = {}): AudioPart {
+  const part: AudioPart = { type: "audio", source };
+  if (options.filename !== undefined) {
+    part.filename = options.filename;
+  }
+  return part;
 }
 
 export function assistantMessage(

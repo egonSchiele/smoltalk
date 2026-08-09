@@ -1,7 +1,8 @@
 import { readFile, stat } from "node:fs/promises";
 import { extname } from "node:path";
+import { EXT_TO_MIME } from "./mime.js";
 
-export type ImageRef =
+export type BlobRef =
   | { kind: "bytes"; data: Uint8Array; mimeType: string }
   | { kind: "base64"; base64: string; mimeType: string }
   | { kind: "path"; path: string; mimeType?: string }
@@ -16,25 +17,16 @@ export type ImageRef =
       timeoutMs?: number;
     };
 
-/** Neutral alias of the source union for non-image uses (uploads via {@link loadBlob}). */
-export type BlobRef = ImageRef;
+/** Alias of {@link BlobRef} for image call sites, where it documents intent. */
+export type ImageRef = BlobRef;
 
-export type NormalizedImage = {
+export type NormalizedBlob = {
   data: Uint8Array;
   mimeType: string;
 };
 
-/** Default timeout for fetching image URLs during normalization (60 seconds). */
+/** Default timeout for fetching attachment URLs during normalization (60 seconds). */
 export const DEFAULT_FETCH_TIMEOUT_MS = 60_000;
-
-const EXT_TO_MIME: Record<string, string> = {
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".gif": "image/gif",
-  ".pdf": "application/pdf",
-};
 
 function isAllowedMime(mimeType: string, allowedPrefixes: string[]): boolean {
   for (const prefix of allowedPrefixes) {
@@ -45,10 +37,10 @@ function isAllowedMime(mimeType: string, allowedPrefixes: string[]): boolean {
   return false;
 }
 
-export async function normalizeImageRef(
-  ref: ImageRef,
+export async function normalizeBlob(
+  ref: BlobRef,
   options: { allowedMimePrefixes?: string[]; maxBytes?: number } = {},
-): Promise<NormalizedImage> {
+): Promise<NormalizedBlob> {
   const allowed = options.allowedMimePrefixes ?? ["image/"];
   const result = await loadRef(ref, allowed, options.maxBytes);
   if (options.maxBytes !== undefined && result.data.length > options.maxBytes) {
@@ -64,11 +56,11 @@ export async function normalizeImageRef(
 }
 
 /**
- * Load a source to bytes WITHOUT the image MIME gate (used by file uploads,
+ * Load a source to bytes WITHOUT the MIME gate (used by file uploads,
  * which accept any type). Enforces `maxBytes` across all kinds.
  */
 export async function loadBlob(
-  ref: ImageRef,
+  ref: BlobRef,
   options: { maxBytes?: number } = {},
 ): Promise<{ data: Uint8Array; mimeType?: string }> {
   const result = await loadRef(ref, null, options.maxBytes);
@@ -116,7 +108,7 @@ async function readBodyWithLimit(
 }
 
 async function loadRef(
-  ref: ImageRef,
+  ref: BlobRef,
   allowed: string[] | null,
   maxBytes?: number,
 ): Promise<{ data: Uint8Array; mimeType?: string }> {
@@ -143,7 +135,7 @@ async function loadRef(
       if (allowed !== null && (!mimeType || !isAllowedMime(mimeType, allowed))) {
         throw new Error(
           `Could not determine an allowed MIME type for path "${ref.path}". ` +
-            `Allowed: ${allowed.join(", ")}. Pass an explicit mimeType on the ImageRef.`,
+            `Allowed: ${allowed.join(", ")}. Pass an explicit mimeType on the BlobRef.`,
         );
       }
       return { data: new Uint8Array(buf), mimeType };
@@ -182,7 +174,7 @@ async function loadRef(
         throw new Error(
           `Could not determine an allowed MIME type for URL "${ref.url}". ` +
             `Response Content-Type was "${contentType ?? "missing"}". ` +
-            `Allowed: ${allowed.join(", ")}. Pass an explicit mimeType on the ImageRef.`,
+            `Allowed: ${allowed.join(", ")}. Pass an explicit mimeType on the BlobRef.`,
         );
       }
       return { data: buf, mimeType };

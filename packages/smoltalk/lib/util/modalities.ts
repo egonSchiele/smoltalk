@@ -1,12 +1,13 @@
-import { UserMessage } from "../classes/message/index.js";
-import { modelSupportsInputModality } from "../models.js";
-import { PromptResult, Result, SmolConfig, failure } from "../types.js";
+import { UserMessage, Message } from "../classes/message/index.js";
 
-export function validateModalities(config: SmolConfig): Result<PromptResult> | null {
-  let needsImage = false;
-  let needsPdf = false;
+/** Modalities a model must positively declare in its data block — for these,
+ *  "unknown" means "unsupported" (audio serialization is model-specific). */
+export const MODALITIES_REQUIRING_DECLARATION: ReadonlySet<string> = new Set(["audio"]);
 
-  for (const msg of config.messages) {
+/** Which non-text input modalities the user messages actually use. */
+export function neededInputModalities(messages: Message[]): string[] {
+  const needed = new Set<string>();
+  for (const msg of messages) {
     if (!(msg instanceof UserMessage)) {
       continue;
     }
@@ -16,19 +17,15 @@ export function validateModalities(config: SmolConfig): Result<PromptResult> | n
     }
     for (const part of parts) {
       if (part.type === "image") {
-        needsImage = true;
+        needed.add("image");
       }
       if (part.type === "file") {
-        needsPdf = true;
+        needed.add("pdf");
+      }
+      if (part.type === "audio") {
+        needed.add("audio");
       }
     }
   }
-
-  if (needsImage && modelSupportsInputModality(config.model, "image", config.modelData) === false) {
-    return failure(`Model ${config.model} does not support image input.`);
-  }
-  if (needsPdf && modelSupportsInputModality(config.model, "pdf", config.modelData) === false) {
-    return failure(`Model ${config.model} does not support PDF/document input.`);
-  }
-  return null;
+  return [...needed];
 }

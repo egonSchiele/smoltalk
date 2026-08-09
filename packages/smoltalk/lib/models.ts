@@ -44,6 +44,21 @@ export type BaseModel = {
 export type SpeechToTextModel = BaseModel & {
   type: "speech-to-text";
   perMinuteCost?: number;
+  /** Canonical MIME types accepted after alias normalization through AUDIO_FORMATS. */
+  supportedMimeTypes?: readonly string[];
+  /** Provider upload cap in bytes. */
+  maxBytes?: number;
+};
+
+export type TextToSpeechModel = BaseModel & {
+  type: "text-to-speech";
+  perCharacterCost?: number; // USD per input Unicode code point
+  /** Input cap in Unicode code points. */
+  maxInputChars?: number;
+  /** Accepted values for the speed option. */
+  speedRange?: { min: number; max: number };
+  /** Output formats the provider can render for this model. */
+  formats?: readonly string[];
 };
 
 export type ImageModel = BaseModel & {
@@ -109,6 +124,7 @@ export type EmbeddingsModel = {
 
 export type ModelType =
   | SpeechToTextModel
+  | TextToSpeechModel
   | TextModel
   | EmbeddingsModel
   | ImageModel;
@@ -116,20 +132,36 @@ export type ModelType =
 export const speechToTextModels = [
   {
     type: "speech-to-text",
-    modelName: "whisper-web",
+    modelName: "whisper-1",
     perMinuteCost: 0.006,
     provider: "openai",
+    supportedMimeTypes: [
+      "audio/flac", "audio/mpeg", "audio/mp4", "audio/m4a", "audio/ogg",
+      "audio/wav", "audio/webm",
+    ],
+    maxBytes: 25 * 1024 * 1024,
   },
-  // not a speech to text model?
-  /* {
-    type: "speech-to-text",
-    modelName: "gpt-4o-audio-preview",
-    description:
-      "This is a preview release of the GPT-4o Audio models. These models accept audio inputs and outputs, and can be used in the Chat Completions REST API. Learn more. The knowledge cutoff for GPT-4o Audio models is October, 2023.",
-    inputTokenCost: 2.5,
-    outputTokenCost: 10,
+] as const;
+
+export const textToSpeechModels = [
+  {
+    type: "text-to-speech",
+    modelName: "tts-1",
+    perCharacterCost: 0.000015,
     provider: "openai",
-  }, */
+    maxInputChars: 4096,
+    speedRange: { min: 0.25, max: 4 },
+    formats: ["mp3", "opus", "aac", "flac", "wav", "pcm"],
+  },
+  {
+    type: "text-to-speech",
+    modelName: "tts-1-hd",
+    perCharacterCost: 0.00003,
+    provider: "openai",
+    maxInputChars: 4096,
+    speedRange: { min: 0.25, max: 4 },
+    formats: ["mp3", "opus", "aac", "flac", "wav", "pcm"],
+  },
 ] as const;
 
 export const textModels = [
@@ -1709,6 +1741,19 @@ export const textModels = [
     temperatureSupported: false,
     provider: "openai-responses",
   },
+  {
+    type: "text",
+    modelName: "gpt-audio-1.5",
+    description: "OpenAI GA audio chat model (Chat Completions). Text+audio in, text+audio out.",
+    provider: "openai",
+    modalities: { input: ["text", "audio"], output: ["text", "audio"] },
+    inputTokenCost: 2.5,
+    outputTokenCost: 10,
+    inputAudioTokenCost: 32,
+    outputAudioTokenCost: 64,
+    maxInputTokens: 128000,
+    maxOutputTokens: 16384,
+  },
 ] as const;
 
 export const imageModels = [
@@ -1806,6 +1851,8 @@ export type TextModelName = (typeof textModels)[number]["modelName"];
 export type ImageModelName = (typeof imageModels)[number]["modelName"];
 export type SpeechToTextModelName =
   (typeof speechToTextModels)[number]["modelName"];
+export type TextToSpeechModelName =
+  (typeof textToSpeechModels)[number]["modelName"];
 export type EmbeddingsModelName =
   (typeof embeddingsModels)[number]["modelName"];
 export type ModelName = string; // TextModelName | ImageModelName | SpeechToTextModelName;
@@ -1952,6 +1999,7 @@ function baselineModels(): ModelType[] {
     ...textModels,
     ...imageModels,
     ...speechToTextModels,
+    ...textToSpeechModels,
     ...registeredTextModels,
     ...embeddingsModels,
   ] as ModelType[];
@@ -1986,6 +2034,22 @@ export function getModel(
 }
 
 /**
+ * Like `getModel`, but also matches on `provider`. Use this whenever a
+ * modelName may collide across providers (the merge key everywhere else in
+ * this module is `provider:modelName`) — plain `getModel` returns whichever
+ * matching entry comes first and can silently pick the wrong provider.
+ */
+export function getModelForProvider(
+  provider: string,
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): ModelType | undefined {
+  return getAllModels(requestData).find(
+    (model) => model.modelName === modelName && model.provider === provider,
+  );
+}
+
+/**
  * Whether a model is known to accept the given input modality ("image", "pdf", …).
  * Returns undefined when the model is unknown or carries no `modalities` data —
  * callers should treat undefined as "don't gate".
@@ -1994,8 +2058,14 @@ export function modelSupportsInputModality(
   modelName: ModelName,
   modality: string,
   requestData?: ModelDataBlob,
+  provider?: string,
 ): boolean | undefined {
-  const model = getModel(modelName, requestData);
+  let model: ModelType | undefined;
+  if (provider !== undefined) {
+    model = getModelForProvider(provider, modelName, requestData);
+  } else {
+    model = getModel(modelName, requestData);
+  }
   if (!model || model.type !== "text") {
     return undefined;
   }
@@ -2083,6 +2153,11 @@ export function isSpeechToTextModel(
   model: ModelType,
 ): model is SpeechToTextModel {
   return model.type === "speech-to-text";
+}
+export function isTextToSpeechModel(
+  model: ModelType,
+): model is TextToSpeechModel {
+  return model.type === "text-to-speech";
 }
 export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";

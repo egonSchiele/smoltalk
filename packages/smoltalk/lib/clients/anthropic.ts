@@ -275,7 +275,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     }
     this.client = new Anthropic({ apiKey });
     this.logger = getLogger();
-    this.model = new Model(config.model, undefined, config.modelData);
+    this.model = new Model(config.model, config.provider, config.modelData);
   }
 
   getModel(): ModelName {

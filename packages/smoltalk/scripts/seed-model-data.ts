@@ -5,6 +5,7 @@ import {
   textModels,
   imageModels,
   speechToTextModels,
+  textToSpeechModels,
   embeddingsModels,
   hostedTools,
 } from "../lib/models.js";
@@ -16,6 +17,7 @@ export function buildSeedBlob(generatedAt: string): ModelDataBlob {
     ...(textModels as unknown as ModelType[]),
     ...(imageModels as unknown as ModelType[]),
     ...(speechToTextModels as unknown as ModelType[]),
+    ...(textToSpeechModels as unknown as ModelType[]),
     ...(embeddingsModels as unknown as ModelType[]),
   ];
   return {

@@ -18,7 +18,7 @@ import { ToolCall } from "../classes/ToolCall.js";
 import { isFunctionToolCall, sanitizeAttributes } from "../util/util.js";
 import { getLogger } from "../util/logger.js";
 import { redactAttachments } from "../util/redact.js";
-import { BaseClient } from "./baseClient.js";
+import { BaseClient, type ClientAttachmentCapabilities } from "./baseClient.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -43,7 +43,12 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     const options = this.resolveClientOptions(config);
     this.client = new OpenAI(options);
     this.logger = getLogger();
-    this.model = new Model(config.model, undefined, config.modelData);
+    this.model = new Model(config.model, config.provider, config.modelData);
+  }
+
+  protected override attachmentCapabilities(): ClientAttachmentCapabilities {
+    // Chat Completions input_audio accepts inline mp3/wav only.
+    return { inputModalities: ["image", "pdf"], audioFormats: ["mp3", "wav"] };
   }
 
   /**
@@ -118,13 +123,21 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     if (usageData) {
       const cached = usageData.prompt_tokens_details?.cached_tokens ?? 0;
+      const audioIn = usageData.prompt_tokens_details?.audio_tokens ?? 0;
+      const audioOut = usageData.completion_tokens_details?.audio_tokens ?? 0;
       usage = {
-        inputTokens: Math.max(0, (usageData.prompt_tokens || 0) - cached),
-        outputTokens: usageData.completion_tokens || 0,
+        inputTokens: Math.max(0, (usageData.prompt_tokens || 0) - cached - audioIn),
+        outputTokens: Math.max(0, (usageData.completion_tokens || 0) - audioOut),
         totalTokens: usageData.total_tokens,
       };
       if (cached > 0) {
         usage.cachedInputTokens = cached;
+      }
+      if (audioIn > 0) {
+        usage.inputAudioTokens = audioIn;
+      }
+      if (audioOut > 0) {
+        usage.outputAudioTokens = audioOut;
       }
 
       // Prefer provider-supplied cost when available (e.g. OpenRouter

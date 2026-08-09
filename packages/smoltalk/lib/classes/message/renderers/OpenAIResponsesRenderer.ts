@@ -1,5 +1,5 @@
 import type { PartRenderer } from "./PartRenderer.js";
-import type { TextPart, ImagePart, FilePart } from "../contentParts.js";
+import type { TextPart, ImagePart, FilePart, AudioPart } from "../contentParts.js";
 import { refToBase64, toDataUri, openAiImageUrl, attachmentFilename } from "../../../util/attachments.js";
 
 /** Renders parts for the OpenAI Responses API. */
@@ -24,5 +24,9 @@ export class OpenAIResponsesRenderer implements PartRenderer<any> {
     }
     const { base64, mimeType } = refToBase64(part.source);
     return { type: "input_file", file_data: toDataUri(base64, mimeType), filename: attachmentFilename(part.filename) };
+  }
+
+  audio(_part: AudioPart): any {
+    throw new Error("Audio input is not supported for this provider in v1.");
   }
 }

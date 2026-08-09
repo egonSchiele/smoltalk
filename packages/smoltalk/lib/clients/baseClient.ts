@@ -15,12 +15,36 @@ import {
 } from "../types.js";
 import { validateHostedTools } from "../util/hostedTools.js";
 import { resolveMessageAttachments, messagesHaveAttachments, DEFAULT_MAX_ATTACHMENT_BYTES } from "./resolveAttachments.js";
-import { validateModalities } from "../util/modalities.js";
+import {
+  neededInputModalities,
+  MODALITIES_REQUIRING_DECLARATION,
+} from "../util/modalities.js";
+import { modelSupportsInputModality } from "../models.js";
 import { resolveProvider } from "../util/provider.js";
 import { isUnconstrainedSchema } from "../util/jsonSchema.js";
 import { z } from "zod";
 
 const DEFAULT_NUM_RETRIES = 2;
+
+export type ClientAttachmentCapabilities = {
+  /** Non-audio attachment modalities this client's serializers can render. */
+  inputModalities: readonly ("image" | "pdf")[];
+  /** Audio containers (by primary extension) accepted inline; empty = no audio. */
+  audioFormats: readonly string[];
+};
+
+function clientSupportsAttachment(
+  capabilities: ClientAttachmentCapabilities,
+  modality: string,
+): boolean {
+  if (modality === "audio") {
+    return capabilities.audioFormats.length > 0;
+  }
+  if (modality === "image" || modality === "pdf") {
+    return capabilities.inputModalities.includes(modality);
+  }
+  return false;
+}
 
 export class BaseClient implements SmolClient {
   protected config: SmolConfig;
@@ -88,7 +112,16 @@ export class BaseClient implements SmolClient {
   }
 
   /**
-   * Gate on input modalities and resolve any image/PDF attachment refs
+   * What this client can accept as attachments. Subclasses override to declare
+   * more (or fewer). Checked against the messages, alongside the model's own
+   * declared modalities, before any serialization runs.
+   */
+  protected attachmentCapabilities(): ClientAttachmentCapabilities {
+    return { inputModalities: ["image", "pdf"], audioFormats: [] };
+  }
+
+  /**
+   * Gate on input modalities and resolve any image/PDF/audio attachment refs
    * (path/url/bytes → base64) before the synchronous serializers run. Returns
    * the (possibly rewritten) config on success, or a Failure to surface. Shared
    * by textSync and textStream so the two paths can't diverge.
@@ -96,12 +129,8 @@ export class BaseClient implements SmolClient {
   protected async prepareAttachments(
     config: SmolConfig,
   ): Promise<Result<SmolConfig>> {
-    const modalityResult = validateModalities(config);
-    if (modalityResult && modalityResult.success === false) {
-      return modalityResult;
-    }
-
-    if (!messagesHaveAttachments(config.messages)) {
+    const needed = neededInputModalities(config.messages);
+    if (needed.length === 0 && !messagesHaveAttachments(config.messages)) {
       return success(config);
     }
 
@@ -110,10 +139,27 @@ export class BaseClient implements SmolClient {
       config.provider,
       config.modelData,
     );
+    const capabilities = this.attachmentCapabilities();
+    for (const modality of needed) {
+      if (!clientSupportsAttachment(capabilities, modality)) {
+        return failure(
+          `${modality[0].toUpperCase()}${modality.slice(1)} input is not supported by the "${provider}" provider.`,
+        );
+      }
+      const supported = modelSupportsInputModality(config.model, modality, config.modelData, provider);
+      if (supported === false) {
+        return failure(`Model ${config.model} does not support ${modality} input.`);
+      }
+      if (supported === undefined && MODALITIES_REQUIRING_DECLARATION.has(modality)) {
+        return failure(`Model ${config.model} does not support ${modality} input.`);
+      }
+    }
+
     const maxBytes = config.attachments?.maxBytes ?? DEFAULT_MAX_ATTACHMENT_BYTES;
     const resolved = await resolveMessageAttachments(config.messages, {
       provider,
       maxBytes,
+      audioFormats: capabilities.audioFormats,
     });
     if (!resolved.success) {
       return resolved;

@@ -8,7 +8,7 @@ import {
 import { Result, success, failure } from "../types/result.js";
 import { getModel, isImageModel } from "../models.js";
 import type { ModelDataBlob } from "../modelData.js";
-import { normalizeImageRef } from "../util/imageRef.js";
+import { normalizeBlob } from "../util/blobRef.js";
 import { COST_DECIMAL_PLACES, round } from "../util/util.js";
 
 export async function googleImage(
@@ -23,7 +23,7 @@ export async function googleImage(
     const parts: any[] = [{ text: normalized.prompt }];
     if (normalized.images && normalized.images.length > 0) {
       const normalizedImages = await Promise.all(
-        normalized.images.map((ref) => normalizeImageRef(ref)),
+        normalized.images.map((ref) => normalizeBlob(ref)),
       );
       for (const img of normalizedImages) {
         parts.push({

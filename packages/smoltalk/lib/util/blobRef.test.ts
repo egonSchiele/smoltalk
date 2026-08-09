@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { normalizeImageRef, loadBlob } from "./imageRef.js";
+import { normalizeBlob, loadBlob } from "./blobRef.js";
 import { writeFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -55,10 +55,10 @@ describe("loadBlob (no MIME gate)", () => {
   });
 });
 
-describe("normalizeImageRef", () => {
+describe("normalizeBlob", () => {
   it("passes through bytes refs", async () => {
     const data = new Uint8Array([1, 2, 3]);
-    const r = await normalizeImageRef({
+    const r = await normalizeBlob({
       kind: "bytes",
       data,
       mimeType: "image/png",
@@ -68,7 +68,7 @@ describe("normalizeImageRef", () => {
   });
 
   it("decodes base64 refs", async () => {
-    const r = await normalizeImageRef({
+    const r = await normalizeBlob({
       kind: "base64",
       base64: Buffer.from([1, 2, 3]).toString("base64"),
       mimeType: "image/jpeg",
@@ -81,7 +81,7 @@ describe("normalizeImageRef", () => {
     const path = join(tmpdir(), `smoltalk-test-${Date.now()}.png`);
     writeFileSync(path, Buffer.from([9, 9, 9]));
     try {
-      const r = await normalizeImageRef({ kind: "path", path });
+      const r = await normalizeBlob({ kind: "path", path });
       expect(Array.from(r.data)).toEqual([9, 9, 9]);
       expect(r.mimeType).toBe("image/png");
     } finally {
@@ -95,7 +95,7 @@ describe("normalizeImageRef", () => {
         headers: { "content-type": "image/webp" },
       }),
     );
-    const r = await normalizeImageRef({
+    const r = await normalizeBlob({
       kind: "url",
       url: "https://example.com/x",
     });
@@ -109,7 +109,7 @@ describe("normalizeImageRef", () => {
     writeFileSync(path, Buffer.from([1]));
     try {
       await expect(
-        normalizeImageRef({ kind: "path", path }),
+        normalizeBlob({ kind: "path", path }),
       ).rejects.toThrow(/Could not determine an allowed MIME type/);
     } finally {
       unlinkSync(path);
@@ -123,7 +123,7 @@ describe("normalizeImageRef", () => {
       }),
     );
     await expect(
-      normalizeImageRef({ kind: "url", url: "https://example.com/x" }),
+      normalizeBlob({ kind: "url", url: "https://example.com/x" }),
     ).rejects.toThrow(/Could not determine an allowed MIME type/);
     fetchSpy.mockRestore();
   });
@@ -135,7 +135,7 @@ describe("normalizeImageRef", () => {
       }),
     );
     const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
-    await normalizeImageRef({
+    await normalizeBlob({
       kind: "url",
       url: "https://example.com/x",
       timeoutMs: 1234,
@@ -150,7 +150,7 @@ describe("normalizeImageRef", () => {
     const path = join(tmpdir(), `smoltalk-test-${Date.now()}-2.png`);
     writeFileSync(path, Buffer.from([1]));
     try {
-      const r = await normalizeImageRef({
+      const r = await normalizeBlob({
         kind: "path",
         path,
         mimeType: "image/jpeg",
@@ -162,12 +162,12 @@ describe("normalizeImageRef", () => {
   });
 });
 
-describe("normalizeImageRef MIME prefix + size options", () => {
+describe("normalizeBlob MIME prefix + size options", () => {
   it("accepts a .pdf path when application/pdf is allowed", async () => {
     const path = join(tmpdir(), `smoltalk-test-${Date.now()}-doc.pdf`);
     writeFileSync(path, Buffer.from("%PDF-1.4 fake"));
     try {
-      const out = await normalizeImageRef(
+      const out = await normalizeBlob(
         { kind: "path", path },
         { allowedMimePrefixes: ["application/pdf"] },
       );
@@ -181,7 +181,7 @@ describe("normalizeImageRef MIME prefix + size options", () => {
     const path = join(tmpdir(), `smoltalk-test-${Date.now()}-doc2.pdf`);
     writeFileSync(path, Buffer.from("%PDF-1.4 fake"));
     try {
-      await expect(normalizeImageRef({ kind: "path", path })).rejects.toThrow(/allowed MIME type/);
+      await expect(normalizeBlob({ kind: "path", path })).rejects.toThrow(/allowed MIME type/);
     } finally {
       unlinkSync(path);
     }
@@ -191,7 +191,7 @@ describe("normalizeImageRef MIME prefix + size options", () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(
       new Response(new Uint8Array([1, 2, 3]), { headers: { "content-type": "application/pdf" } }),
     );
-    const out = await normalizeImageRef(
+    const out = await normalizeBlob(
       { kind: "url", url: "https://x/y.pdf" },
       { allowedMimePrefixes: ["application/pdf"] },
     );
@@ -200,7 +200,7 @@ describe("normalizeImageRef MIME prefix + size options", () => {
   });
 
   it("accepts a pdf base64 ref when application/pdf is allowed", async () => {
-    const out = await normalizeImageRef(
+    const out = await normalizeBlob(
       { kind: "base64", base64: "AAA", mimeType: "application/pdf" },
       { allowedMimePrefixes: ["application/pdf"] },
     );
@@ -210,7 +210,7 @@ describe("normalizeImageRef MIME prefix + size options", () => {
   it("throws when the resolved data exceeds maxBytes", async () => {
     const big = Buffer.alloc(100).toString("base64");
     await expect(
-      normalizeImageRef({ kind: "base64", base64: big, mimeType: "image/png" }, { maxBytes: 10 }),
+      normalizeBlob({ kind: "base64", base64: big, mimeType: "image/png" }, { maxBytes: 10 }),
     ).rejects.toThrow(/exceeds the maximum size/);
   });
 
@@ -231,7 +231,7 @@ describe("normalizeImageRef MIME prefix + size options", () => {
     } as unknown as Response;
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValueOnce(fakeRes);
     await expect(
-      normalizeImageRef({ kind: "url", url: "https://x/big.png" }, { maxBytes: 10 }),
+      normalizeBlob({ kind: "url", url: "https://x/big.png" }, { maxBytes: 10 }),
     ).rejects.toThrow(/exceeds the maximum size/);
     expect(bodyRead).toBe(false);
     fetchSpy.mockRestore();
@@ -243,8 +243,23 @@ describe("normalizeImageRef MIME prefix + size options", () => {
       new Response(new Uint8Array(100), { headers: { "content-type": "image/png" } }),
     );
     await expect(
-      normalizeImageRef({ kind: "url", url: "https://x/y.png" }, { maxBytes: 10 }),
+      normalizeBlob({ kind: "url", url: "https://x/y.png" }, { maxBytes: 10 }),
     ).rejects.toThrow(/exceeds the maximum size/);
     fetchSpy.mockRestore();
+  });
+});
+
+// Table-level audio extension coverage lives in mime.test.ts; this single
+// behavioral case proves path loading infers audio MIME through the shared table.
+describe("path loading infers audio MIME through the shared EXT_TO_MIME table", () => {
+  it("lowercases the extension before lookup, so an uppercase .WAV still infers audio/wav", async () => {
+    const path = join(tmpdir(), `smoltalk-audio-test-${Date.now()}-upper.WAV`);
+    writeFileSync(path, Buffer.from([1, 2, 3]));
+    try {
+      const out = await loadBlob({ kind: "path", path });
+      expect(out.mimeType).toBe("audio/wav");
+    } finally {
+      unlinkSync(path);
+    }
   });
 });

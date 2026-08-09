@@ -37,7 +37,7 @@ export class SmolOllama extends BaseClient implements SmolClient {
   constructor(config: SmolOllamaConfig) {
     super(config);
     this.logger = getLogger();
-    this.model = new Model(config.model, undefined, config.modelData);
+    this.model = new Model(config.model, config.provider, config.modelData);
     const apiKey = config.apiKey?.ollama;
     if (apiKey) {
       this.client = new Ollama({
