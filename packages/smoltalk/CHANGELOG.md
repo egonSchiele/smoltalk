@@ -1,5 +1,22 @@
 # Changelog
 
+## smoltalk 0.10.0 (2026-08-09)
+
+### Added
+- `transcribe()` — speech-to-text via OpenAI `whisper-1`. Returns `text` plus optional `language`, `durationSeconds`, `segments`/`words` timestamps, and per-minute `cost`.
+- `speak()` — text-to-speech via OpenAI `tts-1`/`tts-1-hd`. Returns caller-owned audio bytes (mp3/opus/aac/flac/wav/pcm, default mp3) plus per-character `cost`.
+- `audioPart()` attaches an mp3/wav clip to a `userMessage` for audio-in-chat, supported on OpenAI's `gpt-audio-1.5` Chat Completions model. Unsupported provider/model combinations return a clear `Failure`.
+- Custom STT/TTS providers: `registerTranscriptionProvider(name, ClientClass)` and `registerSpeechProvider(name, ClientClass)` take classes extending the new `BaseTranscriptionClient`/`BaseSpeechClient`, which own validation, cost, and the error boundary (mirroring `BaseClient` for text).
+- Audio-token cost accounting: `TokenUsage` gains `inputAudioTokens`/`outputAudioTokens`, and `Model.calculateCost` prices audio tokens at the model's audio rates.
+- Audio model constraints are registry data, not code — STT models declare accepted MIME types and an upload cap, TTS models declare input cap, speed range, and formats — so custom models supply their own limits via `registerModelData`/`config.modelData`.
+
+### Changed
+- Cost lookup is provider-aware: `getClient()` injects the resolved provider and every client prices against the `provider:modelName` registry entry, fixing cross-provider pricing for inferred litellm/openrouter/deepinfra models.
+- Attachment support is declared per client (`attachmentCapabilities()`) instead of a central provider switch. Audio MIME aliases (`audio/mp3`, `video/mp4`, `;codecs=` parameters) normalize through a single `AUDIO_FORMATS` table.
+- Renamed the attachment-loading internals `normalizeImageRef`/`NormalizedImage` to `normalizeBlob`/`NormalizedBlob`; `BlobRef` is the primary source type with `ImageRef` kept as an alias.
+- `SmolConfig.apiKey` and `EmbedConfig.apiKey` accept arbitrary provider names, so custom-registered providers can receive their keys.
+- Refreshed the model catalog: GPT-5.6 Terra/Luna pricing reflects the July 30, 2026 price cut.
+
 ## smoltalk 0.9.0 (2026-07-24)
 
 ### Fixed
