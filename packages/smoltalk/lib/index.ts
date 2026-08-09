@@ -34,20 +34,16 @@ export type {
 } from "./transcription.js";
 export { BaseTranscriptionClient } from "./transcription/baseTranscriptionClient.js";
 export type { TranscriptionClientConfig } from "./transcription/baseTranscriptionClient.js";
-// Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
+// Explicit (not `export *`) so internal factories and test helpers stay private.
 export {
   speak,
   registerSpeechProvider,
-  OPENAI_SPEECH_MODELS,
-  MAX_TTS_CHARS,
-  MIN_OPENAI_TTS_SPEED,
-  MAX_OPENAI_TTS_SPEED,
 } from "./speech.js";
 export type {
   SpeakOptions,
   PcmAudioMetadata,
   SpeechResult,
-  SpeechProviderOptions,
-  SpeechProviderContext,
-  SpeechProvider,
+  SpeechClientClass,
 } from "./speech.js";
+export { BaseSpeechClient } from "./speech/baseSpeechClient.js";
+export type { SpeechClientConfig } from "./speech/baseSpeechClient.js";

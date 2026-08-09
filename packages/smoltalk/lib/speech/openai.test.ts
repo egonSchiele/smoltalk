@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { ModelDataBlob } from "../modelData.js";
+import { getLogger } from "../util/logger.js";
 
 const create = vi.fn();
 vi.mock("openai", () => {
@@ -10,7 +11,8 @@ vi.mock("openai", () => {
   return { default: OpenAI };
 });
 
-import { openaiSpeak } from "./openai.js";
+import { OpenAISpeechClient } from "./openai.js";
+import type { SpeechClientConfig } from "./baseSpeechClient.js";
 
 const md = {
   schemaVersion: 1,
@@ -40,13 +42,22 @@ const mdZeroRate = {
 beforeEach(() => create.mockReset());
 const okResponse = () => ({ arrayBuffer: async () => new Uint8Array([1, 2, 3]).buffer });
 
-describe("openaiSpeak", () => {
+function run(text: string, overrides: Partial<SpeechClientConfig> = {}) {
+  const client = new OpenAISpeechClient({
+    model: "tts-1",
+    provider: "openai",
+    apiKey: "sk-x",
+    voice: "alloy",
+    modelData: md,
+    ...overrides,
+  });
+  return client.speak(text);
+}
+
+describe("OpenAISpeechClient", () => {
   it("sends the exact SDK request shape", async () => {
     create.mockResolvedValue(okResponse());
-    await openaiSpeak("hello", {
-      apiKey: "sk-x",
-      opts: { model: "tts-1", voice: "alloy", format: "wav", speed: 1.5, modelData: md },
-    });
+    await run("hello", { format: "wav", speed: 1.5 });
     expect(create).toHaveBeenCalledWith({
       model: "tts-1",
       voice: "alloy",
@@ -58,14 +69,14 @@ describe("openaiSpeak", () => {
 
   it("omits speed from the SDK request when not provided", async () => {
     create.mockResolvedValue(okResponse());
-    await openaiSpeak("hello", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", modelData: md } });
+    await run("hello");
     const call = create.mock.calls[0][0];
     expect("speed" in call).toBe(false);
   });
 
   it("defaults to mp3 when no format is given", async () => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hello", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", modelData: md } });
+    const r = await run("hello");
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.value.mimeType).toBe("audio/mpeg");
@@ -78,10 +89,7 @@ describe("openaiSpeak", () => {
     create.mockResolvedValue(okResponse());
     const input = "a😀b";
     expect(input.length).not.toBe([...input].length);
-    const r = await openaiSpeak(input, {
-      apiKey: "sk-x",
-      opts: { model: "tts-1", voice: "alloy", format: "mp3", modelData: md },
-    });
+    const r = await run(input, { format: "mp3" });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -103,10 +111,7 @@ describe("openaiSpeak", () => {
     ["pcm", "application/octet-stream"],
   ])("maps format %s to MIME %s", async (format, mime) => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hi", {
-      apiKey: "sk-x",
-      opts: { model: "tts-1", voice: "alloy", format: format as any, modelData: md },
-    });
+    const r = await run("hi", { format });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.value.mimeType).toBe(mime);
@@ -115,7 +120,7 @@ describe("openaiSpeak", () => {
 
   it("attaches PCM metadata only for pcm format", async () => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hi", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", format: "pcm", modelData: md } });
+    const r = await run("hi", { format: "pcm" });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.value.pcm).toEqual({ sampleRateHz: 24000, sampleFormat: "s16le", channels: 1 });
@@ -124,7 +129,7 @@ describe("openaiSpeak", () => {
 
   it("omits PCM metadata for non-pcm formats", async () => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hi", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", format: "mp3", modelData: md } });
+    const r = await run("hi", { format: "mp3" });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.value.pcm).toBeUndefined();
@@ -133,34 +138,37 @@ describe("openaiSpeak", () => {
 
   it("passes through the minimum speed (0.25)", async () => {
     create.mockResolvedValue(okResponse());
-    await openaiSpeak("hi", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", speed: 0.25, modelData: md } });
+    await run("hi", { speed: 0.25 });
     expect(create.mock.calls[0][0].speed).toBe(0.25);
   });
 
   it("passes through the maximum speed (4.0)", async () => {
     create.mockResolvedValue(okResponse());
-    await openaiSpeak("hi", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", speed: 4, modelData: md } });
+    await run("hi", { speed: 4 });
     expect(create.mock.calls[0][0].speed).toBe(4);
   });
 
-  it("rejects an unknown format before calling the SDK", async () => {
-    const r = await openaiSpeak("hi", {
-      apiKey: "sk-x",
-      opts: { model: "tts-1", voice: "alloy", format: "wma" as any, modelData: md },
-    });
+  it("rejects a format outside the model's declared list before calling the SDK", async () => {
+    const r = await run("hi", { format: "wma" });
     expect(r.success).toBe(false);
     if (!r.success) {
-      expect(r.error).toContain('Unknown speech format "wma"');
+      expect(r.error).toContain('Format "wma" is not supported by model "tts-1"');
+    }
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-OpenAI format via the runtime guard when the model declares no format list", async () => {
+    const r = await run("hi", { model: "unknown-openai-tts", format: "wma" });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).toContain('Format "wma" is not a supported OpenAI speech format');
     }
     expect(create).not.toHaveBeenCalled();
   });
 
   it("omits cost when the model has no perCharacterCost rate", async () => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hello", {
-      apiKey: "sk-x",
-      opts: { model: "tts-1-no-rate", voice: "alloy", modelData: mdNoRate },
-    });
+    const r = await run("hello", { model: "tts-1-no-rate", modelData: mdNoRate });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -170,10 +178,7 @@ describe("openaiSpeak", () => {
 
   it("reports a present zero cost when the model's perCharacterCost is exactly 0", async () => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hello", {
-      apiKey: "sk-x",
-      opts: { model: "tts-1-zero-rate", voice: "alloy", modelData: mdZeroRate },
-    });
+    const r = await run("hello", { model: "tts-1-zero-rate", modelData: mdZeroRate });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -183,7 +188,7 @@ describe("openaiSpeak", () => {
 
   it("omits cost when the model is unknown to the registry", async () => {
     create.mockResolvedValue(okResponse());
-    const r = await openaiSpeak("hello", { apiKey: "sk-x", opts: { model: "totally-unknown-tts", voice: "alloy" } });
+    const r = await run("hello", { model: "totally-unknown-tts", modelData: undefined });
     expect(r.success).toBe(true);
     if (!r.success) {
       throw new Error(r.error);
@@ -191,10 +196,16 @@ describe("openaiSpeak", () => {
     expect(r.value.cost).toBeUndefined();
   });
 
-  it("propagates a rejected SDK promise so the speak() boundary can redact/log it", async () => {
-    create.mockRejectedValueOnce(new Error("sdk exploded"));
-    await expect(
-      openaiSpeak("hi", { apiKey: "sk-x", opts: { model: "tts-1", voice: "alloy", modelData: md } }),
-    ).rejects.toThrow("sdk exploded");
+  it("converts a rejected SDK promise into a redacted, logged Failure at the speak() boundary", async () => {
+    create.mockRejectedValueOnce(new Error("sdk exploded near sk-x"));
+    const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});
+    const r = await run("hi");
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).not.toContain("sk-x");
+      expect(r.error).toContain("[redacted]");
+    }
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    errorSpy.mockRestore();
   });
 });

@@ -36,3 +36,9 @@ export const SPEECH_FORMAT_TO_MIME: Record<SpeakFormat, string> = {
   wav: "audio/wav",
   pcm: "application/octet-stream",
 };
+
+// Object.hasOwn (not `in`) so prototype keys like "toString"/"__proto__"
+// never pass the guard.
+export function isSpeakFormat(value: string): value is SpeakFormat {
+  return Object.hasOwn(SPEECH_FORMAT_TO_MIME, value);
+}

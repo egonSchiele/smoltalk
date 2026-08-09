@@ -1,12 +1,15 @@
 import type { ModelDataBlob } from "./modelData.js";
 import type { SmolConfig } from "./types.js";
-import { Result, failure } from "./types/result.js";
+import { Result, success, failure } from "./types/result.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { resolveProvider, resolveApiKey } from "./util/provider.js";
 import { redactSecret } from "./util/redact.js";
 import { getLogger } from "./util/logger.js";
-import { SpeakFormat } from "./util/audioMime.js";
-import { openaiSpeak } from "./speech/openai.js";
+import { resolveProvider, resolveApiKey } from "./util/provider.js";
+import {
+  BaseSpeechClient,
+  SpeechClientConfig,
+} from "./speech/baseSpeechClient.js";
+import { OpenAISpeechClient } from "./speech/openai.js";
 
 export type SpeakOptions = {
   model: string;
@@ -14,14 +17,16 @@ export type SpeakOptions = {
   provider?: string;
   modelData?: ModelDataBlob;
   apiKey?: SmolConfig["apiKey"];
-  format?: SpeakFormat;
+  format?: string;
   speed?: number;
+  metadata?: Record<string, unknown>;
 };
 
 export type PcmAudioMetadata = {
-  sampleRateHz: 24000;
-  sampleFormat: "s16le";
-  channels: 1;
+  sampleRateHz: number;
+  /** Sample representation, e.g. "s16le"; provider-specific. */
+  sampleFormat: string;
+  channels: number;
 };
 
 export type SpeechResult = {
@@ -32,33 +37,18 @@ export type SpeechResult = {
   raw?: unknown;
 };
 
-/** Provider-facing options: same as {@link SpeakOptions} minus the caller's `apiKey`. */
-export type SpeechProviderOptions = Omit<SpeakOptions, "apiKey">;
+export type SpeechClientClass = new (config: SpeechClientConfig) => BaseSpeechClient;
 
-/**
- * Carries the resolved key plus provider options with the caller's `apiKey`
- * stripped, so a plugin gets a single secret source rather than two.
- */
-export type SpeechProviderContext = {
-  apiKey: string;
-  opts: SpeechProviderOptions;
-};
-
-export type SpeechProvider = {
-  speak(text: string, ctx: SpeechProviderContext): Promise<Result<SpeechResult>>;
-};
-
-export const OPENAI_SPEECH_MODELS = new Set(["tts-1", "tts-1-hd"]);
-export const MAX_TTS_CHARS = 4096;
-export const MIN_OPENAI_TTS_SPEED = 0.25;
-export const MAX_OPENAI_TTS_SPEED = 4;
+// Checked before the user registry so a registered "openai" can't hijack the built-in.
+const builtinClients: Record<string, SpeechClientClass> = Object.create(null);
+builtinClients["openai"] = OpenAISpeechClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.
-const registered: Record<string, SpeechProvider> = Object.create(null);
+const registered: Record<string, SpeechClientClass> = Object.create(null);
 
-export function registerSpeechProvider(name: string, impl: SpeechProvider): void {
-  registered[name] = impl;
+export function registerSpeechProvider(name: string, cls: SpeechClientClass): void {
+  registered[name] = cls;
 }
 
 /** Test-only: clear all registered custom providers so registrations don't leak across tests. */
@@ -68,63 +58,44 @@ export function _resetForTests(): void {
   }
 }
 
-function providerContext(apiKey: string, opts: SpeakOptions): SpeechProviderContext {
-  const { apiKey: _callerKey, ...providerOptions } = opts;
-  return { apiKey, opts: providerOptions };
+/**
+ * Resolve provider + API key and instantiate the matching speech client for
+ * the declarative speak() operation. Never throws: a custom client class's
+ * constructor can throw, and this internal factory's catch redacts the
+ * resolved key so a constructor error cannot leak through the public wrapper.
+ */
+export function getSpeechClient(opts: SpeakOptions): Result<BaseSpeechClient> {
+  let apiKeyForRedaction = "";
+  try {
+    const provider = resolveProvider(opts.model, opts.provider, opts.modelData);
+
+    const ClientClass = builtinClients[provider] ?? registered[provider];
+    if (ClientClass === undefined) {
+      return failure(
+        `Provider "${provider}" has no speech API. Register one with registerSpeechProvider(name, ClientClass).`,
+      );
+    }
+
+    const apiKey = resolveApiKey(provider, opts) ?? "";
+    apiKeyForRedaction = apiKey;
+    const { apiKey: _callerKeys, ...clientOpts } = opts;
+    const config: SpeechClientConfig = { ...clientOpts, provider, apiKey };
+    return success(new ClientClass(config));
+  } catch (err) {
+    let msg = "getSpeechClient() failed";
+    if (err instanceof Error) {
+      msg = err.message;
+    }
+    const redacted = redactSecret(msg, apiKeyForRedaction);
+    getLogger().error("getSpeechClient() failed:", redacted);
+    return failure(redacted);
+  }
 }
 
 export async function speak(text: string, opts: SpeakOptions): Promise<Result<SpeechResult>> {
-  // Populated once the dispatch provider is known, so the catch below redacts
-  // whichever provider's key actually got sent, not a guess made before
-  // resolveProvider() ran.
-  let apiKeyForRedaction = "";
-  try {
-    let provider: string;
-    try {
-      provider = resolveProvider(opts.model, opts.provider, opts.modelData);
-    } catch (err) {
-      return failure(err instanceof Error ? err.message : "Failed to resolve provider");
-    }
-    apiKeyForRedaction = resolveApiKey(provider, opts) ?? "";
-
-    if (provider === "openai") {
-      if ([...text].length > MAX_TTS_CHARS) {
-        return failure(`Input exceeds the ${MAX_TTS_CHARS}-character OpenAI TTS limit.`);
-      }
-      if (
-        opts.speed !== undefined &&
-        (!Number.isFinite(opts.speed) ||
-          opts.speed < MIN_OPENAI_TTS_SPEED ||
-          opts.speed > MAX_OPENAI_TTS_SPEED)
-      ) {
-        return failure(
-          `speed must be a finite number in [${MIN_OPENAI_TTS_SPEED}, ${MAX_OPENAI_TTS_SPEED}].`,
-        );
-      }
-      if (!OPENAI_SPEECH_MODELS.has(opts.model)) {
-        return failure(
-          `Model "${opts.model}" is not a supported OpenAI speech model in v1 (supported: ${[...OPENAI_SPEECH_MODELS].join(", ")}).`,
-        );
-      }
-      const apiKey = resolveApiKey("openai", opts);
-      if (!apiKey) {
-        return failure("No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.");
-      }
-      return await openaiSpeak(text, providerContext(apiKey, opts));
-    }
-
-    const custom = registered[provider];
-    if (custom) {
-      const apiKey = resolveApiKey(provider, opts) ?? "";
-      return await custom.speak(text, providerContext(apiKey, opts));
-    }
-    return failure(
-      `Provider "${provider}" has no speech API. Register one with registerSpeechProvider(name, impl).`,
-    );
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : "speak() failed";
-    const redacted = redactSecret(msg, apiKeyForRedaction);
-    getLogger().error("speak() provider failed:", redacted);
-    return failure(redacted);
+  const client = getSpeechClient(opts);
+  if (!client.success) {
+    return client;
   }
+  return client.value.speak(text);
 }
