@@ -8,6 +8,24 @@
 pnpm add smoltalk smoltalk-llama-cpp
 ```
 
+## Zero-wiring use from smoltalk (>= 0.11.0)
+
+Install this package next to smoltalk and call:
+
+```typescript
+import { textSync, userMessage } from "smoltalk";
+
+await textSync({
+  provider: "llama-cpp",
+  model: "/path/to/model.gguf",
+  messages: [userMessage("Hello!")],
+});
+```
+
+smoltalk auto-loads and registers this provider on first use. Manual
+`registerProvider` wiring is no longer needed (but still works and takes
+precedence over the auto-loader).
+
 ## Downloading models
 
 This package depends on [`node-llama-cpp`](https://node-llama-cpp.withcat.ai/), which ships a CLI with a `pull` command for downloading `.gguf` model files. Because `node-llama-cpp` is already installed as a dependency of `smoltalk-llama-cpp`, you can run its CLI through `npx` without installing anything else:

@@ -507,6 +507,40 @@ Text, transcription, and speech are classes: a base class owns the shared
 behavior (validation, cost, error handling) and the subclass implements only
 the provider call. Embeddings and images are one-shot functions.
 
+## Local models (llama-cpp)
+
+Install the optional plugin and name the provider — no wiring code:
+
+```bash
+npm i smoltalk-llama-cpp
+```
+
+```typescript
+import { textSync, userMessage } from "smoltalk";
+
+const result = await textSync({
+  provider: "llama-cpp",
+  model: "/path/to/llama-3.gguf",
+  messages: [userMessage("Hello!")],
+});
+```
+
+smoltalk lazily imports and registers the plugin on the first `llama-cpp`
+call; if the package is missing you get an install hint instead of a
+resolution stack trace. Hosts with unusual layouts (e.g. a globally-installed
+CLI with the plugin installed globally beside it) can hand smoltalk the
+plugin's entry path explicitly and skip Node resolution:
+
+```typescript
+import { loadLlamaCpp } from "smoltalk";
+
+const { resolveModel } = await loadLlamaCpp({
+  entryPath: "/path/to/smoltalk-llama-cpp/dist/index.js",
+});
+// resolveModel downloads hf: URIs (and returns local paths unchanged):
+const modelPath = await resolveModel("hf:org/repo/model.gguf", "/models/cache");
+```
+
 ## Audio (STT/TTS)
 
 Three audio primitives. `transcribe()` (speech-to-text) and `speak()`
