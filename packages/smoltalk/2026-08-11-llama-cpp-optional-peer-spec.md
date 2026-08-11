@@ -305,7 +305,8 @@ as-is and no classification happens at all.
 
 **Export `resolveModel(uriOrPath, cacheDir)`.** A thin wrapper over
 node-llama-cpp's `resolveModelFile` (with `{ directory: cacheDir, cli: true }`
-for download progress), returning an existing `.gguf` path unchanged. The
+for download progress), returning an existing `.gguf` path absolutized (so the
+result is always directly consumable as `config.model`). The
 plugin imports node-llama-cpp statically already, so this is a few lines. It
 gives hosts a supported way to download/locate model files through the same
 package that will run them — replacing agency's wrapper, which today re-derives
@@ -369,8 +370,8 @@ smoltalk):
   URI-shaped model (`hf:org/repo/file.gguf`) → the instructive
   call-resolveModel-first error, not a split; Windows drive-letter path
   (`C:\models\x.gguf`) is classified as a path, not a URI.
-- `resolveModel` returns an existing `.gguf` path without touching the
-  resolver.
+- `resolveModel` returns an existing `.gguf` path (absolutized) without
+  touching the resolver.
 - Registration integration: `loadLlamaCpp({ entryPath: <own entry> })`
   registers a working class under `"llama-cpp"` (no model inference — the
   existing heavyweight tests keep covering that).

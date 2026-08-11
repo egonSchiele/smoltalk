@@ -65,6 +65,11 @@ export class LlamaCPP extends BaseClient {
         if (modelDir === "") {
           modelDir = "/";
         }
+        // A bare drive prefix ("C:" from "C:\model.gguf") is drive-relative;
+        // keep the separator so joining yields C:\model.gguf, not C:model.gguf.
+        if (/^[A-Za-z]:$/.test(modelDir)) {
+          modelDir = modelDir + "\\";
+        }
         modelFile = modelFile.slice(sepIndex + 1);
       }
     }

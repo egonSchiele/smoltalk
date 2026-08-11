@@ -537,7 +537,7 @@ import { loadLlamaCpp } from "smoltalk";
 const { resolveModel } = await loadLlamaCpp({
   entryPath: "/path/to/smoltalk-llama-cpp/dist/index.js",
 });
-// resolveModel downloads hf: URIs (and returns local paths unchanged):
+// resolveModel downloads hf: URIs (and absolutizes existing local paths):
 const modelPath = await resolveModel("hf:org/repo/model.gguf", "/models/cache");
 ```
 

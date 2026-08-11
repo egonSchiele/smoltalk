@@ -61,6 +61,12 @@ describe("LlamaCPP model classification (no explicit llamaCppModelDir)", () => {
     expect((client as any).modelFile).toBe("llama-3.gguf");
   });
 
+  it("keeps the separator for a drive-root path (C:\\model.gguf)", () => {
+    const client = new LlamaCPP({ model: "C:\\model.gguf", messages: [] });
+    expect((client as any).modelDir).toBe("C:\\");
+    expect((client as any).modelFile).toBe("model.gguf");
+  });
+
   it("rejects URI-shaped models with a resolveModel pointer", () => {
     expect(
       () => new LlamaCPP({ model: "hf:org/repo/llama-3.gguf", messages: [] }),
