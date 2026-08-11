@@ -1,5 +1,17 @@
 # Changelog
 
+## smoltalk 0.11.0 (2026-08-11)
+
+### Added
+- `provider: "llama-cpp"` now auto-loads the optional `smoltalk-llama-cpp` package on first use — install the plugin and local models work with no `registerProvider` wiring. `smoltalk-llama-cpp` is declared as an optional peer dependency (which is also what makes the import resolvable under pnpm's strict layout).
+- `loadLlamaCpp({ entryPath? })` — explicit loader for hosts whose plugin install is not resolvable from smoltalk (e.g. globally-installed CLIs). Returns the plugin module (`LlamaCPP`, `resolveModel`); an existing `llama-cpp` registration is left untouched.
+- `hasProvider(name)` — true when a custom provider is registered under `name`.
+- `type LlamaCppModule` — structural type of the plugin's module.
+
+### Changed
+- `getClient` with unknown provider `"llama-cpp"` now explains auto-loading and points at `loadLlamaCpp()` instead of the generic registerProvider hint.
+- Requires `smoltalk-llama-cpp` >=0.2.0 for the llama-cpp provider; a 0.1.x install is rejected at load time with an explicit upgrade message.
+
 ## smoltalk 0.10.1 (2026-08-09)
 - Audio: cancellation (abortSignal) for transcribe / speak
 

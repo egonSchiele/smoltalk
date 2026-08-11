@@ -1,4 +1,5 @@
 export { LlamaCPP } from "./llamaCpp.js";
+export { resolveModel } from "./resolveModel.js";
 export {
   disposeAll,
   disposeModel,

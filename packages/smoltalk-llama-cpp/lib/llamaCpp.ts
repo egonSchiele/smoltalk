@@ -25,26 +25,66 @@ import {
   success,
 } from "smoltalk";
 import type { Message } from "smoltalk";
-import path from "path";
 import { acquireModelEntry } from "./nativeRegistry.js";
+
+/**
+ * Two-plus characters before the colon, so Windows drive-letter paths
+ * (C:\models\x.gguf) are classified as paths, not URIs.
+ */
+const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
 
 export class LlamaCPP extends BaseClient {
   private modelDir: string;
+  private modelFile: string;
   private model: Model;
   private logger: ReturnType<typeof getLogger>;
 
   constructor(config: SmolConfig) {
     super(config);
-    const modelDir = config.metadata?.llamaCppModelDir as string | undefined;
+    let modelDir = config.metadata?.llamaCppModelDir as string | undefined;
+    let modelFile = config.model;
+
+    // Explicit metadata wins: when llamaCppModelDir is present, config.model
+    // is used as-is and no classification happens at all.
+    if (!modelDir) {
+      if (URI_SCHEME.test(modelFile)) {
+        throw new Error(
+          `smoltalk-llama-cpp: llama-cpp needs a local .gguf path. ` +
+            `To download or resolve "${modelFile}", call resolveModel() first ` +
+            `and pass its result as the model.`,
+        );
+      }
+      // Manual split (not path.dirname/basename) so \-separated paths split
+      // identically on every platform — POSIX path.basename won't split on \.
+      const sepIndex = Math.max(
+        modelFile.lastIndexOf("/"),
+        modelFile.lastIndexOf("\\"),
+      );
+      if (sepIndex !== -1) {
+        modelDir = modelFile.slice(0, sepIndex);
+        if (modelDir === "") {
+          modelDir = "/";
+        }
+        // A bare drive prefix ("C:" from "C:\model.gguf") is drive-relative;
+        // keep the separator so joining yields C:\model.gguf, not C:model.gguf.
+        if (/^[A-Za-z]:$/.test(modelDir)) {
+          modelDir = modelDir + "\\";
+        }
+        modelFile = modelFile.slice(sepIndex + 1);
+      }
+    }
+
     if (!modelDir) {
       throw new Error(
         "smoltalk-llama-cpp: metadata.llamaCppModelDir is required. " +
           "Pass the directory containing your .gguf models in config.metadata, " +
-          'e.g. text({ ..., metadata: { llamaCppModelDir: "./models" } }).',
+          'e.g. text({ ..., metadata: { llamaCppModelDir: "./models" } }), ' +
+          "or pass a full .gguf path as the model.",
       );
     }
-    this.model = new Model(config.model);
+    this.model = new Model(modelFile);
     this.modelDir = modelDir;
+    this.modelFile = modelFile;
     this.logger = getLogger();
   }
 
@@ -55,7 +95,7 @@ export class LlamaCPP extends BaseClient {
    * torn down here (see nativeRegistry.ts / bug.md).
    */
   async setup() {
-    await acquireModelEntry(this.modelDir, this.config.model);
+    await acquireModelEntry(this.modelDir, this.modelFile);
   }
 
   private getModelName(): ModelName {
@@ -213,7 +253,7 @@ export class LlamaCPP extends BaseClient {
     // Long-lived, shared native state for this model. The context/sequence are
     // created once and reused — never disposed here (bug.md: per-call context
     // disposal races the checkpoint worker => SIGSEGV on SWA models).
-    const entry = await acquireModelEntry(this.modelDir, this.config.model);
+    const entry = await acquireModelEntry(this.modelDir, this.modelFile);
 
     // Create grammar for response format (independent of the sequence, so it's
     // fine outside the lock).
@@ -328,7 +368,7 @@ export class LlamaCPP extends BaseClient {
     }
 
     // Long-lived, shared native state for this model (see _textSync).
-    const entry = await acquireModelEntry(this.modelDir, this.config.model);
+    const entry = await acquireModelEntry(this.modelDir, this.modelFile);
 
     // Create grammar for response format
     let grammar;

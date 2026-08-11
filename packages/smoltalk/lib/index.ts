@@ -8,6 +8,9 @@ export * from "./util/util.js";
 export * from "./util/tool.js";
 export * from "./classes/message/index.js";
 export * from "./functions.js";
+// Explicit (not `export *`) so the test-only `_setImportForTests` stays off the public surface.
+export { loadLlamaCpp } from "./clients/llamaCppLoader.js";
+export type { LlamaCppModule } from "./clients/llamaCppLoader.js";
 export * from "./classes/ToolCall.js";
 export * from "./embed.js";
 export * from "./image.js";
