@@ -3,7 +3,8 @@ import {
   Message,
   messageFromJSON,
 } from "./classes/message/index.js";
-import { getClient } from "./client.js";
+import { getClient, hasProvider } from "./client.js";
+import { loadLlamaCpp } from "./clients/llamaCppLoader.js";
 import {
   PromptResult,
   SmolConfig,
@@ -38,6 +39,9 @@ export function text(
 export async function textSync(
   config: SmolConfig,
 ): Promise<Result<PromptResult>> {
+  if (config.provider === "llama-cpp" && !hasProvider("llama-cpp")) {
+    await loadLlamaCpp();
+  }
   config.messages = fixMessagesIfNecessary(config.messages);
   return getClient(config).textSync(config);
 }
@@ -45,6 +49,9 @@ export async function textSync(
 export async function* textStream(
   config: SmolConfig,
 ): AsyncGenerator<StreamChunk> {
+  if (config.provider === "llama-cpp" && !hasProvider("llama-cpp")) {
+    await loadLlamaCpp();
+  }
   config.messages = fixMessagesIfNecessary(config.messages);
   yield* getClient(config).textStream(config);
 }
