@@ -43,6 +43,15 @@ export function unregisterProvider(providerName: string): boolean {
   return false;
 }
 
+/**
+ * True when `providerName` has been registered via registerProvider().
+ * Built-in providers (the switch cases in getClient) are not its concern —
+ * this only consults the custom registry.
+ */
+export function hasProvider(providerName: string): boolean {
+  return providerName in registeredProviders;
+}
+
 export function getClient(config: SmolClientConfig) {
   const modelName = config.model;
   const provider = resolveProvider(modelName, config.provider, config.modelData);
@@ -121,6 +130,12 @@ export function getClient(config: SmolClientConfig) {
       if (provider in registeredProviders) {
         const ClientClass = registeredProviders[provider];
         return new ClientClass(clientConfig);
+      }
+      if (provider === "llama-cpp") {
+        throw new SmolError(
+          "The llama-cpp provider loads automatically when called through text()/textSync()/textStream(). " +
+            "For direct getClient() use, await loadLlamaCpp() first (install smoltalk-llama-cpp if it is missing).",
+        );
       }
       throw new SmolError(
         `Model provider ${provider} is not supported. To use a custom provider, register it first via registerProvider(name, ClientClass).`,
