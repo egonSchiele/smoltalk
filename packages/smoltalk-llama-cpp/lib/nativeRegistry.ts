@@ -87,10 +87,23 @@ function keyFor(modelDir: string, modelFile: string): string {
   return path.resolve(path.join(modelDir, modelFile));
 }
 
+/**
+ * Ceiling on the auto-sized context. The KV cache is allocated UP FRONT at
+ * full size for whatever context length the model advertises — with no cap,
+ * a 262k-context model (Qwen3.5) allocates 9.2 GB of KV cache on a machine
+ * with free memory, versus 1.7 GB at 32k, for measurably identical speed.
+ * The `{max}` form keeps node-llama-cpp's automatic sizing (it still shrinks
+ * under memory pressure) and leaves models that advertise less than the cap
+ * (e.g. Gemma 3 at 32k) completely untouched.
+ */
+const MAX_CONTEXT_TOKENS = 32768;
+
 async function createEntry(modelPath: string): Promise<ModelEntry> {
   const llama = await getSharedLlama();
   const model = await llama.loadModel({ modelPath });
-  const context = await model.createContext();
+  const context = await model.createContext({
+    contextSize: { max: MAX_CONTEXT_TOKENS },
+  });
   const sequence = context.getSequence();
   return { llama, model, context, sequence, lock: new AsyncLock() };
 }
