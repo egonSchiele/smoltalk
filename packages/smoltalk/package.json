@@ -1,6 +1,6 @@
 {
   "name": "smoltalk",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "description": "A common interface for LLM APIs",
   "homepage": "https://github.com/egonSchiele/smoltalk",
   "scripts": {
@@ -50,7 +50,7 @@
     "tsx": "^4.19.2"
   },
   "peerDependencies": {
-    "smoltalk-llama-cpp": ">=0.2.0 <1.0.0"
+    "smoltalk-llama-cpp": ">=0.3.0 <1.0.0"
   },
   "peerDependenciesMeta": {
     "smoltalk-llama-cpp": {
