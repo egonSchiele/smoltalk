@@ -319,7 +319,11 @@ describe("native-state reuse", () => {
 
     // The signal actually reached generateResponse (only the first call).
     expect(counters.signalReceived).toBe(1);
-    expect(aborted.success).toBe(true);
+    // Aborted generations resolve as failure, never success (the abort/caps
+    // contract — see llamaCpp.abortAndCaps.test.ts). What matters HERE is
+    // that the lock was released and the follow-up call still works.
+    expect(aborted.success).toBe(false);
+    if (!aborted.success) expect(aborted.error).toBe("Request was aborted");
     expect(next.success && next.value.output).toBe("again-resp");
     expect(counters.clearHistory).toBe(2);
     expect(counters.contextDispose).toBe(0);

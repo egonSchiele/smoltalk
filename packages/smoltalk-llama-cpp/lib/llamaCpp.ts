@@ -20,6 +20,7 @@ import {
   ToolCall,
   ToolMessage,
   UserMessage,
+  failure,
   getLogger,
   sanitizeAttributes,
   success,
@@ -33,16 +34,53 @@ import { acquireModelEntry } from "./nativeRegistry.js";
  */
 const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
 
+/**
+ * Backstop when the caller sets no maxTokens. Local thinking models
+ * (Qwen3, DeepSeek-R1) burn thousands of hidden reasoning tokens per answer
+ * (~6.6k measured for a 100-word story) and, given a degenerate prompt, can
+ * spiral without terminating — unbounded, one such call generated 169k tokens
+ * over 100 minutes before an external timeout killed it. 16384 clears normal
+ * reasoning several times over while bounding a runaway to minutes. An
+ * explicit `maxTokens` or a `rawAttributes.maxTokens` always wins.
+ */
+const DEFAULT_MAX_TOKENS = 16384;
+
+/**
+ * Merge sanitized rawAttributes over the built options, skipping keys whose
+ * value is `undefined`. sanitizeAttributes preserves present-but-undefined
+ * keys, so a plain Object.assign would let `rawAttributes: { maxTokens:
+ * undefined }` silently clobber the default cap back to unbounded. Only a
+ * DEFINED raw attribute is an override.
+ */
+function applyRawAttributes(
+  options: Record<string, any>,
+  rawAttributes: SmolConfig["rawAttributes"],
+): void {
+  const raw = sanitizeAttributes(rawAttributes);
+  for (const key of Object.keys(raw)) {
+    if (raw[key] !== undefined) {
+      options[key] = raw[key];
+    }
+  }
+}
+
 export class LlamaCPP extends BaseClient {
   private modelDir: string;
   private modelFile: string;
   private model: Model;
   private logger: ReturnType<typeof getLogger>;
+  /** Optional exact context size (`metadata.llamaCppContextSize`), overriding
+   *  the registry's default 32k cap for hardware where a larger KV cache is
+   *  worth its memory. First call per model wins (see acquireModelEntry). */
+  private contextSize: number | undefined;
 
   constructor(config: SmolConfig) {
     super(config);
     let modelDir = config.metadata?.llamaCppModelDir as string | undefined;
     let modelFile = config.model;
+    this.contextSize = config.metadata?.llamaCppContextSize as
+      | number
+      | undefined;
 
     // Explicit metadata wins: when llamaCppModelDir is present, config.model
     // is used as-is and no classification happens at all.
@@ -95,7 +133,7 @@ export class LlamaCPP extends BaseClient {
    * torn down here (see nativeRegistry.ts / bug.md).
    */
   async setup() {
-    await acquireModelEntry(this.modelDir, this.modelFile);
+    await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
   }
 
   private getModelName(): ModelName {
@@ -253,7 +291,7 @@ export class LlamaCPP extends BaseClient {
     // Long-lived, shared native state for this model. The context/sequence are
     // created once and reused — never disposed here (bug.md: per-call context
     // disposal races the checkpoint worker => SIGSEGV on SWA models).
-    const entry = await acquireModelEntry(this.modelDir, this.modelFile);
+    const entry = await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
 
     // Create grammar for response format (independent of the sequence, so it's
     // fine outside the lock).
@@ -269,9 +307,7 @@ export class LlamaCPP extends BaseClient {
 
     // Build options
     const options: Record<string, any> = {};
-    if (config.maxTokens !== undefined) {
-      options.maxTokens = config.maxTokens;
-    }
+    options.maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS;
     if (config.temperature !== undefined) {
       options.temperature = config.temperature;
     }
@@ -287,7 +323,7 @@ export class LlamaCPP extends BaseClient {
     }
 
     // Apply raw attributes
-    Object.assign(options, sanitizeAttributes(config.rawAttributes));
+    applyRawAttributes(options, config.rawAttributes);
 
     this.logger.debug("Sending request to llama.cpp");
     this.statelogClient?.promptRequest({
@@ -334,6 +370,22 @@ export class LlamaCPP extends BaseClient {
       return { result: genResult, usage: u, cost: c };
     });
 
+    // An aborted generation must be a failure, never a success.
+    // `stopOnAbortSignal` makes generateResponse RESOLVE with the partial
+    // response on abort (a response still inside its thinking segment drains
+    // to empty), so without this check a cancelled or timed-out call would
+    // surface as `success(output: null)` — callers record a null assistant
+    // turn and their timeout/retry handling never engages. The partial output
+    // is truncated garbage either way; usage is still reported to statelog so
+    // the spend stays visible. Checked on `options.signal` — the signal
+    // generation actually listened to — not config.abortSignal, which
+    // rawAttributes may have replaced.
+    if ((options.signal as AbortSignal | undefined)?.aborted) {
+      this.logger.debug("llama.cpp generation aborted");
+      this.statelogClient?.promptResponse({ output: null, usage, cost } as any);
+      return failure("Request was aborted");
+    }
+
     // Extract text output
     const output = result.response || null;
 
@@ -368,7 +420,7 @@ export class LlamaCPP extends BaseClient {
     }
 
     // Long-lived, shared native state for this model (see _textSync).
-    const entry = await acquireModelEntry(this.modelDir, this.modelFile);
+    const entry = await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
 
     // Create grammar for response format
     let grammar;
@@ -409,9 +461,7 @@ export class LlamaCPP extends BaseClient {
           pushChunk({ type: "text", text });
         },
       };
-      if (config.maxTokens !== undefined) {
-        options.maxTokens = config.maxTokens;
-      }
+      options.maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS;
       if (config.temperature !== undefined) {
         options.temperature = config.temperature;
       }
@@ -425,7 +475,7 @@ export class LlamaCPP extends BaseClient {
       if (functions) {
         options.functions = functions;
       }
-      Object.assign(options, sanitizeAttributes(config.rawAttributes));
+      applyRawAttributes(options, config.rawAttributes);
 
       this.logger.debug("Sending streaming request to llama.cpp");
       this.statelogClient?.promptRequest({
@@ -438,6 +488,27 @@ export class LlamaCPP extends BaseClient {
         .generateResponse(chatHistory, options)
         .then((result) => {
           const meterAfter = sequence.tokenMeter.getState();
+
+          // Same contract as _textSync: an aborted generation ends the stream
+          // with an error chunk, never a done chunk — `stopOnAbortSignal`
+          // resolves the truncated partial instead of rejecting, and passing
+          // that on as `done` would let a cancelled call masquerade as a
+          // completed one. Checked on `options.signal` (the effective signal;
+          // rawAttributes may have replaced config.abortSignal).
+          if ((options.signal as AbortSignal | undefined)?.aborted) {
+            const { usage, cost } = this.calculateUsageAndCost(
+              meterBefore,
+              meterAfter,
+            );
+            this.logger.debug("llama.cpp streaming generation aborted");
+            this.statelogClient?.promptResponse({
+              output: null,
+              usage,
+              cost,
+            } as any);
+            pushChunk({ type: "error", error: "Request was aborted" });
+            return;
+          }
 
           const toolCalls = this.extractToolCalls(
             result.functionCalls as
