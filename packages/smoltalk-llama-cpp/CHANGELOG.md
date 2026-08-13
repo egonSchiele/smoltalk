@@ -1,3 +1,6 @@
+## version 0.4.0 (08/12/2026)
+- Thought segments from thinking models (Qwen3, DeepSeek-R1) are now mapped into `PromptResult.thinkingBlocks` (sync and streaming `done` results) and streamed live as `{type: "thinking"}` chunks. Previously the hidden reasoning — often the majority of the generated tokens — was silently dropped. `signature` is always `""` (llama.cpp has no signed reasoning).
+
 ## version 0.3.0 (08/12/2026)
 - Aborted generations now resolve as `failure("Request was aborted")` instead of a success. `stopOnAbortSignal` makes node-llama-cpp resolve with the truncated partial response, so a cancelled or timed-out call previously surfaced as `success(output: null)` — callers recorded a null assistant turn and their timeout/retry handling never engaged. The streaming path now ends such calls with an `error` chunk instead of `done`.
 - `maxTokens` defaults to 16384 when the caller sets none, as a backstop against unbounded generation: a thinking model given a degenerate prompt can spiral without terminating (169k tokens over 100 minutes observed). An explicit `maxTokens` or a defined `rawAttributes.maxTokens` overrides the default (a `rawAttributes` key set to `undefined` no longer clobbers built options).
