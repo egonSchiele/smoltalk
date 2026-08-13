@@ -16,6 +16,7 @@ import {
   Result,
   SmolConfig,
   StreamChunk,
+  ThinkingBlock,
   TokenUsage,
   ToolCall,
   ToolMessage,
@@ -62,6 +63,31 @@ function applyRawAttributes(
       options[key] = raw[key];
     }
   }
+}
+
+/**
+ * Collect thought segments (hidden reasoning on thinking models like Qwen3 /
+ * DeepSeek-R1) from `result.fullResponse` into smoltalk ThinkingBlocks.
+ * `result.response` deliberately excludes them, so without this mapping the
+ * reasoning — often the majority of the generated tokens — is invisible to
+ * callers. llama.cpp has no signed reasoning, so `signature` is always `""`
+ * (the same convention the google client uses when no signature is present).
+ */
+function extractThinkingBlocks(
+  fullResponse: Array<string | Record<string, any>> | undefined,
+): ThinkingBlock[] {
+  const blocks: ThinkingBlock[] = [];
+  for (const part of fullResponse ?? []) {
+    if (
+      typeof part !== "string" &&
+      part.type === "segment" &&
+      part.segmentType === "thought" &&
+      part.text
+    ) {
+      blocks.push({ text: part.text, signature: "" });
+    }
+  }
+  return blocks;
 }
 
 export class LlamaCPP extends BaseClient {
@@ -396,12 +422,15 @@ export class LlamaCPP extends BaseClient {
         | undefined,
     );
 
+    const thinkingBlocks = extractThinkingBlocks(result.fullResponse);
+
     this.logger.debug("Response from llama.cpp:", output);
     this.statelogClient?.promptResponse({ output, usage, cost } as any);
 
     return success({
       output,
       toolCalls,
+      ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
       usage,
       cost,
       model: this.getModelName(),
@@ -457,8 +486,20 @@ export class LlamaCPP extends BaseClient {
 
       // Build options
       const options: Record<string, any> = {
+        // onTextChunk streams ONLY main-response text (no segments), so the
+        // two callbacks never deliver the same content twice: thought
+        // segments arrive exclusively via onResponseChunk below.
         onTextChunk: (text: string) => {
           pushChunk({ type: "text", text });
+        },
+        onResponseChunk: (chunk: Record<string, any>) => {
+          if (
+            chunk.type === "segment" &&
+            chunk.segmentType === "thought" &&
+            chunk.text
+          ) {
+            pushChunk({ type: "thinking", text: chunk.text });
+          }
         },
       };
       options.maxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS;
@@ -524,6 +565,7 @@ export class LlamaCPP extends BaseClient {
             meterAfter,
           );
           const output = result.response || null;
+          const thinkingBlocks = extractThinkingBlocks(result.fullResponse);
 
           this.logger.debug("Streaming response completed from llama.cpp");
           this.statelogClient?.promptResponse({ output, usage, cost } as any);
@@ -533,6 +575,7 @@ export class LlamaCPP extends BaseClient {
             result: {
               output,
               toolCalls,
+              ...(thinkingBlocks.length > 0 && { thinkingBlocks }),
               usage,
               cost,
               model: this.getModelName(),
