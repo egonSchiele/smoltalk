@@ -25,11 +25,19 @@ const h = vi.hoisted(() => {
     createContextArgs: [] as any[],
     generateOptions: [] as any[],
   };
+  const hooks = {
+    // Invoked by the mock in the middle of generation (after the first text
+    // chunk, before completion). Lets tests abort mid-generation
+    // DETERMINISTICALLY — a real timer can race the mocked generation under
+    // load, and a microtask would fire before generation even starts.
+    midGeneration: null as (() => void) | null,
+  };
   const reset = () => {
     record.createContextArgs = [];
     record.generateOptions = [];
+    hooks.midGeneration = null;
   };
-  return { record, reset };
+  return { record, hooks, reset };
 });
 
 vi.mock("node-llama-cpp", () => {
@@ -43,6 +51,7 @@ vi.mock("node-llama-cpp", () => {
         return { response: "", functionCalls: undefined };
       }
       if (options?.onTextChunk) options.onTextChunk("hi");
+      h.hooks.midGeneration?.();
       await new Promise((r) => setTimeout(r, 5));
       if (options?.signal?.aborted && options?.stopOnAbortSignal) {
         // Aborted mid-generation: a truncated partial WITH content.
@@ -144,11 +153,29 @@ describe("aborted generations resolve as failure", () => {
   it("sync: an abort landing mid-generation yields failure even with partial content", async () => {
     const client = makeClient("m.gguf");
     const controller = new AbortController();
-    setTimeout(() => controller.abort(), 1);
+    h.hooks.midGeneration = () => controller.abort();
 
     const result = await client._textSync({
       messages: userMessages("hello"),
       abortSignal: controller.signal,
+    } as any);
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error).toBe("Request was aborted");
+  });
+
+  it("sync: an abort on a signal supplied via rawAttributes still yields failure", async () => {
+    // rawAttributes are merged into the native options AFTER our defaults, so
+    // a caller can replace the signal generation actually listens to. The
+    // abort check must follow the effective signal, not just
+    // config.abortSignal, or such a call masquerades as a success.
+    const client = makeClient("m.gguf");
+    const controller = new AbortController();
+    controller.abort();
+
+    const result = await client._textSync({
+      messages: userMessages("hello"),
+      rawAttributes: { signal: controller.signal, stopOnAbortSignal: true },
     } as any);
 
     expect(result.success).toBe(false);
@@ -179,6 +206,26 @@ describe("aborted generations resolve as failure", () => {
     expect(types).not.toContain("done");
     const errChunk = chunks.find((c) => c.type === "error");
     expect(errChunk?.error).toBe("Request was aborted");
+  });
+
+  it("stream: an abort landing mid-generation ends with error, even after text chunks", async () => {
+    const client = makeClient("m.gguf");
+    const controller = new AbortController();
+    h.hooks.midGeneration = () => controller.abort();
+
+    const chunks = await drainStream(
+      client._textStream({
+        messages: userMessages("hello"),
+        abortSignal: controller.signal,
+      } as any),
+    );
+
+    // Text already streamed before the abort is fine — but the stream must
+    // END with an error chunk, never a done chunk.
+    const types = chunks.map((c) => c.type);
+    expect(types).not.toContain("done");
+    expect(chunks.at(-1)?.type).toBe("error");
+    expect(chunks.at(-1)?.error).toBe("Request was aborted");
   });
 
   it("stream: a normal generation still ends with a done chunk", async () => {
@@ -216,6 +263,18 @@ describe("maxTokens default cap", () => {
     expect(h.record.generateOptions[0].maxTokens).toBe(0);
   });
 
+  it("sync: a rawAttributes maxTokens of undefined does NOT clobber the default", async () => {
+    // sanitizeAttributes preserves present-but-undefined keys; a plain
+    // Object.assign would overwrite the cap with undefined and silently
+    // reintroduce unbounded generation.
+    const client = makeClient("m.gguf");
+    await client._textSync({
+      messages: userMessages("a"),
+      rawAttributes: { maxTokens: undefined },
+    } as any);
+    expect(h.record.generateOptions[0].maxTokens).toBe(16384);
+  });
+
   it("stream: applies the default cap when the caller sets none", async () => {
     const client = makeClient("m.gguf");
     await drainStream(
@@ -232,5 +291,15 @@ describe("bounded context size", () => {
     expect(h.record.createContextArgs).toEqual([
       { contextSize: { max: 32768 } },
     ]);
+  });
+
+  it("metadata.llamaCppContextSize overrides the cap (escape hatch)", async () => {
+    const client = new LlamaCPP({
+      model: "big.gguf",
+      messages: [],
+      metadata: { llamaCppModelDir: "/models", llamaCppContextSize: 65536 },
+    });
+    await client._textSync({ messages: userMessages("a") } as any);
+    expect(h.record.createContextArgs).toEqual([{ contextSize: 65536 }]);
   });
 });

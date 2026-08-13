@@ -98,11 +98,18 @@ function keyFor(modelDir: string, modelFile: string): string {
  */
 const MAX_CONTEXT_TOKENS = 32768;
 
-async function createEntry(modelPath: string): Promise<ModelEntry> {
+// The context size each entry was created with, for the mismatch warning in
+// acquireModelEntry. Keyed like `registry`; undefined = the default cap.
+const contextSizeUsed: Record<string, number | undefined> = Object.create(null);
+
+async function createEntry(
+  modelPath: string,
+  contextSize: number | undefined,
+): Promise<ModelEntry> {
   const llama = await getSharedLlama();
   const model = await llama.loadModel({ modelPath });
   const context = await model.createContext({
-    contextSize: { max: MAX_CONTEXT_TOKENS },
+    contextSize: contextSize ?? { max: MAX_CONTEXT_TOKENS },
   });
   const sequence = context.getSequence();
   return { llama, model, context, sequence, lock: new AsyncLock() };
@@ -111,20 +118,34 @@ async function createEntry(modelPath: string): Promise<ModelEntry> {
 /**
  * Get (loading on first use) the shared native resources for a model. The
  * returned entry's context/sequence live until disposeAll()/disposeModel().
+ *
+ * `contextSize` (from `metadata.llamaCppContextSize`) overrides the default
+ * context cap — an exact size, useful on hardware where >32k contexts are
+ * worth their KV-cache memory. The context is created ONCE per model, so the
+ * first call's value wins for the process lifetime; a later call asking for a
+ * different size gets the existing context and a warning.
  */
 export function acquireModelEntry(
   modelDir: string,
   modelFile: string,
+  contextSize?: number,
 ): Promise<ModelEntry> {
   const key = keyFor(modelDir, modelFile);
   let entryPromise = registry[key];
   if (!entryPromise) {
-    entryPromise = createEntry(key);
+    entryPromise = createEntry(key, contextSize);
     registry[key] = entryPromise;
+    contextSizeUsed[key] = contextSize;
     // If loading fails, drop the cached rejection so a later call can retry.
     entryPromise.catch(() => {
       if (registry[key] === entryPromise) delete registry[key];
     });
+  } else if (contextSize !== contextSizeUsed[key]) {
+    getLogger().warn(
+      `llama.cpp: context for ${key} was already created with ` +
+        `contextSize=${contextSizeUsed[key] ?? `{max: ${MAX_CONTEXT_TOKENS}}`}; ` +
+        `ignoring llamaCppContextSize=${contextSize} on this call.`,
+    );
   }
   return entryPromise;
 }
@@ -140,6 +161,7 @@ export async function disposeModel(key: string): Promise<void> {
   const entryPromise = registry[key];
   if (!entryPromise) return;
   delete registry[key];
+  delete contextSizeUsed[key];
 
   let entry: ModelEntry;
   try {
