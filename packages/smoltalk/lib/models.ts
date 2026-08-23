@@ -2121,6 +2121,41 @@ export function getModelForProvider(
 }
 
 /**
+ * API-variant provider names mapped to the catalog family whose entries they
+ * share. "openai-responses" is the same vendor with the same pricing and
+ * modalities as "openai" — only Responses-exclusive models are cataloged
+ * under "openai-responses" itself. Unrelated providers (gateways like
+ * "openrouter"/"openai-compat", custom registrations) are deliberately NOT
+ * aliased: a same-named model under another provider must not lend its
+ * pricing or capabilities across providers.
+ */
+const PROVIDER_FAMILY_ALIAS: Record<string, string> = {
+  "openai-responses": "openai",
+};
+
+/**
+ * Like `getModelForProvider`, but when the exact provider key misses and the
+ * provider is a known API variant (e.g. "openai-responses"), retries under
+ * its catalog family ("openai"). The exact match always wins so
+ * variant-exclusive entries (o3-pro etc.) keep their own data.
+ */
+export function resolveModelForProvider(
+  provider: string,
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): ModelType | undefined {
+  const exact = getModelForProvider(provider, modelName, requestData);
+  if (exact) {
+    return exact;
+  }
+  const family = PROVIDER_FAMILY_ALIAS[provider];
+  if (family === undefined) {
+    return undefined;
+  }
+  return getModelForProvider(family, modelName, requestData);
+}
+
+/**
  * Whether a model is known to accept the given input modality ("image", "pdf", …).
  * Returns undefined when the model is unknown or carries no `modalities` data —
  * callers should treat undefined as "don't gate".
@@ -2133,7 +2168,7 @@ export function modelSupportsInputModality(
 ): boolean | undefined {
   let model: ModelType | undefined;
   if (provider !== undefined) {
-    model = getModelForProvider(provider, modelName, requestData);
+    model = resolveModelForProvider(provider, modelName, requestData);
   } else {
     model = getModel(modelName, requestData);
   }

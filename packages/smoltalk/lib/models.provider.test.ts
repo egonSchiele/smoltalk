@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getModel } from "./models.js";
+import { getModel, modelSupportsInputModality } from "./models.js";
 
 // Rule: provider "openai-responses" is reserved for models that are ONLY
 // available via the Responses API (the *-pro reasoning models). Every other
@@ -44,5 +44,21 @@ describe("OpenAI provider routing", () => {
     for (const name of CHAT_COMPLETIONS) {
       expect(getModel(name)?.provider, name).toBe("openai");
     }
+  });
+});
+
+describe("modelSupportsInputModality with an API-variant provider", () => {
+  it("falls back to the name-keyed entry when the provider key misses", () => {
+    // gpt-5-mini is cataloged under "openai"; asking with the API-variant
+    // provider "openai-responses" must not lose the modality data.
+    expect(
+      modelSupportsInputModality("gpt-5-mini", "image", undefined, "openai-responses"),
+    ).toBe(true);
+  });
+
+  it("still resolves a provider-keyed entry when one exists", () => {
+    expect(
+      modelSupportsInputModality("o3-pro", "image", undefined, "openai-responses"),
+    ).toBe(true);
   });
 });
