@@ -1,7 +1,7 @@
 import {
   ModelName,
   getModel,
-  getModelForProvider,
+  resolveModelForProvider,
   isSpeechToTextModel,
   isTextToSpeechModel,
   ModelNameSchema,
@@ -61,7 +61,7 @@ export class Model {
   } | null {
     let model: ModelType | undefined;
     if (this.provider !== undefined) {
-      model = getModelForProvider(this.provider, this.model, this.modelData);
+      model = resolveModelForProvider(this.provider, this.model, this.modelData);
     } else {
       model = getModel(this.model, this.modelData);
     }

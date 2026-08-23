@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Cost was silently dropped (and `modelSupportsInputModality` returned undefined) for clients configured with the API-variant provider `"openai-responses"` on family-cataloged models like `gpt-5-mini`: the exact provider-keyed lookup missed the `"openai"` catalog entry. New `resolveModelForProvider` falls back to the catalog family for known API-variant providers only; exact provider entries (o3-pro etc.) still win, and unrelated providers/gateways still don't borrow pricing.
+
 ## smoltalk 0.11.0 (2026-08-11)
 
 ### Added

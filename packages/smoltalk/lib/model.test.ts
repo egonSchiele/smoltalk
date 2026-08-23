@@ -109,6 +109,39 @@ describe("Model", () => {
       expect(cost!.totalCost).toBeCloseTo(0.8, 6);
     });
 
+    it("falls back to the name-keyed catalog entry for an API-variant provider", () => {
+      // gpt-5-mini is cataloged under provider "openai"; a client built with
+      // the API-variant provider "openai-responses" must still find pricing.
+      const variant = new Model("gpt-5-mini", "openai-responses");
+      const family = new Model("gpt-5-mini", "openai");
+      const usage = { inputTokens: 1000, outputTokens: 1000 };
+      const variantCost = variant.calculateCost(usage);
+      expect(variantCost).not.toBeNull();
+      expect(variantCost).toEqual(family.calculateCost(usage));
+    });
+
+    it("still resolves a provider-keyed entry when one exists", () => {
+      // o3-pro is cataloged under "openai-responses" itself; the exact
+      // provider match must keep winning over any name-only fallback.
+      const model = new Model("o3-pro", "openai-responses");
+      const cost = model.calculateCost({
+        inputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+      });
+      expect(cost).not.toBeNull();
+      // inputTokenCost=20, outputTokenCost=80
+      expect(cost!.inputCost).toBeCloseTo(20, 6);
+      expect(cost!.outputCost).toBeCloseTo(80, 6);
+    });
+
+    it("does not borrow pricing across unrelated providers", () => {
+      // Gateways may price the same model name differently; only known
+      // API-variant aliases fall back, everything else stays null.
+      const model = new Model("gemini-2.5-flash", "openrouter");
+      const cost = model.calculateCost({ inputTokens: 1000, outputTokens: 1000 });
+      expect(cost).toBeNull();
+    });
+
     it("returns null for non-text models", () => {
       // Image models don't have text pricing
       const model = new Model("gpt-image-1" as any);
