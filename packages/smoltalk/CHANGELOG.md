@@ -1,9 +1,17 @@
 # Changelog
 
-## Unreleased
+## smoltalk 0.12.0 (2026-08-23)
+
+### Added
+- `resolveModelForProvider(provider, modelName, modelData?)` — provider-keyed model lookup that falls back to the catalog family for known API-variant providers (`openai-responses` → `openai`). Exact provider entries still win.
 
 ### Fixed
-- Cost was silently dropped (and `modelSupportsInputModality` returned undefined) for clients configured with the API-variant provider `"openai-responses"` on family-cataloged models like `gpt-5-mini`: the exact provider-keyed lookup missed the `"openai"` catalog entry. New `resolveModelForProvider` falls back to the catalog family for known API-variant providers only; exact provider entries (o3-pro etc.) still win, and unrelated providers/gateways still don't borrow pricing.
+- Cost is no longer silently dropped for clients configured with `provider: "openai-responses"` on models cataloged under `"openai"` (e.g. `gpt-5-mini`). `Model.calculateCost` and `modelSupportsInputModality` now use the family fallback above.
+
+## smoltalk 0.11.1 (2026-08-12)
+
+### Changed
+- Requires `smoltalk-llama-cpp` >=0.3.0 for the llama-cpp provider.
 
 ## smoltalk 0.11.0 (2026-08-11)
 
