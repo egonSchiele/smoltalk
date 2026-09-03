@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { refreshModels } from "./modelData.js";
+import { refreshModels } from "./modelRefresh.js";
 
 const validBlob = JSON.stringify({
   schemaVersion: 1,

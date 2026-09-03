@@ -8,6 +8,7 @@ Smoltalk is a TypeScript npm package providing a unified interface across multip
 
 ```bash
 pnpm install      # Install all workspace deps
+pnpm --filter smoltalk build   # Required first on a clean checkout — see below
 pnpm build        # Build all workspace packages
 pnpm test         # Run vitest across packages
 pnpm typecheck    # tsc --noEmit across packages
@@ -18,11 +19,21 @@ make test         # Run tests in all packages
 make publish      # Build then `pnpm publish` in each package
 ```
 
+`pnpm test` and `pnpm typecheck` need `packages/smoltalk/dist/` to exist: the
+plugin packages and the site all resolve smoltalk's types through it, and
+`dist` is gitignored. Build smoltalk once after cloning. Do **not** add
+`pretest`/`pretypecheck` hooks to the dependent packages to automate this —
+smoltalk's build starts with `rm -rf dist`, and under a parallel `pnpm -r`
+that races with smoltalk-llama-cpp's loader test importing `dist/index.js`.
+CI builds smoltalk explicitly first for this reason.
+
 This repo is a pnpm workspace monorepo:
 
 - `packages/smoltalk/` — core library (cloud providers: OpenAI, Anthropic, Google, Ollama)
 - `packages/smoltalk-llama-cpp/` — `node-llama-cpp` plugin for local models
 - `packages/smoltalk-webllm/` — `@mlc-ai/web-llm` plugin for browser/WebGPU inference
+- `site/` — static Vite/React site listing the model registry (deployed to Vercel).
+  It imports the catalog from the `smoltalk/models` entry point; see `site/README.md`.
 
 ## Project Structure (within `packages/smoltalk/`)
 
