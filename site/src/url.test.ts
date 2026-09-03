@@ -18,6 +18,18 @@ describe("parseFilter", () => {
   it("ignores empty provider entries", () => {
     expect(parseFilter("?provider=,openai,").providers).toEqual(["openai"]);
   });
+
+  it("drops providers the registry does not have", () => {
+    // A stale or hand-edited link must not filter everything away with no
+    // chip on screen to undo it.
+    const known = ["anthropic", "openai"];
+    expect(
+      parseFilter("?provider=openai,removed-provider", known).providers,
+    ).toEqual(["openai"]);
+    expect(parseFilter("?provider=removed-provider", known).providers).toEqual(
+      [],
+    );
+  });
 });
 
 describe("filterToQuery", () => {

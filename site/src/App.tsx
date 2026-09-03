@@ -40,7 +40,7 @@ const deprecatedCount = everyModel.filter((model) => model.disabled).length;
 
 export function App() {
   const [filter, setFilter] = useState(() =>
-    parseFilter(window.location.search),
+    parseFilter(window.location.search, providers),
   );
 
   // Keep the address bar in step with the controls, without adding a history

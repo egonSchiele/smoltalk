@@ -24,7 +24,7 @@ This repo is a pnpm workspace monorepo:
 - `packages/smoltalk-llama-cpp/` — `node-llama-cpp` plugin for local models
 - `packages/smoltalk-webllm/` — `@mlc-ai/web-llm` plugin for browser/WebGPU inference
 - `site/` — static Vite/React site listing the model registry (deployed to Vercel).
-  Its data is generated from `lib/models.ts` at build time; see `site/README.md`.
+  It imports the catalog from the `smoltalk/models` entry point; see `site/README.md`.
 
 ## Project Structure (within `packages/smoltalk/`)
 

@@ -11,21 +11,33 @@ pnpm --filter site test
 
 ## Where the data comes from
 
-`scripts/generate-model-data.ts` imports the model arrays from
-`packages/smoltalk/lib/models.ts` and writes `src/data/models.json`. It runs
-automatically as `predev` and `prebuild`, so the page is never staler than the
-last build, and there is no second copy of the model data to maintain — add a
-model to the registry, redeploy, and it appears here.
+`src/types.ts` imports the catalog from `smoltalk/models` — a Node-free entry
+point exposing the registry and its merge helpers without the provider SDKs or
+the refresh fetcher. It bundles for the browser directly, so there is no
+generated copy of the model data and nothing to keep in sync: add a model to
+`lib/models.ts`, redeploy, and it appears.
 
-`src/data/models.json` is generated and gitignored.
+`smoltalk/models` resolves to the package's `dist/`, so smoltalk has to be
+built first. `pnpm --filter site dev` handles that itself via `predev`, and
+`pnpm -r build` orders smoltalk ahead of the site because the site depends on
+it. Deploys build it explicitly — see the build command in `vercel.json`.
 
-The site imports model *types* from the package with a type-only import, which
-is erased at compile time. That keeps the types exactly as accurate as the
-registry's while keeping smoltalk itself out of the browser bundle — it reaches
-for `node:fs`, so importing it at runtime would not build.
+There is deliberately no `prebuild` hook rebuilding smoltalk: under
+`pnpm -r build` it would run `rm -rf dist && tsc` on the package while
+smoltalk-llama-cpp is compiling against that same `dist`.
+
+Building the site on its own from a clean checkout therefore needs smoltalk
+built first:
+
+```bash
+pnpm --filter smoltalk build && pnpm --filter site build
+```
+
+The page footer's version and build date are injected by Vite's `define` from
+`packages/smoltalk/package.json` at config time — see `vite.config.ts`.
 
 ## Deployment
 
 `vercel.json` at the repo root sets the build command
-(`pnpm --filter site build`) and output directory (`site/dist`). Static output;
-no server functions.
+(`pnpm --filter smoltalk build && pnpm --filter site build`), the install
+command, and the static output directory (`site/dist`). No server functions.

@@ -6,13 +6,26 @@ export const emptyFilter: FilterState = {
   showDeprecated: false,
 };
 
-/** Reads filter state out of a query string so a filtered view is linkable. */
-export function parseFilter(queryString: string): FilterState {
+/**
+ * Reads filter state out of a query string so a filtered view is linkable.
+ *
+ * `known` restricts providers to ones the registry actually has. The query
+ * string is user-editable, and an unrecognised provider would otherwise filter
+ * everything away while rendering no chip the user could click to undo it.
+ */
+export function parseFilter(
+  queryString: string,
+  known?: readonly string[],
+): FilterState {
   const params = new URLSearchParams(queryString);
-  const providers = (params.get("provider") ?? "")
+  let providers = (params.get("provider") ?? "")
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value !== "");
+
+  if (known) {
+    providers = providers.filter((provider) => known.includes(provider));
+  }
 
   return {
     search: params.get("q") ?? "",

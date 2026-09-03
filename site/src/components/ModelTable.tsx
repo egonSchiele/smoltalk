@@ -58,7 +58,13 @@ export function ModelTable<T>({
                     title={column.help}
                   >
                     <span>{column.label}</span>
-                    <span className={active ? "arrow active" : "arrow"}>
+                    {/* Decorative: aria-sort on the th already announces the
+                        state, and including the glyph here would make the
+                        button's accessible name shift as you sort. */}
+                    <span
+                      aria-hidden="true"
+                      className={active ? "arrow active" : "arrow"}
+                    >
                       {active ? ARROW[sort.direction] : "↕"}
                     </span>
                   </button>

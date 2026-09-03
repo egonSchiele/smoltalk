@@ -1,18 +1,26 @@
 /**
- * Model types come straight from the smoltalk registry. This is a type-only
- * import — it is erased at compile time, so the browser bundle never pulls in
- * smoltalk (which reaches for node:fs) while the site's types stay exactly as
- * accurate as the package's.
+ * The registry, straight from the package.
+ *
+ * `smoltalk/models` is a Node-free entry point — the catalog and its merge
+ * helpers, without the provider SDKs or the refresh fetcher — so it bundles
+ * for the browser directly. There is no generated copy of this data.
  */
+import {
+  getAllModels,
+  isEmbeddingsModel,
+  isImageModel,
+  isSpeechToTextModel,
+  isTextModel,
+  isTextToSpeechModel,
+} from "smoltalk/models";
+
 import type {
   EmbeddingsModel,
   ImageModel,
   SpeechToTextModel,
   TextModel,
   TextToSpeechModel,
-} from "../../packages/smoltalk/lib/models";
-
-import raw from "./data/models.json";
+} from "smoltalk/models";
 
 export type {
   EmbeddingsModel,
@@ -22,20 +30,15 @@ export type {
   TextToSpeechModel,
 };
 
-export type ModelData = {
-  generatedAt: string;
-  smoltalkVersion: string;
-  text: TextModel[];
-  image: ImageModel[];
-  embeddings: EmbeddingsModel[];
-  speechToText: SpeechToTextModel[];
-  textToSpeech: TextToSpeechModel[];
-};
+const all = getAllModels();
 
-/**
- * The generated JSON is structurally the registry, but TypeScript infers it as
- * a wide literal shape (every optional field present-or-absent per entry), so
- * it is asserted rather than checked. The generator is the guarantee here: it
- * imports the typed arrays directly and only serializes them.
- */
-export const modelData = raw as unknown as ModelData;
+export const modelData = {
+  /** Injected at build time from the smoltalk package version. */
+  smoltalkVersion: __SMOLTALK_VERSION__,
+  generatedAt: __BUILD_DATE__,
+  text: all.filter(isTextModel),
+  image: all.filter(isImageModel),
+  embeddings: all.filter(isEmbeddingsModel),
+  speechToText: all.filter(isSpeechToTextModel),
+  textToSpeech: all.filter(isTextToSpeechModel),
+};
