@@ -5,9 +5,10 @@ import { App } from "./App";
 import { modelData } from "./types";
 
 /**
- * These run against the real generated models.json rather than fixtures, so
- * they fail if the generator, the column specs, and the registry ever drift
- * apart — the failure mode this site exists to avoid.
+ * These run against the live registry imported from `smoltalk/models`, not
+ * fixtures, so they fail if the column specs and the real catalog ever drift
+ * apart — a model type losing its section, or a renamed field emptying a
+ * column, shows up here rather than in production.
  */
 describe("App", () => {
   it("renders a section per model type", () => {
@@ -68,8 +69,11 @@ describe("App", () => {
   });
 
   it("has a non-empty registry to render", () => {
-    // Guards against the generator silently emitting empty arrays.
+    // Catches a stale or empty `smoltalk/models` build: the type guards would
+    // filter every row away and each section would render nothing, which the
+    // per-section assertions above cannot distinguish from a filter bug.
     expect(modelData.text.length).toBeGreaterThan(0);
+    // The version comes from Vite's `define`; an unsubstituted constant fails.
     expect(modelData.smoltalkVersion).toMatch(/^\d+\.\d+\.\d+$/);
   });
 });
