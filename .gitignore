@@ -4,3 +4,6 @@ node_modules
 !.gitignore
 !.npmrc
 dist
+
+# Generated from the smoltalk registry by site/scripts/generate-model-data.ts
+site/src/data/models.json
