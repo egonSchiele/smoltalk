@@ -8,6 +8,7 @@ export * from "./clients/openaiCompat.js";
 export * from "./clients/openrouter.js";
 export * from "./clients/deepinfra.js";
 export * from "./clients/litellm.js";
+export * from "./clients/mlx.js";
 import { SmolAnthropic } from "./clients/anthropic.js";
 import { BaseClient } from "./clients/baseClient.js";
 import { SmolGoogle } from "./clients/google.js";
@@ -18,6 +19,7 @@ import { SmolOpenAiCompat } from "./clients/openaiCompat.js";
 import { SmolOpenRouter } from "./clients/openrouter.js";
 import { SmolDeepInfra } from "./clients/deepinfra.js";
 import { SmolLiteLlm } from "./clients/litellm.js";
+import { SmolMlx } from "./clients/mlx.js";
 import { getModel, isTextModel } from "./models.js";
 import { SmolError } from "./smolError.js";
 import { SmolClientConfig, SmolConfig } from "./types.js";
@@ -126,6 +128,8 @@ export function getClient(config: SmolClientConfig) {
       return new SmolLiteLlm(clientConfig);
     case "openai-compat":
       return new SmolOpenAiCompat(clientConfig);
+    case "mlx":
+      return new SmolMlx(clientConfig);
     default:
       if (provider in registeredProviders) {
         const ClientClass = registeredProviders[provider];

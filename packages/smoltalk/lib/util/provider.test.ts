@@ -179,3 +179,25 @@ describe("resolveBaseUrl", () => {
     expect(resolveBaseUrl("unknown", {})).toBeUndefined();
   });
 });
+
+describe("resolveBaseUrl mlx", () => {
+  afterEach(() => {
+    delete process.env.MLX_BASE_URL;
+  });
+
+  it("defaults to localhost 8080", () => {
+    expect(resolveBaseUrl("mlx", {})).toBe("http://127.0.0.1:8080/v1");
+  });
+
+  it("env var overrides the default", () => {
+    process.env.MLX_BASE_URL = "http://127.0.0.1:9000/v1";
+    expect(resolveBaseUrl("mlx", {})).toBe("http://127.0.0.1:9000/v1");
+  });
+
+  it("config overrides the env var", () => {
+    process.env.MLX_BASE_URL = "http://127.0.0.1:9000/v1";
+    expect(resolveBaseUrl("mlx", { baseUrl: { mlx: "http://127.0.0.1:9001/v1" } })).toBe(
+      "http://127.0.0.1:9001/v1",
+    );
+  });
+});
