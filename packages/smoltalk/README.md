@@ -197,8 +197,8 @@ Two provider notes:
 | `model` | `ModelName` | **Required.** The model to use (e.g. `"gpt-4o"`, `"gemini-2.0-flash-lite"`). |
 | `messages` | `Message[]` | **Required.** The conversation messages to send. |
 | `apiKey` | `{ openAi?, google?, anthropic?, ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat? }` | API keys, nested by provider. Each falls back to its conventional env var (`OPENAI_API_KEY`, `GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENROUTER_API_KEY`, `DEEPINFRA_API_KEY`, `LITELLM_API_KEY`, `OPENAI_COMPAT_API_KEY`). Ollama has no env-var fallback for the key. |
-| `baseUrl` | `{ ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat? }` | Custom base URLs. `ollama` defaults to `$OLLAMA_HOST` then `http://localhost:11434`; `openRouter`/`deepInfra` defaults are baked in; `liteLlm`/`openAiCompat` require an explicit URL (or `LITELLM_BASE_URL` / `OPENAI_COMPAT_BASE_URL` env). |
-| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, `"openrouter"`, `"deepinfra"`, `"litellm"`, `"openai-compat"`, or any provider registered via `registerProvider()`. |
+| `baseUrl` | `{ ollama?, openRouter?, deepInfra?, liteLlm?, openAiCompat?, mlx? }` | Custom base URLs. `ollama` defaults to `$OLLAMA_HOST` then `http://localhost:11434`; `openRouter`/`deepInfra` defaults are baked in; `mlx` defaults to `$MLX_BASE_URL` then `http://127.0.0.1:8080/v1`; `liteLlm`/`openAiCompat` require an explicit URL (or `LITELLM_BASE_URL` / `OPENAI_COMPAT_BASE_URL` env). |
+| `provider` | `Provider` | Override provider detection. One of `"openai"`, `"openai-responses"`, `"google"`, `"ollama"`, `"anthropic"`, `"openrouter"`, `"deepinfra"`, `"litellm"`, `"openai-compat"`, `"mlx"`, or any provider registered via `registerProvider()`. |
 | `logLevel` | `LogLevel` | Logging verbosity: `"debug"`, `"info"`, `"warn"`, `"error"`. |
 | `tools` | `{ name, description?, schema }[]` | Tool definitions. `schema` is a Zod object schema. |
 | `responseFormat` | `ZodType` | Zod schema for structured output. The response is parsed and validated against this schema. |
@@ -254,6 +254,7 @@ model ids aren't in the smoltalk registry.
 | `"deepinfra"` | DeepInfra hosted models | `apiKey.deepInfra` (or `DEEPINFRA_API_KEY`) | `usage.estimated_cost` |
 | `"litellm"`   | Your own LiteLLM proxy   | `apiKey.liteLlm` + `baseUrl.liteLlm` (or `LITELLM_API_KEY` / `LITELLM_BASE_URL`) | `x-litellm-response-cost` header (non-stream only) |
 | `"openai-compat"` | Any OpenAI-shape backend (vLLM, TGI, LM Studio…) | `apiKey.openAiCompat` + `baseUrl.openAiCompat` (or `OPENAI_COMPAT_API_KEY` / `OPENAI_COMPAT_BASE_URL`) | Best-effort: reads `usage.cost`/`estimated_cost`/`cost_usd` if present |
+| `"mlx"` | An MLX server on localhost (`mlx_lm.server`, or `agency local serve`) | none — `baseUrl.mlx` or `MLX_BASE_URL` (default `http://127.0.0.1:8080/v1`); no API key | Always `0` |
 
 ```ts
 import { textSync, userMessage } from "smoltalk";
@@ -275,6 +276,7 @@ const r = await textSync({
 | `deepinfra`     | ✅   | ✅         | ❌ (uses per-model endpoints, not OpenAI shape) | ❌ |
 | `litellm`       | ✅   | ✅         | ✅ (if the upstream model supports it) | ✅ (if upstream supports it) |
 | `openai-compat` | ✅   | ✅         | ✅ (backend-dependent) | depends on backend |
+| `mlx`           | ✅   | ❌         | ❌               | ❌ |
 
 Smoltalk surfaces a clear `failure(...)` from `embed()`/`image()` for the
 unsupported combinations rather than silently dropping the call.

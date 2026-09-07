@@ -1,5 +1,10 @@
 # Changelog
 
+## smoltalk 0.13.0 (2026-09-07)
+
+### Added
+- `provider: "mlx"` — a client for an MLX server on localhost (`mlx_lm.server`). Defaults to `http://127.0.0.1:8080/v1`, needs no API key, reports zero cost. Set `baseUrl.mlx` or `MLX_BASE_URL` for another port.
+
 ## smoltalk 0.12.0 (2026-08-23)
 
 ### Added
