@@ -246,7 +246,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
 
     const message: ChatCompletionMessage = completion.choices[0].message;
-    const output = message.content;
+    // mlx_lm.server omits `content` entirely on a tool-call reply, where OpenAI
+    // sends an explicit null. Coerce the missing case to null so `output`
+    // honors its declared `string | null` type (a no-op for real OpenAI, whose
+    // content is already string | null).
+    const output = message.content ?? null;
     const _toolCalls: ChatCompletionMessageToolCall[] | undefined =
       message.tool_calls;
 
