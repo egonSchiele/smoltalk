@@ -47,6 +47,7 @@ type NestedKeyConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    mlx?: string;
   };
 };
 
@@ -107,6 +108,8 @@ export function resolveBaseUrl(
       return b?.liteLlm || process.env.LITELLM_BASE_URL;
     case "openai-compat":
       return b?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
+    case "mlx":
+      return b?.mlx || process.env.MLX_BASE_URL || "http://127.0.0.1:8080/v1";
     default:
       return undefined;
   }

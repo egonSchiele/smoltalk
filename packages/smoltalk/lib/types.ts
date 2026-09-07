@@ -48,6 +48,8 @@ export type SmolConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    /** The MLX server started by `mlx_lm.server` (or `agency local serve`). Defaults to http://127.0.0.1:8080/v1 (or $MLX_BASE_URL). */
+    mlx?: string;
   };
 
   /** Log level for internal debug logging. */

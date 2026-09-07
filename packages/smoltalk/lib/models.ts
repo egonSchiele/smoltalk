@@ -19,6 +19,7 @@ export const providers = [
   "litellm",
   "openai-compat",
   "groq",
+  "mlx",
 ] as const;
 export const ProviderSchema = z.enum(providers);
 export type Provider = z.infer<typeof ProviderSchema>;
