@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, afterEach } from "vitest";
 import * as http from "node:http";
 import { getClient } from "../client.js";
+import { embed } from "../embed.js";
 import { UserMessage } from "../classes/message/index.js";
 
 type Received = { body: any; url: string };
@@ -86,9 +87,10 @@ describe("SmolMlx", () => {
   });
 
   it("surfaces a 404 error message from the server", async () => {
-    // The low-level client method throws non-abort errors (only the public
-    // text()/textSync() wrappers convert them to a Result). The thrown error
-    // must carry the server's body message.
+    // textSync throws every non-abort error — the public text()/textSync()
+    // wrappers in functions.ts are `getClient(config).textSync(config)` with no
+    // catch, so a server error propagates to the caller. The thrown error must
+    // carry the server's body message.
     reply = {
       status: 404,
       body: { error: { message: "This server is serving a. It is not serving b." } },
@@ -112,5 +114,12 @@ describe("SmolMlx", () => {
     // PromptResult.output is `string | null` and is built as `output || null`;
     // a missing `content` field becomes null, not "".
     expect(result.value.output).toBeNull();
+  });
+
+  it("embed returns a failure for mlx", async () => {
+    // embed.ts has no mlx case; its default branch returns a failure Result
+    // (not a throw), which callers like Agency's memory code rely on.
+    const result = await embed("hi", { provider: "mlx", model: "m" });
+    expect(result.success).toBe(false);
   });
 });
