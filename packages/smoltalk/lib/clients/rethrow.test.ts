@@ -8,6 +8,7 @@ import {
   SmolRateLimitError,
   SmolAuthError,
   SmolContextWindowExceededError,
+  SmolOverloadedError,
 } from "../smolError.js";
 
 // Exercise the private rethrowAsSmolError wiring directly with hand-rolled,
@@ -109,5 +110,28 @@ describe("SmolAnthropic.rethrowAsSmolError", () => {
     expect(rethrow(client, apiError)).toBeInstanceOf(
       SmolContextWindowExceededError,
     );
+  });
+
+  it("treats a bare 'Invalid request data' 400 as transient (SmolOverloadedError)", () => {
+    // The exact body Anthropic sends, built the way the SDK builds it, so the
+    // message carries the status and JSON prefix a real error has.
+    const body = {
+      type: "error",
+      error: { type: "invalid_request_error", message: "Invalid request data" },
+      request_id: "req_x",
+    };
+    const apiError = Anthropic.APIError.generate(400, body, undefined, new Headers());
+    const err = rethrow(client, apiError);
+    expect(err).toBeInstanceOf(SmolOverloadedError);
+    expect(err.status).toBe(400);
+  });
+
+  it("keeps a 400 that names the rejected field terminal (plain SmolError)", () => {
+    const message = "messages.1.content: Input should be a valid list";
+    const body = { type: "error", error: { type: "invalid_request_error", message } };
+    const apiError = Anthropic.APIError.generate(400, body, undefined, new Headers());
+    const err = rethrow(client, apiError);
+    expect(err).not.toBeInstanceOf(SmolOverloadedError);
+    expect(err).toBeInstanceOf(SmolError);
   });
 });

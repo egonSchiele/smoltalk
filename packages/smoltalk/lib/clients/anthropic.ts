@@ -30,6 +30,7 @@ import { normalizeAnthropicStopReason } from "../util/stopReason.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
+  SmolOverloadedError,
   smolErrorForStatus,
 } from "../smolError.js";
 import { extractHttpErrorFields } from "../util/httpError.js";
@@ -89,6 +90,29 @@ export function mergeConsecutiveMessages(
 export function anthropicSupportsStructuredOutput(model: string): boolean {
   return !/^claude-(?:3(?:[-.]|$)|2(?:[-.]|$)|instant(?:[-.]|$))/i.test(model);
 }
+
+/**
+ * A 400 whose message is only the generic "Invalid request data", with no
+ * field named, is not a malformed request. Anthropic returns it seconds into
+ * generation, intermittently, for a request that succeeds unchanged on the
+ * next try (seen with `output_config.format` plus tools on Opus 4.8). A real
+ * validation failure always names what it rejected, e.g.
+ * `messages.1.content: ...`. Treat the bare form as transient so it is retried
+ * like a 5xx.
+ */
+export function isBareInvalidRequest(error: InstanceType<typeof Anthropic.APIError>): boolean {
+  if (error.status !== 400) {
+    return false;
+  }
+  const body = error.error as { error?: { message?: unknown } } | undefined;
+  const bodyMessage = body?.error?.message;
+  if (typeof bodyMessage === "string") {
+    return bodyMessage.trim() === BARE_INVALID_REQUEST;
+  }
+  return error.message.trim() === BARE_INVALID_REQUEST;
+}
+
+const BARE_INVALID_REQUEST = "Invalid request data";
 
 export function anthropicWebSearchEntries(hostedTools?: string[]): any[] {
   if (hostedTools && hostedTools.includes(WEB_SEARCH)) {
@@ -447,6 +471,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         msg.includes("violates our")
       ) {
         throw new SmolContentPolicyError(error.message, http);
+      }
+      if (isBareInvalidRequest(error)) {
+        throw new SmolOverloadedError(error.message, http);
       }
       throw smolErrorForStatus(error.message, http);
     }

@@ -149,7 +149,9 @@ export class SmolRateLimitError extends SmolError {
   }
 }
 
-/** Provider temporarily overloaded/unavailable (HTTP 503, or Anthropic's 529). */
+/** Provider temporarily overloaded/unavailable (HTTP 503, or Anthropic's 529).
+ *  Also raised for Anthropic's bare "Invalid request data" 400, which is a
+ *  transient generation failure rather than a malformed request. */
 export class SmolOverloadedError extends SmolError {
   constructor(message: string, options: SmolErrorOptions = {}) {
     super(message, options);
