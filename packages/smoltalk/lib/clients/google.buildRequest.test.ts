@@ -100,3 +100,42 @@ describe("SmolGoogle.buildRequest — web_search + function tools", () => {
     expect((config.tools as any[]).some((g) => g.googleSearch)).toBe(true);
   });
 });
+
+// Gemini's responseJsonSchema silently ignores `const` (verified live on
+// gemini-3.5-flash-lite: a union of literals came back as free prose), but it
+// honours `enum`. Zod emits `anyOf: [{type:"string", const:"a"}, ...]` for a
+// union of literals, so the Google client must rewrite `const` to `enum` and
+// collapse a same-typed anyOf-of-enums into one enum before sending.
+describe("SmolGoogle.buildRequest — responseFormat literal unions", () => {
+  it("rewrites a zod literal union to a single string enum", () => {
+    const Mood = z.union([z.literal("idle"), z.literal("happy"), z.literal("sad")]);
+    const req = build("gemini-3.5-flash-lite", {
+      responseFormat: z.object({ response: Mood }),
+    });
+    expect(req.config.responseMimeType).toBe("application/json");
+    const schema = req.config.responseJsonSchema as any;
+    expect(schema.properties.response).toEqual({
+      type: "string",
+      enum: ["idle", "happy", "sad"],
+    });
+  });
+
+  it("rewrites a lone literal to a one-value enum", () => {
+    const req = build("gemini-3.5-flash-lite", {
+      responseFormat: z.object({ kind: z.literal("expression") }),
+    });
+    const schema = req.config.responseJsonSchema as any;
+    expect(schema.properties.kind).toEqual({ type: "string", enum: ["expression"] });
+  });
+
+  it("keeps a mixed-type anyOf as anyOf but still rewrites each const", () => {
+    const req = build("gemini-3.5-flash-lite", {
+      responseFormat: z.object({ v: z.union([z.literal("a"), z.literal(1)]) }),
+    });
+    const schema = req.config.responseJsonSchema as any;
+    expect(schema.properties.v.anyOf).toEqual([
+      { type: "string", enum: ["a"] },
+      { type: "number", enum: [1] },
+    ]);
+  });
+});
