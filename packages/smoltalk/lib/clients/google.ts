@@ -15,7 +15,7 @@ import {
   success,
 } from "../types.js";
 import { zodToGoogleTool } from "../util/tool.js";
-import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
+import { responseFormatToJsonSchema, constToEnum } from "../util/jsonSchema.js";
 import { normalizeGoogleStopReason } from "../util/stopReason.js";
 import {
   SmolError,
@@ -360,7 +360,8 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     if (config.responseFormat) {
       genConfig.responseMimeType = "application/json";
-      genConfig.responseJsonSchema = responseFormatToJsonSchema(config.responseFormat);
+      // Gemini ignores `const` but honours `enum`; see constToEnum.
+      genConfig.responseJsonSchema = constToEnum(responseFormatToJsonSchema(config.responseFormat));
     }
 
     if (config.thinking?.enabled) {

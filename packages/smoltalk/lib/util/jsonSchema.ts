@@ -145,3 +145,78 @@ function sanitizeSubschema(value: unknown): unknown {
   if (typeof value === "boolean") return value;
   return sanitizeJsonSchema(value);
 }
+
+/**
+ * Rewrite `const` to a one-value `enum`, recursing through every subschema
+ * position, and collapse an `anyOf` whose branches are all single-type enums
+ * of the same type into one `{type, enum}` node.
+ *
+ * Gemini's `responseJsonSchema` silently ignores `const` (verified live: a Zod
+ * union of string literals — emitted as `anyOf: [{type:"string", const:"a"}, …]`
+ * — came back as free prose), but it enforces `enum`. Other providers accept
+ * `const`, so only the Google client applies this. Annotations on each node
+ * are preserved; a mixed-type anyOf stays an anyOf with each const rewritten.
+ */
+export function constToEnum(node: unknown): unknown {
+  if (typeof node !== "object" || node === null || Array.isArray(node)) {
+    return node;
+  }
+  const out: Record<string, unknown> = { ...(node as Record<string, unknown>) };
+
+  if ("const" in out) {
+    out.enum = [out.const];
+    delete out.const;
+  }
+
+  for (const key of SCHEMA_KEYS) {
+    if (key in out) out[key] = constToEnumSubschema(out[key]);
+  }
+  for (const key of SCHEMA_MAP_KEYS) {
+    const map = out[key];
+    if (map && typeof map === "object" && !Array.isArray(map)) {
+      const rewritten: Record<string, unknown> = Object.create(null);
+      for (const [name, sub] of Object.entries(map)) {
+        rewritten[name] = constToEnum(sub);
+      }
+      out[key] = rewritten;
+    }
+  }
+  for (const key of SCHEMA_ARRAY_KEYS) {
+    const arr = out[key];
+    if (Array.isArray(arr)) out[key] = arr.map((sub) => constToEnum(sub));
+  }
+  if ("additionalProperties" in out) {
+    out.additionalProperties = constToEnumSubschema(out.additionalProperties);
+  }
+
+  return collapseEnumAnyOf(out);
+}
+
+function constToEnumSubschema(value: unknown): unknown {
+  if (typeof value === "boolean") return value;
+  return constToEnum(value);
+}
+
+/**
+ * `{anyOf: [{type:"string", enum:["a"]}, {type:"string", enum:["b"]}]}` →
+ * `{type:"string", enum:["a","b"]}`. Only collapses when every branch is
+ * exactly `{type, enum}` with one shared `type`, so no constraint is lost.
+ */
+function collapseEnumAnyOf(node: Record<string, unknown>): Record<string, unknown> {
+  const branches = node.anyOf;
+  if (!Array.isArray(branches) || branches.length === 0) return node;
+  const first = branches[0];
+  const sharedType =
+    typeof first === "object" && first !== null ? (first as Record<string, unknown>).type : undefined;
+  if (typeof sharedType !== "string") return node;
+  const isPlainEnum = (branch: unknown): boolean =>
+    typeof branch === "object" &&
+    branch !== null &&
+    Object.keys(branch).every((key) => key === "type" || key === "enum") &&
+    (branch as Record<string, unknown>).type === sharedType &&
+    Array.isArray((branch as Record<string, unknown>).enum);
+  if (!branches.every(isPlainEnum)) return node;
+  const { anyOf, ...rest } = node;
+  const values = branches.flatMap((branch) => (branch as { enum: unknown[] }).enum);
+  return { ...rest, type: sharedType, enum: values };
+}

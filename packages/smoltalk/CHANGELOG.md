@@ -1,5 +1,10 @@
 # Changelog
 
+## smoltalk 0.13.1 (2026-09-10)
+
+### Fixed
+- Google: structured output with a union of literals (Zod `z.union([z.literal(...), ...])`, emitted as `anyOf` of `const`) no longer comes back as free text. Gemini's `responseJsonSchema` silently ignores `const` but honours `enum`, so the Google client now rewrites `const` to `enum` and collapses a same-typed anyOf-of-enums into one enum before sending.
+
 ## smoltalk 0.13.0 (2026-09-07)
 
 ### Added
