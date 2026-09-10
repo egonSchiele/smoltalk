@@ -1,52 +1,68 @@
 # Changelog
 
-## smoltalk 0.13.1 (2026-09-10)
+## smoltalk 0.13.2 (2026-09-10)
 
 ### Fixed
+
 - Google: structured output with a union of literals (Zod `z.union([z.literal(...), ...])`, emitted as `anyOf` of `const`) no longer comes back as free text. Gemini's `responseJsonSchema` silently ignores `const` but honours `enum`, so the Google client now rewrites `const` to `enum` and collapses a same-typed anyOf-of-enums into one enum before sending.
 - Google: dropping the response format on a streaming request that also carries tools is now logged at `warn` instead of `debug`, so it shows up under the default log level.
+
+## smoltalk 0.13.1 (2026-09-09)
+
+### Fixed
+
+- For Anthropic, retry the bare "Invalid request data" 400 as transient
 
 ## smoltalk 0.13.0 (2026-09-07)
 
 ### Added
+
 - `provider: "mlx"` — a client for an MLX server on localhost (`mlx_lm.server`). Defaults to `http://127.0.0.1:8080/v1`, needs no API key, reports zero cost. Set `baseUrl.mlx` or `MLX_BASE_URL` for another port.
 
 ## smoltalk 0.12.0 (2026-08-23)
 
 ### Added
+
 - `resolveModelForProvider(provider, modelName, modelData?)` — provider-keyed model lookup that falls back to the catalog family for known API-variant providers (`openai-responses` → `openai`). Exact provider entries still win.
 
 ### Fixed
+
 - Cost is no longer silently dropped for clients configured with `provider: "openai-responses"` on models cataloged under `"openai"` (e.g. `gpt-5-mini`). `Model.calculateCost` and `modelSupportsInputModality` now use the family fallback above.
 
 ## smoltalk 0.11.1 (2026-08-12)
 
 ### Changed
+
 - Requires `smoltalk-llama-cpp` >=0.3.0 for the llama-cpp provider.
 
 ## smoltalk 0.11.0 (2026-08-11)
 
 ### Added
+
 - `provider: "llama-cpp"` now auto-loads the optional `smoltalk-llama-cpp` package on first use — install the plugin and local models work with no `registerProvider` wiring. `smoltalk-llama-cpp` is declared as an optional peer dependency (which is also what makes the import resolvable under pnpm's strict layout).
 - `loadLlamaCpp({ entryPath? })` — explicit loader for hosts whose plugin install is not resolvable from smoltalk (e.g. globally-installed CLIs). Returns the plugin module (`LlamaCPP`, `resolveModel`); an existing `llama-cpp` registration is left untouched.
 - `hasProvider(name)` — true when a custom provider is registered under `name`.
 - `type LlamaCppModule` — structural type of the plugin's module.
 
 ### Changed
+
 - `getClient` with unknown provider `"llama-cpp"` now explains auto-loading and points at `loadLlamaCpp()` instead of the generic registerProvider hint.
 - Requires `smoltalk-llama-cpp` >=0.2.0 for the llama-cpp provider; a 0.1.x install is rejected at load time with an explicit upgrade message.
 
 ## smoltalk 0.10.1 (2026-08-09)
+
 - Audio: cancellation (abortSignal) for transcribe / speak
 
 ## smoltalk 0.10.0 (2026-08-09)
 
 ### Added
+
 - `transcribe()` — speech-to-text via OpenAI `whisper-1`. Returns `text` plus optional `language`, `durationSeconds`, `segments`/`words` timestamps, and per-minute `cost`.
 - `speak()` — text-to-speech via OpenAI `tts-1`/`tts-1-hd`. Returns caller-owned audio bytes (mp3/opus/aac/flac/wav/pcm, default mp3) plus per-character `cost`.
 - `audioPart()` for sending audio attachments in a `userMessage`.
 
 ### Changed
+
 - Make cost lookup provider-aware: `getClient()` injects the resolved provider.
 - `SmolConfig.apiKey` and `EmbedConfig.apiKey` now accept arbitrary provider names, so you can pass keys for custom-registered providers.
 - Refreshed the model catalog: GPT-5.6 Terra/Luna pricing reflects the July 30, 2026 price cut.
@@ -54,32 +70,39 @@
 ## smoltalk 0.9.0 (2026-07-24)
 
 ### Fixed
+
 - Gemini tool-result pairing: tool results are now matched to their calls regardless of the order the caller supplies them, so results arriving in completion order can no longer be mispaired (tool A's answer feeding tool B). The request builder reorders each round to call order, and function-call ids now round-trip on both sides.
 
 ### Changed
+
 - `ToolCall.tool_call_id` is now populated for non-streaming Gemini responses (previously always `""`), enabling id-based call/response pairing. The streaming path is unchanged.
 
 ## smoltalk 0.8.4 (2026-07-21)
 
 ### Added
+
 - Claude Sonnet 5 (`claude-sonnet-5`) and Claude Fable 5 (`claude-fable-5`) added to the model catalog, with pricing, 1M context / 128K output limits, and adaptive-thinking metadata.
 - Documented how to price a model that isn't in the baked-in catalog — `registerTextModel`, global `registerModelData`, and per-call `config.modelData` — in a new "Custom models & pricing" README section.
 
 ## smoltalk 0.8.3 (2026-07-15)
 
 ### Added
+
 - `PromptResult` now carries `stopReason` — a provider-normalized reason the turn ended (`stop`, `length`, `tool_use`, `content_filter`, `stop_sequence`, `pause`, `other`) — plus `rawStopReason` with the untouched provider value. Populated across OpenAI (chat + Responses), Anthropic, Google, and Ollama, on both sync and streaming results.
 
 ### Fixed
+
 - `z.any()`/`z.unknown()` in a structured-output or tool schema no longer sends a bare `{}` that providers reject: a nested `any` is coerced to `{"type":"string"}`, and a whole-schema `any` drops structured output so the model returns free text.
 
 ## smoltalk 0.8.2 (2026-07-14)
 
 ### Added
+
 - Anthropic structured output now uses the provider-native `output_config.format` (json_schema) when `responseFormat` is set — the analog of the OpenAI client's `response_format`, and it composes with function tools in the same request. Legacy `claude-3.x`/`2.x` models fall back to prompt-based output.
 - Anthropic streaming now emits web search queries as live `web_search` StreamChunks the moment each search block completes, matching the non-streaming path.
 
 ### Fixed
+
 - Gemini 3: the final answer no longer leaks into `thinkingBlocks`. Thinking parts are now identified by `thought: true` (not the presence of a `thoughtSignature`, which Gemini 3 also puts on the answer). `thinking.enabled` also now requests thought summaries so `thinkingBlocks` is actually populated.
 - Structured-output strict path strips ` ```json ` code fences before `JSON.parse`, so a fenced reply parses on the first attempt instead of burning a retry.
 - Gemini combining hosted web search with function tools is gated by model support: only Gemini 3+ allows it, and older models now get a clear error instead of a cryptic provider 400.
@@ -87,51 +110,61 @@
 ## smoltalk 0.8.1 (2026-07-02)
 
 ### Fixed
-- For Anthropic only, two or more user messages in a row are now merged into one message to satisfy Anthropic's strict user/assistant alternation. 
+
+- For Anthropic only, two or more user messages in a row are now merged into one message to satisfy Anthropic's strict user/assistant alternation.
 
 ## smoltalk 0.8.0 (2026-07-01)
 
 ### Fixed
+
 - Gemini hosted web search combined with function calling no longer 400s: the request now sets `includeServerSideToolInvocations` so built-in tools are accepted alongside function declarations.
 - Gemini 3 thought signatures are round-tripped on function-call parts (sync and streaming), so multi-turn tool use no longer fails with a missing `thought_signature`.
 
 ### Changed
+
 - Bumped provider SDKs and shared deps: `@anthropic-ai/sdk` 0.78→0.109, `@google/genai` 1.x→2.x, `openai` 6.15→6.45, plus `zod`, `node-llama-cpp`, and `@mlc-ai/web-llm`.
 
 ## smoltalk 0.7.1 (2026-07-01)
 
 ### Added
+
 - `redactAttachments()` is now exported: deep-copies a value with attachment payloads (base64 / data URIs) summarized, so logs and observability never carry large media blobs.
 
 ## smoltalk 0.7.0 (2026-07-01)
 
 ### Added
+
 - Image and PDF attachments on user messages: `imagePart()` and `filePart()` builders let a `userMessage` carry an image or PDF.
 - Provider Files API: `uploadFile()`, `deleteFile()`, and `registerFileProvider()` upload a file once to OpenAI, Anthropic, or Google and reference it by id as an attachment. Uploaded files persist until you call `deleteFile()`.
 - `getAllModels()` to enumerate the baked-in model catalog.
 
 ### Changed
+
 - Hosted-tool validation errors now hint that OpenAI models can reach hosted tools through the `openai-responses` provider when the call is on the base `openai` provider.
 
 ## smoltalk 0.6.0 (2026-06-29)
 
 ### Added
+
 - Four built-in providers for hosted OpenAI-compatible models — `openrouter`, `deepinfra`, `litellm`, and `openai-compat` — covering OpenRouter.ai, DeepInfra, a self-hosted LiteLLM proxy, and any OpenAI-shape backend (vLLM, TGI, LM Studio, etc.). Pass `provider:` explicitly since these model ids aren't in the registry; cost is read from each provider's reported usage where available.
 - `embed()` and `image()` work on the new providers where the backend supports them (e.g. DeepInfra/LiteLLM embeddings), returning a clear `failure(...)` for unsupported combinations instead of silently dropping the call.
 - Per-provider `baseUrl` config for custom endpoints. `openrouter`/`deepinfra` defaults are baked in; `litellm`/`openai-compat` require an explicit URL (or `LITELLM_BASE_URL` / `OPENAI_COMPAT_BASE_URL`).
 
 ### Changed
+
 - **Breaking:** API keys are now nested under a single `apiKey` object. The flat `openAiApiKey`, `googleApiKey`, `anthropicApiKey`, and `ollamaApiKey` fields are removed — use `apiKey: { openAi, google, anthropic, ollama, openRouter, deepInfra, liteLlm, openAiCompat }`. Env-var fallbacks (`OPENAI_API_KEY`, etc.) are unchanged.
 - **Breaking:** `ollamaHost` is removed; set the Ollama server URL via `baseUrl.ollama` instead (still falls back to `$OLLAMA_HOST`).
 
 ## smoltalk 0.5.1 (2026-06-29)
 
 ### Fixed
+
 - Hosted-tool validation now respects the `provider` override, so requesting `hostedTools: ["web_search"]` on an OpenAI chat model routed through `provider: "openai-responses"` is no longer wrongly rejected. Cost estimation honors the producing provider too, so web-search cost is no longer silently dropped for these calls.
 
 ## smoltalk 0.5.0 (2026-06-29)
 
 ### Added
+
 - Runtime model-data refresh: `refreshModels()` pulls updated model data from a default URL, a URL you control, or a local `file://` path. Then you can use `registerModelData()` to register it once, or provide a `config.modelData` per call.
 - Hosted-tools catalog: `getHostedTools()` and `hostedToolPricingFor()` expose which server-side tools each provider offers (web search, code execution, file search, image generation, etc) plus structured pricing.
 - Hosted web search: enable per call with `hostedTools: ["web_search"]` on Anthropic, Google, and OpenAI Responses models. Results come back normalized in `PromptResult.hostedToolResults`, with an estimated cost folded into `CostEstimate`.
@@ -139,29 +172,35 @@
 - New optional metadata fields for models: knowledge cutoff, release/updated dates, modalities, family, capability flags, and tiered/audio pricing.
 
 ### Changed
+
 - Refreshed the baked-in model registry from models.dev. Corrected pricing and context limits, added models including `claude-opus-4-5`, `claude-sonnet-4-5`, `claude-haiku-4-5`, and `gpt-5-pro`.
 
 ## smoltalk 0.4.2 (2026-06-24)
 
 ### Added
+
 - Exposed HTTP status, an allowlisted subset of response headers, the provider request id, and a parsed `retryAfterMs` on `SmolError`, plus new `SmolRateLimitError`, `SmolOverloadedError`, and `SmolAuthError` subclasses so retry code can `instanceof`-dispatch instead of sniffing status numbers.
 
 ### Security
+
 - The raw provider error on `SmolError.cause` is now non-enumerable, with `toJSON` and `util.inspect` overrides — `JSON.stringify(err)`, structured loggers, and `console.error(err)` no longer leak `set-cookie` / `authorization` / `x-api-key` from upstream responses.
 - Message `fromJSON` parse failures no longer dump the full payload (prompts, tool arguments, tool results) to `console.error` unconditionally; the raw JSON now prints only at debug log level.
 
 ## smoltalk 0.4.1 (2026-06-20)
 
 ### Changed
+
 - Anthropic models default to adaptive `thinking` budgets.
 - OpenAI models that only support the Responses API are now routed through it automatically.
 
 ## smoltalk 0.4.0 (2026-06-03)
 
 ### Added
+
 - Anthropic prompt-caching support, with corrected cost estimation that no longer double-counts cached input tokens.
 
 ### Changed
+
 - Refreshed the model registry.
 
 ## smoltalk 0.3.0 (2026-05-13)
@@ -181,6 +220,7 @@
 ### Migration
 
 Before:
+
 ```ts
 import { text } from "smoltalk";
 
@@ -193,6 +233,7 @@ await text({
 ```
 
 After:
+
 ```ts
 import { registerProvider, text } from "smoltalk";
 import { LlamaCPP } from "smoltalk-llama-cpp";
@@ -208,6 +249,7 @@ await text({
 ```
 
 Changes:
+
 - `llamaCppModelDir` moves from a top-level field on the config to `metadata.llamaCppModelDir`
 - `LlamaCPP` is no longer exported from `smoltalk`; import it from `smoltalk-llama-cpp` instead
 - The `pnpm pull` script (which used `node-llama-cpp pull`) is gone — install `smoltalk-llama-cpp` if you need it
@@ -224,6 +266,7 @@ Initial release. Extracted from `smoltalk` core.
 **Breaking:** removed several features that had accumulated and made the package complex without serving the core "wrapper around LLM provider APIs" purpose.
 
 Changes:
+
 - Removed the `lib/strategies/` directory — `model: { type: "race", ... }`, `model: fallback(...)`, etc. no longer work. Pass a `ModelName` string for `model`. Implement fallback or race logic in your own code if needed.
 - Removed `lib/middleware.ts` and the `middleware` field on `SmolConfig`. Implement LLM-based pre/parallel validation externally.
 - Removed `lib/latencyTracker.ts` and its `latencyTracker` export. The library no longer instruments per-call latency.
