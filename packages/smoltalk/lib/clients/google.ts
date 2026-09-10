@@ -639,7 +639,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     const hasTools = config.tools && config.tools.length > 0;
     const hasStructuredResponse = !!config.responseFormat;
     if (hasTools && hasStructuredResponse) {
-      this.logger.debug(
+      this.logger.warn(
         "Gemini does not support streaming responses with both tool calls and structured response formats. Response format will be ignored.",
       );
       this.statelogClient?.debug(
