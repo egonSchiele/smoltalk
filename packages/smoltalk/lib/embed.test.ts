@@ -31,10 +31,21 @@ vi.mock("./embed/ollama.js", () => ({
   }),
 }));
 
+vi.mock("./embed/mlx.js", () => ({
+  mlxEmbed: vi.fn().mockResolvedValue({
+    success: true,
+    value: {
+      embeddings: [[0.7, 0.8]],
+      model: "mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
+    },
+  }),
+}));
+
 import { embed } from "./embed.js";
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
+import { mlxEmbed } from "./embed/mlx.js";
 
 describe("embed", () => {
   beforeEach(() => {
@@ -178,6 +189,39 @@ describe("embed", () => {
       expect.anything(),
       "k",
       "https://h.test/v1",
+    );
+  });
+
+  it("dispatches to the MLX server for provider mlx, with the default base URL", async () => {
+    const saved = process.env.MLX_BASE_URL;
+    delete process.env.MLX_BASE_URL;
+    try {
+      await embed(["hello"], {
+        model: "mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
+        provider: "mlx",
+      });
+    } finally {
+      if (saved !== undefined) {
+        process.env.MLX_BASE_URL = saved;
+      }
+    }
+    expect(mlxEmbed).toHaveBeenCalledWith(
+      ["hello"],
+      expect.objectContaining({ provider: "mlx" }),
+      "http://127.0.0.1:8080/v1",
+    );
+  });
+
+  it("uses baseUrl.mlx when it is set", async () => {
+    await embed(["hello"], {
+      model: "x/y",
+      provider: "mlx",
+      baseUrl: { mlx: "http://127.0.0.1:9000/v1" },
+    });
+    expect(mlxEmbed).toHaveBeenCalledWith(
+      ["hello"],
+      expect.anything(),
+      "http://127.0.0.1:9000/v1",
     );
   });
 });

@@ -6,6 +6,7 @@ import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
+import { mlxEmbed } from "./embed/mlx.js";
 
 export type EmbedConfig = {
   model: string;
@@ -32,6 +33,7 @@ export type EmbedConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    mlx?: string;
     /** Arbitrary provider names, for URLs targeting a custom-registered provider. */
     [provider: string]: string | undefined;
   };
@@ -140,6 +142,10 @@ export async function embed(
         );
       }
       return openaiEmbed(inputs, config, apiKey, baseURL);
+    }
+    case "mlx": {
+      // resolveBaseUrl always returns a value for "mlx" (it has a default).
+      return mlxEmbed(inputs, config, resolveBaseUrl("mlx", config)!);
     }
     default: {
       const custom = registeredEmbedProviders[provider];
