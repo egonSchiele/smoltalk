@@ -6,6 +6,16 @@ import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
+import { mlxEmbed } from "./embed/mlx.js";
+import { loadLlamaCpp } from "./clients/llamaCppLoader.js";
+import type { LlamaCppModule } from "./clients/llamaCppLoader.js";
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
 
 export type EmbedConfig = {
   model: string;
@@ -32,6 +42,7 @@ export type EmbedConfig = {
     deepInfra?: string;
     liteLlm?: string;
     openAiCompat?: string;
+    mlx?: string;
     /** Arbitrary provider names, for URLs targeting a custom-registered provider. */
     [provider: string]: string | undefined;
   };
@@ -62,6 +73,21 @@ const registeredEmbedProviders: Record<string, EmbedProvider> =
 
 export function registerEmbeddingProvider(name: string, fn: EmbedProvider): void {
   registeredEmbedProviders[name] = fn;
+}
+
+/** True when `name` has an embed provider registered through
+ *  registerEmbeddingProvider. The built-in cases in embed() are not its
+ *  concern, the same as hasProvider in client.ts. */
+export function hasEmbeddingProvider(name: string): boolean {
+  return name in registeredEmbedProviders;
+}
+
+export function unregisterEmbeddingProvider(name: string): boolean {
+  if (name in registeredEmbedProviders) {
+    delete registeredEmbedProviders[name];
+    return true;
+  }
+  return false;
 }
 
 export async function embed(
@@ -140,6 +166,32 @@ export async function embed(
         );
       }
       return openaiEmbed(inputs, config, apiKey, baseURL);
+    }
+    case "mlx": {
+      // resolveBaseUrl always returns a value for "mlx" (it has a default).
+      return mlxEmbed(inputs, config, resolveBaseUrl("mlx", config)!);
+    }
+    case "llama-cpp": {
+      // A hand-registered provider wins, the same rule loadLlamaCpp applies
+      // to the chat class. Otherwise load the plugin the way text() does;
+      // the loader caches its import.
+      const custom = registeredEmbedProviders[provider];
+      if (custom) {
+        return custom(inputs, config);
+      }
+      let plugin: LlamaCppModule;
+      try {
+        plugin = await loadLlamaCpp();
+      } catch (err) {
+        return failure(errorMessage(err));
+      }
+      if (typeof plugin.embed !== "function") {
+        return failure(
+          "Your installed smoltalk-llama-cpp has no embeddings support. " +
+            "Upgrade it (npm i smoltalk-llama-cpp@latest; >=0.5.0 required).",
+        );
+      }
+      return plugin.embed(inputs, config);
     }
     default: {
       const custom = registeredEmbedProviders[provider];

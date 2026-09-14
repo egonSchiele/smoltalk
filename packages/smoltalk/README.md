@@ -276,7 +276,7 @@ const r = await textSync({
 | `deepinfra`     | ✅   | ✅         | ❌ (uses per-model endpoints, not OpenAI shape) | ❌ |
 | `litellm`       | ✅   | ✅         | ✅ (if the upstream model supports it) | ✅ (if upstream supports it) |
 | `openai-compat` | ✅   | ✅         | ✅ (backend-dependent) | depends on backend |
-| `mlx`           | ✅   | ❌         | ❌               | ❌ |
+| `mlx`           | ✅   | ✅         | ❌               | ❌ |
 
 Smoltalk surfaces a clear `failure(...)` from `embed()`/`image()` for the
 unsupported combinations rather than silently dropping the call.
@@ -542,6 +542,11 @@ const { resolveModel } = await loadLlamaCpp({
 // resolveModel downloads hf: URIs (and absolutizes existing local paths):
 const modelPath = await resolveModel("hf:org/repo/model.gguf", "/models/cache");
 ```
+
+`embed()` with `provider: "llama-cpp"` and a local `.gguf` path works the
+same way and needs `smoltalk-llama-cpp` >= 0.5.0; the vector is computed in
+process. See that package's README for the embedding caveats (dimension
+truncation, one model file per role).
 
 ## Audio (STT/TTS)
 

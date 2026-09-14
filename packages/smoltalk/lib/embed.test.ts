@@ -1,4 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const loaderState = vi.hoisted(() => ({
+  fail: undefined as Error | undefined,
+  withEmbed: true,
+  calls: 0,
+}));
+
+vi.mock("./clients/llamaCppLoader.js", () => ({
+  loadLlamaCpp: vi.fn(async () => {
+    loaderState.calls += 1;
+    if (loaderState.fail) {
+      throw loaderState.fail;
+    }
+    if (!loaderState.withEmbed) {
+      return {};
+    }
+    return {
+      embed: async (inputs: string[]) => ({
+        success: true,
+        value: { embeddings: inputs.map(() => [0.1]), model: "/m/model.gguf" },
+      }),
+    };
+  }),
+}));
 
 vi.mock("./embed/openai.js", () => ({
   openaiEmbed: vi.fn().mockResolvedValue({
@@ -31,10 +55,26 @@ vi.mock("./embed/ollama.js", () => ({
   }),
 }));
 
-import { embed } from "./embed.js";
+vi.mock("./embed/mlx.js", () => ({
+  mlxEmbed: vi.fn().mockResolvedValue({
+    success: true,
+    value: {
+      embeddings: [[0.7, 0.8]],
+      model: "mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
+    },
+  }),
+}));
+
+import {
+  embed,
+  registerEmbeddingProvider,
+  hasEmbeddingProvider,
+  unregisterEmbeddingProvider,
+} from "./embed.js";
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
+import { mlxEmbed } from "./embed/mlx.js";
 
 describe("embed", () => {
   beforeEach(() => {
@@ -179,5 +219,102 @@ describe("embed", () => {
       "k",
       "https://h.test/v1",
     );
+  });
+
+  it("dispatches to the MLX server for provider mlx, with the default base URL", async () => {
+    const saved = process.env.MLX_BASE_URL;
+    delete process.env.MLX_BASE_URL;
+    try {
+      await embed(["hello"], {
+        model: "mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
+        provider: "mlx",
+      });
+    } finally {
+      if (saved !== undefined) {
+        process.env.MLX_BASE_URL = saved;
+      }
+    }
+    expect(mlxEmbed).toHaveBeenCalledWith(
+      ["hello"],
+      expect.objectContaining({ provider: "mlx" }),
+      "http://127.0.0.1:8080/v1",
+    );
+  });
+
+  it("reports and removes a registered embed provider", async () => {
+    expect(hasEmbeddingProvider("custom-x")).toBe(false);
+    registerEmbeddingProvider("custom-x", async () => ({
+      success: true,
+      value: { embeddings: [[1]], model: "custom" },
+    }));
+    expect(hasEmbeddingProvider("custom-x")).toBe(true);
+    expect(unregisterEmbeddingProvider("custom-x")).toBe(true);
+    expect(unregisterEmbeddingProvider("custom-x")).toBe(false);
+    expect(hasEmbeddingProvider("custom-x")).toBe(false);
+  });
+
+  it("uses baseUrl.mlx when it is set", async () => {
+    await embed(["hello"], {
+      model: "x/y",
+      provider: "mlx",
+      baseUrl: { mlx: "http://127.0.0.1:9000/v1" },
+    });
+    expect(mlxEmbed).toHaveBeenCalledWith(
+      ["hello"],
+      expect.anything(),
+      "http://127.0.0.1:9000/v1",
+    );
+  });
+
+  describe("llama-cpp", () => {
+    beforeEach(() => {
+      loaderState.fail = undefined;
+      loaderState.withEmbed = true;
+      loaderState.calls = 0;
+      unregisterEmbeddingProvider("llama-cpp");
+    });
+    afterEach(() => {
+      unregisterEmbeddingProvider("llama-cpp");
+    });
+
+    it("loads the plugin and uses its embed function", async () => {
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.model).toBe("/m/model.gguf");
+      }
+      expect(loaderState.calls).toBe(1);
+    });
+
+    it("surfaces the loader's install hint when the plugin is missing", async () => {
+      loaderState.fail = new Error(
+        "The llama-cpp provider needs the optional smoltalk-llama-cpp package. Install it (npm i smoltalk-llama-cpp) and try again.",
+      );
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("npm i smoltalk-llama-cpp");
+      }
+    });
+
+    it("says the plugin is too old when it loads but has no embed", async () => {
+      loaderState.withEmbed = false;
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("smoltalk-llama-cpp@latest");
+        expect(result.error).toContain("0.5.0");
+      }
+    });
+
+    it("prefers a hand-registered llama-cpp embed provider and does not load", async () => {
+      registerEmbeddingProvider("llama-cpp", async () => ({
+        success: true,
+        value: { embeddings: [[9]], model: "mine" },
+      }));
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success && result.value.model).toBe("mine");
+      expect(loaderState.calls).toBe(0);
+    });
   });
 });

@@ -2,6 +2,7 @@ import { pathToFileURL } from "url";
 import type { BaseClient } from "./baseClient.js";
 import { hasProvider, registerProvider } from "../client.js";
 import { SmolError } from "../smolError.js";
+import type { EmbedProvider } from "../embed.js";
 
 /**
  * Minimal structural view of smoltalk-llama-cpp's module. Declared here (not
@@ -11,6 +12,9 @@ import { SmolError } from "../smolError.js";
 export type LlamaCppModule = {
   LlamaCPP: typeof BaseClient;
   resolveModel: (uriOrPath: string, cacheDir: string) => Promise<string>;
+  /** Present from smoltalk-llama-cpp 0.5.0. Absent on older plugins, which
+   *  then serve chat only. */
+  embed?: EmbedProvider;
 };
 
 type ImportFn = (specifier: string) => Promise<Record<string, unknown>>;
