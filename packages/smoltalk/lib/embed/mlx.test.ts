@@ -37,6 +37,7 @@ describe("mlxEmbed", () => {
     expect(mockCreate).toHaveBeenCalledWith({
       model: "mlx-community/Qwen3-Embedding-4B-4bit-DWQ",
       input: ["hello"],
+      encoding_format: "float",
     });
   });
 

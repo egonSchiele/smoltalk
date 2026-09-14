@@ -5,6 +5,17 @@ import { getModel, isEmbeddingsModel } from "../models.js";
 import type { ModelDataBlob } from "../modelData.js";
 import { round } from "../util/util.js";
 
+export type OpenAiEmbedOptions = {
+  /**
+   * Wire encoding to ask the server for. Left unset, the OpenAI SDK asks for
+   * base64 and decodes the reply as base64 no matter what came back, so a
+   * server that ignores the field and returns float arrays yields empty
+   * vectors. Backends that may not honour base64 (local servers) should
+   * pass "float", which the SDK then returns untouched.
+   */
+  encodingFormat?: "float" | "base64";
+};
+
 /**
  * OpenAI-compatible embedding call. Used by openai directly and by other
  * OpenAI-shape backends (deepinfra, litellm, openai-compat) which pass a
@@ -16,16 +27,21 @@ export async function openaiEmbed(
   config: EmbedConfig,
   apiKey: string,
   baseURL?: string,
+  options?: OpenAiEmbedOptions,
 ): Promise<Result<EmbedResult>> {
   try {
     const client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
-    const response = await client.embeddings.create({
+    const body: OpenAI.EmbeddingCreateParams = {
       model: config.model,
       input: inputs,
-      ...(config.dimensions !== undefined
-        ? { dimensions: config.dimensions }
-        : {}),
-    });
+    };
+    if (config.dimensions !== undefined) {
+      body.dimensions = config.dimensions;
+    }
+    if (options?.encodingFormat !== undefined) {
+      body.encoding_format = options.encodingFormat;
+    }
+    const response = await client.embeddings.create(body);
 
     const embeddings = [...response.data]
       .sort((a, b) => a.index - b.index)

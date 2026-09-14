@@ -116,10 +116,38 @@ describe("SmolMlx", () => {
     expect(result.value.output).toBeNull();
   });
 
-  it("embed returns a failure for mlx", async () => {
-    // embed.ts has no mlx case; its default branch returns a failure Result
-    // (not a throw), which callers like Agency's memory code rely on.
-    const result = await embed("hi", { provider: "mlx", model: "m" });
+  it("embed posts to /v1/embeddings at the mlx base URL with zero cost", async () => {
+    reply = {
+      status: 200,
+      body: {
+        object: "list",
+        model: "m",
+        data: [{ object: "embedding", index: 0, embedding: [0.1, 0.2, 0.3] }],
+        usage: { prompt_tokens: 4, total_tokens: 4 },
+      },
+    };
+    const result = await embed("hi", { provider: "mlx", model: "m", baseUrl: { mlx: baseUrl } });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.value.embeddings).toEqual([[0.1, 0.2, 0.3]]);
+      expect(result.value.tokenUsage).toEqual({ inputTokens: 4, outputTokens: 0 });
+      expect(result.value.costEstimate?.totalCost).toBe(0);
+    }
+    expect(received[0].url).toBe("/v1/embeddings");
+    expect(received[0].body.model).toBe("m");
+    expect(received[0].body.input).toEqual(["hi"]);
+    // Float, not the SDK's base64 default: a server that ignores the field
+    // and returns float arrays must not be decoded as base64.
+    expect(received[0].body.encoding_format).toBe("float");
+  });
+
+  it("embed returns a failure Result, not a throw, when the server errors", async () => {
+    // Callers like Agency's memory code rely on a failure Result here.
+    reply = { status: 500, body: { error: { message: "no embedding model loaded" } } };
+    const result = await embed("hi", { provider: "mlx", model: "m", baseUrl: { mlx: baseUrl } });
     expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain("no embedding model loaded");
+    }
   });
 });

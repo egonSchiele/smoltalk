@@ -9,13 +9,19 @@ import { openaiEmbed } from "./openai.js";
  * chat client also fixes: the key is a placeholder the server ignores, and
  * the cost is zero. `dimensions` is passed through as-is; whether the
  * server honours it depends on the server and model.
+ *
+ * Float encoding is requested explicitly. The SDK otherwise asks for base64
+ * and decodes the reply as base64 unconditionally, so a local server that
+ * ignores the field and returns float arrays would yield empty vectors.
  */
 export async function mlxEmbed(
   inputs: string[],
   config: EmbedConfig,
   baseURL: string,
 ): Promise<Result<EmbedResult>> {
-  const result = await openaiEmbed(inputs, config, "mlx-local", baseURL);
+  const result = await openaiEmbed(inputs, config, "mlx-local", baseURL, {
+    encodingFormat: "float",
+  });
   if (!result.success) {
     return result;
   }
