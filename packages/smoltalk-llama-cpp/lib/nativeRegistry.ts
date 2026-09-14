@@ -174,9 +174,17 @@ async function createEmbeddingEntry(
 ): Promise<EmbeddingEntry> {
   const llama = await getSharedLlama();
   const model = await llama.loadModel({ modelPath });
-  const context = await model.createEmbeddingContext({
-    contextSize: { max: MAX_CONTEXT_TOKENS },
-  });
+  let context: LlamaEmbeddingContext;
+  try {
+    context = await model.createEmbeddingContext({
+      contextSize: { max: MAX_CONTEXT_TOKENS },
+    });
+  } catch (error) {
+    // The rejection drops this entry from the registry, which would leave
+    // the loaded model unreachable and its native memory leaked.
+    await model.dispose();
+    throw error;
+  }
   return { llama, model, context, lock: new AsyncLock() };
 }
 

@@ -1,3 +1,5 @@
+import { LlamaVocabularyType } from "node-llama-cpp";
+import type { LlamaModel, Token } from "node-llama-cpp";
 import type { EmbedConfig, EmbedProvider, EmbedResult, Result } from "smoltalk";
 import { failure, success } from "smoltalk";
 import { acquireEmbeddingEntry } from "./nativeRegistry.js";
@@ -30,6 +32,66 @@ function truncate(vector: readonly number[], dimensions: number): number[] {
 }
 
 /**
+ * The beginning/end tokens getEmbeddingFor() adds around the text before
+ * evaluating it. node-llama-cpp keeps these resolvers private
+ * (utils/tokenizerUtils.ts), so this mirrors them from the public model
+ * properties; they follow llama.cpp's llama_tokenize_internal.
+ */
+function beginningToken(model: LlamaModel): Token | null {
+  const vocab = model.vocabularyType;
+  if (vocab === LlamaVocabularyType.rwkv) {
+    return null;
+  }
+  if (vocab === LlamaVocabularyType.wpm) {
+    return model.tokens.bos;
+  }
+  if (vocab === LlamaVocabularyType.ugm) {
+    return null;
+  }
+  if (model.tokens.shouldPrependBosToken) {
+    return model.tokens.bos;
+  }
+  return null;
+}
+
+function endToken(model: LlamaModel): Token | null {
+  const vocab = model.vocabularyType;
+  if (vocab === LlamaVocabularyType.rwkv) {
+    return null;
+  }
+  if (vocab === LlamaVocabularyType.wpm) {
+    return model.tokens.sep;
+  }
+  if (vocab === LlamaVocabularyType.ugm) {
+    return model.tokens.eos;
+  }
+  if (model.tokens.shouldAppendEosToken) {
+    return model.tokens.eos;
+  }
+  return null;
+}
+
+/** The number of tokens getEmbeddingFor(text) actually evaluates: the raw
+ *  tokenization plus the beginning/end markers it adds when they are not
+ *  already there. Empty text is not evaluated at all. */
+function countEvaluatedTokens(model: LlamaModel, text: string): number {
+  const tokens = model.tokenize(text);
+  if (tokens.length === 0) {
+    return 0;
+  }
+  let count = tokens.length;
+  const begin = beginningToken(model);
+  if (begin !== null && tokens[0] !== begin) {
+    count += 1;
+  }
+  const end = endToken(model);
+  if (end !== null && tokens[tokens.length - 1] !== end) {
+    count += 1;
+  }
+  return count;
+}
+
+/**
  * Embeddings computed in process by node-llama-cpp. `config.model` is a
  * local .gguf path; resolve a URI or a catalog name with resolveModel()
  * first. One embedding context per model file, kept for the life of the
@@ -46,6 +108,14 @@ export const embed: EmbedProvider = async (
         `To download or resolve "${modelPath}", call resolveModel() first and pass its result as the model.`,
     );
   }
+  const dimensions = config.dimensions;
+  if (dimensions !== undefined) {
+    if (!Number.isInteger(dimensions) || dimensions < 1) {
+      return failure(
+        `smoltalk-llama-cpp: dimensions must be a positive integer, got ${dimensions}.`,
+      );
+    }
+  }
   let entry;
   try {
     entry = await acquireEmbeddingEntry(modelPath);
@@ -54,7 +124,6 @@ export const embed: EmbedProvider = async (
       `smoltalk-llama-cpp: could not load ${modelPath} for embeddings: ${errorMessage(err)}`,
     );
   }
-  const dimensions = config.dimensions;
   try {
     return await entry.lock.runExclusive(async () => {
       const embeddings: number[][] = [];
@@ -66,7 +135,7 @@ export const embed: EmbedProvider = async (
         } else {
           embeddings.push([...embedding.vector]);
         }
-        inputTokens += entry.model.tokenize(text).length;
+        inputTokens += countEvaluatedTokens(entry.model, text);
       }
       return success({
         embeddings,

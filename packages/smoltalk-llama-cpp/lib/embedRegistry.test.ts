@@ -16,10 +16,14 @@ const h = vi.hoisted(() => {
     active: 0,
     maxActive: 0,
   };
+  const flags = {
+    failCreateEmbeddingContextOnce: false, // createEmbeddingContext() rejects once
+  };
   const reset = () => {
     for (const k of Object.keys(counters)) (counters as any)[k] = 0;
+    flags.failCreateEmbeddingContextOnce = false;
   };
-  return { counters, reset };
+  return { counters, flags, reset };
 });
 
 vi.mock("node-llama-cpp", () => {
@@ -42,6 +46,10 @@ vi.mock("node-llama-cpp", () => {
   class FakeModel {
     async createEmbeddingContext() {
       counters.createEmbeddingContext += 1;
+      if (h.flags.failCreateEmbeddingContextOnce) {
+        h.flags.failCreateEmbeddingContextOnce = false;
+        throw new Error("model has no embedding support");
+      }
       return new FakeEmbeddingContext();
     }
     tokenize(text: string) {
@@ -71,11 +79,29 @@ afterEach(async () => {
 
 describe("acquireEmbeddingEntry", () => {
   it("loads the model and creates one embedding context per path", async () => {
-    const a = await acquireEmbeddingEntry("/m/emb.gguf");
-    const b = await acquireEmbeddingEntry("/m/emb.gguf");
+    // Concurrent first calls must share one load: the registry stores the
+    // promise, not the resolved entry.
+    const [a, b] = await Promise.all([
+      acquireEmbeddingEntry("/m/emb.gguf"),
+      acquireEmbeddingEntry("/m/emb.gguf"),
+    ]);
+    const c = await acquireEmbeddingEntry("/m/emb.gguf");
     expect(a).toBe(b);
+    expect(a).toBe(c);
     expect(h.counters.loadModel).toBe(1);
     expect(h.counters.createEmbeddingContext).toBe(1);
+  });
+
+  it("disposes the loaded model when context creation fails, then retries", async () => {
+    h.flags.failCreateEmbeddingContextOnce = true;
+    await expect(acquireEmbeddingEntry("/m/emb.gguf")).rejects.toThrow(
+      "no embedding support",
+    );
+    expect(h.counters.modelDispose).toBe(1);
+    // The failed entry is gone from the registry, so the next call reloads.
+    await acquireEmbeddingEntry("/m/emb.gguf");
+    expect(h.counters.loadModel).toBe(2);
+    expect(h.counters.createEmbeddingContext).toBe(2);
   });
 
   it("keeps entries for different paths apart", async () => {
