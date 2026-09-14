@@ -4,6 +4,7 @@ import type {
   LlamaModel,
   LlamaContext,
   LlamaContextSequence,
+  LlamaEmbeddingContext,
 } from "node-llama-cpp";
 import { getLogger } from "smoltalk";
 import path from "path";
@@ -29,6 +30,19 @@ export type ModelEntry = {
   model: LlamaModel;
   context: LlamaContext;
   sequence: LlamaContextSequence;
+  lock: AsyncLock;
+};
+
+/**
+ * Native resources for one embedding model. A different context type from
+ * ModelEntry's, created from the same kind of loaded model; the two
+ * registries never share a model file (a path used for both chat and
+ * embeddings is loaded twice).
+ */
+export type EmbeddingEntry = {
+  llama: Llama;
+  model: LlamaModel;
+  context: LlamaEmbeddingContext;
   lock: AsyncLock;
 };
 
@@ -150,14 +164,80 @@ export function acquireModelEntry(
   return entryPromise;
 }
 
+// Embedding entries, keyed by resolved model path like `registry`. Stored as
+// promises for the same reason: concurrent first calls share one load.
+const embeddingRegistry: Record<string, Promise<EmbeddingEntry>> =
+  Object.create(null);
+
+async function createEmbeddingEntry(
+  modelPath: string,
+): Promise<EmbeddingEntry> {
+  const llama = await getSharedLlama();
+  const model = await llama.loadModel({ modelPath });
+  const context = await model.createEmbeddingContext({
+    contextSize: { max: MAX_CONTEXT_TOKENS },
+  });
+  return { llama, model, context, lock: new AsyncLock() };
+}
+
 /**
- * Dispose one model's native state. Awaits the per-model lock (nothing in
- * flight), drains pending checkpoint work under the context lock via
- * clearHistory(), then frees the context and model. If the drain throws, the
- * context is intentionally leaked rather than freed (see below). Safe no-op for
- * unknown keys. `key` is the resolved model path (see acquireModelEntry).
+ * Get (loading on first use) the embedding context for a model file. Lives
+ * until disposeAll()/disposeModel(); never disposed per call, the same rule
+ * as the chat contexts.
+ */
+export function acquireEmbeddingEntry(
+  modelPath: string,
+): Promise<EmbeddingEntry> {
+  const key = path.resolve(modelPath);
+  let entryPromise = embeddingRegistry[key];
+  if (!entryPromise) {
+    entryPromise = createEmbeddingEntry(key);
+    embeddingRegistry[key] = entryPromise;
+    // If loading fails, drop the cached rejection so a later call can retry.
+    entryPromise.catch(() => {
+      if (embeddingRegistry[key] === entryPromise) delete embeddingRegistry[key];
+    });
+  }
+  return entryPromise;
+}
+
+async function disposeEmbeddingEntry(key: string): Promise<void> {
+  const entryPromise = embeddingRegistry[key];
+  if (!entryPromise) return;
+  delete embeddingRegistry[key];
+
+  let entry: EmbeddingEntry;
+  try {
+    entry = await entryPromise;
+  } catch {
+    // Entry never finished loading; nothing native to free.
+    return;
+  }
+
+  await entry.lock.runExclusive(async () => {
+    await entry.context.dispose();
+    await entry.model.dispose();
+  });
+}
+
+/**
+ * Dispose one model's native state, chat and embedding entries alike. Each
+ * half is a safe no-op for a key it does not hold. `key` is the resolved
+ * model path (see acquireModelEntry / acquireEmbeddingEntry).
  */
 export async function disposeModel(key: string): Promise<void> {
+  await disposeChatEntry(key);
+  await disposeEmbeddingEntry(key);
+}
+
+/**
+ * Dispose one chat model's native state. Awaits the per-model lock (nothing
+ * in flight), drains pending checkpoint work under the context lock via
+ * clearHistory(), then frees the context and model. If the drain throws, the
+ * context is intentionally leaked rather than freed (see below). Safe no-op
+ * for unknown keys.
+ */
+async function disposeChatEntry(key: string): Promise<void> {
   const entryPromise = registry[key];
   if (!entryPromise) return;
   delete registry[key];
@@ -202,6 +282,10 @@ export function modelKey(modelDir: string, modelFile: string): string {
  * runs can just exit. Callers must ensure nothing is mid-generation.
  */
 export async function disposeAll(): Promise<void> {
-  const keys = Object.keys(registry);
-  await Promise.all(keys.map((key) => disposeModel(key)));
+  // A path held by both registries is disposed once.
+  const keys = new Set([
+    ...Object.keys(registry),
+    ...Object.keys(embeddingRegistry),
+  ]);
+  await Promise.all([...keys].map((key) => disposeModel(key)));
 }
