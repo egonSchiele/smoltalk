@@ -65,6 +65,31 @@ const result = await text({
 
 `metadata.llamaCppModelDir` points to a directory containing your `.gguf` model files.
 
+## Embeddings
+
+With smoltalk >= 0.14.0, `embed()` works the same zero-wiring way:
+
+```ts
+import { embed } from "smoltalk";
+
+const result = await embed("some text", {
+  provider: "llama-cpp",
+  model: "/path/to/nomic-embed-text.gguf",
+});
+```
+
+The vector is computed in process by node-llama-cpp. `model` must be a local
+`.gguf` path; `resolveModel` turns an `hf:` URI into one. A few caveats:
+
+- `dimensions` truncates the vector and renormalizes it. That is only
+  meaningful for models trained for it (nomic-embed-text v1.5, the Qwen3
+  embedding family); any other model returns a degraded vector with no error.
+- Chat and embedding contexts are held separately. Passing the same `.gguf`
+  to both `text()` and `embed()` loads it twice; use a dedicated embedding
+  model.
+- Embedding contexts follow the lifecycle rules below: one per model file,
+  calls serialized, freed by `disposeAll()` / `disposeModel()`.
+
 ## Lifecycle & concurrency
 
 Native model state is expensive to allocate and cannot be safely torn down
