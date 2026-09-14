@@ -1,4 +1,28 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+const loaderState = vi.hoisted(() => ({
+  fail: undefined as Error | undefined,
+  withEmbed: true,
+  calls: 0,
+}));
+
+vi.mock("./clients/llamaCppLoader.js", () => ({
+  loadLlamaCpp: vi.fn(async () => {
+    loaderState.calls += 1;
+    if (loaderState.fail) {
+      throw loaderState.fail;
+    }
+    if (!loaderState.withEmbed) {
+      return {};
+    }
+    return {
+      embed: async (inputs: string[]) => ({
+        success: true,
+        value: { embeddings: inputs.map(() => [0.1]), model: "/m/model.gguf" },
+      }),
+    };
+  }),
+}));
 
 vi.mock("./embed/openai.js", () => ({
   openaiEmbed: vi.fn().mockResolvedValue({
@@ -240,5 +264,57 @@ describe("embed", () => {
       expect.anything(),
       "http://127.0.0.1:9000/v1",
     );
+  });
+
+  describe("llama-cpp", () => {
+    beforeEach(() => {
+      loaderState.fail = undefined;
+      loaderState.withEmbed = true;
+      loaderState.calls = 0;
+      unregisterEmbeddingProvider("llama-cpp");
+    });
+    afterEach(() => {
+      unregisterEmbeddingProvider("llama-cpp");
+    });
+
+    it("loads the plugin and uses its embed function", async () => {
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.value.model).toBe("/m/model.gguf");
+      }
+      expect(loaderState.calls).toBe(1);
+    });
+
+    it("surfaces the loader's install hint when the plugin is missing", async () => {
+      loaderState.fail = new Error(
+        "The llama-cpp provider needs the optional smoltalk-llama-cpp package. Install it (npm i smoltalk-llama-cpp) and try again.",
+      );
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("npm i smoltalk-llama-cpp");
+      }
+    });
+
+    it("says the plugin is too old when it loads but has no embed", async () => {
+      loaderState.withEmbed = false;
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain("smoltalk-llama-cpp@latest");
+        expect(result.error).toContain("0.5.0");
+      }
+    });
+
+    it("prefers a hand-registered llama-cpp embed provider and does not load", async () => {
+      registerEmbeddingProvider("llama-cpp", async () => ({
+        success: true,
+        value: { embeddings: [[9]], model: "mine" },
+      }));
+      const result = await embed("hello", { provider: "llama-cpp", model: "/m/model.gguf" });
+      expect(result.success && result.value.model).toBe("mine");
+      expect(loaderState.calls).toBe(0);
+    });
   });
 });

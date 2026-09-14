@@ -7,6 +7,15 @@ import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
 import { mlxEmbed } from "./embed/mlx.js";
+import { loadLlamaCpp } from "./clients/llamaCppLoader.js";
+import type { LlamaCppModule } from "./clients/llamaCppLoader.js";
+
+function errorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
 
 export type EmbedConfig = {
   model: string;
@@ -161,6 +170,28 @@ export async function embed(
     case "mlx": {
       // resolveBaseUrl always returns a value for "mlx" (it has a default).
       return mlxEmbed(inputs, config, resolveBaseUrl("mlx", config)!);
+    }
+    case "llama-cpp": {
+      // A hand-registered provider wins, the same rule loadLlamaCpp applies
+      // to the chat class. Otherwise load the plugin the way text() does;
+      // the loader caches its import.
+      const custom = registeredEmbedProviders[provider];
+      if (custom) {
+        return custom(inputs, config);
+      }
+      let plugin: LlamaCppModule;
+      try {
+        plugin = await loadLlamaCpp();
+      } catch (err) {
+        return failure(errorMessage(err));
+      }
+      if (typeof plugin.embed !== "function") {
+        return failure(
+          "Your installed smoltalk-llama-cpp has no embeddings support. " +
+            "Upgrade it (npm i smoltalk-llama-cpp@latest; >=0.5.0 required).",
+        );
+      }
+      return plugin.embed(inputs, config);
     }
     default: {
       const custom = registeredEmbedProviders[provider];
