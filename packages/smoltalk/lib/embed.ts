@@ -66,6 +66,21 @@ export function registerEmbeddingProvider(name: string, fn: EmbedProvider): void
   registeredEmbedProviders[name] = fn;
 }
 
+/** True when `name` has an embed provider registered through
+ *  registerEmbeddingProvider. The built-in cases in embed() are not its
+ *  concern, the same as hasProvider in client.ts. */
+export function hasEmbeddingProvider(name: string): boolean {
+  return name in registeredEmbedProviders;
+}
+
+export function unregisterEmbeddingProvider(name: string): boolean {
+  if (name in registeredEmbedProviders) {
+    delete registeredEmbedProviders[name];
+    return true;
+  }
+  return false;
+}
+
 export async function embed(
   input: string | string[],
   config: EmbedConfig,

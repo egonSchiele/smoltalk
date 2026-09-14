@@ -41,7 +41,12 @@ vi.mock("./embed/mlx.js", () => ({
   }),
 }));
 
-import { embed } from "./embed.js";
+import {
+  embed,
+  registerEmbeddingProvider,
+  hasEmbeddingProvider,
+  unregisterEmbeddingProvider,
+} from "./embed.js";
 import { openaiEmbed } from "./embed/openai.js";
 import { googleEmbed } from "./embed/google.js";
 import { ollamaEmbed } from "./embed/ollama.js";
@@ -210,6 +215,18 @@ describe("embed", () => {
       expect.objectContaining({ provider: "mlx" }),
       "http://127.0.0.1:8080/v1",
     );
+  });
+
+  it("reports and removes a registered embed provider", async () => {
+    expect(hasEmbeddingProvider("custom-x")).toBe(false);
+    registerEmbeddingProvider("custom-x", async () => ({
+      success: true,
+      value: { embeddings: [[1]], model: "custom" },
+    }));
+    expect(hasEmbeddingProvider("custom-x")).toBe(true);
+    expect(unregisterEmbeddingProvider("custom-x")).toBe(true);
+    expect(unregisterEmbeddingProvider("custom-x")).toBe(false);
+    expect(hasEmbeddingProvider("custom-x")).toBe(false);
   });
 
   it("uses baseUrl.mlx when it is set", async () => {
