@@ -4,9 +4,13 @@
 
 ### Added
 
-- `embed()` with `provider: "mlx"` posts to the MLX server's `/v1/embeddings` route, at `baseUrl.mlx`, `MLX_BASE_URL`, or `http://127.0.0.1:8080/v1`. Zero cost, no key, like the chat client. Float encoding is requested explicitly so a server that ignores the OpenAI SDK's base64 default is not decoded as base64.
+- `embed()` with `provider: "mlx"` posts to the MLX server's `/v1/embeddings` route, at `baseUrl.mlx`, `MLX_BASE_URL`, or `http://127.0.0.1:8080/v1`. Zero cost, no key, like the chat client.
 - `embed()` with `provider: "llama-cpp"` auto-loads `smoltalk-llama-cpp` and calls the `embed` function it exports (>=0.5.0). An older plugin gets a failure that says to upgrade. A provider registered by hand under `llama-cpp` still wins.
 - `hasEmbeddingProvider(name)` and `unregisterEmbeddingProvider(name)` join `registerEmbeddingProvider`.
+
+### Fixed
+
+- Embeddings through any OpenAI-shaped backend with a custom base URL (`mlx`, `deepinfra`, `litellm`, `openai-compat`) now request float encoding, and a base64 reply is decoded either way. The OpenAI SDK asks for base64 by default and decodes the reply as base64 unconditionally, so a server that ignored the field and returned float arrays came back as empty vectors. Real OpenAI keeps the SDK default.
 
 ## smoltalk 0.13.2 (2026-09-10)
 
