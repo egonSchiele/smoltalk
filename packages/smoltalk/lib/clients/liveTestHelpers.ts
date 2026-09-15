@@ -45,9 +45,16 @@ export function liveProviderSuite(config: LiveProviderTestConfig): void {
   const haveKey = Boolean(process.env[config.envKey]);
   const timeout = config.timeout ?? DEFAULT_TIMEOUT;
 
-  const baseConfig = config.provider
-    ? { model: config.model, provider: config.provider }
-    : { model: config.model };
+  // A small maxTokens keeps the smoke tests cheap. OpenRouter in particular
+  // reserves the full output limit against the credit balance when none is
+  // sent, so a low balance would 402 every request.
+  const baseConfig: { model: string; provider?: string; maxTokens: number } = {
+    model: config.model,
+    maxTokens: 500,
+  };
+  if (config.provider) {
+    baseConfig.provider = config.provider;
+  }
 
   describe.runIf(haveKey).concurrent(`${config.name} - real API`, () => {
     it("hello world", { timeout }, async () => {

@@ -81,4 +81,15 @@ describe("SmolOpenAiCompat", () => {
       }).cost?.totalCost,
     ).toBe(0.03);
   });
+
+  it("sends maxTokens as max_tokens, which compat servers accept", () => {
+    const c = new SmolOpenAiCompat({
+      ...base,
+      apiKey: { openAiCompat: "k" },
+      baseUrl: { openAiCompat: "https://host.test/v1" },
+    });
+    const req = (c as any).buildRequest({ ...base, maxTokens: 400 });
+    expect(req.max_tokens).toBe(400);
+    expect(req.max_completion_tokens).toBeUndefined();
+  });
 });

@@ -42,6 +42,15 @@ export class SmolOpenAiCompat extends SmolOpenAi {
     return { apiKey, baseURL };
   }
 
+  // Compat servers (OpenRouter, DeepInfra, LiteLLM, vLLM, mlx_lm.server) all
+  // accept `max_tokens`; `max_completion_tokens` support is patchy.
+  protected maxTokensParam(config: SmolConfig): Record<string, number> {
+    if (config.maxTokens === undefined) {
+      return {};
+    }
+    return { max_tokens: config.maxTokens };
+  }
+
   protected resolveCostUsd(usage: any): number | undefined {
     // Try the three common conventions across OpenAI-compatible providers.
     const c = usage?.cost ?? usage?.estimated_cost ?? usage?.cost_usd;

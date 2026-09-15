@@ -93,6 +93,19 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   }
 
   /**
+   * The request field carrying `config.maxTokens`. OpenAI deprecated
+   * `max_tokens` in favor of `max_completion_tokens`, and its reasoning models
+   * reject `max_tokens` outright. Compat servers override this to send
+   * `max_tokens`, which is the field they reliably accept.
+   */
+  protected maxTokensParam(config: SmolConfig): Record<string, number> {
+    if (config.maxTokens === undefined) {
+      return {};
+    }
+    return { max_completion_tokens: config.maxTokens };
+  }
+
+  /**
    * Extract provider-specific hosted-tool results (e.g. OpenRouter web_search
    * annotations) from a completion. Subclasses override; default returns none.
    */
@@ -175,6 +188,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       ...(config.reasoningEffort && {
         reasoning_effort: config.reasoningEffort,
       }),
+      ...this.maxTokensParam(config),
       ...sanitizeAttributes(config.rawAttributes),
       ...this.buildRequestExtras(config),
     };
