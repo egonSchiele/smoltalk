@@ -561,6 +561,10 @@ that exposes OpenAI-shaped `/audio/*` endpoints, use the generic
 **`openai-compat`** provider with `baseUrl` (mirrors the chat client). Anthropic,
 OpenRouter, and Ollama have no audio endpoints and return a `Failure`.
 
+`speak()` also supports **`mlx`**: a local MLX speech server at `baseUrl.mlx`,
+`MLX_BASE_URL`, or `http://127.0.0.1:8080/v1`. No API key, no retries, zero
+cost, and `"wav"` by default.
+
 ```ts
 // example: skip-typecheck
 // Groq STT (OpenAI-compatible; provider inferred from the model)
@@ -655,7 +659,11 @@ if (result.success) {
 `tts-1` and `tts-1-hd` are the only baked-in models in v1. `voice` is
 required. Options: `format` (OpenAI accepts `"mp3"` | `"opus"` | `"aac"` |
 `"flac"` | `"wav"` | `"pcm"`, default `"mp3"`; a custom provider may accept
-other strings) and `speed`. Limits are declared per model in the registry —
+other strings), `speed`, and `instructions`. `instructions` is free-text
+guidance on how the speech should sound (`"Alarmed and urgent."`). It is passed
+through as-is by the OpenAI-shaped providers (`openai`, `groq`, `openai-compat`,
+`mlx`); whether the model reads it is up to the model (`gpt-4o-mini-tts` does,
+`tts-1` does not). The `google` provider ignores it. Limits are declared per model in the registry —
 for `tts-1`/`tts-1-hd` that's a 4096-code-point input cap, a 0.25–4.0 speed
 range, and the format list above; exceeding any of them returns a `Failure`
 before the request is sent. The returned `audio` is a `Uint8Array` you own —
