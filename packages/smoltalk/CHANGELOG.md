@@ -1,11 +1,5 @@
 # Changelog
 
-## Unreleased
-
-### Fixed
-
-- `maxTokens` is now sent by every client. It was silently dropped by the Chat Completions client (and so by `openai`, `openrouter`, `deepinfra`, `litellm`, `mlx`, `openai-compat`), by `google`, and by `ollama`, so responses were never capped and OpenRouter reserved the model's full output limit against your credit balance. It maps to `max_completion_tokens` for OpenAI, `max_tokens` for OpenAI-compatible servers, `maxOutputTokens` for Google, and `options.num_predict` for Ollama. `rawAttributes` still override it.
-
 ## smoltalk 0.14.0 (2026-09-14)
 
 ### Added
