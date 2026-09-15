@@ -60,7 +60,7 @@ describe("SmolOpenRouter", () => {
     ).toThrow(/API key/i);
   });
 
-  it("injects usage:{include:true} in the request body", () => {
+  it("does not inject the deprecated usage:{include:true}", () => {
     const c = new SmolOpenRouter({
       model: baseModel,
       provider: "openrouter",
@@ -71,7 +71,7 @@ describe("SmolOpenRouter", () => {
       model: baseModel,
       messages: [userMessage("hi")],
     });
-    expect(request.usage).toEqual({ include: true });
+    expect(request.usage).toBeUndefined();
     // No plugins when web_search is not requested
     expect(request.plugins).toBeUndefined();
   });
@@ -89,7 +89,6 @@ describe("SmolOpenRouter", () => {
       messages: [userMessage("hi")],
       hostedTools: ["web_search"],
     });
-    expect(request.usage).toEqual({ include: true });
     expect(request.plugins).toEqual([{ id: "web", max_results: 5 }]);
   });
 

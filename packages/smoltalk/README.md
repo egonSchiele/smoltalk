@@ -250,7 +250,7 @@ model ids aren't in the smoltalk registry.
 
 | `provider:` | What it is | Required config | Cost source |
 |-------------|------------|-----------------|-------------|
-| `"openrouter"` | OpenRouter.ai aggregator | `apiKey.openRouter` (or `OPENROUTER_API_KEY`) | `usage.cost` (auto-enabled by injecting `usage:{include:true}`) |
+| `"openrouter"` | OpenRouter.ai aggregator | `apiKey.openRouter` (or `OPENROUTER_API_KEY`) | `usage.cost` |
 | `"deepinfra"` | DeepInfra hosted models | `apiKey.deepInfra` (or `DEEPINFRA_API_KEY`) | `usage.estimated_cost` |
 | `"litellm"`   | Your own LiteLLM proxy   | `apiKey.liteLlm` + `baseUrl.liteLlm` (or `LITELLM_API_KEY` / `LITELLM_BASE_URL`) | `x-litellm-response-cost` header (non-stream only) |
 | `"openai-compat"` | Any OpenAI-shape backend (vLLM, TGI, LM Studio…) | `apiKey.openAiCompat` + `baseUrl.openAiCompat` (or `OPENAI_COMPAT_API_KEY` / `OPENAI_COMPAT_BASE_URL`) | Best-effort: reads `usage.cost`/`estimated_cost`/`cost_usd` if present |

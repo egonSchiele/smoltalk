@@ -8,9 +8,8 @@ import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
  *
  * - Baked base URL `https://openrouter.ai/api/v1` (override via config.baseUrl.openRouter).
  * - Key: config.apiKey.openRouter or env OPENROUTER_API_KEY.
- * - Cost: reads `usage.cost` (USD). OpenRouter only returns this when
- *   `usage: { include: true }` is set in the request body, which this client
- *   injects automatically via buildRequestExtras.
+ * - Cost: reads `usage.cost` (USD). OpenRouter includes this in every
+ *   response (in the final SSE chunk when streaming); no request flag needed.
  * - Hosted web_search: when config.hostedTools includes "web_search",
  *   injects `plugins: [{ id: "web", max_results: 5 }]` and parses
  *   message.annotations into a HostedToolResult.
@@ -36,8 +35,7 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
   }
 
   protected buildRequestExtras(config: SmolConfig): Record<string, unknown> {
-    // OpenRouter only returns usage.cost when this is set.
-    const extras: Record<string, unknown> = { usage: { include: true } };
+    const extras: Record<string, unknown> = {};
     if (config.hostedTools?.includes("web_search")) {
       extras.plugins = [{ id: "web", max_results: 5 }];
     }

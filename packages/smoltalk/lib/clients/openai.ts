@@ -84,8 +84,8 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   /**
    * Extra request body fields injected on every call. Subclasses override to
-   * add provider-specific request shapes (e.g. OpenRouter's `usage: { include: true }`
-   * or its `plugins: [{ id: "web" }]` for web search). Merged into the request
+   * add provider-specific request shapes (e.g. OpenRouter's
+   * `plugins: [{ id: "web" }]` for web search). Merged into the request
    * after the standard params so it can override them.
    */
   protected buildRequestExtras(_config: SmolConfig): Record<string, unknown> {
