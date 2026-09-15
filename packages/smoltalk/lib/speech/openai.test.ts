@@ -199,6 +199,21 @@ describe("OpenAISpeechClient", () => {
     expect(r.value.cost).toBeUndefined();
   });
 
+  it("sends instructions when set, and leaves the field out when empty or absent", async () => {
+    create.mockResolvedValue(okResponse());
+    await run("hello", { instructions: "Alarmed and urgent." });
+    expect(create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ instructions: "Alarmed and urgent." }),
+      expect.anything(),
+    );
+
+    await run("hello", { instructions: "" });
+    expect(create.mock.calls[1][0]).not.toHaveProperty("instructions");
+
+    await run("hello");
+    expect(create.mock.calls[2][0]).not.toHaveProperty("instructions");
+  });
+
   it("converts a rejected SDK promise into a redacted, logged Failure at the speak() boundary", async () => {
     create.mockRejectedValueOnce(new Error("sdk exploded near sk-x"));
     const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});

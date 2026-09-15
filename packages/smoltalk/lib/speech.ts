@@ -18,6 +18,11 @@ import { OpenAiCompatSpeechClient } from "./speech/openaiCompat.js";
 export type SpeakOptions = {
   model: string;
   voice: string;
+  /** How the speech should sound, in plain words: "Alarmed and urgent."
+   *  Passed through as-is by the OpenAI-shaped providers (openai, groq,
+   *  openai-compat, mlx); whether the model reads it is up to the model
+   *  (OpenAI's tts-1 and tts-1-hd do not). The google provider ignores it. */
+  instructions?: string;
   provider?: string;
   modelData?: ModelDataBlob;
   apiKey?: SmolConfig["apiKey"];
