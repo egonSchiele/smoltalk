@@ -115,6 +115,9 @@ export class SmolOllama extends BaseClient implements SmolClient {
     if (config.responseFormat) {
       request.format = responseFormatToJsonSchema(config.responseFormat);
     }
+    if (config.maxTokens !== undefined) {
+      request.options = { num_predict: config.maxTokens };
+    }
     Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
     this.logger.debug(
@@ -196,6 +199,9 @@ export class SmolOllama extends BaseClient implements SmolClient {
     }
     if (config.responseFormat) {
       request.format = responseFormatToJsonSchema(config.responseFormat);
+    }
+    if (config.maxTokens !== undefined) {
+      request.options = { num_predict: config.maxTokens };
     }
     Object.assign(request, sanitizeAttributes(config.rawAttributes));
 

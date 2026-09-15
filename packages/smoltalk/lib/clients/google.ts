@@ -318,6 +318,10 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     const genConfig: GenerateContentConfig = {};
 
+    if (config.maxTokens !== undefined) {
+      genConfig.maxOutputTokens = config.maxTokens;
+    }
+
     if (systemParts.length > 0) {
       genConfig.systemInstruction = systemParts.join("\n");
     }

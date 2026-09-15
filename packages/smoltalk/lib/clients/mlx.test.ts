@@ -57,6 +57,14 @@ describe("SmolMlx", () => {
     expect(received[0].url).toBe("/v1/chat/completions");
   });
 
+  it("sends maxTokens to the server as max_tokens", async () => {
+    reply = { status: 200, body: chatReply("m", "hello") };
+    const client = getClient({ provider: "mlx", model: "m", baseUrl: { mlx: baseUrl } });
+    const result = await client.textSync({ messages, maxTokens: 50 });
+    expect(result.success).toBe(true);
+    expect(received[0].body.max_tokens).toBe(50);
+  });
+
   it("needs no API key", async () => {
     reply = { status: 200, body: chatReply("m", "hello") };
     delete process.env.OPENAI_COMPAT_API_KEY;

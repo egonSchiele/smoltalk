@@ -37,6 +37,18 @@ describe("geminiSupportsToolCirculation", () => {
   });
 });
 
+describe("SmolGoogle.buildRequest — maxTokens", () => {
+  it("sends maxTokens as maxOutputTokens", () => {
+    const req = build("gemini-3-flash-preview", { maxTokens: 300 });
+    expect(req.config.maxOutputTokens).toBe(300);
+  });
+
+  it("sets no maxOutputTokens when maxTokens is not set", () => {
+    const req = build("gemini-3-flash-preview", {});
+    expect(req.config.maxOutputTokens).toBeUndefined();
+  });
+});
+
 describe("SmolGoogle.buildRequest — thinking config", () => {
   it("requests thought summaries (includeThoughts) when thinking is enabled", () => {
     const req = build("gemini-3-flash-preview", {

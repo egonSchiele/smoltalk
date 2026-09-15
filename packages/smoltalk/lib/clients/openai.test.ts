@@ -104,6 +104,37 @@ describe("SmolOpenAi seams", () => {
   });
 });
 
+describe("SmolOpenAi maxTokens", () => {
+  it("sends maxTokens as max_completion_tokens", () => {
+    const c = new ExtrasProvider({
+      model: "gpt-4o",
+      provider: "openai",
+      messages: [],
+    });
+    const req = c.publicBuild({
+      model: "gpt-4o" as any,
+      messages: [],
+      maxTokens: 123,
+    } as SmolConfig);
+    expect(req.max_completion_tokens).toBe(123);
+    expect(req.max_tokens).toBeUndefined();
+  });
+
+  it("omits the token limit when maxTokens is not set", () => {
+    const c = new ExtrasProvider({
+      model: "gpt-4o",
+      provider: "openai",
+      messages: [],
+    });
+    const req = c.publicBuild({
+      model: "gpt-4o" as any,
+      messages: [],
+    } as SmolConfig);
+    expect("max_completion_tokens" in req).toBe(false);
+    expect("max_tokens" in req).toBe(false);
+  });
+});
+
 const audioModelData: ModelDataBlob = {
   schemaVersion: 1,
   generatedAt: "test",
