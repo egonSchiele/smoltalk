@@ -14,6 +14,7 @@ import { OpenAISpeechClient } from "./speech/openai.js";
 import { GroqSpeechClient } from "./speech/groq.js";
 import { GoogleSpeechClient } from "./speech/google.js";
 import { OpenAiCompatSpeechClient } from "./speech/openaiCompat.js";
+import { MlxSpeechClient } from "./speech/mlx.js";
 
 export type SpeakOptions = {
   model: string;
@@ -58,6 +59,7 @@ builtinClients["openai"] = OpenAISpeechClient;
 builtinClients["groq"] = GroqSpeechClient;
 builtinClients["google"] = GoogleSpeechClient;
 builtinClients["openai-compat"] = OpenAiCompatSpeechClient;
+builtinClients["mlx"] = MlxSpeechClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.
