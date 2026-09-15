@@ -199,6 +199,43 @@ describe("OpenAISpeechClient", () => {
     expect(r.value.cost).toBeUndefined();
   });
 
+  it("sends instructions when set, and leaves the field out when empty or absent", async () => {
+    create.mockResolvedValue(okResponse());
+    await run("hello", { instructions: "Alarmed and urgent." });
+    expect(create).toHaveBeenLastCalledWith(
+      expect.objectContaining({ instructions: "Alarmed and urgent." }),
+      expect.anything(),
+    );
+
+    await run("hello", { instructions: "" });
+    expect(create.mock.calls[1][0]).not.toHaveProperty("instructions");
+
+    await run("hello");
+    expect(create.mock.calls[2][0]).not.toHaveProperty("instructions");
+  });
+
+  it("refuses an empty key by default, so a subclass must opt out explicitly", async () => {
+    const res = await run("hello", { apiKey: "" });
+    expect(res.success).toBe(false);
+    if (!res.success) expect(res.error).toMatch(/No OpenAI API key/);
+    expect(create).not.toHaveBeenCalled();
+
+    class NoKey extends OpenAISpeechClient {
+      protected requiresKey(): boolean {
+        return false;
+      }
+    }
+    create.mockResolvedValue(okResponse());
+    const open = await new NoKey({
+      model: "tts-1",
+      provider: "openai",
+      apiKey: "",
+      voice: "alloy",
+    }).speak("hello");
+    expect(open.success).toBe(true);
+    expect(create).toHaveBeenCalledTimes(1);
+  });
+
   it("converts a rejected SDK promise into a redacted, logged Failure at the speak() boundary", async () => {
     create.mockRejectedValueOnce(new Error("sdk exploded near sk-x"));
     const errorSpy = vi.spyOn(getLogger(), "error").mockImplementation(() => {});

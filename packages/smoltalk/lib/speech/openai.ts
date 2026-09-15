@@ -25,10 +25,16 @@ export class OpenAISpeechClient extends BaseSpeechClient {
     return "No OpenAI API key provided. Set apiKey.openAi or OPENAI_API_KEY.";
   }
 
+  /** Whether a request needs an API key at all. A local server ignores the
+   *  key, and its client says so by returning false. */
+  protected requiresKey(): boolean {
+    return true;
+  }
+
   // No try/catch here: BaseSpeechClient.speak() is the single
   // redacting/logging exception boundary.
   protected async _speak(text: string): Promise<Result<SpeechResult>> {
-    if (!this.config.apiKey) {
+    if (this.requiresKey() && !this.config.apiKey) {
       return failure(this.noKeyMessage());
     }
 
@@ -53,6 +59,9 @@ export class OpenAISpeechClient extends BaseSpeechClient {
     };
     if (this.config.speed !== undefined) {
       params.speed = this.config.speed;
+    }
+    if (this.config.instructions !== undefined && this.config.instructions !== "") {
+      params.instructions = this.config.instructions;
     }
     const res = await client.audio.speech.create(params, { signal: this.config.abortSignal });
     const audio = new Uint8Array(await res.arrayBuffer());

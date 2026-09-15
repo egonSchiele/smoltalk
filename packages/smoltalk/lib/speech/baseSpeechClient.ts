@@ -20,6 +20,11 @@ export type SpeechClientConfig = {
   /** Base-URL map (for OpenAI-compatible providers); read via resolveBaseUrl. */
   baseUrl?: SmolConfig["baseUrl"];
   voice: string;
+  /** How the speech should sound, in plain words: "Alarmed and urgent."
+   *  Passed through as-is by the OpenAI-shaped providers (openai, groq,
+   *  openai-compat, mlx); whether the model reads it is up to the model
+   *  (OpenAI's tts-1 and tts-1-hd do not). The google provider ignores it. */
+  instructions?: string;
   modelData?: ModelDataBlob;
   /** Output format; provider-specific vocabulary (OpenAI: mp3/opus/aac/flac/wav/pcm). */
   format?: string;

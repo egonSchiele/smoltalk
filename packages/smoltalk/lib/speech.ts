@@ -14,10 +14,16 @@ import { OpenAISpeechClient } from "./speech/openai.js";
 import { GroqSpeechClient } from "./speech/groq.js";
 import { GoogleSpeechClient } from "./speech/google.js";
 import { OpenAiCompatSpeechClient } from "./speech/openaiCompat.js";
+import { MlxSpeechClient } from "./speech/mlx.js";
 
 export type SpeakOptions = {
   model: string;
   voice: string;
+  /** How the speech should sound, in plain words: "Alarmed and urgent."
+   *  Passed through as-is by the OpenAI-shaped providers (openai, groq,
+   *  openai-compat, mlx); whether the model reads it is up to the model
+   *  (OpenAI's tts-1 and tts-1-hd do not). The google provider ignores it. */
+  instructions?: string;
   provider?: string;
   modelData?: ModelDataBlob;
   apiKey?: SmolConfig["apiKey"];
@@ -53,6 +59,7 @@ builtinClients["openai"] = OpenAISpeechClient;
 builtinClients["groq"] = GroqSpeechClient;
 builtinClients["google"] = GoogleSpeechClient;
 builtinClients["openai-compat"] = OpenAiCompatSpeechClient;
+builtinClients["mlx"] = MlxSpeechClient;
 
 // Null-prototype so provider names like "toString"/"__proto__" can't collide
 // with Object.prototype or pollute the registry.
