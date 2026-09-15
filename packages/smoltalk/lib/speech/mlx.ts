@@ -40,8 +40,11 @@ export class MlxSpeechClient extends OpenAISpeechClient {
     return "wav";
   }
 
-  protected override async _speak(text: string): Promise<Result<SpeechResult>> {
-    const result = await super._speak(text);
+  /** Local speech is free. Set after the base class's cost pass, so model
+   *  data that prices this model cannot override it (matching the chat mlx
+   *  client, whose provider cost of 0 wins over registry pricing). */
+  override async speak(text: string): Promise<Result<SpeechResult>> {
+    const result = await super.speak(text);
     if (!result.success) {
       return result;
     }

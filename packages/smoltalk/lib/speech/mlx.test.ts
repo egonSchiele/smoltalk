@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { speak } from "../speech.js";
+import type { ModelDataBlob } from "../modelData.js";
 
 const create = vi.fn();
 const ctor = vi.fn();
@@ -78,6 +79,27 @@ describe("MlxSpeechClient", () => {
     expect(res.success).toBe(true);
     if (res.success) {
       expect(res.value.mimeType).toBe("audio/wav");
+      expect(res.value.cost).toEqual({ inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" });
+    }
+  });
+
+  it("reports zero cost even when model data prices the model", async () => {
+    const priced = {
+      schemaVersion: 1,
+      generatedAt: "t",
+      hostedTools: [],
+      models: [
+        {
+          type: "text-to-speech",
+          modelName: "mlx-community/Qwen3-TTS-12Hz-1.7B-CustomVoice-8bit",
+          provider: "mlx",
+          perCharacterCost: 0.001,
+        },
+      ],
+    } satisfies ModelDataBlob;
+    const res = await mlxSpeak({ modelData: priced });
+    expect(res.success).toBe(true);
+    if (res.success) {
       expect(res.value.cost).toEqual({ inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" });
     }
   });
