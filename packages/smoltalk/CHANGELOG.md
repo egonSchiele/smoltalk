@@ -1,5 +1,20 @@
 # Changelog
 
+## smoltalk 0.14.2 (2026-09-21)
+
+### Added
+
+- New models in the registry: `gpt-6-astra` (OpenAI, 1M context) and `gemini-3.1-flash-tts-preview` (Google TTS).
+
+### Fixed
+
+- OpenAI long-context pricing now kicks in at 272K input tokens, not 200K (gpt-5.x and gpt-6 families).
+
+### Changed
+
+- Refreshed throughput (`outputTokensPerSecond`) across OpenAI and Anthropic models; added it for `claude-fable-5-1` and `claude-opus-5`.
+- Hosted tool pricing: Anthropic code execution free allowance is 1,550 container-hours/month (5-min minimum per container); Google Maps grounding is $14 per 1,000 queries with 5,000 free grounded prompts/month.
+
 ## smoltalk 0.14.1 (2026-09-15)
 
 ### Added
