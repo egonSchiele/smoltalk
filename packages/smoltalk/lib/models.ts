@@ -215,6 +215,14 @@ export const textToSpeechModels = [
   // Gemini documents a 32k-token context, and characters are not a sound proxy.
   {
     type: "text-to-speech",
+    modelName: "gemini-3.1-flash-tts-preview",
+    provider: "google",
+    inputTokenCost: 1.0, // $/1M text-input tokens, verified 2026-09-21
+    outputAudioTokenCost: 20.0, // $/1M audio-output tokens
+    formats: ["pcm", "wav"],
+  },
+  {
+    type: "text-to-speech",
     modelName: "gemini-2.5-flash-preview-tts",
     provider: "google",
     inputTokenCost: 0.5, // $/1M text-input tokens, verified 2026-08-09
@@ -748,7 +756,7 @@ export const textModels = [
       inputTokenCost: 5,
       cachedInputTokenCost: 0.5,
       outputTokenCost: 22.5,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh"],
@@ -841,7 +849,7 @@ export const textModels = [
     longContext: {
       inputTokenCost: 60,
       outputTokenCost: 270,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["medium", "high", "xhigh"],
@@ -877,7 +885,7 @@ export const textModels = [
       inputTokenCost: 10,
       cachedInputTokenCost: 1,
       outputTokenCost: 45,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh"],
@@ -910,7 +918,7 @@ export const textModels = [
     longContext: {
       inputTokenCost: 60,
       outputTokenCost: 270,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh"],
@@ -934,6 +942,42 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "gpt-6-astra",
+    description: "GPT-6 Astra is OpenAI's most capable model, built for the hardest end-to-end work: complex reasoning, coding, computer use, research, and document creation. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Knowledge cutoff: April 2026.",
+    maxInputTokens: 1050000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 10,
+    cachedInputTokenCost: 1,
+    outputTokenCost: 50,
+    outputTokensPerSecond: 69,
+    longContext: {
+      inputTokenCost: 20,
+      cachedInputTokenCost: 2,
+      outputTokenCost: 75,
+      thresholdTokens: 272000,
+    },
+    reasoning: {
+      levels: ["low", "medium", "high", "xhigh", "max"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    modalities: {
+      input: ["text", "image", "pdf"],
+      output: ["text"],
+    },
+    knowledge: "2026-04-30",
+    releaseDate: "2026-09-04",
+    lastUpdated: "2026-09-04",
+    family: "gpt",
+    openWeights: false,
+    structuredOutput: true,
+    temperatureSupported: false,
+    provider: "openai",
+  },
+  {
+    type: "text",
     modelName: "gpt-5.6-sol",
     description: "GPT-5.6 Sol is the flagship model of the GPT-5.6 family for the most complex coding and agentic tasks. 1M context window. Standard pricing for ≤272K tokens, 2x input/1.5x output for >272K. Reflects the August 21, 2026 promotional price cut (input $5→$4, output $30→$20), which runs through at least November 21, 2026. Knowledge cutoff: February 2026.",
     maxInputTokens: 1050000,
@@ -941,12 +985,12 @@ export const textModels = [
     inputTokenCost: 4,
     cachedInputTokenCost: 0.4,
     outputTokenCost: 20,
-    outputTokensPerSecond: 71,
+    outputTokensPerSecond: 77,
     longContext: {
       inputTokenCost: 8,
       cachedInputTokenCost: 0.8,
       outputTokenCost: 30,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh", "max"],
@@ -977,12 +1021,12 @@ export const textModels = [
     inputTokenCost: 2,
     cachedInputTokenCost: 0.2,
     outputTokenCost: 12,
-    outputTokensPerSecond: 98,
+    outputTokensPerSecond: 106,
     longContext: {
       inputTokenCost: 4,
       cachedInputTokenCost: 0.4,
       outputTokenCost: 18,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh", "max"],
@@ -1013,12 +1057,12 @@ export const textModels = [
     inputTokenCost: 0.2,
     cachedInputTokenCost: 0.02,
     outputTokenCost: 1.2,
-    outputTokensPerSecond: 116,
+    outputTokensPerSecond: 165,
     longContext: {
       inputTokenCost: 0.4,
       cachedInputTokenCost: 0.04,
       outputTokenCost: 1.8,
-      thresholdTokens: 200000,
+      thresholdTokens: 272000,
     },
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh", "max"],
@@ -1049,7 +1093,7 @@ export const textModels = [
     inputTokenCost: 2,
     cachedInputTokenCost: 0.2,
     outputTokenCost: 12,
-    outputTokensPerSecond: 133,
+    outputTokensPerSecond: 124,
     longContext: {
       inputTokenCost: 4,
       cachedInputTokenCost: 0.4,
@@ -1114,7 +1158,7 @@ export const textModels = [
     inputTokenCost: 0.75,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 3.75,
-    outputTokensPerSecond: 312,
+    outputTokensPerSecond: 329,
     inputAudioTokenCost: 1.5,
     reasoning: {
       levels: ["low", "medium", "high"],
@@ -1546,6 +1590,7 @@ export const textModels = [
     cachedInputTokenCost: 0.25,
     cacheCreationInputTokenCost: 12.5,
     outputTokenCost: 50,
+    outputTokensPerSecond: 69,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "xhigh", "max"],
@@ -1576,6 +1621,7 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
+    outputTokensPerSecond: 59,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "xhigh", "max"],
@@ -1722,7 +1768,7 @@ export const textModels = [
     cachedInputTokenCost: 0.2,
     cacheCreationInputTokenCost: 2.5,
     outputTokenCost: 10,
-    outputTokensPerSecond: 71,
+    outputTokensPerSecond: 81,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "xhigh", "max"],
@@ -2080,7 +2126,7 @@ export const hostedTools: HostedTool[] = [
     category: "code_execution",
     description: "Run code in a sandboxed container.",
     providerToolId: "code_execution",
-    pricing: { unit: "per_hour", amount: 0.05, freeAllowance: "50 container-hours/day", note: "Free when used with web_search or web_fetch." },
+    pricing: { unit: "per_hour", amount: 0.05, freeAllowance: "1,550 container-hours/month", note: "Free when used with web_search or web_fetch. 5-minute minimum execution time per container." },
   },
   {
     name: "web_search",
@@ -2155,7 +2201,12 @@ export const hostedTools: HostedTool[] = [
     description: "Grounding with Google Maps (Gemini 3 only).",
     providerToolId: "google_maps",
     models: ["gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"],
-    pricing: { unit: "per_call", note: "Gemini 3 family only; see Google pricing." },
+    pricing: {
+      unit: "per_call",
+      amount: 0.014,
+      freeAllowance: "5,000 grounded prompts/month (Gemini 3)",
+      note: "$14 per 1,000 search queries on the Gemini 3 family.",
+    },
   },
   {
     name: "web_search",
