@@ -1,5 +1,20 @@
 # Changelog
 
+## smoltalk 0.14.1 (2026-09-15)
+
+### Added
+
+- `speak()` now supports `provider: "mlx"` — a local MLX speech server at `baseUrl.mlx`, `MLX_BASE_URL`, or `http://127.0.0.1:8080/v1`.
+- `instructions` on `speak()` lets you give free-text guidance on how the speech should sound (`"Alarmed and urgent."`). This is used by some models (eg Qwen-TTS). It is passed through as-is by the OpenAI-shaped providers (`openai`, `groq`, `openai-compat`, `mlx`). The `google` provider ignores it.
+
+### Fixed
+
+- `config.maxTokens` is now actually sent by every client. Google gets `maxOutputTokens`, Ollama `options.num_predict`, OpenAI `max_completion_tokens` (its reasoning models reject the deprecated `max_tokens`), and OpenAI-compatible servers `max_tokens`, which is the field they reliably accept.
+
+### Changed
+
+- OpenRouter no longer injects the deprecated `usage: { include: true }`. `usage.cost` comes back on every response without needing this.
+
 ## smoltalk 0.14.0 (2026-09-14)
 
 ### Added
