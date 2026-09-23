@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
- * Which grammar a typed call gets. A model whose chat wrapper has a thought
- * segment gets the grammar from thinkingGrammar.ts, built from the wrapper's
- * own tokens; any other model gets the plain schema grammar. And an empty
- * tool list must not count as tools, since node-llama-cpp cannot apply a
- * grammar and functions together and the grammar would be dropped.
+ * Which grammar a typed call gets. A wrapper whose reply is one thought
+ * block then the answer (Qwen, DeepSeek, Seed, Gemma 4) gets the grammar
+ * from thinkingGrammar.ts, built from the wrapper's own tokens. Every other
+ * wrapper gets the plain schema grammar: Harmony and Muse put the answer in
+ * a second channel, and the template fallback for an unknown model can
+ * spell its markers as plain text. And an empty tool list must not count
+ * as tools, since node-llama-cpp cannot apply a grammar and functions
+ * together and the grammar would be dropped.
  *
  * node-llama-cpp can't load a real GGUF in CI, so it is mocked; the mock
  * records the grammar text our code asks for and the options it generates
@@ -18,13 +21,16 @@ const h = vi.hoisted(() => {
     generateOptions: [] as any[],
   };
   const wrapper = {
-    // What resolveChatWrapper's settings.segments holds for the test's model.
-    segments: undefined as any,
+    // Which fake wrapper class resolveChatWrapper returns, and its thought
+    // segment settings.
+    name: "General" as string,
+    thought: undefined as any,
   };
   const reset = () => {
     record.grammarTexts = [];
     record.generateOptions = [];
-    wrapper.segments = undefined;
+    wrapper.name = "General";
+    wrapper.thought = undefined;
   };
   return { record, wrapper, reset };
 });
@@ -39,6 +45,27 @@ vi.mock("node-llama-cpp", () => {
     dispose() {}
   }
 
+  // The token ids the fake tokenizer gives each marker. Special markers
+  // are one token; a plain-text marker splits into ordinary tokens.
+  const TOKENS: Record<string, number[]> = {
+    "<think>\n": [1000, 5],
+    "\n</think>": [5, 1001],
+    "</think>": [1001],
+    "<think>": [1000],
+    "<seed:think>": [2000],
+    "</seed:think>": [2001],
+  };
+  const SPECIAL = [1000, 1001, 2000, 2001];
+  class FakeLlamaText {
+    constructor(public text: string) {}
+    tokenize() {
+      return TOKENS[this.text] ?? [60, 47, 62];
+    }
+  }
+  const LlamaText = (value: any) =>
+    value instanceof FakeLlamaText ? value : new FakeLlamaText(value);
+  const isLlamaText = (value: any) => value instanceof FakeLlamaText;
+
   const makeSequence = () => ({
     tokenMeter: {
       getState: () => ({ usedInputTokens: 1, usedOutputTokens: 1 }),
@@ -48,6 +75,7 @@ vi.mock("node-llama-cpp", () => {
 
   const makeModel = () => ({
     tokenizer: () => [],
+    isSpecialToken: (token: number) => SPECIAL.includes(token),
     async createContext() {
       const seq = makeSequence();
       return {
@@ -72,20 +100,25 @@ vi.mock("node-llama-cpp", () => {
     },
   });
 
-  // The token ids the fake tokenizer gives the wrapper's markers.
-  const TOKENS: Record<string, number[]> = {
-    "<think>\n": [1000, 5],
-    "\n</think>": [5, 1001],
-  };
-  class FakeLlamaText {
-    constructor(public text: string) {}
-    tokenize() {
-      return TOKENS[this.text] ?? [];
+  class ChatWrapper {
+    get settings() {
+      return { segments: { thought: h.wrapper.thought } };
     }
   }
-  const LlamaText = (value: any) =>
-    value instanceof FakeLlamaText ? value : new FakeLlamaText(value);
-  const isLlamaText = (value: any) => value instanceof FakeLlamaText;
+  class QwenChatWrapper extends ChatWrapper {}
+  class DeepSeekChatWrapper extends ChatWrapper {}
+  class SeedChatWrapper extends ChatWrapper {}
+  class Gemma4ChatWrapper extends ChatWrapper {}
+  class HarmonyChatWrapper extends ChatWrapper {}
+  class GeneralChatWrapper extends ChatWrapper {}
+  const classes: Record<string, new () => ChatWrapper> = {
+    Qwen: QwenChatWrapper,
+    DeepSeek: DeepSeekChatWrapper,
+    Seed: SeedChatWrapper,
+    Gemma4: Gemma4ChatWrapper,
+    Harmony: HarmonyChatWrapper,
+    General: GeneralChatWrapper,
+  };
 
   return {
     getLlama: async () => makeLlama(),
@@ -93,7 +126,11 @@ vi.mock("node-llama-cpp", () => {
     LlamaLogLevel: { error: "error" },
     LlamaText,
     isLlamaText,
-    resolveChatWrapper: () => ({ settings: { segments: h.wrapper.segments } }),
+    QwenChatWrapper,
+    DeepSeekChatWrapper,
+    SeedChatWrapper,
+    Gemma4ChatWrapper,
+    resolveChatWrapper: () => new classes[h.wrapper.name](),
   };
 });
 
@@ -117,20 +154,23 @@ function call(extra: Record<string, any> = {}) {
   } as any);
 }
 
+function grammarKind(): string {
+  return h.record.generateOptions[0].grammar.kind;
+}
+
+function qwenThought(extra: Record<string, any> = {}) {
+  return { prefix: "<think>\n", suffix: "\n</think>", ...extra };
+}
+
 beforeEach(() => h.reset());
 afterEach(async () => {
   await disposeAll();
 });
 
 describe("the grammar for a typed reply", () => {
-  it("lets a thinking model close its block before the JSON", async () => {
-    h.wrapper.segments = {
-      thought: {
-        prefix: "<think>\n",
-        suffix: "\n</think>",
-        openOnResponseStart: true,
-      },
-    };
+  it("lets a Qwen model close its auto-opened block before the JSON", async () => {
+    h.wrapper.name = "Qwen";
+    h.wrapper.thought = qwenThought({ openOnResponseStart: true });
     await call();
     expect(h.record.grammarTexts).toEqual([
       [
@@ -140,28 +180,57 @@ describe("the grammar for a typed reply", () => {
         'thinking-json ::= "{" "}"',
       ].join("\n"),
     ]);
-    expect(h.record.generateOptions[0].grammar.kind).toBe("custom");
+    expect(grammarKind()).toBe("custom");
   });
 
   it("makes the block optional when the model opens it itself", async () => {
-    h.wrapper.segments = {
-      thought: { prefix: "<think>\n", suffix: "\n</think>" },
-    };
+    h.wrapper.name = "DeepSeek";
+    h.wrapper.thought = { prefix: "<think>", suffix: "</think>" };
     await call();
     expect(h.record.grammarTexts[0].split("\n")[0]).toBe(
       "root ::= (<[1000]> thinking-body <[1001]>)? thinking-gap thinking-json",
     );
   });
 
-  it("gives a model with no thought segment the plain schema grammar", async () => {
+  it("uses each wrapper's own markers", async () => {
+    h.wrapper.name = "Seed";
+    h.wrapper.thought = { prefix: "<seed:think>", suffix: "</seed:think>" };
+    await call();
+    expect(h.record.grammarTexts[0].split("\n")[0]).toBe(
+      "root ::= (<[2000]> thinking-body <[2001]>)? thinking-gap thinking-json",
+    );
+  });
+
+  it("gives the plain schema grammar to wrappers with another layout", async () => {
+    for (const name of ["Harmony", "General"]) {
+      h.reset();
+      h.wrapper.name = name;
+      h.wrapper.thought = qwenThought({ openOnResponseStart: true });
+      await call();
+      expect(h.record.grammarTexts, name).toEqual([]);
+      expect(grammarKind(), name).toBe("schema");
+      await disposeAll();
+    }
+  });
+
+  it("gives the plain schema grammar when a marker is not one special token", async () => {
+    h.wrapper.name = "Qwen";
+    h.wrapper.thought = { prefix: "<think>", suffix: "plain text marker" };
     await call();
     expect(h.record.grammarTexts).toEqual([]);
-    expect(h.record.generateOptions[0].grammar.kind).toBe("schema");
+    expect(grammarKind()).toBe("schema");
+  });
+
+  it("gives a wrapper with no thought segment the plain schema grammar", async () => {
+    h.wrapper.name = "Qwen";
+    await call();
+    expect(h.record.grammarTexts).toEqual([]);
+    expect(grammarKind()).toBe("schema");
   });
 
   it("keeps the grammar when the tool list is empty", async () => {
     await call({ tools: [] });
-    expect(h.record.generateOptions[0].grammar.kind).toBe("schema");
+    expect(grammarKind()).toBe("schema");
     expect(h.record.generateOptions[0].functions).toBeUndefined();
   });
 

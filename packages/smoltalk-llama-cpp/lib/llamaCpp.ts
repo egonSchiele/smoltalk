@@ -1,6 +1,10 @@
 import {
+  DeepSeekChatWrapper,
+  Gemma4ChatWrapper,
   LlamaChat,
   LlamaText,
+  QwenChatWrapper,
+  SeedChatWrapper,
   isLlamaText,
   resolveChatWrapper,
 } from "node-llama-cpp";
@@ -98,11 +102,13 @@ function extractThinkingBlocks(
 }
 
 /** The grammar for a typed reply: the schema alone, or the schema after a
- *  thought block when the model's chat wrapper has one (see
+ *  thought block for a wrapper whose reply is laid out that way (see
  *  thinkingGrammar.ts). The wrapper resolved here is the one `LlamaChat`
  *  picks for the same model, so the grammar and the chat agree on how the
  *  block is spelled. Its token ids come from the wrapper's own prefix and
- *  suffix, so a wrapper that spells the block differently still works. */
+ *  suffix, and each has to be one special token: a plain-text marker would
+ *  tokenize into several ordinary tokens, and the grammar would treat the
+ *  last of them as the end of the block wherever the model wrote it. */
 async function grammarForReply(
   entry: ModelEntry,
   schema: object,
@@ -110,13 +116,28 @@ async function grammarForReply(
   const jsonGrammar = await entry.llama.createGrammarForJsonSchema(
     schema as any,
   );
-  const thought = resolveChatWrapper(entry.model).settings.segments?.thought;
+  // The wrappers whose reply is one thought block, then the answer, which
+  // is the layout the thinking grammar assumes. Harmony (gpt-oss) and Muse
+  // put the answer in a second channel after its own header, so they keep
+  // the plain schema grammar, as does the template fallback for an unknown
+  // model.
+  const blockThenAnswer = [
+    QwenChatWrapper,
+    DeepSeekChatWrapper,
+    SeedChatWrapper,
+    Gemma4ChatWrapper,
+  ];
+  const wrapper = resolveChatWrapper(entry.model);
+  if (!blockThenAnswer.some((cls) => wrapper instanceof cls)) {
+    return jsonGrammar;
+  }
+  const thought = wrapper.settings.segments?.thought;
   if (thought === undefined || thought.suffix === undefined) {
     return jsonGrammar;
   }
   const closeTokens = LlamaText(thought.suffix).tokenize(entry.model.tokenizer);
-  const close = closeTokens[closeTokens.length - 1] as number | undefined;
-  if (close === undefined) {
+  const close = closeTokens[closeTokens.length - 1];
+  if (close === undefined || !entry.model.isSpecialToken(close)) {
     return jsonGrammar;
   }
   // The block is already open when the wrapper opens it at the start of
@@ -129,13 +150,14 @@ async function grammarForReply(
     const openTokens = LlamaText(thought.prefix as string).tokenize(
       entry.model.tokenizer,
     );
-    if (openTokens.length === 0) {
+    const first = openTokens[0];
+    if (first === undefined || !entry.model.isSpecialToken(first)) {
       return jsonGrammar;
     }
-    open = openTokens[0] as number;
+    open = first as number;
   }
   return entry.llama.createGrammar({
-    grammar: thinkingGrammar(jsonGrammar.grammar, close, open),
+    grammar: thinkingGrammar(jsonGrammar.grammar, close as number, open),
   });
 }
 
