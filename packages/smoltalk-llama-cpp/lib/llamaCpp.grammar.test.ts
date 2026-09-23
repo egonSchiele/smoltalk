@@ -45,8 +45,8 @@ vi.mock("node-llama-cpp", () => {
     dispose() {}
   }
 
-  // The token ids the fake tokenizer gives each marker. Special markers
-  // are one token; a plain-text marker splits into ordinary tokens.
+  // The token ids the fake tokenizer gives each marker. A tag marker is
+  // one token; a plain-text marker splits into ordinary tokens.
   const TOKENS: Record<string, number[]> = {
     "<think>\n": [1000, 5],
     "\n</think>": [5, 1001],
@@ -55,11 +55,20 @@ vi.mock("node-llama-cpp", () => {
     "<seed:think>": [2000],
     "</seed:think>": [2001],
   };
-  const SPECIAL = [1000, 1001, 2000, 2001];
+  const TEXT: Record<number, string> = {
+    1000: "<think>",
+    1001: "</think>",
+    2000: "<seed:think>",
+    2001: "</seed:think>",
+    5: "\n",
+  };
   class FakeLlamaText {
     constructor(public text: string) {}
     tokenize() {
       return TOKENS[this.text] ?? [60, 47, 62];
+    }
+    toString() {
+      return this.text;
     }
   }
   const LlamaText = (value: any) =>
@@ -75,7 +84,8 @@ vi.mock("node-llama-cpp", () => {
 
   const makeModel = () => ({
     tokenizer: () => [],
-    isSpecialToken: (token: number) => SPECIAL.includes(token),
+    detokenize: (tokens: number[]) =>
+      tokens.map((t) => TEXT[t] ?? "x").join(""),
     async createContext() {
       const seq = makeSequence();
       return {
@@ -213,7 +223,7 @@ describe("the grammar for a typed reply", () => {
     }
   });
 
-  it("gives the plain schema grammar when a marker is not one special token", async () => {
+  it("gives the plain schema grammar when a marker is not one tag token", async () => {
     h.wrapper.name = "Qwen";
     h.wrapper.thought = { prefix: "<think>", suffix: "plain text marker" };
     await call();

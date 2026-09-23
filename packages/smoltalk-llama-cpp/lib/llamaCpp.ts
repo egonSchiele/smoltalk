@@ -15,6 +15,7 @@ import type {
   TokenMeterState,
   LlamaChatResponseFunctionCall,
   LlamaGrammar,
+  Token,
 } from "node-llama-cpp";
 import {
   AssistantMessage,
@@ -101,14 +102,28 @@ function extractThinkingBlocks(
   return blocks;
 }
 
+/** A marker's text without the newlines the wrappers pad it with. */
+function markerText(marker: string | LlamaText): string {
+  return LlamaText(marker).toString().trim();
+}
+
+/** Whether one token spells a whole tag that starts the marker, such as
+ *  `</think>` or `<|channel>`. */
+function isTagToken(entry: ModelEntry, token: number, marker: string): boolean {
+  const text = entry.model.detokenize([token as Token], true);
+  return text.startsWith("<") && text.endsWith(">") && marker.startsWith(text);
+}
+
 /** The grammar for a typed reply: the schema alone, or the schema after a
  *  thought block for a wrapper whose reply is laid out that way (see
  *  thinkingGrammar.ts). The wrapper resolved here is the one `LlamaChat`
  *  picks for the same model, so the grammar and the chat agree on how the
  *  block is spelled. Its token ids come from the wrapper's own prefix and
- *  suffix, and each has to be one special token: a plain-text marker would
- *  tokenize into several ordinary tokens, and the grammar would treat the
- *  last of them as the end of the block wherever the model wrote it. */
+ *  suffix, and each has to be one token that spells a whole tag: a marker
+ *  the tokenizer splits into pieces would leave the grammar treating the
+ *  last piece, say `>`, as the end of the block wherever the model wrote
+ *  it. (node-llama-cpp's `isSpecialToken` is no use here: Qwen's `</think>`
+ *  is an added token, not a control token, and it reports false.) */
 async function grammarForReply(
   entry: ModelEntry,
   schema: object,
@@ -137,7 +152,10 @@ async function grammarForReply(
   }
   const closeTokens = LlamaText(thought.suffix).tokenize(entry.model.tokenizer);
   const close = closeTokens[closeTokens.length - 1];
-  if (close === undefined || !entry.model.isSpecialToken(close)) {
+  if (
+    close === undefined ||
+    !isTagToken(entry, close, markerText(thought.suffix))
+  ) {
     return jsonGrammar;
   }
   // The block is already open when the wrapper opens it at the start of
@@ -151,7 +169,10 @@ async function grammarForReply(
       entry.model.tokenizer,
     );
     const first = openTokens[0];
-    if (first === undefined || !entry.model.isSpecialToken(first)) {
+    if (
+      first === undefined ||
+      !isTagToken(entry, first, markerText(thought.prefix as string))
+    ) {
       return jsonGrammar;
     }
     open = first as number;
