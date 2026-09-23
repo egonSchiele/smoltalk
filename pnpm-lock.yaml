@@ -1,7 +1,7 @@
 lockfileVersion: '9.0'
 
 settings:
-  autoInstallPeers: false
+  autoInstallPeers: true
   excludeLinksFromLockfile: false
 
 importers:
@@ -56,6 +56,9 @@ importers:
       openai:
         specifier: ^6.45.0
         version: 6.45.0(ws@8.19.0)(zod@4.4.3)
+      smoltalk-llama-cpp:
+        specifier: '>=0.3.0 <1.0.0'
+        version: 0.5.0(smoltalk@0.14.2)(typescript@5.9.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -67,8 +70,8 @@ importers:
   packages/smoltalk-llama-cpp:
     dependencies:
       node-llama-cpp:
-        specifier: ^3.19.0
-        version: 3.19.0(typescript@5.9.3)
+        specifier: ^3.21.1
+        version: 3.21.1(typescript@5.9.3)
     devDependencies:
       smoltalk:
         specifier: workspace:*
@@ -658,6 +661,10 @@ packages:
       '@modelcontextprotocol/sdk':
         optional: true
 
+  '@huggingface/jinja@0.5.10':
+    resolution: {integrity: sha512-SgS1D1bglQ94ceD4ZCL6eayUDy9uV1xuyk61OjgSxU5GJh7upqZCKII0JoTYMc6wWsg3JUgaPRX0ElQzXPk3Cw==}
+    engines: {node: '>=18'}
+
   '@huggingface/jinja@0.5.6':
     resolution: {integrity: sha512-MyMWyLnjqo+KRJYSH7oWNbsOn5onuIvfXYPcc0WOGxU0eHUV7oAYUoQTl2BMdu7ml+ea/bu11UM+EshbeHwtIA==}
     engines: {node: '>=18'}
@@ -700,45 +707,107 @@ packages:
     engines: {node: '>=20.0.0'}
     cpu: [arm64, x64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-arm64@3.21.1':
+    resolution: {integrity: sha512-eI3anSEGzJiwF2rpMpZVTdHzw47LztbvfvuRzlu/fPO18ROnBOd+75RPUBlV6qENPpmNtbov85+3VODwEwBurg==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm64, x64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/linux-armv7l@3.19.0':
     resolution: {integrity: sha512-MtupbpWjl2ccMssyAh6ZjJr9rE1P5moHNRAXparzjmKT2l69QyfVmr984503PPWXsAGhvVETqdDDpaFJOdNh4g==}
     engines: {node: '>=20.0.0'}
     cpu: [arm, x64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-armv7l@3.21.1':
+    resolution: {integrity: sha512-N/IaOXCQogfyDrlANRXbU2u+l0dbZ4BBqc3/Rv1xknHbRi/rX0rrOf5elPG8S9I5p9ebcU48HrRqk2d9O/LNHw==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm, x64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/linux-riscv64@3.19.0':
     resolution: {integrity: sha512-XdNZJxpnLsjt1E+y+HZcjTUxRd5fBzUA9L1NqFkJOYizRjYbuK1z/pDr0wqcsndmkB7IHu6ay9XqfCnM5AeY8w==}
     engines: {node: '>=20.0.0'}
     cpu: [riscv64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-riscv64@3.21.1':
+    resolution: {integrity: sha512-tjxegcxrw4heT3LIyPjXvCu7pFaD7e4ac1z+5KhWf/iS/9SSB9poqNyPXSkPibyzhTBB8BgDY47LgfBKqiu/xQ==}
+    engines: {node: '>=20.0.0'}
+    cpu: [riscv64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/linux-x64-cuda-ext@3.19.0':
     resolution: {integrity: sha512-CLewIjUH0ag/W3R3/lBV/2ABMoTewcDJOQ3SIIGYXuARu4AwMi62cVfBxUtDONW/rWb9EdMQIhCggdTdkI63iA==}
     engines: {node: '>=20.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-x64-cuda-ext@3.21.1':
+    resolution: {integrity: sha512-1PuURowccBcks3CCoMe1mTHh5vD0V5bFHMUEgtbI/OSDjpP+Pdbn+lf42CGUrepTzR8kCH1HovQ7d8q6/vuIKA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/linux-x64-cuda@3.19.0':
     resolution: {integrity: sha512-lqx8CZcLxXimz3vOsFwRdyUs8VdceT0MMYMjmYvvTRRae8q047yM3mk0Ys6Hi6+31Lzw5MpQTFvO8RAxxJEnng==}
     engines: {node: '>=20.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-x64-cuda@3.21.1':
+    resolution: {integrity: sha512-idsE55VoD/FbvLhnBC9krUJaUoC0XnebseAAnCpm/brKf61HEbu+idgbb5eN6mxkjLSrHtILprJ0nDcUJjVrFg==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/linux-x64-vulkan@3.19.0':
     resolution: {integrity: sha512-dFtqAV8GTZN08LoDHk0BFh+y/zZDscb/QbIbKtoR/JJyLwLNFEOIuKfHl/ay8K3bYxg4QWHnQz8r5coEwIBECQ==}
     engines: {node: '>=20.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-x64-vulkan@3.21.1':
+    resolution: {integrity: sha512-flEeSzONQ6OIm5bYKLQf4eEnBzcC5WugFbyPUwkCqyyOFZ8pH0H9ulQ7ZNDLSIczeKneMRJornlyY1Hq7d3GDA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/linux-x64@3.19.0':
     resolution: {integrity: sha512-cFnXjyRmFJ+lVq0QQFqflGDdF5UnMPzHLIQ4i2Xg5526QpWOw3IC0APiZluKvyqXCtU+g44ZH4YPQNUKqsZG6A==}
     engines: {node: '>=20.0.0'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
+
+  '@node-llama-cpp/linux-x64@3.21.1':
+    resolution: {integrity: sha512-Totj6RTDMGo3FoK2yNUaz/oGmZD0olAqTrRluFUWmu0kW2i9TOzHSW0OWCAiGkzRCVX0WsU2CyUQo/W2NYtdPA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
 
   '@node-llama-cpp/mac-arm64-metal@3.19.0':
     resolution: {integrity: sha512-mBIM9ZOMBiexxvE5I9Py5rhdtaPZVbtWec0oA5UefBmhcmcQdAp+fcy3R9zNUlEn8BbBDU4TPNc7Nr8UkSyqzw==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm64, x64]
+    os: [darwin]
+
+  '@node-llama-cpp/mac-arm64-metal@3.21.1':
+    resolution: {integrity: sha512-6MIDAZV7DXD9R1+jEXWJkFuolni3GATGE6mmuyFYc6ZmtOh9djAy15df0T0AXK3sCmVKL+fQcOAWZezxx4MvQQ==}
     engines: {node: '>=20.0.0'}
     cpu: [arm64, x64]
     os: [darwin]
@@ -749,8 +818,20 @@ packages:
     cpu: [x64]
     os: [darwin]
 
+  '@node-llama-cpp/mac-x64@3.21.1':
+    resolution: {integrity: sha512-Q4nyNmbcNiKygBZQZjX+qLk2w3YzoiFpLWsxNURQN7xjyUi2p2rWxjRa7Otg0FrjGf/ri4aQ+X3Uj5Y0zD06eg==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [darwin]
+
   '@node-llama-cpp/win-arm64@3.19.0':
     resolution: {integrity: sha512-MReCDQcBQ649xluUMyeaUwrEXlb4Ffaxu8JQBpX0FzCUpVW/LVXRoa9ZJuAtshij0OE/6aR0peyF1VoOH6Qd4w==}
+    engines: {node: '>=20.0.0'}
+    cpu: [arm64, x64]
+    os: [win32]
+
+  '@node-llama-cpp/win-arm64@3.21.1':
+    resolution: {integrity: sha512-/UDR7Y0B8iKfc/tqxBmWkcgRdZQ9Wrkwod7fYl4J6iZXcTIj286RkHvZSED7VMY67TrcUXVvxJVMNFtmjeYnDg==}
     engines: {node: '>=20.0.0'}
     cpu: [arm64, x64]
     os: [win32]
@@ -761,8 +842,20 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@node-llama-cpp/win-x64-cuda-ext@3.21.1':
+    resolution: {integrity: sha512-L2MxLVEYPDDe4O8EDWPmX6brldc9+Vt9hNoT/anj3pSnmrjkQcmaoKhHs6oP5qhEhb5Uog0rj6lgzNGtJO3p9Q==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
   '@node-llama-cpp/win-x64-cuda@3.19.0':
     resolution: {integrity: sha512-Y/mnB8suxOzMnvD3w0TCkQSdSUIIvJ7DYFrvj4P4uXMsKE46NMtgoAVT7k9sIIvE5V1UfwbAcCqhbvfAR/frug==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@node-llama-cpp/win-x64-cuda@3.21.1':
+    resolution: {integrity: sha512-PLz70neFEMkQTlmJqG1ujUtCSgHasLPMxQ9rLkqQVmZYAXqkRj+45TIHCjdn3XqUeaoun0vrO9rRaxZ8NVq9jg==}
     engines: {node: '>=20.0.0'}
     cpu: [x64]
     os: [win32]
@@ -773,8 +866,20 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@node-llama-cpp/win-x64-vulkan@3.21.1':
+    resolution: {integrity: sha512-HJ237Azh5m4Sz+w3A1IU/fYLaSDOocskcfn2ILTgqTuuORCB86EMnu3Yt/XsNhRHTtEiwz1Q/E0mO4PLIbZLAA==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
   '@node-llama-cpp/win-x64@3.19.0':
     resolution: {integrity: sha512-z5zsRXW2tlR4e93aiVxon15t4h9xKFjlbKnKBN1NNX8YxaUgqp8rflfBYi1SO9Nk6JlKBLnftNYaI53Vy0u7HQ==}
+    engines: {node: '>=20.0.0'}
+    cpu: [x64]
+    os: [win32]
+
+  '@node-llama-cpp/win-x64@3.21.1':
+    resolution: {integrity: sha512-JcIpCnra7bAd7JNWA8ehdn2DIRaTMuj+fBC8bw+5rKSNzszWFbuj2XA05c5QHovonDMBLN1ePXE/hcfZtzXoUQ==}
     engines: {node: '>=20.0.0'}
     cpu: [x64]
     os: [win32]
@@ -827,24 +932,28 @@ packages:
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [glibc]
 
   '@reflink/reflink-linux-arm64-musl@0.1.19':
     resolution: {integrity: sha512-37iO/Dp6m5DDaC2sf3zPtx/hl9FV3Xze4xoYidrxxS9bgP3S8ALroxRK6xBG/1TtfXKTvolvp+IjrUU6ujIGmA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
+    libc: [musl]
 
   '@reflink/reflink-linux-x64-gnu@0.1.19':
     resolution: {integrity: sha512-jbI8jvuYCaA3MVUdu8vLoLAFqC+iNMpiSuLbxlAgg7x3K5bsS8nOpTRnkLF7vISJ+rVR8W+7ThXlXlUQ93ulkw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [glibc]
 
   '@reflink/reflink-linux-x64-musl@0.1.19':
     resolution: {integrity: sha512-e9FBWDe+lv7QKAwtKOt6A2W/fyy/aEEfr0g6j/hWzvQcrzHCsz07BNQYlNOjTfeytrtLU7k449H1PI95jA4OjQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
+    libc: [musl]
 
   '@reflink/reflink-win32-arm64-msvc@0.1.19':
     resolution: {integrity: sha512-09PxnVIQcd+UOn4WAW73WU6PXL7DwGS6wPlkMhMg2zlHHG65F3vHepOw06HFCq+N42qkaNAc8AKIabWvtk6cIQ==}
@@ -1004,6 +1113,12 @@ packages:
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
+
+  '@simple-git/args-pathspec@1.0.3':
+    resolution: {integrity: sha512-ngJMaHlsWDTfjyq9F3VIQ8b7NXbBLq5j9i5bJ6XLYtD6qlDXT7fdKY2KscWWUF8t18xx052Y/PUO1K1TRc9yKA==}
+
+  '@simple-git/argv-parser@1.1.1':
+    resolution: {integrity: sha512-Q9lBcfQ+VQCpQqGJFHe5yooOS5hGdLFFbJ5R+R5aDsnkPCahtn1hSkMcORX65J2Z5lxSkD0lQorMsncuBQxYUw==}
 
   '@stablelib/base64@1.0.1':
     resolution: {integrity: sha512-1bnPQqSxSuc3Ii6MhBysoWCg58j97aUjuCSZrGSmDxNqtytIi0k8utUenAwTZN4V5mXXYGsVUI9zeBqy+jBOSQ==}
@@ -1459,6 +1574,10 @@ packages:
     resolution: {integrity: sha512-CTXd6rk/M3/ULNQj8FBqBWHYBVYybQ3VPBw0xGKFe3tuH7ytT6ACnvzpIQ3UZtB8yvUKC2cXn1a+x+5EVQLovA==}
     engines: {node: '>=14.14'}
 
+  fs-extra@11.4.1:
+    resolution: {integrity: sha512-KYAb4c9BJQI6QqGKthV68OHe0badztdXJWKo0WtBA9IuCFPTKvE5ZdUBglP833aMjhaSPNO4A5j/EkzZtGlKjA==}
+    engines: {node: '>=14.14'}
+
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -1649,6 +1768,9 @@ packages:
   lifecycle-utils@3.1.1:
     resolution: {integrity: sha512-gNd3OvhFNjHykJE3uGntz7UuPzWlK9phrIdXxU9Adis0+ExkwnZibfxCJWiWWZ+a6VbKiZrb+9D9hCQWd4vjTg==}
 
+  lifecycle-utils@4.5.1:
+    resolution: {integrity: sha512-RV7+jNHVQ2ktkkfgpjatWgVAeVJqW3RCw9rxAD9t8TMJr3RwJlMaKtXZmJZLth6Fxj8igP4uqkkZjsIMekuK2Q==}
+
   linkify-it@5.0.0:
     resolution: {integrity: sha512-5aHCbzQRADcdP+ATqnDuhhJ/MRIqDkZX5pyjFHRRysS8vZ5AbqGEoFIb6pYHPZ+L/OC2Lc+xT8uHVVR5CAK/wQ==}
 
@@ -1752,6 +1874,10 @@ packages:
     resolution: {integrity: sha512-gBVjCaqDlRUk0EwoPNKzIr9KkS9041G/q31IBShPs1Xz6UTA+EXdZADbzqAJQrpDRq71CIMnOP5VMut3SL0z5Q==}
     engines: {node: ^18 || ^20 || >= 21}
 
+  node-addon-api@8.9.2:
+    resolution: {integrity: sha512-VijLXbi3UACN69I0JVXJsX4tjACjNoQDgv2gTF6sx2wWEi8tkSg2eX8p5gSIFi8z2+DL3oHmY6OyKce38SDolg==}
+    engines: {node: ^18 || ^20 || >= 21}
+
   node-api-headers@1.8.0:
     resolution: {integrity: sha512-jfnmiKWjRAGbdD1yQS28bknFM1tbHC1oucyuMPjmkEs+kpiu76aRs40WlTmBmyEgzDM76ge1DQ7XJ3R5deiVjQ==}
 
@@ -1766,6 +1892,16 @@ packages:
 
   node-llama-cpp@3.19.0:
     resolution: {integrity: sha512-OZKc6IUsu6pNRPFKV0vgqJmagbGWFPhVsrMIj4pdxcglcSzDwzX5TmaIlikT6Ue9081uXOsocPFUBERHgHgJvg==}
+    engines: {node: '>=20.0.0'}
+    hasBin: true
+    peerDependencies:
+      typescript: '>=5.0.0'
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+
+  node-llama-cpp@3.21.1:
+    resolution: {integrity: sha512-E3N0Ev2Va0wzydvXYFwM9Hvyo07PoWjt8T/9GMc43Cvt8YkV/NU/tYUgEMC1grTPv2o9PRjQi0G3Wb5P/awiMg==}
     engines: {node: '>=20.0.0'}
     hasBin: true
     peerDependencies:
@@ -1996,6 +2132,9 @@ packages:
   simple-git@3.33.0:
     resolution: {integrity: sha512-D4V/tGC2sjsoNhoMybKyGoE+v8A60hRawKQ1iFRA1zwuDgGZCBJ4ByOzZ5J8joBbi4Oam0qiPH+GhzmSBwbJng==}
 
+  simple-git@3.36.0:
+    resolution: {integrity: sha512-cGQjLjK8bxJw4QuYT7gxHw3/IouVESbhahSsHrX97MzCL1gu2u7oy38W6L2ZIGECEfIBG4BabsWDPjBxJENv9Q==}
+
   sleep-promise@9.1.0:
     resolution: {integrity: sha512-UHYzVpz9Xn8b+jikYSD6bqvf754xL2uBUzDFwiU6NcdZeifPr6UfgU43xpkPu67VMS88+TI2PSI7Eohgqf2fKA==}
 
@@ -2006,6 +2145,19 @@ packages:
   slice-ansi@8.0.0:
     resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
     engines: {node: '>=20'}
+
+  smoltalk-llama-cpp@0.5.0:
+    resolution: {integrity: sha512-vuVmpfOJ9dk9IQMLTy2GEOSUgsrH5MlgobmqQrTTTcQ9YzxQKZT2i8TfYg/5O1unATysEH7RVDOjCsJEdqtyVA==}
+    peerDependencies:
+      smoltalk: '>=0.5.1 <1.0.0'
+
+  smoltalk@0.14.2:
+    resolution: {integrity: sha512-t+DmJcSg29zfzSawlqJzby3dLTXkVhQlCNYEREJcir6exjpXBuz3LEr+M7tprUsqiZM00uF0V9D5ghOJ5lWPWw==}
+    peerDependencies:
+      smoltalk-llama-cpp: '>=0.3.0 <1.0.0'
+    peerDependenciesMeta:
+      smoltalk-llama-cpp:
+        optional: true
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -2734,6 +2886,8 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@huggingface/jinja@0.5.10': {}
+
   '@huggingface/jinja@0.5.6': {}
 
   '@isaacs/cliui@8.0.2':
@@ -2780,46 +2934,74 @@ snapshots:
     dependencies:
       loglevel: 1.9.2
 
-  '@node-llama-cpp/linux-arm64@3.19.0':
+  '@node-llama-cpp/linux-arm64@3.19.0': {}
+
+  '@node-llama-cpp/linux-arm64@3.21.1':
     optional: true
 
-  '@node-llama-cpp/linux-armv7l@3.19.0':
+  '@node-llama-cpp/linux-armv7l@3.19.0': {}
+
+  '@node-llama-cpp/linux-armv7l@3.21.1':
     optional: true
 
-  '@node-llama-cpp/linux-riscv64@3.19.0':
+  '@node-llama-cpp/linux-riscv64@3.19.0': {}
+
+  '@node-llama-cpp/linux-riscv64@3.21.1':
     optional: true
 
-  '@node-llama-cpp/linux-x64-cuda-ext@3.19.0':
+  '@node-llama-cpp/linux-x64-cuda-ext@3.19.0': {}
+
+  '@node-llama-cpp/linux-x64-cuda-ext@3.21.1':
     optional: true
 
-  '@node-llama-cpp/linux-x64-cuda@3.19.0':
+  '@node-llama-cpp/linux-x64-cuda@3.19.0': {}
+
+  '@node-llama-cpp/linux-x64-cuda@3.21.1':
     optional: true
 
-  '@node-llama-cpp/linux-x64-vulkan@3.19.0':
+  '@node-llama-cpp/linux-x64-vulkan@3.19.0': {}
+
+  '@node-llama-cpp/linux-x64-vulkan@3.21.1':
     optional: true
 
-  '@node-llama-cpp/linux-x64@3.19.0':
+  '@node-llama-cpp/linux-x64@3.19.0': {}
+
+  '@node-llama-cpp/linux-x64@3.21.1':
     optional: true
 
-  '@node-llama-cpp/mac-arm64-metal@3.19.0':
+  '@node-llama-cpp/mac-arm64-metal@3.19.0': {}
+
+  '@node-llama-cpp/mac-arm64-metal@3.21.1':
     optional: true
 
-  '@node-llama-cpp/mac-x64@3.19.0':
+  '@node-llama-cpp/mac-x64@3.19.0': {}
+
+  '@node-llama-cpp/mac-x64@3.21.1':
     optional: true
 
-  '@node-llama-cpp/win-arm64@3.19.0':
+  '@node-llama-cpp/win-arm64@3.19.0': {}
+
+  '@node-llama-cpp/win-arm64@3.21.1':
     optional: true
 
-  '@node-llama-cpp/win-x64-cuda-ext@3.19.0':
+  '@node-llama-cpp/win-x64-cuda-ext@3.19.0': {}
+
+  '@node-llama-cpp/win-x64-cuda-ext@3.21.1':
     optional: true
 
-  '@node-llama-cpp/win-x64-cuda@3.19.0':
+  '@node-llama-cpp/win-x64-cuda@3.19.0': {}
+
+  '@node-llama-cpp/win-x64-cuda@3.21.1':
     optional: true
 
-  '@node-llama-cpp/win-x64-vulkan@3.19.0':
+  '@node-llama-cpp/win-x64-vulkan@3.19.0': {}
+
+  '@node-llama-cpp/win-x64-vulkan@3.21.1':
     optional: true
 
-  '@node-llama-cpp/win-x64@3.19.0':
+  '@node-llama-cpp/win-x64@3.19.0': {}
+
+  '@node-llama-cpp/win-x64@3.21.1':
     optional: true
 
   '@pkgjs/parseargs@0.11.0':
@@ -2977,6 +3159,12 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/vscode-textmate@10.0.2': {}
+
+  '@simple-git/args-pathspec@1.0.3': {}
+
+  '@simple-git/argv-parser@1.1.1':
+    dependencies:
+      '@simple-git/args-pathspec': 1.0.3
 
   '@stablelib/base64@1.0.1': {}
 
@@ -3453,6 +3641,12 @@ snapshots:
       jsonfile: 6.2.0
       universalify: 2.0.1
 
+  fs-extra@11.4.1:
+    dependencies:
+      graceful-fs: 4.2.11
+      jsonfile: 6.2.0
+      universalify: 2.0.1
+
   fsevents@2.3.3:
     optional: true
 
@@ -3714,6 +3908,8 @@ snapshots:
 
   lifecycle-utils@3.1.1: {}
 
+  lifecycle-utils@4.5.1: {}
+
   linkify-it@5.0.0:
     dependencies:
       uc.micro: 2.1.0
@@ -3794,6 +3990,8 @@ snapshots:
 
   node-addon-api@8.6.0: {}
 
+  node-addon-api@8.9.2: {}
+
   node-api-headers@1.8.0: {}
 
   node-domexception@1.0.0: {}
@@ -3849,6 +4047,55 @@ snapshots:
       '@node-llama-cpp/win-x64-cuda': 3.19.0
       '@node-llama-cpp/win-x64-cuda-ext': 3.19.0
       '@node-llama-cpp/win-x64-vulkan': 3.19.0
+      typescript: 5.9.3
+    transitivePeerDependencies:
+      - supports-color
+
+  node-llama-cpp@3.21.1(typescript@5.9.3):
+    dependencies:
+      '@huggingface/jinja': 0.5.10
+      async-retry: 1.3.3
+      bytes: 3.1.2
+      chalk: 5.6.2
+      chmodrp: 1.0.2
+      cmake-js: 8.0.0
+      cross-spawn: 7.0.6
+      env-var: 7.5.0
+      filenamify: 6.0.0
+      fs-extra: 11.4.1
+      ignore: 7.0.5
+      ipull: 3.9.5
+      is-unicode-supported: 2.1.0
+      lifecycle-utils: 4.5.1
+      log-symbols: 7.0.1
+      nanoid: 5.1.6
+      node-addon-api: 8.9.2
+      ora: 9.3.0
+      pretty-ms: 9.3.0
+      proper-lockfile: 4.1.2
+      semver: 7.7.4
+      simple-git: 3.36.0
+      slice-ansi: 8.0.0
+      stdout-update: 4.0.1
+      strip-ansi: 7.2.0
+      validate-npm-package-name: 7.0.2
+      which: 6.0.1
+      yargs: 17.7.2
+    optionalDependencies:
+      '@node-llama-cpp/linux-arm64': 3.21.1
+      '@node-llama-cpp/linux-armv7l': 3.21.1
+      '@node-llama-cpp/linux-riscv64': 3.21.1
+      '@node-llama-cpp/linux-x64': 3.21.1
+      '@node-llama-cpp/linux-x64-cuda': 3.21.1
+      '@node-llama-cpp/linux-x64-cuda-ext': 3.21.1
+      '@node-llama-cpp/linux-x64-vulkan': 3.21.1
+      '@node-llama-cpp/mac-arm64-metal': 3.21.1
+      '@node-llama-cpp/mac-x64': 3.21.1
+      '@node-llama-cpp/win-arm64': 3.21.1
+      '@node-llama-cpp/win-x64': 3.21.1
+      '@node-llama-cpp/win-x64-cuda': 3.21.1
+      '@node-llama-cpp/win-x64-cuda-ext': 3.21.1
+      '@node-llama-cpp/win-x64-vulkan': 3.21.1
       typescript: 5.9.3
     transitivePeerDependencies:
       - supports-color
@@ -4072,6 +4319,16 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  simple-git@3.36.0:
+    dependencies:
+      '@kwsites/file-exists': 1.1.1
+      '@kwsites/promise-deferred': 1.1.1
+      '@simple-git/args-pathspec': 1.0.3
+      '@simple-git/argv-parser': 1.1.1
+      debug: 4.4.3
+    transitivePeerDependencies:
+      - supports-color
+
   sleep-promise@9.1.0: {}
 
   slice-ansi@7.1.2:
@@ -4083,6 +4340,34 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
+
+  smoltalk-llama-cpp@0.5.0(smoltalk@0.14.2)(typescript@5.9.3):
+    dependencies:
+      node-llama-cpp: 3.19.0(typescript@5.9.3)
+      smoltalk: 0.14.2(smoltalk-llama-cpp@0.5.0)(ws@8.19.0)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
+  smoltalk@0.14.2(smoltalk-llama-cpp@0.5.0)(ws@8.19.0):
+    dependencies:
+      '@anthropic-ai/sdk': 0.109.0(zod@4.4.3)
+      '@google/genai': 2.10.0
+      nanoid: 5.1.6
+      ollama: 0.6.3
+      openai: 6.45.0(ws@8.19.0)(zod@4.4.3)
+      zod: 4.4.3
+    optionalDependencies:
+      smoltalk-llama-cpp: 0.5.0(smoltalk@0.14.2)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-node'
+      - '@modelcontextprotocol/sdk'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+      - ws
 
   source-map-js@1.2.1: {}
 

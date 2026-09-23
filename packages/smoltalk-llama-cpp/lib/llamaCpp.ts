@@ -1,10 +1,16 @@
-import { LlamaChat } from "node-llama-cpp";
+import {
+  LlamaChat,
+  LlamaText,
+  isLlamaText,
+  resolveChatWrapper,
+} from "node-llama-cpp";
 import type {
   ChatHistoryItem,
   ChatModelFunctions,
   ChatModelFunctionCall,
   TokenMeterState,
   LlamaChatResponseFunctionCall,
+  LlamaGrammar,
 } from "node-llama-cpp";
 import {
   AssistantMessage,
@@ -27,7 +33,8 @@ import {
   success,
 } from "smoltalk";
 import type { Message } from "smoltalk";
-import { acquireModelEntry } from "./nativeRegistry.js";
+import { acquireModelEntry, type ModelEntry } from "./nativeRegistry.js";
+import { thinkingGrammar } from "./thinkingGrammar.js";
 
 /**
  * Two-plus characters before the colon, so Windows drive-letter paths
@@ -88,6 +95,48 @@ function extractThinkingBlocks(
     }
   }
   return blocks;
+}
+
+/** The grammar for a typed reply: the schema alone, or the schema after a
+ *  thought block when the model's chat wrapper has one (see
+ *  thinkingGrammar.ts). The wrapper resolved here is the one `LlamaChat`
+ *  picks for the same model, so the grammar and the chat agree on how the
+ *  block is spelled. Its token ids come from the wrapper's own prefix and
+ *  suffix, so a wrapper that spells the block differently still works. */
+async function grammarForReply(
+  entry: ModelEntry,
+  schema: object,
+): Promise<LlamaGrammar> {
+  const jsonGrammar = await entry.llama.createGrammarForJsonSchema(
+    schema as any,
+  );
+  const thought = resolveChatWrapper(entry.model).settings.segments?.thought;
+  if (thought === undefined || thought.suffix === undefined) {
+    return jsonGrammar;
+  }
+  const closeTokens = LlamaText(thought.suffix).tokenize(entry.model.tokenizer);
+  const close = closeTokens[closeTokens.length - 1] as number | undefined;
+  if (close === undefined) {
+    return jsonGrammar;
+  }
+  // The block is already open when the wrapper opens it at the start of
+  // every reply, or when its prefix is part of the prompt.
+  const openedAlready =
+    thought.openOnResponseStart === true ||
+    (typeof thought.prefix === "object" && !isLlamaText(thought.prefix));
+  let open: number | null = null;
+  if (!openedAlready) {
+    const openTokens = LlamaText(thought.prefix as string).tokenize(
+      entry.model.tokenizer,
+    );
+    if (openTokens.length === 0) {
+      return jsonGrammar;
+    }
+    open = openTokens[0] as number;
+  }
+  return entry.llama.createGrammar({
+    grammar: thinkingGrammar(jsonGrammar.grammar, close, open),
+  });
 }
 
 export class LlamaCPP extends BaseClient {
@@ -249,7 +298,10 @@ export class LlamaCPP extends BaseClient {
   private buildFunctions(
     tools: SmolConfig["tools"],
   ): ChatModelFunctions | undefined {
-    if (!tools) return undefined;
+    // An empty list is no tools. It matters: node-llama-cpp cannot apply a
+    // grammar and functions together, so a typed call whose caller sends
+    // `tools: []` would otherwise lose its grammar.
+    if (!tools || tools.length === 0) return undefined;
     const functions: Record<string, { description?: string; params?: any }> =
       {};
 
@@ -317,14 +369,19 @@ export class LlamaCPP extends BaseClient {
     // Long-lived, shared native state for this model. The context/sequence are
     // created once and reused — never disposed here (bug.md: per-call context
     // disposal races the checkpoint worker => SIGSEGV on SWA models).
-    const entry = await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
+    const entry = await acquireModelEntry(
+      this.modelDir,
+      this.modelFile,
+      this.contextSize,
+    );
 
     // Create grammar for response format (independent of the sequence, so it's
     // fine outside the lock).
     let grammar;
     if (config.responseFormat) {
-      grammar = await entry.llama.createGrammarForJsonSchema(
-        config.responseFormat.toJSONSchema() as any,
+      grammar = await grammarForReply(
+        entry,
+        config.responseFormat.toJSONSchema(),
       );
     }
 
@@ -449,13 +506,18 @@ export class LlamaCPP extends BaseClient {
     }
 
     // Long-lived, shared native state for this model (see _textSync).
-    const entry = await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
+    const entry = await acquireModelEntry(
+      this.modelDir,
+      this.modelFile,
+      this.contextSize,
+    );
 
     // Create grammar for response format
     let grammar;
     if (config.responseFormat) {
-      grammar = await entry.llama.createGrammarForJsonSchema(
-        config.responseFormat.toJSONSchema() as any,
+      grammar = await grammarForReply(
+        entry,
+        config.responseFormat.toJSONSchema(),
       );
     }
 
