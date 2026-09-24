@@ -1,7 +1,7 @@
 lockfileVersion: '9.0'
 
 settings:
-  autoInstallPeers: false
+  autoInstallPeers: true
   excludeLinksFromLockfile: false
 
 importers:
@@ -56,6 +56,9 @@ importers:
       openai:
         specifier: ^6.45.0
         version: 6.45.0(ws@8.19.0)(zod@4.4.3)
+      smoltalk-llama-cpp:
+        specifier: '>=0.3.0 <1.0.0'
+        version: 0.5.0(smoltalk@0.14.2)(typescript@5.9.3)
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -2036,6 +2039,19 @@ packages:
   slice-ansi@8.0.0:
     resolution: {integrity: sha512-stxByr12oeeOyY2BlviTNQlYV5xOj47GirPr4yA1hE9JCtxfQN0+tVbkxwCtYDQWhEKWFHsEK48ORg5jrouCAg==}
     engines: {node: '>=20'}
+
+  smoltalk-llama-cpp@0.5.0:
+    resolution: {integrity: sha512-vuVmpfOJ9dk9IQMLTy2GEOSUgsrH5MlgobmqQrTTTcQ9YzxQKZT2i8TfYg/5O1unATysEH7RVDOjCsJEdqtyVA==}
+    peerDependencies:
+      smoltalk: '>=0.5.1 <1.0.0'
+
+  smoltalk@0.14.2:
+    resolution: {integrity: sha512-t+DmJcSg29zfzSawlqJzby3dLTXkVhQlCNYEREJcir6exjpXBuz3LEr+M7tprUsqiZM00uF0V9D5ghOJ5lWPWw==}
+    peerDependencies:
+      smoltalk-llama-cpp: '>=0.3.0 <1.0.0'
+    peerDependenciesMeta:
+      smoltalk-llama-cpp:
+        optional: true
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -4121,6 +4137,34 @@ snapshots:
     dependencies:
       ansi-styles: 6.2.3
       is-fullwidth-code-point: 5.1.0
+
+  smoltalk-llama-cpp@0.5.0(smoltalk@0.14.2)(typescript@5.9.3):
+    dependencies:
+      node-llama-cpp: 3.21.1(typescript@5.9.3)
+      smoltalk: 0.14.2(smoltalk-llama-cpp@0.5.0)(ws@8.19.0)
+    transitivePeerDependencies:
+      - supports-color
+      - typescript
+
+  smoltalk@0.14.2(smoltalk-llama-cpp@0.5.0)(ws@8.19.0):
+    dependencies:
+      '@anthropic-ai/sdk': 0.109.0(zod@4.4.3)
+      '@google/genai': 2.10.0
+      nanoid: 5.1.6
+      ollama: 0.6.3
+      openai: 6.45.0(ws@8.19.0)(zod@4.4.3)
+      zod: 4.4.3
+    optionalDependencies:
+      smoltalk-llama-cpp: 0.5.0(smoltalk@0.14.2)(typescript@5.9.3)
+    transitivePeerDependencies:
+      - '@aws-sdk/credential-provider-node'
+      - '@modelcontextprotocol/sdk'
+      - '@smithy/hash-node'
+      - '@smithy/signature-v4'
+      - bufferutil
+      - supports-color
+      - utf-8-validate
+      - ws
 
   source-map-js@1.2.1: {}
 

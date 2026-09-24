@@ -162,10 +162,11 @@ type WrapperName = (typeof resolvableChatWrapperTypeNames)[number];
  *  template from the model file.) */
 const UNUSABLE_WRAPPER_NAMES: readonly string[] = ["auto", "template"];
 
-/** The wrapper names a call may ask for. */
-const WRAPPER_NAMES: readonly string[] = resolvableChatWrapperTypeNames.filter(
-  (name) => !UNUSABLE_WRAPPER_NAMES.includes(name),
-);
+/** The wrapper names a call may ask for. Read when a call asks, not at
+ *  load, so a test that mocks node-llama-cpp without the list still runs. */
+function usableWrapperNames(): readonly string[] {
+  return resolvableChatWrapperTypeNames.filter((name) => !UNUSABLE_WRAPPER_NAMES.includes(name));
+}
 
 /**
  * The wrapper the chat and the grammar both use. `"auto"` is LlamaChat's own
@@ -211,9 +212,10 @@ function wrapperOverride(metadata: Record<string, unknown> | undefined): Wrapper
   if (name === undefined) {
     return undefined;
   }
-  if (typeof name !== "string" || !WRAPPER_NAMES.includes(name)) {
+  const names = usableWrapperNames();
+  if (typeof name !== "string" || !names.includes(name)) {
     throw new Error(
-      `smoltalk-llama-cpp: llamaCppChatWrapper must be one of ${WRAPPER_NAMES.join(", ")}; got ${JSON.stringify(name)}.`,
+      `smoltalk-llama-cpp: llamaCppChatWrapper must be one of ${names.join(", ")}; got ${JSON.stringify(name)}.`,
     );
   }
   return name as WrapperName;
