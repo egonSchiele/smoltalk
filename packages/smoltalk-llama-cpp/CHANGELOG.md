@@ -1,3 +1,9 @@
+## version 0.6.0 (09/23/2026)
+- A typed reply (`responseFormat`) from a thinking model now comes back as JSON. The grammar lets the model think up to the token that closes its thought block, then holds the rest to the schema (`lib/thinkingGrammar.ts`).
+- Applies to the Qwen, DeepSeek, Seed, and Gemma 4 wrappers; other wrappers keep the plain schema grammar.
+- An empty tool list no longer drops the grammar.
+- Requires node-llama-cpp 3.21.1 or later.
+
 ## version 0.5.0 (09/14/2026)
 - New `embed` export: embeddings computed in process through node-llama-cpp's `createEmbeddingContext`. smoltalk 0.14.0 registers it under the `llama-cpp` provider, so `embed(text, { provider: "llama-cpp", model: "/path/model.gguf" })` works with no wiring. One embedding context per model file, kept until `disposeAll()`/`disposeModel()` like the chat contexts; calls on one model run one at a time. `dimensions` truncates and renormalizes. Zero cost. A URI-shaped model is refused with the same `resolveModel()` hint the chat client gives.
 

@@ -45,6 +45,15 @@ npx --no node-llama-cpp chat
 
 See the [node-llama-cpp getting-a-model guide](https://node-llama-cpp.withcat.ai/guide/#getting-a-model-file) for more.
 
+## Structured output and thinking models
+
+Pass `responseFormat` as usual and the reply is held to the schema with a
+llama.cpp grammar. A thinking model such as Qwen3.5 is left free inside its
+`<think>` block, and only the text after it has to fit the schema, so the
+thought still arrives in `thinkingBlocks` and `output` holds the JSON. When
+tools are passed as well, the schema is not enforced, because node-llama-cpp
+cannot apply a grammar and functions together.
+
 ## Usage
 
 Register the provider before your first call, then use `smoltalk` normally:

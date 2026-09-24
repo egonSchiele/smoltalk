@@ -1,10 +1,21 @@
-import { LlamaChat } from "node-llama-cpp";
+import {
+  DeepSeekChatWrapper,
+  Gemma4ChatWrapper,
+  LlamaChat,
+  LlamaText,
+  QwenChatWrapper,
+  SeedChatWrapper,
+  isLlamaText,
+  resolveChatWrapper,
+} from "node-llama-cpp";
 import type {
   ChatHistoryItem,
   ChatModelFunctions,
   ChatModelFunctionCall,
   TokenMeterState,
   LlamaChatResponseFunctionCall,
+  LlamaGrammar,
+  Token,
 } from "node-llama-cpp";
 import {
   AssistantMessage,
@@ -27,7 +38,8 @@ import {
   success,
 } from "smoltalk";
 import type { Message } from "smoltalk";
-import { acquireModelEntry } from "./nativeRegistry.js";
+import { acquireModelEntry, type ModelEntry } from "./nativeRegistry.js";
+import { thinkingGrammar } from "./thinkingGrammar.js";
 
 /**
  * Two-plus characters before the colon, so Windows drive-letter paths
@@ -88,6 +100,86 @@ function extractThinkingBlocks(
     }
   }
   return blocks;
+}
+
+/** A marker's text without the newlines the wrappers pad it with. */
+function markerText(marker: string | LlamaText): string {
+  return LlamaText(marker).toString().trim();
+}
+
+/** Whether one token spells a whole tag that starts the marker, such as
+ *  `</think>` or `<|channel>`. */
+function isTagToken(entry: ModelEntry, token: number, marker: string): boolean {
+  const text = entry.model.detokenize([token as Token], true);
+  return text.startsWith("<") && text.endsWith(">") && marker.startsWith(text);
+}
+
+/** The grammar for a typed reply: the schema alone, or the schema after a
+ *  thought block for a wrapper whose reply is laid out that way (see
+ *  thinkingGrammar.ts). The wrapper resolved here is the one `LlamaChat`
+ *  picks for the same model, so the grammar and the chat agree on how the
+ *  block is spelled. Its token ids come from the wrapper's own prefix and
+ *  suffix, and each has to be one token that spells a whole tag: a marker
+ *  the tokenizer splits into pieces would leave the grammar treating the
+ *  last piece, say `>`, as the end of the block wherever the model wrote
+ *  it. (node-llama-cpp's `isSpecialToken` is no use here: Qwen's `</think>`
+ *  is an added token, not a control token, and it reports false.) */
+async function grammarForReply(
+  entry: ModelEntry,
+  schema: object,
+): Promise<LlamaGrammar> {
+  const jsonGrammar = await entry.llama.createGrammarForJsonSchema(
+    schema as any,
+  );
+  // The wrappers whose reply is one thought block, then the answer, which
+  // is the layout the thinking grammar assumes. Harmony (gpt-oss) and Muse
+  // put the answer in a second channel after its own header, so they keep
+  // the plain schema grammar, as does the template fallback for an unknown
+  // model.
+  const blockThenAnswer = [
+    QwenChatWrapper,
+    DeepSeekChatWrapper,
+    SeedChatWrapper,
+    Gemma4ChatWrapper,
+  ];
+  const wrapper = resolveChatWrapper(entry.model);
+  if (!blockThenAnswer.some((cls) => wrapper instanceof cls)) {
+    return jsonGrammar;
+  }
+  const thought = wrapper.settings.segments?.thought;
+  if (thought === undefined || thought.suffix === undefined) {
+    return jsonGrammar;
+  }
+  const closeTokens = LlamaText(thought.suffix).tokenize(entry.model.tokenizer);
+  const close = closeTokens[closeTokens.length - 1];
+  if (
+    close === undefined ||
+    !isTagToken(entry, close, markerText(thought.suffix))
+  ) {
+    return jsonGrammar;
+  }
+  // The block is already open when the wrapper opens it at the start of
+  // every reply, or when its prefix is part of the prompt.
+  const openedAlready =
+    thought.openOnResponseStart === true ||
+    (typeof thought.prefix === "object" && !isLlamaText(thought.prefix));
+  let open: number | null = null;
+  if (!openedAlready) {
+    const openTokens = LlamaText(thought.prefix as string).tokenize(
+      entry.model.tokenizer,
+    );
+    const first = openTokens[0];
+    if (
+      first === undefined ||
+      !isTagToken(entry, first, markerText(thought.prefix as string))
+    ) {
+      return jsonGrammar;
+    }
+    open = first as number;
+  }
+  return entry.llama.createGrammar({
+    grammar: thinkingGrammar(jsonGrammar.grammar, close as number, open),
+  });
 }
 
 export class LlamaCPP extends BaseClient {
@@ -249,7 +341,10 @@ export class LlamaCPP extends BaseClient {
   private buildFunctions(
     tools: SmolConfig["tools"],
   ): ChatModelFunctions | undefined {
-    if (!tools) return undefined;
+    // An empty list is no tools. It matters: node-llama-cpp cannot apply a
+    // grammar and functions together, so a typed call whose caller sends
+    // `tools: []` would otherwise lose its grammar.
+    if (!tools || tools.length === 0) return undefined;
     const functions: Record<string, { description?: string; params?: any }> =
       {};
 
@@ -317,14 +412,19 @@ export class LlamaCPP extends BaseClient {
     // Long-lived, shared native state for this model. The context/sequence are
     // created once and reused — never disposed here (bug.md: per-call context
     // disposal races the checkpoint worker => SIGSEGV on SWA models).
-    const entry = await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
+    const entry = await acquireModelEntry(
+      this.modelDir,
+      this.modelFile,
+      this.contextSize,
+    );
 
     // Create grammar for response format (independent of the sequence, so it's
     // fine outside the lock).
     let grammar;
     if (config.responseFormat) {
-      grammar = await entry.llama.createGrammarForJsonSchema(
-        config.responseFormat.toJSONSchema() as any,
+      grammar = await grammarForReply(
+        entry,
+        config.responseFormat.toJSONSchema(),
       );
     }
 
@@ -449,13 +549,18 @@ export class LlamaCPP extends BaseClient {
     }
 
     // Long-lived, shared native state for this model (see _textSync).
-    const entry = await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
+    const entry = await acquireModelEntry(
+      this.modelDir,
+      this.modelFile,
+      this.contextSize,
+    );
 
     // Create grammar for response format
     let grammar;
     if (config.responseFormat) {
-      grammar = await entry.llama.createGrammarForJsonSchema(
-        config.responseFormat.toJSONSchema() as any,
+      grammar = await grammarForReply(
+        entry,
+        config.responseFormat.toJSONSchema(),
       );
     }
 
