@@ -131,6 +131,29 @@ and rejected counts are logged at debug level, and
 time (`maxTokens`, default 16) and how sure it must be of each
 (`minConfidence`, default 0.6).
 
+### Choosing the chat wrapper
+
+node-llama-cpp picks a chat wrapper for a model by reading its template, and
+the thinking controls above go through that wrapper. For a model it gets
+wrong, such as a fine-tune with a changed template, name the wrapper
+yourself with `metadata.llamaCppChatWrapper`, using node-llama-cpp's name for
+it (`qwen`, `gemma4`, `harmony`, `chatML`, and the rest of
+`resolvableChatWrapperTypeNames`). The thinking settings still apply to the
+wrapper you name, and the typed-reply grammar is built for it. A name
+node-llama-cpp does not know is refused when the client is made.
+
+```ts
+await text({
+  model: "my-qwen-finetune.gguf",
+  provider: "llama-cpp",
+  metadata: { llamaCppModelDir: "./models", llamaCppChatWrapper: "qwen" },
+  messages: [userMessage("Hello")],
+  thinking: { enabled: false },
+});
+```
+
+## Speculative decoding: sampling
+
 A drafted model is safest run greedy (`temperature: 0`). With node-llama-cpp
 3.21.1, a Qwen3.5 model that samples on a draft never returns from the call,
 so a call with a temperature above zero on a drafted Qwen3.5 model is refused
