@@ -1,8 +1,3 @@
 packages:
   - "packages/*"
   - "site"
-allowBuilds:
-  '@google/genai': true
-  esbuild: true
-  node-llama-cpp: true
-  protobufjs: true
