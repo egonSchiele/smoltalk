@@ -4,18 +4,26 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  * A call's `thinking` and `reasoningEffort` reach node-llama-cpp two ways.
  * The chat wrapper is told, through its own settings, whether to open a
  * thought block at all. The generation gets a `budgets.thoughtTokens` cap.
- * A call that says nothing leaves both alone, so the model's usual wrapper
- * and node-llama-cpp's own default budget apply.
+ * A call that says nothing leaves the wrapper alone and passes an empty
+ * `budgets`, which is what makes LlamaChat apply its own default budget.
+ * The chat and the typed-reply grammar share one resolved wrapper, and a
+ * resolved wrapper is kept per model so the slow resolution runs once.
  */
 
 const h = vi.hoisted(() => ({
   chatOptions: [] as any[],
   generateOptions: [] as any[],
   resolveOptions: [] as any[],
+  resolved: [] as any[],
+  grammarWrappers: [] as any[],
+  warnings: [] as string[],
   reset() {
     h.chatOptions = [];
     h.generateOptions = [];
     h.resolveOptions = [];
+    h.resolved = [];
+    h.grammarWrappers = [];
+    h.warnings = [];
   },
 }));
 
@@ -68,8 +76,23 @@ vi.mock("node-llama-cpp", () => {
     Gemma4ChatWrapper,
     resolveChatWrapper: (_model: any, options: any) => {
       h.resolveOptions.push(options);
-      return new QwenChatWrapper();
+      const wrapper = new QwenChatWrapper();
+      h.resolved.push(wrapper);
+      return wrapper;
     },
+  };
+});
+
+vi.mock("smoltalk", async (importOriginal) => {
+  const original = await importOriginal<typeof import("smoltalk")>();
+  return {
+    ...original,
+    getLogger: () => ({
+      warn: (...args: any[]) => h.warnings.push(args.join(" ")),
+      debug() {},
+      info() {},
+      error() {},
+    }),
   };
 });
 
@@ -77,6 +100,7 @@ import { LlamaCPP } from "./llamaCpp.js";
 import { disposeAll } from "./nativeRegistry.js";
 
 const messages = [{ role: "user", content: "hi" }] as any;
+const responseFormat = { toJSONSchema: () => ({ type: "object" }) } as any;
 
 function call(extra: Record<string, any>) {
   const client = new LlamaCPP({
@@ -100,11 +124,11 @@ afterEach(async () => {
 });
 
 describe("thinking controls", () => {
-  it("leaves the wrapper and the budget alone when the call says nothing", async () => {
+  it("leaves the wrapper alone and lets LlamaChat apply its default budget when the call says nothing", async () => {
     await call({});
     expect(h.resolveOptions).toEqual([]);
     expect(h.chatOptions[0].chatWrapper).toBe("auto");
-    expect(h.generateOptions[0].budgets).toBeUndefined();
+    expect(h.generateOptions[0].budgets).toEqual({});
   });
 
   it("turns thinking off through the wrapper's own switch and a zero budget", async () => {
@@ -115,13 +139,17 @@ describe("thinking controls", () => {
       seed: { thinkingBudget: 0 },
       harmony: { reasoningEffort: "low" },
     });
-    expect(h.chatOptions[0].chatWrapper).not.toBe("auto");
+    expect(h.chatOptions[0].chatWrapper).toBe(h.resolved[0]);
     expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 0 });
   });
 
-  it("passes a thinking budget through as the thought-token budget", async () => {
+  it("asks for thinking when the call turns it on", async () => {
     await call({ thinking: { enabled: true, budgetTokens: 512 } });
-    expect(h.chatOptions[0].chatWrapper).toBe("auto");
+    expect(h.resolveOptions[0].customWrapperSettings).toEqual({
+      qwen: { thoughts: "auto" },
+      gemma4: { reasoning: true },
+      seed: { thinkingBudget: 512 },
+    });
     expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 512 });
   });
 
@@ -131,14 +159,34 @@ describe("thinking controls", () => {
     expect(h.resolveOptions[0].customWrapperSettings).toEqual({
       harmony: { reasoningEffort: "low" },
     });
-    h.reset();
+  });
+
+  it("raises the cap over a big budget when the call set none, and clamps the budget under a cap the call set", async () => {
     await call({ reasoningEffort: "high" });
     expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 16384 });
+    expect(h.generateOptions[0].maxTokens).toBe(16384 + 4096);
+    expect(h.warnings).toEqual([]);
+    h.reset();
+    await call({ thinking: { enabled: true, budgetTokens: 3000 }, maxTokens: 4000 });
+    expect(h.generateOptions[0].maxTokens).toBe(4000);
+    expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 0 });
+    expect(h.warnings[0]).toContain("leaves no room for the answer");
   });
 
   it("lets an explicit budget win over an effort", async () => {
     await call({ reasoningEffort: "high", thinking: { enabled: true, budgetTokens: 100 } });
     expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 100 });
+  });
+
+  it("gives the chat and the grammar one wrapper, resolved once per setting", async () => {
+    await call({ thinking: { enabled: false }, responseFormat });
+    await call({ thinking: { enabled: false }, responseFormat });
+    // One resolution for two calls with the same setting, and the chat got
+    // that very instance both times. The grammar test checks the grammar's
+    // side of the sharing.
+    expect(h.resolved.length).toBe(1);
+    expect(h.chatOptions[0].chatWrapper).toBe(h.resolved[0]);
+    expect(h.chatOptions[1].chatWrapper).toBe(h.resolved[0]);
   });
 
   it("does the same on the streaming path", async () => {
@@ -154,7 +202,7 @@ describe("thinking controls", () => {
         thinking: { enabled: false },
       } as any),
     );
-    expect(h.chatOptions[0].chatWrapper).not.toBe("auto");
+    expect(h.chatOptions[0].chatWrapper).toBe(h.resolved[0]);
     expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 0 });
   });
 });

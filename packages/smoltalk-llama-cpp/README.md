@@ -64,15 +64,22 @@ await text({ ..., thinking: { enabled: false } });
 // Think for at most 2048 tokens, then answer.
 await text({ ..., thinking: { enabled: true, budgetTokens: 2048 } });
 
-// The budgets the other providers use for each effort: 2048, 8192, 16384.
+// The budgets the google client uses for each effort: 2048, 8192, 16384.
 await text({ ..., reasoningEffort: "low" });
 ```
 
 Turning thinking off uses the chat wrapper's own switch where it has one:
 Qwen, Gemma 4, and Seed. Harmony (gpt-oss) takes an effort instead, so off
 is its lowest effort. DeepSeek always thinks, so off is a budget of zero,
-which closes the block as soon as it opens. A call that says nothing keeps
-node-llama-cpp's default budget, three quarters of the context.
+which closes the block as soon as it opens. `thinking: { enabled: true }`
+asks a wrapper that would otherwise leave it to the model to open the block.
+A call that says nothing gets node-llama-cpp's default budget, three
+quarters of the context.
+
+The budget and `maxTokens` come out of one pool. When the call sets no
+`maxTokens`, it is raised to leave 4096 tokens for the answer after the
+budget. When the call sets one that the budget would fill, the budget is cut
+to leave that room, and a warning says so.
 
 ## Speculative decoding
 
@@ -92,10 +99,25 @@ await text({
 ```
 
 The draft must share the main model's tokenizer, so pick the smallest member
-of the same family. Like the context size, the first call for a model decides
-whether it has a draft; a later call naming a different one is warned and
-gets what exists. The draft's memory is added to the main model's for as long
-as the model stays loaded.
+of the same family. The pair is checked when the draft loads (vocabulary
+type, start and end tokens, and whether they are added), and a mismatch
+fails the load with the reason rather than failing every later call. A
+relative draft path is resolved against `llamaCppModelDir`, like the model.
+
+Whether a draft helps depends on the pair and the machine. The two models
+share the GPU's memory bandwidth, a draft that is too large costs nearly what
+it saves, and at a high temperature the main model rejects more guesses.
+Measure before relying on it: after each call the accepted and rejected
+counts are logged at debug level, and `metadata.llamaCppDraftOptions` tunes
+how many tokens the draft guesses at a time (`maxTokens`, default 16) and
+how sure it must be of each (`minConfidence`, default 0.6).
+
+Like the context size, the first call for a model decides whether it has a
+draft, and smoltalk makes a new client per call. A call without the setting
+before the first call with it locks the draft out for the process, with a
+warning that says how to change it. When a program should always draft,
+call `new LlamaCPP(config).setup()` at startup. The draft's memory is added
+to the main model's for as long as the model stays loaded.
 
 ## Usage
 

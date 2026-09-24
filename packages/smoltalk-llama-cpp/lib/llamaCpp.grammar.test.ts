@@ -19,6 +19,8 @@ const h = vi.hoisted(() => {
   const record = {
     grammarTexts: [] as string[],
     generateOptions: [] as any[],
+    chatWrappers: [] as any[],
+    resolved: [] as any[],
   };
   const wrapper = {
     // Which fake wrapper class resolveChatWrapper returns, and its thought
@@ -29,6 +31,8 @@ const h = vi.hoisted(() => {
   const reset = () => {
     record.grammarTexts = [];
     record.generateOptions = [];
+    record.chatWrappers = [];
+    record.resolved = [];
     wrapper.name = "General";
     wrapper.thought = undefined;
   };
@@ -37,7 +41,9 @@ const h = vi.hoisted(() => {
 
 vi.mock("node-llama-cpp", () => {
   class LlamaChat {
-    constructor(_opts: any) {}
+    constructor(opts: any) {
+      h.record.chatWrappers.push(opts.chatWrapper);
+    }
     async generateResponse(_history: any[], options: any) {
       h.record.generateOptions.push(options);
       return { response: "{}", functionCalls: undefined };
@@ -111,8 +117,14 @@ vi.mock("node-llama-cpp", () => {
   });
 
   class ChatWrapper {
+    // Told not to think, Qwen's wrapper no longer opens the block itself.
+    discouraged = false;
     get settings() {
-      return { segments: { thought: h.wrapper.thought } };
+      const thought =
+        h.wrapper.thought === undefined
+          ? undefined
+          : { ...h.wrapper.thought, ...(this.discouraged ? { openOnResponseStart: false } : {}) };
+      return { segments: { thought } };
     }
   }
   class QwenChatWrapper extends ChatWrapper {}
@@ -140,7 +152,14 @@ vi.mock("node-llama-cpp", () => {
     DeepSeekChatWrapper,
     SeedChatWrapper,
     Gemma4ChatWrapper,
-    resolveChatWrapper: () => new classes[h.wrapper.name](),
+    resolveChatWrapper: (_model: any, options?: any) => {
+      const wrapper = new classes[h.wrapper.name]();
+      if (options?.customWrapperSettings?.qwen?.thoughts === "discourage") {
+        wrapper.discouraged = true;
+      }
+      h.record.resolved.push(wrapper);
+      return wrapper;
+    },
   };
 });
 
@@ -236,6 +255,20 @@ describe("the grammar for a typed reply", () => {
     await call();
     expect(h.record.grammarTexts).toEqual([]);
     expect(grammarKind()).toBe("schema");
+  });
+
+  it("makes the block optional for a Qwen model told not to think, and builds it on the chat's own wrapper", async () => {
+    h.wrapper.name = "Qwen";
+    h.wrapper.thought = qwenThought({ openOnResponseStart: true });
+    await call({ thinking: { enabled: false } });
+    // The wrapper was resolved once, with the switch, and the chat got that
+    // instance; the grammar read the same instance, so it saw the block as
+    // optional rather than already open.
+    expect(h.record.resolved.length).toBe(1);
+    expect(h.record.chatWrappers[0]).toBe(h.record.resolved[0]);
+    expect(h.record.grammarTexts[0].split("\n")[0]).toBe(
+      "root ::= (<[1000]> thinking-body <[1001]>)? thinking-gap thinking-json",
+    );
   });
 
   it("keeps the grammar when the tool list is empty", async () => {

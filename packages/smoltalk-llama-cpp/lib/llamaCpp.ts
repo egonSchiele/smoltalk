@@ -39,7 +39,12 @@ import {
   success,
 } from "smoltalk";
 import type { Message } from "smoltalk";
-import { acquireModelEntry, type ModelEntry } from "./nativeRegistry.js";
+import path from "path";
+import {
+  acquireModelEntry,
+  type DraftOptions,
+  type ModelEntry,
+} from "./nativeRegistry.js";
 import { thinkingGrammar } from "./thinkingGrammar.js";
 
 /**
@@ -60,29 +65,39 @@ const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
 const DEFAULT_MAX_TOKENS = 16384;
 
 /**
- * What a call asked about thinking, in one place. `off` is
- * `thinking.enabled: false`. `budget` is the most tokens the model may think
- * for: the call's own `budgetTokens`, else the budget every other smoltalk
- * client gives a `reasoningEffort`. Undefined leaves node-llama-cpp's own
- * default, three quarters of the context.
+ * What a call asked about thinking, in one place. `on` and `off` are
+ * `thinking.enabled`; both false when the call did not say. `budget` is the
+ * most tokens the model may think for: the call's own `budgetTokens`, else
+ * the budget the google client gives a `reasoningEffort`. Undefined leaves
+ * node-llama-cpp's own default, three quarters of the context.
  */
 type ThinkingChoice = {
+  on: boolean;
   off: boolean;
   budget: number | undefined;
   effort: SmolConfig["reasoningEffort"];
 };
 
-/** Tokens of thinking for each effort, the same map the google client uses. */
+/** Tokens of thinking for each effort, the google client's map. */
 const EFFORT_BUDGETS = { low: 2048, medium: 8192, high: 16384 } as const;
 
+/**
+ * Tokens kept free for the answer after the thinking. A budget that meets
+ * `maxTokens` lets the model think for the whole reply and answer with
+ * nothing, so the budget is held this far under the cap, or the cap raised
+ * this far over the budget when the call set none.
+ */
+const ANSWER_HEADROOM = 4096;
+
 function thinkingChoice(config: SmolConfig): ThinkingChoice {
+  const on = config.thinking?.enabled === true;
   const off = config.thinking?.enabled === false;
   const effort = config.reasoningEffort;
   let budget = config.thinking?.budgetTokens;
   if (budget === undefined && effort !== undefined) {
     budget = EFFORT_BUDGETS[effort];
   }
-  return { off, budget, effort };
+  return { on, off, budget, effort };
 }
 
 /**
@@ -103,8 +118,20 @@ function wrapperSettingsFor(choice: ThinkingChoice) {
       harmony: { reasoningEffort: "low" as const },
     };
   }
+  const harmony =
+    choice.effort === undefined ? {} : { harmony: { reasoningEffort: choice.effort } };
+  if (choice.on) {
+    // Asked for: a wrapper whose detected default leaves thinking to the
+    // model is told to open the block.
+    return {
+      qwen: { thoughts: "auto" as const },
+      gemma4: { reasoning: true },
+      ...(choice.budget === undefined ? {} : { seed: { thinkingBudget: choice.budget } }),
+      ...harmony,
+    };
+  }
   if (choice.effort !== undefined) {
-    return { harmony: { reasoningEffort: choice.effort } };
+    return harmony;
   }
   return undefined;
 }
@@ -115,6 +142,10 @@ function wrapperSettingsFor(choice: ThinkingChoice) {
  * usual wrapper applies. The two have to agree: a grammar built for a
  * wrapper that opens a thought block on every reply is wrong for one that
  * has been told not to.
+ *
+ * Resolving a wrapper renders the model's chat template against every
+ * candidate, which is slow, so each setting's wrapper is kept on the model
+ * entry. A wrapper holds no conversation state, so sharing one is safe.
  */
 function chatWrapperFor(
   entry: ModelEntry,
@@ -124,24 +155,52 @@ function chatWrapperFor(
   if (settings === undefined) {
     return "auto";
   }
-  return resolveChatWrapper(entry.model, { customWrapperSettings: settings });
+  const key = JSON.stringify(settings);
+  let wrapper = entry.wrappers[key];
+  if (wrapper === undefined) {
+    wrapper = resolveChatWrapper(entry.model, { customWrapperSettings: settings });
+    entry.wrappers[key] = wrapper;
+  }
+  return wrapper;
 }
 
 /**
  * The generation options that bound thinking. A budget of 0 when thinking
  * is off, so a wrapper with no switch (DeepSeek) closes its thought block
- * at once, and the call's budget otherwise. node-llama-cpp closes the block
- * for the model when the budget runs out, so the answer still follows.
+ * at once; the call's budget otherwise; and an empty `budgets` when the call
+ * said nothing, which is what makes LlamaChat apply its own default at all.
+ * node-llama-cpp closes the block for the model when the budget runs out,
+ * so the answer still follows.
+ *
+ * The budget and `maxTokens` come out of one pool. When the call set no
+ * cap, the cap grows to leave room for the answer; when it set one, the
+ * budget shrinks to fit under it.
  */
 function applyThinking(
   options: Record<string, any>,
   choice: ThinkingChoice,
+  capWasSet: boolean,
+  logger: ReturnType<typeof getLogger>,
 ): void {
   if (choice.off) {
     options.budgets = { thoughtTokens: 0 };
-  } else if (choice.budget !== undefined) {
-    options.budgets = { thoughtTokens: choice.budget };
+    return;
   }
+  if (choice.budget === undefined) {
+    options.budgets = {};
+    return;
+  }
+  let budget = choice.budget;
+  if (!capWasSet && options.maxTokens < budget + ANSWER_HEADROOM) {
+    options.maxTokens = budget + ANSWER_HEADROOM;
+  } else if (options.maxTokens < budget + ANSWER_HEADROOM) {
+    budget = Math.max(0, options.maxTokens - ANSWER_HEADROOM);
+    logger.warn(
+      `llama.cpp: thinking budget of ${choice.budget} tokens leaves no room for the answer ` +
+        `under maxTokens ${options.maxTokens}; using ${budget}.`,
+    );
+  }
+  options.budgets = { thoughtTokens: budget };
 }
 
 /**
@@ -284,6 +343,9 @@ export class LlamaCPP extends BaseClient {
    *  verify, which is speculative decoding. First call per model wins, like
    *  the context size. */
   private draftModel: string | undefined;
+  /** How much the draft guesses at a time and how sure it must be
+   *  (`metadata.llamaCppDraftOptions`), for tuning on the machine. */
+  private draftOptions: DraftOptions | undefined;
 
   constructor(config: SmolConfig) {
     super(config);
@@ -295,6 +357,16 @@ export class LlamaCPP extends BaseClient {
     this.draftModel = config.metadata?.llamaCppDraftModel as
       | string
       | undefined;
+    this.draftOptions = config.metadata?.llamaCppDraftOptions as
+      | DraftOptions
+      | undefined;
+    if (this.draftModel !== undefined && URI_SCHEME.test(this.draftModel)) {
+      throw new Error(
+        `smoltalk-llama-cpp: llamaCppDraftModel needs a local .gguf path. ` +
+          `To download or resolve "${this.draftModel}", call resolveModel() first ` +
+          `and pass its result.`,
+      );
+    }
 
     // Explicit metadata wins: when llamaCppModelDir is present, config.model
     // is used as-is and no classification happens at all.
@@ -338,6 +410,10 @@ export class LlamaCPP extends BaseClient {
     this.modelDir = modelDir;
     this.modelFile = modelFile;
     this.logger = getLogger();
+    // A relative draft path is next to the models, like a relative model.
+    if (this.draftModel !== undefined && !path.isAbsolute(this.draftModel)) {
+      this.draftModel = path.join(this.modelDir, this.draftModel);
+    }
   }
 
   /**
@@ -347,11 +423,28 @@ export class LlamaCPP extends BaseClient {
    * torn down here (see nativeRegistry.ts / bug.md).
    */
   async setup() {
-    await acquireModelEntry(
+    await this.entry();
+  }
+
+  private entry(): Promise<ModelEntry> {
+    return acquireModelEntry(
       this.modelDir,
       this.modelFile,
       this.contextSize,
       this.draftModel,
+      this.draftOptions,
+    );
+  }
+
+  /** How the draft did on this call, at debug level, since node-llama-cpp
+   *  says to measure a predictor before trusting it. */
+  private logDraft(entry: ModelEntry): void {
+    if (entry.draft === undefined) {
+      return;
+    }
+    const stats = entry.sequence.tokenPredictions;
+    this.logger.debug(
+      `llama.cpp draft: ${stats.validated} tokens accepted, ${stats.refuted} rejected`,
     );
   }
 
@@ -513,12 +606,7 @@ export class LlamaCPP extends BaseClient {
     // Long-lived, shared native state for this model. The context/sequence are
     // created once and reused — never disposed here (bug.md: per-call context
     // disposal races the checkpoint worker => SIGSEGV on SWA models).
-    const entry = await acquireModelEntry(
-      this.modelDir,
-      this.modelFile,
-      this.contextSize,
-      this.draftModel,
-    );
+    const entry = await this.entry();
 
     const thinking = thinkingChoice(config);
     const chatWrapper = chatWrapperFor(entry, thinking);
@@ -554,7 +642,7 @@ export class LlamaCPP extends BaseClient {
       options.functions = functions;
     }
 
-    applyThinking(options, thinking);
+    applyThinking(options, thinking, config.maxTokens !== undefined, this.logger);
 
     // Apply raw attributes
     applyRawAttributes(options, config.rawAttributes);
@@ -575,6 +663,7 @@ export class LlamaCPP extends BaseClient {
       try {
         genResult = await chat.generateResponse(chatHistory, options);
         meterAfter = entry.sequence.tokenMeter.getState();
+        this.logDraft(entry);
       } finally {
         // Both cleanup steps are best-effort: neither may mask the generation
         // result or its error. The lock is released by runExclusive regardless.
@@ -657,12 +746,7 @@ export class LlamaCPP extends BaseClient {
     }
 
     // Long-lived, shared native state for this model (see _textSync).
-    const entry = await acquireModelEntry(
-      this.modelDir,
-      this.modelFile,
-      this.contextSize,
-      this.draftModel,
-    );
+    const entry = await this.entry();
 
     const thinking = thinkingChoice(config);
     const chatWrapper = chatWrapperFor(entry, thinking);
@@ -734,7 +818,7 @@ export class LlamaCPP extends BaseClient {
       if (functions) {
         options.functions = functions;
       }
-      applyThinking(options, thinking);
+      applyThinking(options, thinking, config.maxTokens !== undefined, this.logger);
       applyRawAttributes(options, config.rawAttributes);
 
       this.logger.debug("Sending streaming request to llama.cpp");
@@ -748,6 +832,7 @@ export class LlamaCPP extends BaseClient {
         .generateResponse(chatHistory, options)
         .then((result) => {
           const meterAfter = sequence.tokenMeter.getState();
+          this.logDraft(entry);
 
           // Same contract as _textSync: an aborted generation ends the stream
           // with an error chunk, never a done chunk — `stopOnAbortSignal`

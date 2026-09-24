@@ -4,6 +4,7 @@ import {
   LlamaLogLevel,
 } from "node-llama-cpp";
 import type {
+  ChatWrapper,
   Llama,
   LlamaModel,
   LlamaContext,
@@ -30,14 +31,25 @@ import path from "path";
 
 /** Native resources for one model, shared across all calls for that model.
  *  `draft` is the smaller model that drafts tokens for this one, when a call
- *  named one; its sequence is owned by the predictor on `sequence`. */
+ *  named one; its sequence is owned by the predictor on `sequence`.
+ *  `wrappers` holds the chat wrapper each thinking setting resolved to,
+ *  keyed by the setting, so the resolution runs once per setting. */
 export type ModelEntry = {
   llama: Llama;
   model: LlamaModel;
   context: LlamaContext;
   sequence: LlamaContextSequence;
   draft?: { model: LlamaModel; context: LlamaContext };
+  wrappers: Record<string, ChatWrapper>;
   lock: AsyncLock;
+};
+
+/** What the draft predictor is tuned with: how many tokens the draft
+ *  guesses at a time (node-llama-cpp's default is 16) and how sure it must
+ *  be of a token to offer it (default 0.6). */
+export type DraftOptions = {
+  maxTokens?: number;
+  minConfidence?: number;
 };
 
 /**
@@ -135,8 +147,10 @@ const draftUsed: Record<string, string | undefined> = Object.create(null);
  */
 async function draftPredictor(
   llama: Llama,
+  main: LlamaModel,
+  mainContextSize: number,
   draftPath: string,
-  contextSize: number | undefined,
+  options: DraftOptions | undefined,
 ): Promise<{
   predictor: DraftSequenceTokenPredictor;
   draft: { model: LlamaModel; context: LlamaContext };
@@ -144,21 +158,51 @@ async function draftPredictor(
   const model = await llama.loadModel({ modelPath: draftPath });
   let context: LlamaContext;
   try {
-    context = await model.createContext({
-      contextSize: contextSize ?? { max: MAX_CONTEXT_TOKENS },
-    });
+    const mismatch = draftMismatch(main, model);
+    if (mismatch !== null) {
+      throw new Error(
+        `smoltalk-llama-cpp: ${draftPath} cannot draft for ${main.filename}: ${mismatch}. ` +
+          `A draft has to be a smaller model of the same family.`,
+      );
+    }
+    // The draft holds the same tokens as the main sequence, so its context
+    // is the main context's size, not another guess from free memory.
+    context = await model.createContext({ contextSize: mainContextSize });
   } catch (error) {
     await model.dispose();
     throw error;
   }
-  const predictor = new DraftSequenceTokenPredictor(context.getSequence());
+  const predictor = new DraftSequenceTokenPredictor(context.getSequence(), options);
   return { predictor, draft: { model, context } };
+}
+
+/**
+ * Why the draft cannot stand in for the main model, or null when it can.
+ * node-llama-cpp makes the same checks, but only inside the first
+ * generation, where a failure leaves the loaded model cached and every later
+ * call failing the same way. Checking here fails the load instead.
+ */
+export function draftMismatch(main: LlamaModel, draft: LlamaModel): string | null {
+  if (main.vocabularyType !== draft.vocabularyType) {
+    return `its vocabulary is ${draft.vocabularyType}, not ${main.vocabularyType}`;
+  }
+  if (main.tokens.bos !== draft.tokens.bos || main.tokens.eos !== draft.tokens.eos) {
+    return "its start and end tokens differ";
+  }
+  if (
+    main.tokens.shouldPrependBosToken !== draft.tokens.shouldPrependBosToken ||
+    main.tokens.shouldAppendEosToken !== draft.tokens.shouldAppendEosToken
+  ) {
+    return "it adds start and end tokens differently";
+  }
+  return null;
 }
 
 async function createEntry(
   modelPath: string,
   contextSize: number | undefined,
   draftPath: string | undefined,
+  draftOptions: DraftOptions | undefined,
 ): Promise<ModelEntry> {
   const llama = await getSharedLlama();
   const model = await llama.loadModel({ modelPath });
@@ -167,11 +211,11 @@ async function createEntry(
   });
   if (draftPath === undefined) {
     const sequence = context.getSequence();
-    return { llama, model, context, sequence, lock: new AsyncLock() };
+    return { llama, model, context, sequence, wrappers: {}, lock: new AsyncLock() };
   }
   let drafted;
   try {
-    drafted = await draftPredictor(llama, draftPath, contextSize);
+    drafted = await draftPredictor(llama, model, context.contextSize, draftPath, draftOptions);
   } catch (error) {
     // The rejection drops this entry from the registry, which would leave
     // the loaded main model unreachable and its native memory leaked.
@@ -186,6 +230,7 @@ async function createEntry(
     context,
     sequence,
     draft: drafted.draft,
+    wrappers: {},
     lock: new AsyncLock(),
   };
 }
@@ -205,12 +250,13 @@ export function acquireModelEntry(
   modelFile: string,
   contextSize?: number,
   draftPath?: string,
+  draftOptions?: DraftOptions,
 ): Promise<ModelEntry> {
   const key = keyFor(modelDir, modelFile);
   const draft = draftPath === undefined ? undefined : path.resolve(draftPath);
   let entryPromise = registry[key];
   if (!entryPromise) {
-    entryPromise = createEntry(key, contextSize, draft);
+    entryPromise = createEntry(key, contextSize, draft, draftOptions);
     registry[key] = entryPromise;
     contextSizeUsed[key] = contextSize;
     draftUsed[key] = draft;
@@ -228,10 +274,15 @@ export function acquireModelEntry(
     );
   }
   if (draft !== draftUsed[key]) {
+    // The first call for a model decides its draft, and smoltalk makes a new
+    // client per call, so one early call without the setting decides for
+    // the process. Say how to change it.
     getLogger().warn(
       `llama.cpp: ${key} was already loaded ` +
         `${draftUsed[key] === undefined ? "without a draft model" : `with draft model ${draftUsed[key]}`}; ` +
-        `ignoring llamaCppDraftModel=${draftPath} on this call.`,
+        `ignoring llamaCppDraftModel=${draftPath} on this call. To change it, call ` +
+        `disposeModel("${key}") and try again, or call setup() on a client with the ` +
+        `draft before any other call.`,
     );
   }
   return entryPromise;
