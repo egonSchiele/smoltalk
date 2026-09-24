@@ -10,6 +10,7 @@ import {
 } from "node-llama-cpp";
 import type {
   ChatHistoryItem,
+  ChatWrapper,
   ChatModelFunctions,
   ChatModelFunctionCall,
   TokenMeterState,
@@ -57,6 +58,91 @@ const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
  * explicit `maxTokens` or a `rawAttributes.maxTokens` always wins.
  */
 const DEFAULT_MAX_TOKENS = 16384;
+
+/**
+ * What a call asked about thinking, in one place. `off` is
+ * `thinking.enabled: false`. `budget` is the most tokens the model may think
+ * for: the call's own `budgetTokens`, else the budget every other smoltalk
+ * client gives a `reasoningEffort`. Undefined leaves node-llama-cpp's own
+ * default, three quarters of the context.
+ */
+type ThinkingChoice = {
+  off: boolean;
+  budget: number | undefined;
+  effort: SmolConfig["reasoningEffort"];
+};
+
+/** Tokens of thinking for each effort, the same map the google client uses. */
+const EFFORT_BUDGETS = { low: 2048, medium: 8192, high: 16384 } as const;
+
+function thinkingChoice(config: SmolConfig): ThinkingChoice {
+  const off = config.thinking?.enabled === false;
+  const effort = config.reasoningEffort;
+  let budget = config.thinking?.budgetTokens;
+  if (budget === undefined && effort !== undefined) {
+    budget = EFFORT_BUDGETS[effort];
+  }
+  return { off, budget, effort };
+}
+
+/**
+ * The settings that tell a chat wrapper about the choice. Each wrapper
+ * spells it its own way: Qwen and Gemma 4 have a switch, Seed has a budget,
+ * and Harmony (gpt-oss) only takes an effort, so "off" is its lowest effort.
+ * DeepSeek always thinks; the budget below is what bounds it. The settings
+ * name every wrapper, and node-llama-cpp reads the one it picks for the
+ * model. Undefined when the call said nothing, so the default wrapper
+ * applies.
+ */
+function wrapperSettingsFor(choice: ThinkingChoice) {
+  if (choice.off) {
+    return {
+      qwen: { thoughts: "discourage" as const },
+      gemma4: { reasoning: false },
+      seed: { thinkingBudget: 0 },
+      harmony: { reasoningEffort: "low" as const },
+    };
+  }
+  if (choice.effort !== undefined) {
+    return { harmony: { reasoningEffort: choice.effort } };
+  }
+  return undefined;
+}
+
+/**
+ * The wrapper the chat and the grammar both use. `"auto"` is LlamaChat's own
+ * default, kept when the call said nothing about thinking, so the model's
+ * usual wrapper applies. The two have to agree: a grammar built for a
+ * wrapper that opens a thought block on every reply is wrong for one that
+ * has been told not to.
+ */
+function chatWrapperFor(
+  entry: ModelEntry,
+  choice: ThinkingChoice,
+): "auto" | ChatWrapper {
+  const settings = wrapperSettingsFor(choice);
+  if (settings === undefined) {
+    return "auto";
+  }
+  return resolveChatWrapper(entry.model, { customWrapperSettings: settings });
+}
+
+/**
+ * The generation options that bound thinking. A budget of 0 when thinking
+ * is off, so a wrapper with no switch (DeepSeek) closes its thought block
+ * at once, and the call's budget otherwise. node-llama-cpp closes the block
+ * for the model when the budget runs out, so the answer still follows.
+ */
+function applyThinking(
+  options: Record<string, any>,
+  choice: ThinkingChoice,
+): void {
+  if (choice.off) {
+    options.budgets = { thoughtTokens: 0 };
+  } else if (choice.budget !== undefined) {
+    options.budgets = { thoughtTokens: choice.budget };
+  }
+}
 
 /**
  * Merge sanitized rawAttributes over the built options, skipping keys whose
@@ -127,6 +213,7 @@ function isTagToken(entry: ModelEntry, token: number, marker: string): boolean {
 async function grammarForReply(
   entry: ModelEntry,
   schema: object,
+  chatWrapper: "auto" | ChatWrapper,
 ): Promise<LlamaGrammar> {
   const jsonGrammar = await entry.llama.createGrammarForJsonSchema(
     schema as any,
@@ -142,7 +229,8 @@ async function grammarForReply(
     SeedChatWrapper,
     Gemma4ChatWrapper,
   ];
-  const wrapper = resolveChatWrapper(entry.model);
+  const wrapper =
+    chatWrapper === "auto" ? resolveChatWrapper(entry.model) : chatWrapper;
   if (!blockThenAnswer.some((cls) => wrapper instanceof cls)) {
     return jsonGrammar;
   }
@@ -191,6 +279,11 @@ export class LlamaCPP extends BaseClient {
    *  the registry's default 32k cap for hardware where a larger KV cache is
    *  worth its memory. First call per model wins (see acquireModelEntry). */
   private contextSize: number | undefined;
+  /** Optional path to a smaller model of the same family
+   *  (`metadata.llamaCppDraftModel`) that drafts tokens for this one to
+   *  verify, which is speculative decoding. First call per model wins, like
+   *  the context size. */
+  private draftModel: string | undefined;
 
   constructor(config: SmolConfig) {
     super(config);
@@ -198,6 +291,9 @@ export class LlamaCPP extends BaseClient {
     let modelFile = config.model;
     this.contextSize = config.metadata?.llamaCppContextSize as
       | number
+      | undefined;
+    this.draftModel = config.metadata?.llamaCppDraftModel as
+      | string
       | undefined;
 
     // Explicit metadata wins: when llamaCppModelDir is present, config.model
@@ -251,7 +347,12 @@ export class LlamaCPP extends BaseClient {
    * torn down here (see nativeRegistry.ts / bug.md).
    */
   async setup() {
-    await acquireModelEntry(this.modelDir, this.modelFile, this.contextSize);
+    await acquireModelEntry(
+      this.modelDir,
+      this.modelFile,
+      this.contextSize,
+      this.draftModel,
+    );
   }
 
   private getModelName(): ModelName {
@@ -416,7 +517,11 @@ export class LlamaCPP extends BaseClient {
       this.modelDir,
       this.modelFile,
       this.contextSize,
+      this.draftModel,
     );
+
+    const thinking = thinkingChoice(config);
+    const chatWrapper = chatWrapperFor(entry, thinking);
 
     // Create grammar for response format (independent of the sequence, so it's
     // fine outside the lock).
@@ -425,6 +530,7 @@ export class LlamaCPP extends BaseClient {
       grammar = await grammarForReply(
         entry,
         config.responseFormat.toJSONSchema(),
+        chatWrapper,
       );
     }
 
@@ -448,6 +554,8 @@ export class LlamaCPP extends BaseClient {
       options.functions = functions;
     }
 
+    applyThinking(options, thinking);
+
     // Apply raw attributes
     applyRawAttributes(options, config.rawAttributes);
 
@@ -460,7 +568,7 @@ export class LlamaCPP extends BaseClient {
     // Serialize generation on the shared sequence. Token-meter reads must be
     // inside the lock so deltas are attributable to this call.
     const { result, usage, cost } = await entry.lock.runExclusive(async () => {
-      const chat = new LlamaChat({ contextSequence: entry.sequence });
+      const chat = new LlamaChat({ contextSequence: entry.sequence, chatWrapper });
       const meterBefore = entry.sequence.tokenMeter.getState();
       let genResult;
       let meterAfter: TokenMeterState;
@@ -553,7 +661,11 @@ export class LlamaCPP extends BaseClient {
       this.modelDir,
       this.modelFile,
       this.contextSize,
+      this.draftModel,
     );
+
+    const thinking = thinkingChoice(config);
+    const chatWrapper = chatWrapperFor(entry, thinking);
 
     // Create grammar for response format
     let grammar;
@@ -561,6 +673,7 @@ export class LlamaCPP extends BaseClient {
       grammar = await grammarForReply(
         entry,
         config.responseFormat.toJSONSchema(),
+        chatWrapper,
       );
     }
 
@@ -573,7 +686,7 @@ export class LlamaCPP extends BaseClient {
     let promptPromise: Promise<void> | undefined;
     try {
       const sequence = entry.sequence;
-      const chat = new LlamaChat({ contextSequence: sequence });
+      const chat = new LlamaChat({ contextSequence: sequence, chatWrapper });
       const meterBefore = sequence.tokenMeter.getState();
 
       // Bridge callback-based streaming to async generator using a queue
@@ -621,6 +734,7 @@ export class LlamaCPP extends BaseClient {
       if (functions) {
         options.functions = functions;
       }
+      applyThinking(options, thinking);
       applyRawAttributes(options, config.rawAttributes);
 
       this.logger.debug("Sending streaming request to llama.cpp");

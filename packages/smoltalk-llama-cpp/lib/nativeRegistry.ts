@@ -1,4 +1,8 @@
-import { getLlama, LlamaLogLevel } from "node-llama-cpp";
+import {
+  DraftSequenceTokenPredictor,
+  getLlama,
+  LlamaLogLevel,
+} from "node-llama-cpp";
 import type {
   Llama,
   LlamaModel,
@@ -24,12 +28,15 @@ import path from "path";
  * worker on SWA/hybrid models and produces a native use-after-free (bug.md).
  */
 
-/** Native resources for one model, shared across all calls for that model. */
+/** Native resources for one model, shared across all calls for that model.
+ *  `draft` is the smaller model that drafts tokens for this one, when a call
+ *  named one; its sequence is owned by the predictor on `sequence`. */
 export type ModelEntry = {
   llama: Llama;
   model: LlamaModel;
   context: LlamaContext;
   sequence: LlamaContextSequence;
+  draft?: { model: LlamaModel; context: LlamaContext };
   lock: AsyncLock;
 };
 
@@ -112,21 +119,75 @@ function keyFor(modelDir: string, modelFile: string): string {
  */
 const MAX_CONTEXT_TOKENS = 32768;
 
-// The context size each entry was created with, for the mismatch warning in
-// acquireModelEntry. Keyed like `registry`; undefined = the default cap.
+// The context size and draft model each entry was created with, for the
+// mismatch warnings in acquireModelEntry. Keyed like `registry`; undefined =
+// the default cap, and no draft.
 const contextSizeUsed: Record<string, number | undefined> = Object.create(null);
+const draftUsed: Record<string, string | undefined> = Object.create(null);
+
+/**
+ * Speculative decoding: a draft model guesses the next several tokens, and
+ * the main model checks the whole guess in one pass, which costs about the
+ * same as producing one token. Every guess the main model agrees with is
+ * kept, so the reply is what the main model would have written alone, only
+ * sooner. The draft must share the main model's tokenizer, which in
+ * practice means the smallest member of the same family.
+ */
+async function draftPredictor(
+  llama: Llama,
+  draftPath: string,
+  contextSize: number | undefined,
+): Promise<{
+  predictor: DraftSequenceTokenPredictor;
+  draft: { model: LlamaModel; context: LlamaContext };
+}> {
+  const model = await llama.loadModel({ modelPath: draftPath });
+  let context: LlamaContext;
+  try {
+    context = await model.createContext({
+      contextSize: contextSize ?? { max: MAX_CONTEXT_TOKENS },
+    });
+  } catch (error) {
+    await model.dispose();
+    throw error;
+  }
+  const predictor = new DraftSequenceTokenPredictor(context.getSequence());
+  return { predictor, draft: { model, context } };
+}
 
 async function createEntry(
   modelPath: string,
   contextSize: number | undefined,
+  draftPath: string | undefined,
 ): Promise<ModelEntry> {
   const llama = await getSharedLlama();
   const model = await llama.loadModel({ modelPath });
   const context = await model.createContext({
     contextSize: contextSize ?? { max: MAX_CONTEXT_TOKENS },
   });
-  const sequence = context.getSequence();
-  return { llama, model, context, sequence, lock: new AsyncLock() };
+  if (draftPath === undefined) {
+    const sequence = context.getSequence();
+    return { llama, model, context, sequence, lock: new AsyncLock() };
+  }
+  let drafted;
+  try {
+    drafted = await draftPredictor(llama, draftPath, contextSize);
+  } catch (error) {
+    // The rejection drops this entry from the registry, which would leave
+    // the loaded main model unreachable and its native memory leaked.
+    await context.dispose();
+    await model.dispose();
+    throw error;
+  }
+  const sequence = context.getSequence({ tokenPredictor: drafted.predictor });
+  return {
+    llama,
+    model,
+    context,
+    sequence,
+    draft: drafted.draft,
+    lock: new AsyncLock(),
+  };
 }
 
 /**
@@ -143,22 +204,34 @@ export function acquireModelEntry(
   modelDir: string,
   modelFile: string,
   contextSize?: number,
+  draftPath?: string,
 ): Promise<ModelEntry> {
   const key = keyFor(modelDir, modelFile);
+  const draft = draftPath === undefined ? undefined : path.resolve(draftPath);
   let entryPromise = registry[key];
   if (!entryPromise) {
-    entryPromise = createEntry(key, contextSize);
+    entryPromise = createEntry(key, contextSize, draft);
     registry[key] = entryPromise;
     contextSizeUsed[key] = contextSize;
+    draftUsed[key] = draft;
     // If loading fails, drop the cached rejection so a later call can retry.
     entryPromise.catch(() => {
       if (registry[key] === entryPromise) delete registry[key];
     });
-  } else if (contextSize !== contextSizeUsed[key]) {
+    return entryPromise;
+  }
+  if (contextSize !== contextSizeUsed[key]) {
     getLogger().warn(
       `llama.cpp: context for ${key} was already created with ` +
         `contextSize=${contextSizeUsed[key] ?? `{max: ${MAX_CONTEXT_TOKENS}}`}; ` +
         `ignoring llamaCppContextSize=${contextSize} on this call.`,
+    );
+  }
+  if (draft !== draftUsed[key]) {
+    getLogger().warn(
+      `llama.cpp: ${key} was already loaded ` +
+        `${draftUsed[key] === undefined ? "without a draft model" : `with draft model ${draftUsed[key]}`}; ` +
+        `ignoring llamaCppDraftModel=${draftPath} on this call.`,
     );
   }
   return entryPromise;
@@ -250,6 +323,7 @@ async function disposeChatEntry(key: string): Promise<void> {
   if (!entryPromise) return;
   delete registry[key];
   delete contextSizeUsed[key];
+  delete draftUsed[key];
 
   let entry: ModelEntry;
   try {
@@ -277,6 +351,12 @@ async function disposeChatEntry(key: string): Promise<void> {
     }
     await entry.context.dispose();
     await entry.model.dispose();
+    // The draft's sequence belongs to the predictor on the main sequence,
+    // which the main context's dispose has just taken down.
+    if (entry.draft !== undefined) {
+      await entry.draft.context.dispose();
+      await entry.draft.model.dispose();
+    }
   });
 }
 

@@ -54,6 +54,49 @@ thought still arrives in `thinkingBlocks` and `output` holds the JSON. When
 tools are passed as well, the schema is not enforced, because node-llama-cpp
 cannot apply a grammar and functions together.
 
+`thinking` and `reasoningEffort` work here the way they do on the hosted
+providers:
+
+```ts
+// No thought block at all: the answer comes straight away.
+await text({ ..., thinking: { enabled: false } });
+
+// Think for at most 2048 tokens, then answer.
+await text({ ..., thinking: { enabled: true, budgetTokens: 2048 } });
+
+// The budgets the other providers use for each effort: 2048, 8192, 16384.
+await text({ ..., reasoningEffort: "low" });
+```
+
+Turning thinking off uses the chat wrapper's own switch where it has one:
+Qwen, Gemma 4, and Seed. Harmony (gpt-oss) takes an effort instead, so off
+is its lowest effort. DeepSeek always thinks, so off is a budget of zero,
+which closes the block as soon as it opens. A call that says nothing keeps
+node-llama-cpp's default budget, three quarters of the context.
+
+## Speculative decoding
+
+A smaller model of the same family can draft tokens for the main model to
+check, which is speculative decoding. The main model checks a whole draft in
+one pass, at about the cost of producing one token, and keeps every token it
+agrees with. The reply is what the main model would have written on its own,
+only sooner. Typical gains are 1.5x to 2x on decode; a grammar-constrained
+reply gains less, because the draft guesses wrong more often.
+
+```ts
+await text({
+  model: "/models/Qwen3-32B-Q4_K_M.gguf",
+  metadata: { llamaCppDraftModel: "/models/Qwen3-0.6B-Q4_K_M.gguf" },
+  ...
+});
+```
+
+The draft must share the main model's tokenizer, so pick the smallest member
+of the same family. Like the context size, the first call for a model decides
+whether it has a draft; a later call naming a different one is warned and
+gets what exists. The draft's memory is added to the main model's for as long
+as the model stays loaded.
+
 ## Usage
 
 Register the provider before your first call, then use `smoltalk` normally:
