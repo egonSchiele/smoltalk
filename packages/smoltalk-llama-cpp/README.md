@@ -58,14 +58,23 @@ cannot apply a grammar and functions together.
 providers:
 
 ```ts
+import { text, userMessage } from "smoltalk";
+
+const call = {
+  model: "Qwen3.5-4B-Q4_K_M.gguf",
+  provider: "llama-cpp",
+  metadata: { llamaCppModelDir: "./models" },
+  messages: [userMessage("What is 17 times 23?")],
+};
+
 // No thought block at all: the answer comes straight away.
-await text({ ..., thinking: { enabled: false } });
+await text({ ...call, thinking: { enabled: false } });
 
 // Think for at most 2048 tokens, then answer.
-await text({ ..., thinking: { enabled: true, budgetTokens: 2048 } });
+await text({ ...call, thinking: { enabled: true, budgetTokens: 2048 } });
 
 // The budgets the google client uses for each effort: 2048, 8192, 16384.
-await text({ ..., reasoningEffort: "low" });
+await text({ ...call, reasoningEffort: "low" });
 ```
 
 Turning thinking off uses the chat wrapper's own switch where it has one:
@@ -92,10 +101,16 @@ only sooner. Typical gains are 1.5x to 2x on decode; a grammar-constrained
 reply gains less, because the draft guesses wrong more often.
 
 ```ts
+import { text, userMessage } from "smoltalk";
+
 await text({
-  model: "/models/Qwen3-32B-Q4_K_M.gguf",
-  metadata: { llamaCppDraftModel: "/models/Qwen3-0.6B-Q4_K_M.gguf" },
-  ...
+  model: "Qwen3-32B-Q4_K_M.gguf",
+  provider: "llama-cpp",
+  metadata: {
+    llamaCppModelDir: "./models",
+    llamaCppDraftModel: "Qwen3-0.6B-Q4_K_M.gguf",
+  },
+  messages: [userMessage("Hello")],
 });
 ```
 
