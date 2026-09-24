@@ -154,6 +154,19 @@ function wrapperSettingsFor(choice: ThinkingChoice) {
  *  `"qwen"` or `"gemma4"`. */
 type WrapperName = (typeof resolvableChatWrapperTypeNames)[number];
 
+/** The resolvable names a call cannot usefully ask for. `"auto"` is what
+ *  happens without an override. `"template"` needs a template string in
+ *  the wrapper settings, which a call has no way to pass, so node-llama-cpp
+ *  logs a complaint and falls back to auto-detection, the thing the
+ *  override exists to avoid. (`"jinjaTemplate"` is fine: it reads the
+ *  template from the model file.) */
+const UNUSABLE_WRAPPER_NAMES: readonly string[] = ["auto", "template"];
+
+/** The wrapper names a call may ask for. */
+const WRAPPER_NAMES: readonly string[] = resolvableChatWrapperTypeNames.filter(
+  (name) => !UNUSABLE_WRAPPER_NAMES.includes(name),
+);
+
 /**
  * The wrapper the chat and the grammar both use. `"auto"` is LlamaChat's own
  * default, kept when the call said nothing about thinking and named no
@@ -198,9 +211,9 @@ function wrapperOverride(metadata: Record<string, unknown> | undefined): Wrapper
   if (name === undefined) {
     return undefined;
   }
-  if (typeof name !== "string" || !(resolvableChatWrapperTypeNames as readonly string[]).includes(name)) {
+  if (typeof name !== "string" || !WRAPPER_NAMES.includes(name)) {
     throw new Error(
-      `smoltalk-llama-cpp: llamaCppChatWrapper must be one of ${resolvableChatWrapperTypeNames.join(", ")}; got ${JSON.stringify(name)}.`,
+      `smoltalk-llama-cpp: llamaCppChatWrapper must be one of ${WRAPPER_NAMES.join(", ")}; got ${JSON.stringify(name)}.`,
     );
   }
   return name as WrapperName;

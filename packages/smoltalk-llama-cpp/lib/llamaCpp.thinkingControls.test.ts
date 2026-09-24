@@ -80,7 +80,7 @@ vi.mock("node-llama-cpp", () => {
       h.resolved.push(wrapper);
       return wrapper;
     },
-    resolvableChatWrapperTypeNames: ["auto", "qwen", "gemma4", "harmony", "chatML"],
+    resolvableChatWrapperTypeNames: ["auto", "qwen", "gemma4", "harmony", "chatML", "template"],
   };
 });
 
@@ -217,15 +217,18 @@ describe("thinking controls", () => {
     expect(h.resolveOptions[0].customWrapperSettings.qwen).toEqual({ thoughts: "discourage" });
   });
 
-  it("refuses a wrapper name node-llama-cpp does not know", () => {
-    expect(
-      () =>
-        new LlamaCPP({
-          model: "m.gguf",
-          messages,
-          metadata: { llamaCppModelDir: "/models", llamaCppChatWrapper: "llama9" },
-        }),
-    ).toThrow("llamaCppChatWrapper must be one of");
+  it("refuses a wrapper name node-llama-cpp does not know, and the two it knows but cannot use", () => {
+    for (const name of ["llama9", "template", "auto"]) {
+      expect(
+        () =>
+          new LlamaCPP({
+            model: "m.gguf",
+            messages,
+            metadata: { llamaCppModelDir: "/models", llamaCppChatWrapper: name },
+          }),
+        name,
+      ).toThrow("llamaCppChatWrapper must be one of qwen, gemma4, harmony, chatML;");
+    }
   });
 
   it("does the same on the streaming path", async () => {
