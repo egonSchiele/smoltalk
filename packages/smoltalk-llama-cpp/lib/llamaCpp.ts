@@ -7,6 +7,7 @@ import {
   SeedChatWrapper,
   isLlamaText,
   resolveChatWrapper,
+  resolvableChatWrapperTypeNames,
 } from "node-llama-cpp";
 import type {
   ChatHistoryItem,
@@ -149,12 +150,21 @@ function wrapperSettingsFor(choice: ThinkingChoice) {
   return undefined;
 }
 
+/** A chat wrapper name node-llama-cpp can resolve by name, such as
+ *  `"qwen"` or `"gemma4"`. */
+type WrapperName = (typeof resolvableChatWrapperTypeNames)[number];
+
 /**
  * The wrapper the chat and the grammar both use. `"auto"` is LlamaChat's own
- * default, kept when the call said nothing about thinking, so the model's
- * usual wrapper applies. The two have to agree: a grammar built for a
- * wrapper that opens a thought block on every reply is wrong for one that
- * has been told not to.
+ * default, kept when the call said nothing about thinking and named no
+ * wrapper, so the model's usual wrapper applies. The two have to agree: a
+ * grammar built for a wrapper that opens a thought block on every reply is
+ * wrong for one that has been told not to.
+ *
+ * `override` is the wrapper the call named (`metadata.llamaCppChatWrapper`),
+ * for a model whose template node-llama-cpp does not recognise, such as a
+ * fine-tune with a changed template. The thinking settings still apply to
+ * it.
  *
  * Resolving a wrapper renders the model's chat template against every
  * candidate, which is slow, so each setting's wrapper is kept on the model
@@ -163,18 +173,37 @@ function wrapperSettingsFor(choice: ThinkingChoice) {
 function chatWrapperFor(
   entry: ModelEntry,
   choice: ThinkingChoice,
+  override: WrapperName | undefined,
 ): "auto" | ChatWrapper {
   const settings = wrapperSettingsFor(choice);
-  if (settings === undefined) {
+  if (settings === undefined && override === undefined) {
     return "auto";
   }
-  const key = JSON.stringify(settings);
+  const key = JSON.stringify({ type: override, settings });
   let wrapper = entry.wrappers[key];
   if (wrapper === undefined) {
-    wrapper = resolveChatWrapper(entry.model, { customWrapperSettings: settings });
+    wrapper = resolveChatWrapper(entry.model, {
+      ...(override === undefined ? {} : { type: override }),
+      ...(settings === undefined ? {} : { customWrapperSettings: settings }),
+    });
     entry.wrappers[key] = wrapper;
   }
   return wrapper;
+}
+
+/** The wrapper name a call asks for, checked against the names
+ *  node-llama-cpp resolves. */
+function wrapperOverride(metadata: Record<string, unknown> | undefined): WrapperName | undefined {
+  const name = metadata?.llamaCppChatWrapper;
+  if (name === undefined) {
+    return undefined;
+  }
+  if (typeof name !== "string" || !(resolvableChatWrapperTypeNames as readonly string[]).includes(name)) {
+    throw new Error(
+      `smoltalk-llama-cpp: llamaCppChatWrapper must be one of ${resolvableChatWrapperTypeNames.join(", ")}; got ${JSON.stringify(name)}.`,
+    );
+  }
+  return name as WrapperName;
 }
 
 /**
@@ -368,6 +397,9 @@ export class LlamaCPP extends BaseClient {
   /** How much the draft guesses at a time and how sure it must be
    *  (`metadata.llamaCppDraftOptions`), for tuning on the machine. */
   private draftOptions: DraftOptions | undefined;
+  /** The chat wrapper to use instead of the one node-llama-cpp detects
+   *  (`metadata.llamaCppChatWrapper`), for a model it gets wrong. */
+  private chatWrapper: WrapperName | undefined;
 
   constructor(config: SmolConfig) {
     super(config);
@@ -382,6 +414,7 @@ export class LlamaCPP extends BaseClient {
     this.draftOptions = config.metadata?.llamaCppDraftOptions as
       | DraftOptions
       | undefined;
+    this.chatWrapper = wrapperOverride(config.metadata);
     if (this.draftModel !== undefined && URI_SCHEME.test(this.draftModel)) {
       throw new Error(
         `smoltalk-llama-cpp: llamaCppDraftModel needs a local .gguf path. ` +
@@ -668,7 +701,7 @@ export class LlamaCPP extends BaseClient {
     const entry = await this.entry();
 
     const thinking = thinkingChoice(config);
-    const chatWrapper = chatWrapperFor(entry, thinking);
+    const chatWrapper = chatWrapperFor(entry, thinking, this.chatWrapper);
 
     // Create grammar for response format (independent of the sequence, so it's
     // fine outside the lock).
@@ -809,7 +842,7 @@ export class LlamaCPP extends BaseClient {
     const entry = await this.entry();
 
     const thinking = thinkingChoice(config);
-    const chatWrapper = chatWrapperFor(entry, thinking);
+    const chatWrapper = chatWrapperFor(entry, thinking, this.chatWrapper);
 
     // Create grammar for response format
     let grammar;
