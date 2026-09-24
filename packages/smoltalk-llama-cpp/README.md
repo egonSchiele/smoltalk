@@ -148,6 +148,30 @@ warning that says how to change it. When a program should always draft,
 call `new LlamaCPP(config).setup()` at startup. The draft's memory is added
 to the main model's for as long as the model stays loaded.
 
+## Choosing the chat wrapper
+
+node-llama-cpp picks a chat wrapper for a model by reading its template, and
+the thinking controls above go through that wrapper. For a model it gets
+wrong, such as a fine-tune with a changed template, name the wrapper
+yourself with `metadata.llamaCppChatWrapper`, using node-llama-cpp's name for
+it (`qwen`, `gemma4`, `harmony`, `chatML`, and the rest of
+`resolvableChatWrapperTypeNames`, except `auto` and `template`, which cannot
+name a usable wrapper). The thinking settings still apply to the
+wrapper you name, and the typed-reply grammar is built for it. A name
+node-llama-cpp does not know is refused when the client is made.
+
+```ts
+import { text, userMessage } from "smoltalk";
+
+await text({
+  model: "my-qwen-finetune.gguf",
+  provider: "llama-cpp",
+  metadata: { llamaCppModelDir: "./models", llamaCppChatWrapper: "qwen" },
+  messages: [userMessage("Hello")],
+  thinking: { enabled: false },
+});
+```
+
 ## Usage
 
 Register the provider before your first call, then use `smoltalk` normally:

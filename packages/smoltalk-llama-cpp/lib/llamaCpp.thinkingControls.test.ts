@@ -80,6 +80,7 @@ vi.mock("node-llama-cpp", () => {
       h.resolved.push(wrapper);
       return wrapper;
     },
+    resolvableChatWrapperTypeNames: ["auto", "qwen", "gemma4", "harmony", "chatML", "template"],
   };
 });
 
@@ -201,6 +202,33 @@ describe("thinking controls", () => {
     expect(h.resolved.length).toBe(1);
     expect(h.chatOptions[0].chatWrapper).toBe(h.resolved[0]);
     expect(h.chatOptions[1].chatWrapper).toBe(h.resolved[0]);
+  });
+
+  it("resolves the wrapper a call names, with the thinking settings on top", async () => {
+    await call({ metadata: { llamaCppModelDir: "/models", llamaCppChatWrapper: "chatML" } });
+    expect(h.resolveOptions).toEqual([{ type: "chatML" }]);
+    expect(h.chatOptions[0].chatWrapper).toBe(h.resolved[0]);
+    h.reset();
+    await call({
+      metadata: { llamaCppModelDir: "/models", llamaCppChatWrapper: "qwen" },
+      thinking: { enabled: false },
+    });
+    expect(h.resolveOptions[0].type).toBe("qwen");
+    expect(h.resolveOptions[0].customWrapperSettings.qwen).toEqual({ thoughts: "discourage" });
+  });
+
+  it("refuses a wrapper name node-llama-cpp does not know, and the two it knows but cannot use", () => {
+    for (const name of ["llama9", "template", "auto"]) {
+      expect(
+        () =>
+          new LlamaCPP({
+            model: "m.gguf",
+            messages,
+            metadata: { llamaCppModelDir: "/models", llamaCppChatWrapper: name },
+          }),
+        name,
+      ).toThrow("llamaCppChatWrapper must be one of qwen, gemma4, harmony, chatML;");
+    }
   });
 
   it("does the same on the streaming path", async () => {
