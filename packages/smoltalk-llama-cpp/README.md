@@ -78,8 +78,9 @@ quarters of the context.
 
 The budget and `maxTokens` come out of one pool. When the call sets no
 `maxTokens`, it is raised to leave 4096 tokens for the answer after the
-budget. When the call sets one that the budget would fill, the budget is cut
-to leave that room, and a warning says so.
+budget. When the call sets one, an eighth of it (at least 256 tokens) is kept
+for the answer, and a budget that would take that is cut down, with a
+warning. That is the rule Agency's MLX server applies too.
 
 ## Speculative decoding
 
@@ -104,15 +105,16 @@ type, start and end tokens, and whether they are added), and a mismatch
 fails the load with the reason rather than failing every later call. A
 relative draft path is resolved against `llamaCppModelDir`, like the model.
 
-Two limits, both node-llama-cpp 3.21's. A drafted model has to run greedy:
-its draft predictor never returns when the main model samples, so a call
-with a temperature above zero on a drafted model is refused with an error
-rather than left to hang. And measure before relying on it. In testing on
-Apple Silicon, a Qwen3.5 2B drafting for the 4B reported no predictions
-used and ran slower than the 4B alone. After each call the accepted and
-rejected counts are logged at debug level, and `metadata.llamaCppDraftOptions`
-tunes how many tokens the draft guesses at a time (`maxTokens`, default 16)
-and how sure it must be of each (`minConfidence`, default 0.6).
+The draft has to be much smaller than the model it drafts for: a 0.6B for
+a 30B is the shape this is for. A draft half the size of its model costs
+nearly what it saves and is rarely ready before the main step needs it, so
+it cannot win. In testing on Apple Silicon a Qwen3.5 2B drafting for the 4B,
+which is that shape, reported no predictions used and ran slower than the
+4B alone. Measure before relying on a draft: after each call the accepted
+and rejected counts are logged at debug level, and
+`metadata.llamaCppDraftOptions` tunes how many tokens the draft guesses at a
+time (`maxTokens`, default 16) and how sure it must be of each
+(`minConfidence`, default 0.6).
 
 Like the context size, the first call for a model decides whether it has a
 draft, and smoltalk makes a new client per call. A call without the setting

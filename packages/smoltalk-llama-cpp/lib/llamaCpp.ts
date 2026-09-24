@@ -82,12 +82,21 @@ type ThinkingChoice = {
 const EFFORT_BUDGETS = { low: 2048, medium: 8192, high: 16384 } as const;
 
 /**
- * Tokens kept free for the answer after the thinking. A budget that meets
- * `maxTokens` lets the model think for the whole reply and answer with
- * nothing, so the budget is held this far under the cap, or the cap raised
- * this far over the budget when the call set none.
+ * How far a cap the call did not set is raised over the thinking budget, so
+ * the answer has room after the thinking.
  */
 const ANSWER_HEADROOM = 4096;
+
+/**
+ * Tokens kept free for the answer under a cap the call did set: an eighth of
+ * it, and never fewer than 256. A budget that meets the cap lets the model
+ * think for the whole reply and answer with nothing, so the budget is held
+ * this far under it. Proportional, so a small cap keeps most of its budget;
+ * the same rule the MLX chat server applies.
+ */
+function answerReserve(maxTokens: number): number {
+  return Math.max(256, Math.floor(maxTokens / 8));
+}
 
 function thinkingChoice(config: SmolConfig): ThinkingChoice {
   const on = config.thinking?.enabled === true;
@@ -176,6 +185,14 @@ function chatWrapperFor(
  * cap, the cap grows to leave room for the answer; when it set one, the
  * budget shrinks to fit under it.
  */
+/** Whether the call set its own cap, in `maxTokens` or as a raw attribute. */
+function capWasSet(config: SmolConfig): boolean {
+  return (
+    config.maxTokens !== undefined ||
+    sanitizeAttributes(config.rawAttributes).maxTokens !== undefined
+  );
+}
+
 function applyThinking(
   options: Record<string, any>,
   choice: ThinkingChoice,
@@ -191,10 +208,11 @@ function applyThinking(
     return;
   }
   let budget = choice.budget;
+  const most = options.maxTokens - answerReserve(options.maxTokens);
   if (!capWasSet && options.maxTokens < budget + ANSWER_HEADROOM) {
     options.maxTokens = budget + ANSWER_HEADROOM;
-  } else if (options.maxTokens < budget + ANSWER_HEADROOM) {
-    budget = Math.max(0, options.maxTokens - ANSWER_HEADROOM);
+  } else if (budget > most) {
+    budget = Math.max(0, most);
     logger.warn(
       `llama.cpp: thinking budget of ${choice.budget} tokens leaves no room for the answer ` +
         `under maxTokens ${options.maxTokens}; using ${budget}.`,
@@ -662,10 +680,10 @@ export class LlamaCPP extends BaseClient {
       options.functions = functions;
     }
 
-    applyThinking(options, thinking, config.maxTokens !== undefined, this.logger);
-
-    // Apply raw attributes
+    // Raw attributes first: one of them may be maxTokens, and the thinking
+    // budget has to see the cap that will apply.
     applyRawAttributes(options, config.rawAttributes);
+    applyThinking(options, thinking, capWasSet(config), this.logger);
     this.refuseSampledDraft(entry, options);
 
     this.logger.debug("Sending request to llama.cpp");
@@ -839,8 +857,8 @@ export class LlamaCPP extends BaseClient {
       if (functions) {
         options.functions = functions;
       }
-      applyThinking(options, thinking, config.maxTokens !== undefined, this.logger);
       applyRawAttributes(options, config.rawAttributes);
+      applyThinking(options, thinking, capWasSet(config), this.logger);
       this.refuseSampledDraft(entry, options);
 
       this.logger.debug("Sending streaming request to llama.cpp");

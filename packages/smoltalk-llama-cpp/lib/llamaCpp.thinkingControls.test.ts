@@ -161,16 +161,30 @@ describe("thinking controls", () => {
     });
   });
 
-  it("raises the cap over a big budget when the call set none, and clamps the budget under a cap the call set", async () => {
+  it("raises the cap over a big budget when the call set none, and holds the budget under a cap the call set", async () => {
     await call({ reasoningEffort: "high" });
     expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 16384 });
     expect(h.generateOptions[0].maxTokens).toBe(16384 + 4096);
     expect(h.warnings).toEqual([]);
     h.reset();
+    // An eighth of the cap is kept for the answer: 3000 of 4000 fits.
     await call({ thinking: { enabled: true, budgetTokens: 3000 }, maxTokens: 4000 });
     expect(h.generateOptions[0].maxTokens).toBe(4000);
-    expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 0 });
+    expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 3000 });
+    expect(h.warnings).toEqual([]);
+    h.reset();
+    await call({ thinking: { enabled: true, budgetTokens: 3900 }, maxTokens: 4000 });
+    expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 3500 });
     expect(h.warnings[0]).toContain("leaves no room for the answer");
+  });
+
+  it("lets a raw maxTokens set the cap the budget is held under", async () => {
+    await call({
+      thinking: { enabled: true, budgetTokens: 3900 },
+      rawAttributes: { maxTokens: 4000 },
+    });
+    expect(h.generateOptions[0].maxTokens).toBe(4000);
+    expect(h.generateOptions[0].budgets).toEqual({ thoughtTokens: 3500 });
   });
 
   it("lets an explicit budget win over an effort", async () => {
