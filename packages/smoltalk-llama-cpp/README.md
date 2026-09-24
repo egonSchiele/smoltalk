@@ -104,13 +104,15 @@ type, start and end tokens, and whether they are added), and a mismatch
 fails the load with the reason rather than failing every later call. A
 relative draft path is resolved against `llamaCppModelDir`, like the model.
 
-Whether a draft helps depends on the pair and the machine. The two models
-share the GPU's memory bandwidth, a draft that is too large costs nearly what
-it saves, and at a high temperature the main model rejects more guesses.
-Measure before relying on it: after each call the accepted and rejected
-counts are logged at debug level, and `metadata.llamaCppDraftOptions` tunes
-how many tokens the draft guesses at a time (`maxTokens`, default 16) and
-how sure it must be of each (`minConfidence`, default 0.6).
+Two limits, both node-llama-cpp 3.21's. A drafted model has to run greedy:
+its draft predictor never returns when the main model samples, so a call
+with a temperature above zero on a drafted model is refused with an error
+rather than left to hang. And measure before relying on it. In testing on
+Apple Silicon, a Qwen3.5 2B drafting for the 4B reported no predictions
+used and ran slower than the 4B alone. After each call the accepted and
+rejected counts are logged at debug level, and `metadata.llamaCppDraftOptions`
+tunes how many tokens the draft guesses at a time (`maxTokens`, default 16)
+and how sure it must be of each (`minConfidence`, default 0.6).
 
 Like the context size, the first call for a model decides whether it has a
 draft, and smoltalk makes a new client per call. A call without the setting

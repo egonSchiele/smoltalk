@@ -436,6 +436,26 @@ export class LlamaCPP extends BaseClient {
     );
   }
 
+  /**
+   * node-llama-cpp 3.21's draft predictor never returns when the main model
+   * samples: a call with a temperature above zero on a drafted model hangs
+   * for good. Refusing it is the only safe answer until that is fixed
+   * upstream. A caller who wants the draft runs greedy.
+   */
+  private refuseSampledDraft(entry: ModelEntry, options: Record<string, any>): void {
+    if (entry.draft === undefined) {
+      return;
+    }
+    const temperature = options.temperature ?? 0;
+    if (temperature > 0) {
+      throw new Error(
+        `smoltalk-llama-cpp: a draft model needs temperature 0, and this call asked for ${temperature}. ` +
+          `node-llama-cpp's draft predictor does not return when the main model samples. ` +
+          `Pass temperature: 0, or drop llamaCppDraftModel.`,
+      );
+    }
+  }
+
   /** How the draft did on this call, at debug level, since node-llama-cpp
    *  says to measure a predictor before trusting it. */
   private logDraft(entry: ModelEntry): void {
@@ -646,6 +666,7 @@ export class LlamaCPP extends BaseClient {
 
     // Apply raw attributes
     applyRawAttributes(options, config.rawAttributes);
+    this.refuseSampledDraft(entry, options);
 
     this.logger.debug("Sending request to llama.cpp");
     this.statelogClient?.promptRequest({
@@ -820,6 +841,7 @@ export class LlamaCPP extends BaseClient {
       }
       applyThinking(options, thinking, config.maxTokens !== undefined, this.logger);
       applyRawAttributes(options, config.rawAttributes);
+      this.refuseSampledDraft(entry, options);
 
       this.logger.debug("Sending streaming request to llama.cpp");
       this.statelogClient?.promptRequest({

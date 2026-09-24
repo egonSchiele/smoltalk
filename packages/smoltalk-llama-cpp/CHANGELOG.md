@@ -4,6 +4,7 @@
 - A call that says nothing about thinking now passes an empty `budgets` object, so node-llama-cpp's own default thought budget (three quarters of the context) applies; before, `LlamaChat` had no budget at all without one. A budget that would leave no room for the answer is clamped, or `maxTokens` raised when the call set none, with a warning either way.
 - The draft is checked against the main model when it loads (vocabulary type, BOS and EOS tokens, and whether they are added), so a mismatch fails the load instead of poisoning the cached model. The draft's context is sized like the main model's. A relative draft path resolves against the model directory. `metadata.llamaCppDraftOptions` passes `maxTokens` and `minConfidence` to the predictor, and the draft's validated and refuted counts are logged at debug level after each call.
 - The chat wrapper a thinking setting resolves is kept per model, so the Jinja search runs once per setting rather than once per call.
+- A call with a temperature above zero on a drafted model is refused with an error: node-llama-cpp 3.21's draft predictor never returns when the main model samples.
 
 ## version 0.6.0 (09/23/2026)
 - A typed reply (`responseFormat`) from a thinking model now comes back as JSON. The grammar lets the model think up to the token that closes its thought block, then holds the rest to the schema (`lib/thinkingGrammar.ts`).

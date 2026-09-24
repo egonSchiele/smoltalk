@@ -170,6 +170,19 @@ describe("draft models", () => {
     expect(h.debugs.some((d) => d.includes("7 tokens accepted, 2 rejected"))).toBe(true);
   });
 
+  it("refuses a call that samples on a drafted model, since the predictor would hang", async () => {
+    const client = new LlamaCPP({
+      model: "big.gguf",
+      messages,
+      metadata: { llamaCppModelDir: "/models", llamaCppDraftModel: "small.gguf" },
+    });
+    await expect(
+      client._textSync({ model: "big.gguf", messages, temperature: 0.7 } as any),
+    ).rejects.toThrow("needs temperature 0");
+    const greedy = await client._textSync({ model: "big.gguf", messages, temperature: 0 } as any);
+    expect(greedy.success).toBe(true);
+  });
+
   it("refuses a URI-shaped draft with the resolveModel hint", () => {
     expect(
       () =>
