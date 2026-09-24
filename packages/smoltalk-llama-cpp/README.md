@@ -143,6 +143,8 @@ wrapper you name, and the typed-reply grammar is built for it. A name
 node-llama-cpp does not know is refused when the client is made.
 
 ```ts
+import { text, userMessage } from "smoltalk";
+
 await text({
   model: "my-qwen-finetune.gguf",
   provider: "llama-cpp",
