@@ -116,6 +116,16 @@ and rejected counts are logged at debug level, and
 time (`maxTokens`, default 16) and how sure it must be of each
 (`minConfidence`, default 0.6).
 
+A drafted model is safest run greedy (`temperature: 0`). With node-llama-cpp
+3.21.1, a Qwen3.5 model that samples on a draft never returns from the call,
+so a call with a temperature above zero on a drafted Qwen3.5 model is refused
+with an error. On a Qwen3 pair (0.6B drafting for the 8B) the same call
+returned as usual, so other families get a warning, once per model, that a
+hang has been seen. `llamaCppDraftOptions.allowSampling: true` turns off both
+the refusal and the warning. In that Qwen3 test the predictor reported no
+predictions used at any temperature and was slower than the 8B alone, so a
+draft on llama.cpp is not a speed-up today; measure your own pair.
+
 Like the context size, the first call for a model decides whether it has a
 draft, and smoltalk makes a new client per call. A call without the setting
 before the first call with it locks the draft out for the process, with a

@@ -53,6 +53,10 @@ import { thinkingGrammar } from "./thinkingGrammar.js";
  */
 const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
 
+/** GGUF architectures whose draft predictor has been seen to hang when the
+ *  main model samples (node-llama-cpp 3.21.1). */
+const HANGS_WHEN_SAMPLED = ["qwen35"];
+
 /**
  * Backstop when the caller sets no maxTokens. Local thinking models
  * (Qwen3, DeepSeek-R1) burn thousands of hidden reasoning tokens per answer
@@ -455,21 +459,38 @@ export class LlamaCPP extends BaseClient {
   }
 
   /**
-   * node-llama-cpp 3.21's draft predictor never returns when the main model
-   * samples: a call with a temperature above zero on a drafted model hangs
-   * for good. Refusing it is the only safe answer until that is fixed
-   * upstream. A caller who wants the draft runs greedy.
+   * A call that samples (temperature above zero) on a drafted model. On a
+   * Qwen3.5 pair, node-llama-cpp 3.21's draft predictor never returned
+   * when the main model sampled; on a Qwen3 pair it returned as usual. So
+   * the family that hangs is refused, with `allowSampling` as the way past
+   * the check, and any other family is warned once per model that a hang
+   * has been seen. A caller who wants the draft and none of this runs
+   * greedy.
    */
-  private refuseSampledDraft(entry: ModelEntry, options: Record<string, any>): void {
-    if (entry.draft === undefined) {
+  private checkSampledDraft(entry: ModelEntry, options: Record<string, any>): void {
+    if (entry.draft === undefined || this.draftOptions?.allowSampling === true) {
       return;
     }
     const temperature = options.temperature ?? 0;
-    if (temperature > 0) {
+    if (!(temperature > 0)) {
+      return;
+    }
+    const architecture = entry.model.fileInfo.metadata.general.architecture;
+    if (HANGS_WHEN_SAMPLED.includes(architecture)) {
       throw new Error(
-        `smoltalk-llama-cpp: a draft model needs temperature 0, and this call asked for ${temperature}. ` +
-          `node-llama-cpp's draft predictor does not return when the main model samples. ` +
-          `Pass temperature: 0, or drop llamaCppDraftModel.`,
+        `smoltalk-llama-cpp: this call asked for temperature ${temperature} on a drafted ` +
+          `${architecture} model, and node-llama-cpp's draft predictor does not return ` +
+          `when a ${architecture} model samples. Pass temperature: 0, drop ` +
+          `llamaCppDraftModel, or set llamaCppDraftOptions.allowSampling to try anyway.`,
+      );
+    }
+    if (!entry.draft.warnedSampling) {
+      entry.draft.warnedSampling = true;
+      this.logger.warn(
+        `smoltalk-llama-cpp: sampling (temperature ${temperature}) on a drafted model. ` +
+          `node-llama-cpp's draft predictor has hung when a Qwen3.5 model sampled; if a ` +
+          `call on this ${architecture} model never returns, pass temperature: 0. ` +
+          `llamaCppDraftOptions.allowSampling silences this warning.`,
       );
     }
   }
@@ -684,7 +705,7 @@ export class LlamaCPP extends BaseClient {
     // budget has to see the cap that will apply.
     applyRawAttributes(options, config.rawAttributes);
     applyThinking(options, thinking, capWasSet(config), this.logger);
-    this.refuseSampledDraft(entry, options);
+    this.checkSampledDraft(entry, options);
 
     this.logger.debug("Sending request to llama.cpp");
     this.statelogClient?.promptRequest({
@@ -859,7 +880,7 @@ export class LlamaCPP extends BaseClient {
       }
       applyRawAttributes(options, config.rawAttributes);
       applyThinking(options, thinking, capWasSet(config), this.logger);
-      this.refuseSampledDraft(entry, options);
+      this.checkSampledDraft(entry, options);
 
       this.logger.debug("Sending streaming request to llama.cpp");
       this.statelogClient?.promptRequest({

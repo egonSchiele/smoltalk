@@ -20,6 +20,8 @@ const h = vi.hoisted(() => ({
   // What each model reports about its tokenizer, by path, so a draft can
   // be made to mismatch.
   vocab: {} as Record<string, any>,
+  // The GGUF architecture each model reports, by path; "qwen3" unless set.
+  architecture: {} as Record<string, string>,
   reset() {
     h.loaded = [];
     h.disposed = [];
@@ -29,6 +31,7 @@ const h = vi.hoisted(() => ({
     h.warnings = [];
     h.debugs = [];
     h.vocab = {};
+    h.architecture = {};
   },
 }));
 
@@ -53,6 +56,7 @@ vi.mock("node-llama-cpp", () => {
   }
   const makeModel = (modelPath: string) => ({
     filename: modelPath,
+    fileInfo: { metadata: { general: { architecture: h.architecture[modelPath] ?? "qwen3" } } },
     ...(h.vocab[modelPath] ?? SAME_FAMILY),
     async createContext(options: any) {
       h.contextOptions.push({ owner: modelPath, options });
@@ -170,7 +174,24 @@ describe("draft models", () => {
     expect(h.debugs.some((d) => d.includes("7 tokens accepted, 2 rejected"))).toBe(true);
   });
 
-  it("refuses a call that samples on a drafted model, since the predictor would hang", async () => {
+  it("warns once when a call samples on a drafted model, and not at all when greedy", async () => {
+    const client = new LlamaCPP({
+      model: "big.gguf",
+      messages,
+      metadata: { llamaCppModelDir: "/models", llamaCppDraftModel: "small.gguf" },
+    });
+    const greedy = await client._textSync({ model: "big.gguf", messages, temperature: 0 } as any);
+    expect(greedy.success).toBe(true);
+    expect(h.warnings).toEqual([]);
+    await client._textSync({ model: "big.gguf", messages, temperature: 0.7 } as any);
+    await client._textSync({ model: "big.gguf", messages, temperature: 0.7 } as any);
+    expect(h.warnings.length).toBe(1);
+    expect(h.warnings[0]).toContain("has hung when a Qwen3.5 model sampled");
+    expect(h.warnings[0]).toContain("this qwen3 model");
+  });
+
+  it("refuses a sampled call on a drafted Qwen3.5 model, the family seen to hang", async () => {
+    h.architecture["/models/big.gguf"] = "qwen35";
     const client = new LlamaCPP({
       model: "big.gguf",
       messages,
@@ -178,9 +199,27 @@ describe("draft models", () => {
     });
     await expect(
       client._textSync({ model: "big.gguf", messages, temperature: 0.7 } as any),
-    ).rejects.toThrow("needs temperature 0");
+    ).rejects.toThrow("does not return when a qwen35 model samples");
     const greedy = await client._textSync({ model: "big.gguf", messages, temperature: 0 } as any);
     expect(greedy.success).toBe(true);
+  });
+
+  it("lets allowSampling past the refusal and the warning", async () => {
+    h.architecture["/models/big.gguf"] = "qwen35";
+    const client = new LlamaCPP({
+      model: "big.gguf",
+      messages,
+      metadata: {
+        llamaCppModelDir: "/models",
+        llamaCppDraftModel: "small.gguf",
+        llamaCppDraftOptions: { allowSampling: true },
+      },
+    });
+    const sampled = await client._textSync({ model: "big.gguf", messages, temperature: 0.7 } as any);
+    expect(sampled.success).toBe(true);
+    expect(h.warnings).toEqual([]);
+    // The predictor only sees the tuning options, not the switch.
+    expect(h.predictors[0].options).toEqual({ allowSampling: true });
   });
 
   it("refuses a URI-shaped draft with the resolveModel hint", () => {

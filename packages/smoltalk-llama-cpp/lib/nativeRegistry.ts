@@ -39,17 +39,20 @@ export type ModelEntry = {
   model: LlamaModel;
   context: LlamaContext;
   sequence: LlamaContextSequence;
-  draft?: { model: LlamaModel; context: LlamaContext };
+  draft?: { model: LlamaModel; context: LlamaContext; warnedSampling: boolean };
   wrappers: Record<string, ChatWrapper>;
   lock: AsyncLock;
 };
 
 /** What the draft predictor is tuned with: how many tokens the draft
  *  guesses at a time (node-llama-cpp's default is 16) and how sure it must
- *  be of a token to offer it (default 0.6). */
+ *  be of a token to offer it (default 0.6). `allowSampling` lets a call
+ *  with a temperature above zero run on a drafted model without the check
+ *  in `LlamaCPP.checkSampledDraft`. */
 export type DraftOptions = {
   maxTokens?: number;
   minConfidence?: number;
+  allowSampling?: boolean;
 };
 
 /**
@@ -153,7 +156,7 @@ async function draftPredictor(
   options: DraftOptions | undefined,
 ): Promise<{
   predictor: DraftSequenceTokenPredictor;
-  draft: { model: LlamaModel; context: LlamaContext };
+  draft: { model: LlamaModel; context: LlamaContext; warnedSampling: boolean };
 }> {
   const model = await llama.loadModel({ modelPath: draftPath });
   let context: LlamaContext;
@@ -173,7 +176,7 @@ async function draftPredictor(
     throw error;
   }
   const predictor = new DraftSequenceTokenPredictor(context.getSequence(), options);
-  return { predictor, draft: { model, context } };
+  return { predictor, draft: { model, context, warnedSampling: false } };
 }
 
 /**
