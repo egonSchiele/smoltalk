@@ -323,6 +323,7 @@ async function grammarForReply(
   schema: object,
   chatWrapper: "auto" | ChatWrapper,
   thinkingOff: boolean,
+  override: WrapperName | undefined,
 ): Promise<LlamaGrammar> {
   const schemaGrammar = await entry.llama.createGrammarForJsonSchema(
     grammarSchema(schema) as any,
@@ -335,10 +336,12 @@ async function grammarForReply(
   const jsonGrammar = await entry.llama.createGrammar({ grammar: jsonGbnf });
   // Only a reply laid out as one thought block then the answer can be
   // wrapped by the thinking grammar. The family says which it writes; a
-  // family with no profile is judged by the wrapper class.
+  // family with no profile, or a call that named its own wrapper, is
+  // judged by the wrapper class, since the wrapper named need not be the
+  // family's.
   const wrapper =
     chatWrapper === "auto" ? resolveChatWrapper(entry.model) : chatWrapper;
-  let layout = profileOf(entry).replyLayout;
+  let layout = override === undefined ? profileOf(entry).replyLayout : "byWrapper";
   if (layout === "byWrapper") {
     layout = layoutOfWrapper(wrapper);
   }
@@ -743,6 +746,7 @@ export class LlamaCPP extends BaseClient {
         config.responseFormat.toJSONSchema(),
         chatWrapper,
         thinking.off,
+        this.chatWrapper,
       );
     }
 
@@ -884,6 +888,7 @@ export class LlamaCPP extends BaseClient {
         config.responseFormat.toJSONSchema(),
         chatWrapper,
         thinking.off,
+        this.chatWrapper,
       );
     }
 

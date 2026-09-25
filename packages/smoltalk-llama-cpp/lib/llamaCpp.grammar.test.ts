@@ -28,6 +28,8 @@ const h = vi.hoisted(() => {
     // segment settings.
     name: "General" as string,
     thought: undefined as any,
+    // The model file's architecture, which picks the family profile.
+    architecture: undefined as string | undefined,
   };
   // Whether the fake schema grammar carries node-llama-cpp's indentation
   // rules, for the test of their loosening.
@@ -40,6 +42,7 @@ const h = vi.hoisted(() => {
     record.resolved = [];
     wrapper.name = "General";
     wrapper.thought = undefined;
+    wrapper.architecture = undefined;
     api.grammarWithIndentation = false;
   };
   const api = { record, wrapper, reset, grammarWithIndentation };
@@ -96,6 +99,7 @@ vi.mock("node-llama-cpp", () => {
   });
 
   const makeModel = () => ({
+    fileInfo: { metadata: { general: { architecture: h.wrapper.architecture } } },
     tokenizer: () => [],
     detokenize: (tokens: number[]) =>
       tokens.map((t) => TEXT[t] ?? "x").join(""),
@@ -166,6 +170,7 @@ vi.mock("node-llama-cpp", () => {
     DeepSeekChatWrapper,
     SeedChatWrapper,
     Gemma4ChatWrapper,
+    resolvableChatWrapperTypeNames: ["auto", "qwen", "harmony"],
     resolveChatWrapper: (_model: any, options?: any) => {
       const wrapper = new classes[h.wrapper.name]();
       // Only Qwen's wrapper has the switch; the others keep their layout.
@@ -186,11 +191,11 @@ import { disposeAll } from "./nativeRegistry.js";
 
 const responseFormat = { toJSONSchema: () => ({ type: "object" }) } as any;
 
-function call(extra: Record<string, any> = {}) {
+function call(extra: Record<string, any> = {}, clientMetadata: Record<string, any> = {}) {
   const client = new LlamaCPP({
     model: "m.gguf",
     messages: [],
-    metadata: { llamaCppModelDir: "/models" },
+    metadata: { llamaCppModelDir: "/models", ...clientMetadata },
   });
   return client._textSync({
     model: "m.gguf",
@@ -298,6 +303,29 @@ describe("the grammar for a typed reply", () => {
     h.wrapper.name = "DeepSeek";
     h.wrapper.thought = qwenThought({ openOnResponseStart: true });
     await call({ thinking: { enabled: false } });
+    expect(h.record.grammarTexts[1].split("\n")[0]).toBe(
+      "root ::= thinking-body <[1001]> thinking-gap thinking-json",
+    );
+  });
+
+  it("reads the layout off a wrapper the call named, not the family's", async () => {
+    // A Qwen3 fine-tune run with Harmony's wrapper: Qwen3's layout would
+    // force the JSON right after the thought block, before Harmony's
+    // final-channel header.
+    h.wrapper.architecture = "qwen3";
+    h.wrapper.name = "Harmony";
+    h.wrapper.thought = qwenThought({ openOnResponseStart: true });
+    await call({}, { llamaCppChatWrapper: "harmony" });
+    expectPlainSchemaGrammar();
+
+    // And the other way: a gpt-oss model given Qwen's wrapper gets the
+    // thinking grammar Qwen's layout calls for.
+    await disposeAll();
+    h.reset();
+    h.wrapper.architecture = "gpt-oss";
+    h.wrapper.name = "Qwen";
+    h.wrapper.thought = qwenThought({ openOnResponseStart: true });
+    await call({}, { llamaCppChatWrapper: "qwen" });
     expect(h.record.grammarTexts[1].split("\n")[0]).toBe(
       "root ::= thinking-body <[1001]> thinking-gap thinking-json",
     );
