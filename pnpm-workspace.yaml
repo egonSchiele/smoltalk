@@ -1,3 +1,11 @@
 packages:
   - "packages/*"
   - "site"
+
+# Peers are compatibility constraints, not install edges. Without this, pnpm
+# converts smoltalk's *optional* peer on smoltalk-llama-cpp into a real
+# install edge (autoInstallPeers ignores peerDependenciesMeta.optional for
+# workspace projects) and then fails to resolve the range before the plugin's
+# next version is published. This used to live in .npmrc; pnpm 12 reads only
+# auth and registry settings from there, so it moved here.
+autoInstallPeers: false
