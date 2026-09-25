@@ -52,7 +52,10 @@ llama.cpp grammar. A thinking model such as Qwen3.5 is left free inside its
 `<think>` block, and only the text after it has to fit the schema, so the
 thought still arrives in `thinkingBlocks` and `output` holds the JSON. When
 tools are passed as well, the schema is not enforced, because node-llama-cpp
-cannot apply a grammar and functions together.
+cannot apply a grammar and functions together. A model told not to think
+(below) is held to the schema from its first token. A schema's `anyOf`, which
+is what zod writes for a union, is rewritten as `oneOf` or `enum` on the way
+to node-llama-cpp's grammar builder, which does not read `anyOf`.
 
 `thinking` and `reasoningEffort` work here the way they do on the hosted
 providers:
@@ -147,6 +150,28 @@ before the first call with it locks the draft out for the process, with a
 warning that says how to change it. When a program should always draft,
 call `new LlamaCPP(config).setup()` at startup. The draft's memory is added
 to the main model's for as long as the model stays loaded.
+
+## Tool calls
+
+A chain of tool calls is shown to the model as one turn, whatever the
+messages look like: an assistant message that follows only tool messages
+continues the model turn before it. Gemma 4 needs this, and it also gets the
+tool markers from its own chat template rather than the ones node-llama-cpp
+3.21.1 gives it, which the model did not recognise after a result.
+
+## Model families
+
+Everything the plugin knows about a family lives in one profile in
+`lib/familyProfiles.ts`, looked up by the architecture named in the GGUF
+file: how its wrapper is told about thinking, whether its reply is one
+thought block then the answer (which the typed-reply grammar can wrap) or
+channels (which it cannot), tool markers to use in place of the wrapper's
+own, and whether a draft model is safe when it samples. Qwen3, Qwen3.5,
+Gemma 4, and gpt-oss have profiles. Any other architecture gets the
+default, which tells every wrapper about thinking and judges the layout
+from the wrapper class node-llama-cpp picks. A new family that misbehaves
+gets a profile, not a special case elsewhere; a fact about one model, such
+as its sampling, belongs with the caller's catalog.
 
 ## Choosing the chat wrapper
 

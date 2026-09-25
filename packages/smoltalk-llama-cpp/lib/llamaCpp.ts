@@ -1,10 +1,6 @@
 import {
-  DeepSeekChatWrapper,
-  Gemma4ChatWrapper,
   LlamaChat,
   LlamaText,
-  QwenChatWrapper,
-  SeedChatWrapper,
   isLlamaText,
   resolveChatWrapper,
   resolvableChatWrapperTypeNames,
@@ -47,16 +43,21 @@ import {
   type ModelEntry,
 } from "./nativeRegistry.js";
 import { thinkingGrammar } from "./thinkingGrammar.js";
+import { grammarSchema } from "./grammarSchema.js";
+import { loosenJsonWhitespace } from "./jsonWhitespace.js";
+import {
+  DEFAULT_PROFILE,
+  layoutOfWrapper,
+  profileFor,
+  type FamilyProfile,
+  type ThinkingChoice,
+} from "./familyProfiles.js";
 
 /**
  * Two-plus characters before the colon, so Windows drive-letter paths
  * (C:\models\x.gguf) are classified as paths, not URIs.
  */
 const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
-
-/** GGUF architectures whose draft predictor has been seen to hang when the
- *  main model samples (node-llama-cpp 3.21.1). */
-const HANGS_WHEN_SAMPLED = ["qwen35"];
 
 /**
  * Backstop when the caller sets no maxTokens. Local thinking models
@@ -68,20 +69,6 @@ const HANGS_WHEN_SAMPLED = ["qwen35"];
  * explicit `maxTokens` or a `rawAttributes.maxTokens` always wins.
  */
 const DEFAULT_MAX_TOKENS = 16384;
-
-/**
- * What a call asked about thinking, in one place. `on` and `off` are
- * `thinking.enabled`; both false when the call did not say. `budget` is the
- * most tokens the model may think for: the call's own `budgetTokens`, else
- * the budget the google client gives a `reasoningEffort`. Undefined leaves
- * node-llama-cpp's own default, three quarters of the context.
- */
-type ThinkingChoice = {
-  on: boolean;
-  off: boolean;
-  budget: number | undefined;
-  effort: SmolConfig["reasoningEffort"];
-};
 
 /** Tokens of thinking for each effort, the google client's map. */
 const EFFORT_BUDGETS = { low: 2048, medium: 8192, high: 16384 } as const;
@@ -114,40 +101,10 @@ function thinkingChoice(config: SmolConfig): ThinkingChoice {
   return { on, off, budget, effort };
 }
 
-/**
- * The settings that tell a chat wrapper about the choice. Each wrapper
- * spells it its own way: Qwen and Gemma 4 have a switch, Seed has a budget,
- * and Harmony (gpt-oss) only takes an effort, so "off" is its lowest effort.
- * DeepSeek always thinks; the budget below is what bounds it. The settings
- * name every wrapper, and node-llama-cpp reads the one it picks for the
- * model. Undefined when the call said nothing, so the default wrapper
- * applies.
- */
-function wrapperSettingsFor(choice: ThinkingChoice) {
-  if (choice.off) {
-    return {
-      qwen: { thoughts: "discourage" as const },
-      gemma4: { reasoning: false },
-      seed: { thinkingBudget: 0 },
-      harmony: { reasoningEffort: "low" as const },
-    };
-  }
-  const harmony =
-    choice.effort === undefined ? {} : { harmony: { reasoningEffort: choice.effort } };
-  if (choice.on) {
-    // Asked for: a wrapper whose detected default leaves thinking to the
-    // model is told to open the block.
-    return {
-      qwen: { thoughts: "auto" as const },
-      gemma4: { reasoning: true },
-      ...(choice.budget === undefined ? {} : { seed: { thinkingBudget: choice.budget } }),
-      ...harmony,
-    };
-  }
-  if (choice.effort !== undefined) {
-    return harmony;
-  }
-  return undefined;
+/** The family profile for a loaded model (see familyProfiles.ts), from
+ *  the architecture named in its GGUF file. */
+function profileOf(entry: ModelEntry): FamilyProfile {
+  return profileFor(entry.model.fileInfo?.metadata?.general?.architecture);
 }
 
 /** A chat wrapper name node-llama-cpp can resolve by name, such as
@@ -178,7 +135,13 @@ function usableWrapperNames(): readonly string[] {
  * `override` is the wrapper the call named (`metadata.llamaCppChatWrapper`),
  * for a model whose template node-llama-cpp does not recognise, such as a
  * fine-tune with a changed template. The thinking settings still apply to
- * it.
+ * it, spelled for every wrapper rather than the family's own, since the
+ * wrapper named need not be the family's. It keeps its own tool markers.
+ *
+ * A family whose profile replaces the wrapper's tool markers is always
+ * resolved here rather than left to `"auto"`, so the markers can be put in.
+ * They go on the family's wrapper class alone: when node-llama-cpp falls
+ * back to a template wrapper, that template's markers stay.
  *
  * Resolving a wrapper renders the model's chat template against every
  * candidate, which is slow, so each setting's wrapper is kept on the model
@@ -189,8 +152,13 @@ function chatWrapperFor(
   choice: ThinkingChoice,
   override: WrapperName | undefined,
 ): "auto" | ChatWrapper {
-  const settings = wrapperSettingsFor(choice);
-  if (settings === undefined && override === undefined) {
+  const profile = profileOf(entry);
+  const settings =
+    override === undefined
+      ? profile.thinkingSettings(choice)
+      : DEFAULT_PROFILE.thinkingSettings(choice);
+  const markers = override === undefined ? profile.toolMarkers : undefined;
+  if (settings === undefined && override === undefined && markers === undefined) {
     return "auto";
   }
   const key = JSON.stringify({ type: override, settings });
@@ -200,6 +168,14 @@ function chatWrapperFor(
       ...(override === undefined ? {} : { type: override }),
       ...(settings === undefined ? {} : { customWrapperSettings: settings }),
     });
+    if (markers !== undefined && wrapper instanceof markers.wrapper()) {
+      // `settings` is declared read-only, but it is a plain instance
+      // field that node-llama-cpp reads on every render, so replacing it
+      // takes effect. A subclass cannot do this: resolveChatWrapper
+      // constructs the class itself.
+      const patchable = wrapper as { settings: ChatWrapper["settings"] };
+      patchable.settings = { ...wrapper.settings, functions: markers.settings() };
+    }
     entry.wrappers[key] = wrapper;
   }
   return wrapper;
@@ -334,29 +310,42 @@ function isTagToken(entry: ModelEntry, token: number, marker: string): boolean {
  *  the tokenizer splits into pieces would leave the grammar treating the
  *  last piece, say `>`, as the end of the block wherever the model wrote
  *  it. (node-llama-cpp's `isSpecialToken` is no use here: Qwen's `</think>`
- *  is an added token, not a control token, and it reports false.) */
+ *  is an added token, not a control token, and it reports false.)
+ *
+ *  A call that turned thinking off gets the schema alone, unless the
+ *  wrapper opens the block on every reply regardless. Offering the block
+ *  as an option to a model told not to think gave it a way out of the
+ *  schema: Qwen3.5 and Gemma 4 both opened it and wrote their answer as
+ *  prose inside, and since neither closes a block it was told not to
+ *  open, the JSON never came. */
 async function grammarForReply(
   entry: ModelEntry,
   schema: object,
   chatWrapper: "auto" | ChatWrapper,
+  thinkingOff: boolean,
+  override: WrapperName | undefined,
 ): Promise<LlamaGrammar> {
-  const jsonGrammar = await entry.llama.createGrammarForJsonSchema(
-    schema as any,
+  const schemaGrammar = await entry.llama.createGrammarForJsonSchema(
+    grammarSchema(schema) as any,
   );
-  // The wrappers whose reply is one thought block, then the answer, which
-  // is the layout the thinking grammar assumes. Harmony (gpt-oss) and Muse
-  // put the answer in a second channel after its own header, so they keep
-  // the plain schema grammar, as does the template fallback for an unknown
-  // model.
-  const blockThenAnswer = [
-    QwenChatWrapper,
-    DeepSeekChatWrapper,
-    SeedChatWrapper,
-    Gemma4ChatWrapper,
-  ];
+  // The schema's grammar with its whitespace loosened (see
+  // jsonWhitespace.ts). It is rebuilt as a plain grammar, since the text
+  // is what changes; node-llama-cpp reads the JSON back from the reply
+  // the same way either way.
+  const jsonGbnf = loosenJsonWhitespace(schemaGrammar.grammar);
+  const jsonGrammar = await entry.llama.createGrammar({ grammar: jsonGbnf });
+  // Only a reply laid out as one thought block then the answer can be
+  // wrapped by the thinking grammar. The family says which it writes; a
+  // family with no profile, or a call that named its own wrapper, is
+  // judged by the wrapper class, since the wrapper named need not be the
+  // family's.
   const wrapper =
     chatWrapper === "auto" ? resolveChatWrapper(entry.model) : chatWrapper;
-  if (!blockThenAnswer.some((cls) => wrapper instanceof cls)) {
+  let layout = override === undefined ? profileOf(entry).replyLayout : "byWrapper";
+  if (layout === "byWrapper") {
+    layout = layoutOfWrapper(wrapper);
+  }
+  if (layout !== "blockThenAnswer") {
     return jsonGrammar;
   }
   const thought = wrapper.settings.segments?.thought;
@@ -376,6 +365,9 @@ async function grammarForReply(
   const openedAlready =
     thought.openOnResponseStart === true ||
     (typeof thought.prefix === "object" && !isLlamaText(thought.prefix));
+  if (thinkingOff && !openedAlready) {
+    return jsonGrammar;
+  }
   let open: number | null = null;
   if (!openedAlready) {
     const openTokens = LlamaText(thought.prefix as string).tokenize(
@@ -391,7 +383,7 @@ async function grammarForReply(
     open = first as number;
   }
   return entry.llama.createGrammar({
-    grammar: thinkingGrammar(jsonGrammar.grammar, close as number, open),
+    grammar: thinkingGrammar(jsonGbnf, close as number, open),
   });
 }
 
@@ -524,7 +516,7 @@ export class LlamaCPP extends BaseClient {
       return;
     }
     const architecture = entry.model.fileInfo.metadata.general.architecture;
-    if (HANGS_WHEN_SAMPLED.includes(architecture)) {
+    if (!profileOf(entry).draftSamplesSafely) {
       throw new Error(
         `smoltalk-llama-cpp: this call asked for temperature ${temperature} on a drafted ` +
           `${architecture} model, and node-llama-cpp's draft predictor does not return ` +
@@ -563,6 +555,16 @@ export class LlamaCPP extends BaseClient {
    * Converts smoltalk messages to node-llama-cpp's ChatHistoryItem format.
    * Builds the full history including the last user message (LlamaChat.generateResponse
    * expects the complete history, unlike LlamaChatSession which takes the last message separately).
+   *
+   * A chain of tool calls is one model turn. smoltalk's tool loop records
+   * each round as its own assistant message, with the tool results after
+   * it, but the model wrote them all in one turn, and it is shown them
+   * that way: an assistant message that follows a tool-calling assistant
+   * message, with only tool messages between them, is added to the model
+   * item before it. Two plain assistant messages in a row, as in a
+   * caller-built history, stay two items. Gemma 4 depends on the merge.
+   * Shown its own chain as separate turns, it ended the next one at once
+   * and never answered.
    */
   private convertMessages(messages: Message[]): {
     systemPrompt?: string;
@@ -570,9 +572,21 @@ export class LlamaCPP extends BaseClient {
   } {
     let systemPrompt: string | undefined;
     const chatHistory: ChatHistoryItem[] = [];
+    // Whether the last item is a model item that called tools and that
+    // only tool messages have followed, so the next assistant message
+    // continues it.
+    let modelTurnOpen = false;
 
     for (let i = 0; i < messages.length; i++) {
       const msg = messages[i];
+
+      if (msg.role === "tool") {
+        // Handled as part of the assistant message that called the tool.
+        continue;
+      }
+      if (msg.role !== "assistant") {
+        modelTurnOpen = false;
+      }
 
       if (msg.role === "system" || msg.role === "developer") {
         if (!systemPrompt) {
@@ -621,9 +635,14 @@ export class LlamaCPP extends BaseClient {
           }
         }
 
-        chatHistory.push({ type: "model", response });
+        const last = chatHistory[chatHistory.length - 1];
+        if (modelTurnOpen && last?.type === "model") {
+          last.response.push(...response);
+        } else {
+          chatHistory.push({ type: "model", response });
+        }
+        modelTurnOpen = (assistantMsg.toolCalls?.length ?? 0) > 0;
       }
-      // Tool messages are handled as part of assistant messages above
     }
 
     // Prepend system message if present
@@ -726,6 +745,8 @@ export class LlamaCPP extends BaseClient {
         entry,
         config.responseFormat.toJSONSchema(),
         chatWrapper,
+        thinking.off,
+        this.chatWrapper,
       );
     }
 
@@ -866,6 +887,8 @@ export class LlamaCPP extends BaseClient {
         entry,
         config.responseFormat.toJSONSchema(),
         chatWrapper,
+        thinking.off,
+        this.chatWrapper,
       );
     }
 
