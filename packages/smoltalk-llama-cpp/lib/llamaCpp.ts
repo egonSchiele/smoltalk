@@ -46,6 +46,7 @@ import { thinkingGrammar } from "./thinkingGrammar.js";
 import { grammarSchema } from "./grammarSchema.js";
 import { loosenJsonWhitespace } from "./jsonWhitespace.js";
 import {
+  DEFAULT_PROFILE,
   layoutOfWrapper,
   profileFor,
   type FamilyProfile,
@@ -134,10 +135,13 @@ function usableWrapperNames(): readonly string[] {
  * `override` is the wrapper the call named (`metadata.llamaCppChatWrapper`),
  * for a model whose template node-llama-cpp does not recognise, such as a
  * fine-tune with a changed template. The thinking settings still apply to
- * it.
+ * it, spelled for every wrapper rather than the family's own, since the
+ * wrapper named need not be the family's. It keeps its own tool markers.
  *
  * A family whose profile replaces the wrapper's tool markers is always
  * resolved here rather than left to `"auto"`, so the markers can be put in.
+ * They go on the family's wrapper class alone: when node-llama-cpp falls
+ * back to a template wrapper, that template's markers stay.
  *
  * Resolving a wrapper renders the model's chat template against every
  * candidate, which is slow, so each setting's wrapper is kept on the model
@@ -149,8 +153,12 @@ function chatWrapperFor(
   override: WrapperName | undefined,
 ): "auto" | ChatWrapper {
   const profile = profileOf(entry);
-  const settings = profile.thinkingSettings(choice);
-  if (settings === undefined && override === undefined && profile.toolMarkers === undefined) {
+  const settings =
+    override === undefined
+      ? profile.thinkingSettings(choice)
+      : DEFAULT_PROFILE.thinkingSettings(choice);
+  const markers = override === undefined ? profile.toolMarkers : undefined;
+  if (settings === undefined && override === undefined && markers === undefined) {
     return "auto";
   }
   const key = JSON.stringify({ type: override, settings });
@@ -160,13 +168,13 @@ function chatWrapperFor(
       ...(override === undefined ? {} : { type: override }),
       ...(settings === undefined ? {} : { customWrapperSettings: settings }),
     });
-    if (profile.toolMarkers !== undefined) {
+    if (markers !== undefined && wrapper instanceof markers.wrapper()) {
       // `settings` is declared read-only, but it is a plain instance
       // field that node-llama-cpp reads on every render, so replacing it
       // takes effect. A subclass cannot do this: resolveChatWrapper
       // constructs the class itself.
       const patchable = wrapper as { settings: ChatWrapper["settings"] };
-      patchable.settings = { ...wrapper.settings, functions: profile.toolMarkers() };
+      patchable.settings = { ...wrapper.settings, functions: markers.settings() };
     }
     entry.wrappers[key] = wrapper;
   }
@@ -548,10 +556,12 @@ export class LlamaCPP extends BaseClient {
    * A chain of tool calls is one model turn. smoltalk's tool loop records
    * each round as its own assistant message, with the tool results after
    * it, but the model wrote them all in one turn, and it is shown them
-   * that way: an assistant message that follows only tool messages is
-   * added to the model item before it. Gemma 4 depends on this. Shown its
-   * own chain as separate turns, it ended the next one at once and never
-   * answered.
+   * that way: an assistant message that follows a tool-calling assistant
+   * message, with only tool messages between them, is added to the model
+   * item before it. Two plain assistant messages in a row, as in a
+   * caller-built history, stay two items. Gemma 4 depends on the merge.
+   * Shown its own chain as separate turns, it ended the next one at once
+   * and never answered.
    */
   private convertMessages(messages: Message[]): {
     systemPrompt?: string;
@@ -559,8 +569,9 @@ export class LlamaCPP extends BaseClient {
   } {
     let systemPrompt: string | undefined;
     const chatHistory: ChatHistoryItem[] = [];
-    // Whether the last item is a model item that only tool messages have
-    // followed, so the next assistant message continues it.
+    // Whether the last item is a model item that called tools and that
+    // only tool messages have followed, so the next assistant message
+    // continues it.
     let modelTurnOpen = false;
 
     for (let i = 0; i < messages.length; i++) {
@@ -627,7 +638,7 @@ export class LlamaCPP extends BaseClient {
         } else {
           chatHistory.push({ type: "model", response });
         }
-        modelTurnOpen = true;
+        modelTurnOpen = (assistantMsg.toolCalls?.length ?? 0) > 0;
       }
     }
 

@@ -71,8 +71,14 @@ export type FamilyProfile = {
   replyLayout: ReplyLayout;
   /** Tool markers to use in place of the wrapper's own, for a family whose
    *  wrapper in node-llama-cpp spells them differently from the model's
-   *  chat template. */
-  toolMarkers?: () => ChatWrapper["settings"]["functions"];
+   *  chat template. They go on that wrapper class alone: a caller who
+   *  named another wrapper, or a template fallback, keeps its own. The
+   *  class is read when a model loads, not when this module does, so a
+   *  test that mocks node-llama-cpp without it still runs. */
+  toolMarkers?: {
+    wrapper: () => new (...args: any[]) => ChatWrapper;
+    settings: () => ChatWrapper["settings"]["functions"];
+  };
   /** Whether node-llama-cpp's draft predictor returns when a model of this
    *  family samples (temperature above zero). It hung on Qwen3.5 in 3.21. */
   draftSamplesSafely: boolean;
@@ -192,7 +198,7 @@ const PROFILES: Record<string, FamilyProfile> = {
     name: "Gemma 4",
     thinkingSettings: gemma4Thinking,
     replyLayout: "blockThenAnswer",
-    toolMarkers: gemma4ToolMarkers,
+    toolMarkers: { wrapper: () => Gemma4ChatWrapper, settings: gemma4ToolMarkers },
     draftSamplesSafely: true,
   },
   "gpt-oss": {

@@ -72,7 +72,8 @@ describe("profileFor", () => {
   });
 
   it("gives Gemma 4 the tool markers from its own template", () => {
-    const markers = profileFor("gemma4").toolMarkers?.();
+    expect(profileFor("gemma4").toolMarkers?.wrapper()).toBe(Gemma4ChatWrapper);
+    const markers = profileFor("gemma4").toolMarkers?.settings();
     expect(markers?.call.prefix.toString()).toBe("<|tool_call>call:");
     expect(markers?.call.paramsPrefix).toBe("");
     expect(markers?.call.suffix.toString()).toBe("<tool_call|>");

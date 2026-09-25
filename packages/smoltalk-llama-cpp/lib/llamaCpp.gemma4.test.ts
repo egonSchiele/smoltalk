@@ -18,14 +18,19 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const h = vi.hoisted(() => ({
   architecture: "qwen35",
+  // The wrapper a named override resolves to: "qwen" for the Qwen class.
+  overrideResolvesTo: undefined as string | undefined,
   histories: [] as any[],
   chatWrappers: [] as any[],
   resolved: [] as any[],
+  resolveOptions: [] as any[],
   reset() {
     h.architecture = "qwen35";
+    h.overrideResolvesTo = undefined;
     h.histories = [];
     h.chatWrappers = [];
     h.resolved = [];
+    h.resolveOptions = [];
   },
 }));
 
@@ -83,8 +88,10 @@ vi.mock("node-llama-cpp", () => {
     DeepSeekChatWrapper,
     SeedChatWrapper,
     Gemma4ChatWrapper,
-    resolveChatWrapper: () => {
-      const wrapper = h.architecture === "gemma4" ? new Gemma4ChatWrapper() : new QwenChatWrapper();
+    resolveChatWrapper: (_model: any, options: any) => {
+      h.resolveOptions.push(options);
+      const gemma = h.architecture === "gemma4" && options?.type === undefined;
+      const wrapper = gemma ? new Gemma4ChatWrapper() : new QwenChatWrapper();
       h.resolved.push(wrapper);
       return wrapper;
     },
@@ -140,6 +147,20 @@ describe("a chain of tool calls in the history", () => {
     ]);
   });
 
+  it("keeps two plain assistant messages in a row apart", async () => {
+    // A caller-built history, or a prefilled reply. Nothing was called, so
+    // nothing is continued.
+    await call([
+      { role: "user", content: "Hi" },
+      { role: "assistant", content: "A" },
+      { role: "assistant", content: "B" },
+    ]);
+    expect(h.histories[0].filter((item: any) => item.type === "model")).toEqual([
+      { type: "model", response: ["A"] },
+      { type: "model", response: ["B"] },
+    ]);
+  });
+
   it("keeps two assistant replies apart when a user message sits between them", async () => {
     await call([
       { role: "user", content: "Hi" },
@@ -169,6 +190,30 @@ describe("the Gemma 4 wrapper", () => {
     expect(functions.result.suffix.toString()).toBe("}<tool_response|>");
     // The rest of the settings are the wrapper's own.
     expect(h.chatWrappers[0].settings.segments).toEqual({});
+  });
+
+  it("keeps a wrapper the call named as it is, but still tells it about thinking", async () => {
+    h.architecture = "gemma4";
+    h.overrideResolvesTo = "qwen";
+    const client = new LlamaCPP({
+      model: "m.gguf",
+      messages: [],
+      metadata: { llamaCppModelDir: "/models", llamaCppChatWrapper: "qwen" },
+    });
+    await client._textSync({
+      model: "m.gguf",
+      messages: [{ role: "user", content: "hi" }],
+      thinking: { enabled: false },
+    } as any);
+    // The named wrapper is not the family's, so it keeps its own markers,
+    // and it gets the settings for every wrapper, not Gemma 4's alone.
+    expect(h.chatWrappers[0].settings.functions.call.prefix).toBe("old");
+    expect(h.resolveOptions[0].customWrapperSettings).toEqual({
+      qwen: { thoughts: "discourage" },
+      gemma4: { reasoning: false },
+      seed: { thinkingBudget: 0 },
+      harmony: { reasoningEffort: "low" },
+    });
   });
 
   it("is left to node-llama-cpp for another model", async () => {
