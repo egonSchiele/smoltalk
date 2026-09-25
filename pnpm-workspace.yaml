@@ -9,3 +9,18 @@ packages:
 # next version is published. This used to live in .npmrc; pnpm 12 reads only
 # auth and registry settings from there, so it moved here.
 autoInstallPeers: false
+
+# Lifecycle (install) scripts are default-denied, and pnpm 12 fails a
+# non-interactive install outright when a package asks for one and no
+# decision is recorded here. These five ask; all are blocked and everything
+# works, as it did under pnpm 10 where blocking was silent: esbuild ships
+# platform binaries as optionalDependencies (its script is only a validator
+# fallback), the genai/protobufjs postinstalls are not needed at runtime, and
+# node-llama-cpp ships its prebuilt binaries as optionalDependencies too and
+# builds from source on first use only when none of them fits. Flip one to
+# true only with a reason.
+allowBuilds:
+  "@google/genai": false
+  esbuild: false
+  node-llama-cpp: false
+  protobufjs: false
