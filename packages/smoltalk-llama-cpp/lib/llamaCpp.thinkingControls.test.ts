@@ -67,6 +67,9 @@ vi.mock("node-llama-cpp", () => {
       async createGrammarForJsonSchema() {
         return { grammar: 'root ::= "{" "}"' };
       },
+      async createGrammar({ grammar }: { grammar: string }) {
+        return { grammar };
+      },
     }),
     LlamaChat,
     LlamaLogLevel: { error: "error" },

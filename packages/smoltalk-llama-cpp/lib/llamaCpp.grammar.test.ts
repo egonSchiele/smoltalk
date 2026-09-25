@@ -18,6 +18,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 const h = vi.hoisted(() => {
   const record = {
     grammarTexts: [] as string[],
+    schemas: [] as any[],
     generateOptions: [] as any[],
     chatWrappers: [] as any[],
     resolved: [] as any[],
@@ -28,15 +29,21 @@ const h = vi.hoisted(() => {
     name: "General" as string,
     thought: undefined as any,
   };
+  // Whether the fake schema grammar carries node-llama-cpp's indentation
+  // rules, for the test of their loosening.
+  let grammarWithIndentation = false;
   const reset = () => {
     record.grammarTexts = [];
+    record.schemas = [];
     record.generateOptions = [];
     record.chatWrappers = [];
     record.resolved = [];
     wrapper.name = "General";
     wrapper.thought = undefined;
+    api.grammarWithIndentation = false;
   };
-  return { record, wrapper, reset };
+  const api = { record, wrapper, reset, grammarWithIndentation };
+  return api;
 });
 
 vi.mock("node-llama-cpp", () => {
@@ -107,7 +114,14 @@ vi.mock("node-llama-cpp", () => {
     async loadModel() {
       return makeModel();
     },
-    async createGrammarForJsonSchema() {
+    async createGrammarForJsonSchema(schema: any) {
+      h.record.schemas.push(schema);
+      if (h.grammarWithIndentation) {
+        return {
+          grammar: ['root ::= "[" whitespace-b-1-4-rule "]"', 'whitespace-b-1-4-rule ::= [\\n] ("    " | "\\t") | [ ]?'].join("\n"),
+          kind: "schema",
+        };
+      }
       return { grammar: 'root ::= "{" "}"', kind: "schema" };
     },
     async createGrammar({ grammar }: { grammar: string }) {
@@ -154,7 +168,11 @@ vi.mock("node-llama-cpp", () => {
     Gemma4ChatWrapper,
     resolveChatWrapper: (_model: any, options?: any) => {
       const wrapper = new classes[h.wrapper.name]();
-      if (options?.customWrapperSettings?.qwen?.thoughts === "discourage") {
+      // Only Qwen's wrapper has the switch; the others keep their layout.
+      if (
+        wrapper instanceof QwenChatWrapper &&
+        options?.customWrapperSettings?.qwen?.thoughts === "discourage"
+      ) {
         wrapper.discouraged = true;
       }
       h.record.resolved.push(wrapper);
@@ -183,8 +201,14 @@ function call(extra: Record<string, any> = {}) {
   } as any);
 }
 
-function grammarKind(): string {
-  return h.record.generateOptions[0].grammar.kind;
+// The schema's own grammar, as the mock builds it. Every grammar the
+// plugin generates with is rebuilt from text, so the plain schema shows
+// up as this text and nothing else.
+const SCHEMA_GBNF = 'root ::= "{" "}"';
+
+function expectPlainSchemaGrammar(name?: string) {
+  expect(h.record.grammarTexts, name).toEqual([SCHEMA_GBNF]);
+  expect(h.record.generateOptions[0].grammar.grammar, name).toBe(SCHEMA_GBNF);
 }
 
 function qwenThought(extra: Record<string, any> = {}) {
@@ -202,6 +226,7 @@ describe("the grammar for a typed reply", () => {
     h.wrapper.thought = qwenThought({ openOnResponseStart: true });
     await call();
     expect(h.record.grammarTexts).toEqual([
+      SCHEMA_GBNF,
       [
         "root ::= thinking-body <[1001]> thinking-gap thinking-json",
         "thinking-body ::= !<[1001]>*",
@@ -209,14 +234,13 @@ describe("the grammar for a typed reply", () => {
         'thinking-json ::= "{" "}"',
       ].join("\n"),
     ]);
-    expect(grammarKind()).toBe("custom");
   });
 
   it("makes the block optional when the model opens it itself", async () => {
     h.wrapper.name = "DeepSeek";
     h.wrapper.thought = { prefix: "<think>", suffix: "</think>" };
     await call();
-    expect(h.record.grammarTexts[0].split("\n")[0]).toBe(
+    expect(h.record.grammarTexts[1].split("\n")[0]).toBe(
       "root ::= (<[1000]> thinking-body <[1001]>)? thinking-gap thinking-json",
     );
   });
@@ -225,7 +249,7 @@ describe("the grammar for a typed reply", () => {
     h.wrapper.name = "Seed";
     h.wrapper.thought = { prefix: "<seed:think>", suffix: "</seed:think>" };
     await call();
-    expect(h.record.grammarTexts[0].split("\n")[0]).toBe(
+    expect(h.record.grammarTexts[1].split("\n")[0]).toBe(
       "root ::= (<[2000]> thinking-body <[2001]>)? thinking-gap thinking-json",
     );
   });
@@ -236,8 +260,7 @@ describe("the grammar for a typed reply", () => {
       h.wrapper.name = name;
       h.wrapper.thought = qwenThought({ openOnResponseStart: true });
       await call();
-      expect(h.record.grammarTexts, name).toEqual([]);
-      expect(grammarKind(), name).toBe("schema");
+      expectPlainSchemaGrammar(name);
       await disposeAll();
     }
   });
@@ -246,34 +269,64 @@ describe("the grammar for a typed reply", () => {
     h.wrapper.name = "Qwen";
     h.wrapper.thought = { prefix: "<think>", suffix: "plain text marker" };
     await call();
-    expect(h.record.grammarTexts).toEqual([]);
-    expect(grammarKind()).toBe("schema");
+    expectPlainSchemaGrammar();
   });
 
   it("gives a wrapper with no thought segment the plain schema grammar", async () => {
     h.wrapper.name = "Qwen";
     await call();
-    expect(h.record.grammarTexts).toEqual([]);
-    expect(grammarKind()).toBe("schema");
+    expectPlainSchemaGrammar();
   });
 
-  it("makes the block optional for a Qwen model told not to think, and builds it on the chat's own wrapper", async () => {
+  it("gives a Qwen model told not to think the schema alone, read off the chat's own wrapper", async () => {
     h.wrapper.name = "Qwen";
     h.wrapper.thought = qwenThought({ openOnResponseStart: true });
     await call({ thinking: { enabled: false } });
     // The wrapper was resolved once, with the switch, and the chat got that
-    // instance; the grammar read the same instance, so it saw the block as
-    // optional rather than already open.
+    // instance; the grammar read the same instance, so it saw that the
+    // block is no longer opened for the model. With thinking off the block
+    // is not offered at all: offered as an option, the model took it and
+    // wrote prose inside.
     expect(h.record.resolved.length).toBe(1);
     expect(h.record.chatWrappers[0]).toBe(h.record.resolved[0]);
-    expect(h.record.grammarTexts[0].split("\n")[0]).toBe(
-      "root ::= (<[1000]> thinking-body <[1001]>)? thinking-gap thinking-json",
+    expectPlainSchemaGrammar();
+  });
+
+  it("still makes a model told not to think close a block its wrapper opens anyway", async () => {
+    // DeepSeek's wrapper has no switch: the block opens on every reply and
+    // a zero budget closes it, so the grammar has to let the close through.
+    h.wrapper.name = "DeepSeek";
+    h.wrapper.thought = qwenThought({ openOnResponseStart: true });
+    await call({ thinking: { enabled: false } });
+    expect(h.record.grammarTexts[1].split("\n")[0]).toBe(
+      "root ::= thinking-body <[1001]> thinking-gap thinking-json",
     );
+  });
+
+  it("rewrites a union of string literals as an enum before building the grammar", async () => {
+    const zodStyle = {
+      type: "object",
+      properties: {
+        label: { anyOf: [{ type: "string", const: "yes" }, { type: "string", const: "no" }] },
+      },
+    };
+    await call({ responseFormat: { toJSONSchema: () => zodStyle } });
+    expect(h.record.schemas).toEqual([
+      { type: "object", properties: { label: { type: "string", enum: ["yes", "no"] } } },
+    ]);
+  });
+
+  it("loosens the schema grammar's indentation rules", async () => {
+    h.grammarWithIndentation = true;
+    await call();
+    expect(h.record.grammarTexts).toEqual([
+      ['root ::= "[" whitespace-b-1-4-rule "]"', "whitespace-b-1-4-rule ::= [ \\t\\n]{0,64}"].join("\n"),
+    ]);
   });
 
   it("keeps the grammar when the tool list is empty", async () => {
     await call({ tools: [] });
-    expect(grammarKind()).toBe("schema");
+    expectPlainSchemaGrammar();
     expect(h.record.generateOptions[0].functions).toBeUndefined();
   });
 

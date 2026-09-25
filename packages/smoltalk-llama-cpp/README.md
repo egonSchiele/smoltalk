@@ -52,7 +52,10 @@ llama.cpp grammar. A thinking model such as Qwen3.5 is left free inside its
 `<think>` block, and only the text after it has to fit the schema, so the
 thought still arrives in `thinkingBlocks` and `output` holds the JSON. When
 tools are passed as well, the schema is not enforced, because node-llama-cpp
-cannot apply a grammar and functions together.
+cannot apply a grammar and functions together. A model told not to think
+(below) is held to the schema from its first token. A schema's `anyOf`, which
+is what zod writes for a union, is rewritten as `oneOf` or `enum` on the way
+to node-llama-cpp's grammar builder, which does not read `anyOf`.
 
 `thinking` and `reasoningEffort` work here the way they do on the hosted
 providers:
@@ -147,6 +150,14 @@ before the first call with it locks the draft out for the process, with a
 warning that says how to change it. When a program should always draft,
 call `new LlamaCPP(config).setup()` at startup. The draft's memory is added
 to the main model's for as long as the model stays loaded.
+
+## Tool calls
+
+A chain of tool calls is shown to the model as one turn, whatever the
+messages look like: an assistant message that follows only tool messages
+continues the model turn before it. Gemma 4 needs this, and it also gets the
+tool markers from its own chat template rather than the ones node-llama-cpp
+3.21.1 gives it, which the model did not recognise after a result.
 
 ## Choosing the chat wrapper
 
