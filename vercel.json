@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm --filter smoltalk build && pnpm --filter site build",
+  "buildCommand": "npx pnpm@12.6.0 --filter smoltalk build && npx pnpm@12.6.0 --filter site build",
   "outputDirectory": "site/dist",
-  "installCommand": "pnpm install --frozen-lockfile",
+  "installCommand": "npx pnpm@12.6.0 install --frozen-lockfile",
   "framework": null
 }
