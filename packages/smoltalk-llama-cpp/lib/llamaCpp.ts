@@ -1,11 +1,6 @@
 import {
-  DeepSeekChatWrapper,
-  Gemma4ChatWrapper,
   LlamaChat,
   LlamaText,
-  QwenChatWrapper,
-  SeedChatWrapper,
-  SpecialTokensText,
   isLlamaText,
   resolveChatWrapper,
   resolvableChatWrapperTypeNames,
@@ -50,16 +45,18 @@ import {
 import { thinkingGrammar } from "./thinkingGrammar.js";
 import { grammarSchema } from "./grammarSchema.js";
 import { loosenJsonWhitespace } from "./jsonWhitespace.js";
+import {
+  layoutOfWrapper,
+  profileFor,
+  type FamilyProfile,
+  type ThinkingChoice,
+} from "./familyProfiles.js";
 
 /**
  * Two-plus characters before the colon, so Windows drive-letter paths
  * (C:\models\x.gguf) are classified as paths, not URIs.
  */
 const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
-
-/** GGUF architectures whose draft predictor has been seen to hang when the
- *  main model samples (node-llama-cpp 3.21.1). */
-const HANGS_WHEN_SAMPLED = ["qwen35"];
 
 /**
  * Backstop when the caller sets no maxTokens. Local thinking models
@@ -71,20 +68,6 @@ const HANGS_WHEN_SAMPLED = ["qwen35"];
  * explicit `maxTokens` or a `rawAttributes.maxTokens` always wins.
  */
 const DEFAULT_MAX_TOKENS = 16384;
-
-/**
- * What a call asked about thinking, in one place. `on` and `off` are
- * `thinking.enabled`; both false when the call did not say. `budget` is the
- * most tokens the model may think for: the call's own `budgetTokens`, else
- * the budget the google client gives a `reasoningEffort`. Undefined leaves
- * node-llama-cpp's own default, three quarters of the context.
- */
-type ThinkingChoice = {
-  on: boolean;
-  off: boolean;
-  budget: number | undefined;
-  effort: SmolConfig["reasoningEffort"];
-};
 
 /** Tokens of thinking for each effort, the google client's map. */
 const EFFORT_BUDGETS = { low: 2048, medium: 8192, high: 16384 } as const;
@@ -117,40 +100,10 @@ function thinkingChoice(config: SmolConfig): ThinkingChoice {
   return { on, off, budget, effort };
 }
 
-/**
- * The settings that tell a chat wrapper about the choice. Each wrapper
- * spells it its own way: Qwen and Gemma 4 have a switch, Seed has a budget,
- * and Harmony (gpt-oss) only takes an effort, so "off" is its lowest effort.
- * DeepSeek always thinks; the budget below is what bounds it. The settings
- * name every wrapper, and node-llama-cpp reads the one it picks for the
- * model. Undefined when the call said nothing, so the default wrapper
- * applies.
- */
-function wrapperSettingsFor(choice: ThinkingChoice) {
-  if (choice.off) {
-    return {
-      qwen: { thoughts: "discourage" as const },
-      gemma4: { reasoning: false },
-      seed: { thinkingBudget: 0 },
-      harmony: { reasoningEffort: "low" as const },
-    };
-  }
-  const harmony =
-    choice.effort === undefined ? {} : { harmony: { reasoningEffort: choice.effort } };
-  if (choice.on) {
-    // Asked for: a wrapper whose detected default leaves thinking to the
-    // model is told to open the block.
-    return {
-      qwen: { thoughts: "auto" as const },
-      gemma4: { reasoning: true },
-      ...(choice.budget === undefined ? {} : { seed: { thinkingBudget: choice.budget } }),
-      ...harmony,
-    };
-  }
-  if (choice.effort !== undefined) {
-    return harmony;
-  }
-  return undefined;
+/** The family profile for a loaded model (see familyProfiles.ts), from
+ *  the architecture named in its GGUF file. */
+function profileOf(entry: ModelEntry): FamilyProfile {
+  return profileFor(entry.model.fileInfo?.metadata?.general?.architecture);
 }
 
 /** A chat wrapper name node-llama-cpp can resolve by name, such as
@@ -172,42 +125,6 @@ function usableWrapperNames(): readonly string[] {
 }
 
 /**
- * The markers Gemma 4 puts around a tool call and its result, from the
- * model's own chat template and Google's prompt-format page. node-llama-cpp
- * 3.21.1's wrapper closes a result with `</tool_response>` where the model
- * expects `<tool_response|>`, opens it with `<tool_response>` rather than
- * `<|tool_response>`, and wraps a call's parameters in a second pair of
- * braces. A model shown its results that way stopped answering: it ended
- * its turn at once, or wrote a stray `<tool_call|>` and nothing else.
- */
-function gemma4FunctionSettings(): ChatWrapper["settings"]["functions"] {
-  return {
-    call: {
-      optionalPrefixSpace: false,
-      prefix: LlamaText(new SpecialTokensText("<|tool_call>call:")),
-      paramsPrefix: "",
-      suffix: LlamaText(new SpecialTokensText("<tool_call|>")),
-      emptyCallParamsPlaceholder: {},
-    },
-    result: {
-      prefix: LlamaText(
-        new SpecialTokensText("<|tool_response>response:"),
-        "{{functionName}}",
-        "{value:",
-      ),
-      suffix: LlamaText(new SpecialTokensText("}<tool_response|>")),
-    },
-  };
-}
-
-/** The GGUF architecture whose wrapper needs the markers above. */
-const GEMMA4_ARCHITECTURE = "gemma4";
-
-function architectureOf(entry: ModelEntry): string | undefined {
-  return entry.model.fileInfo?.metadata?.general?.architecture;
-}
-
-/**
  * The wrapper the chat and the grammar both use. `"auto"` is LlamaChat's own
  * default, kept when the call said nothing about thinking and named no
  * wrapper, so the model's usual wrapper applies. The two have to agree: a
@@ -219,8 +136,8 @@ function architectureOf(entry: ModelEntry): string | undefined {
  * fine-tune with a changed template. The thinking settings still apply to
  * it.
  *
- * A Gemma 4 model is always resolved here rather than left to `"auto"`, so
- * its wrapper can be given the tool markers the model expects.
+ * A family whose profile replaces the wrapper's tool markers is always
+ * resolved here rather than left to `"auto"`, so the markers can be put in.
  *
  * Resolving a wrapper renders the model's chat template against every
  * candidate, which is slow, so each setting's wrapper is kept on the model
@@ -231,12 +148,9 @@ function chatWrapperFor(
   choice: ThinkingChoice,
   override: WrapperName | undefined,
 ): "auto" | ChatWrapper {
-  const settings = wrapperSettingsFor(choice);
-  if (
-    settings === undefined &&
-    override === undefined &&
-    architectureOf(entry) !== GEMMA4_ARCHITECTURE
-  ) {
+  const profile = profileOf(entry);
+  const settings = profile.thinkingSettings(choice);
+  if (settings === undefined && override === undefined && profile.toolMarkers === undefined) {
     return "auto";
   }
   const key = JSON.stringify({ type: override, settings });
@@ -246,13 +160,13 @@ function chatWrapperFor(
       ...(override === undefined ? {} : { type: override }),
       ...(settings === undefined ? {} : { customWrapperSettings: settings }),
     });
-    if (wrapper instanceof Gemma4ChatWrapper) {
+    if (profile.toolMarkers !== undefined) {
       // `settings` is declared read-only, but it is a plain instance
       // field that node-llama-cpp reads on every render, so replacing it
       // takes effect. A subclass cannot do this: resolveChatWrapper
       // constructs the class itself.
       const patchable = wrapper as { settings: ChatWrapper["settings"] };
-      patchable.settings = { ...wrapper.settings, functions: gemma4FunctionSettings() };
+      patchable.settings = { ...wrapper.settings, functions: profile.toolMarkers() };
     }
     entry.wrappers[key] = wrapper;
   }
@@ -411,20 +325,16 @@ async function grammarForReply(
   // the same way either way.
   const jsonGbnf = loosenJsonWhitespace(schemaGrammar.grammar);
   const jsonGrammar = await entry.llama.createGrammar({ grammar: jsonGbnf });
-  // The wrappers whose reply is one thought block, then the answer, which
-  // is the layout the thinking grammar assumes. Harmony (gpt-oss) and Muse
-  // put the answer in a second channel after its own header, so they keep
-  // the plain schema grammar, as does the template fallback for an unknown
-  // model.
-  const blockThenAnswer = [
-    QwenChatWrapper,
-    DeepSeekChatWrapper,
-    SeedChatWrapper,
-    Gemma4ChatWrapper,
-  ];
+  // Only a reply laid out as one thought block then the answer can be
+  // wrapped by the thinking grammar. The family says which it writes; a
+  // family with no profile is judged by the wrapper class.
   const wrapper =
     chatWrapper === "auto" ? resolveChatWrapper(entry.model) : chatWrapper;
-  if (!blockThenAnswer.some((cls) => wrapper instanceof cls)) {
+  let layout = profileOf(entry).replyLayout;
+  if (layout === "byWrapper") {
+    layout = layoutOfWrapper(wrapper);
+  }
+  if (layout !== "blockThenAnswer") {
     return jsonGrammar;
   }
   const thought = wrapper.settings.segments?.thought;
@@ -595,7 +505,7 @@ export class LlamaCPP extends BaseClient {
       return;
     }
     const architecture = entry.model.fileInfo.metadata.general.architecture;
-    if (HANGS_WHEN_SAMPLED.includes(architecture)) {
+    if (!profileOf(entry).draftSamplesSafely) {
       throw new Error(
         `smoltalk-llama-cpp: this call asked for temperature ${temperature} on a drafted ` +
           `${architecture} model, and node-llama-cpp's draft predictor does not return ` +

@@ -159,6 +159,20 @@ continues the model turn before it. Gemma 4 needs this, and it also gets the
 tool markers from its own chat template rather than the ones node-llama-cpp
 3.21.1 gives it, which the model did not recognise after a result.
 
+## Model families
+
+Everything the plugin knows about a family lives in one profile in
+`lib/familyProfiles.ts`, looked up by the architecture named in the GGUF
+file: how its wrapper is told about thinking, whether its reply is one
+thought block then the answer (which the typed-reply grammar can wrap) or
+channels (which it cannot), tool markers to use in place of the wrapper's
+own, and whether a draft model is safe when it samples. Qwen3, Qwen3.5,
+Gemma 4, and gpt-oss have profiles. Any other architecture gets the
+default, which tells every wrapper about thinking and judges the layout
+from the wrapper class node-llama-cpp picks. A new family that misbehaves
+gets a profile, not a special case elsewhere; a fact about one model, such
+as its sampling, belongs with the caller's catalog.
+
 ## Choosing the chat wrapper
 
 node-llama-cpp picks a chat wrapper for a model by reading its template, and
