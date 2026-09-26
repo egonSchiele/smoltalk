@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { SmolOpenAi } from "./openai.js";
+import { userMessage } from "../classes/message/index.js";
 import type { SmolConfig } from "../types.js";
 import type { ModelDataBlob } from "../modelData.js";
 
@@ -368,6 +370,48 @@ describe("SmolOpenAi logprobs", () => {
       throw new Error(result.error);
     }
     expect(result.value).not.toHaveProperty("logprobs");
+  });
+
+  // Review Focus 3: a structured-output reply that fails validation retries;
+  // the retry's logprobs must reach the final result. textWithRetry must not
+  // rebuild the PromptResult in a way that drops them.
+  it("keeps the retry's logprobs when a structured-output reply is retried", async () => {
+    const invalid = {
+      choices: [{ message: { content: "not json" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    };
+    const valid = {
+      choices: [
+        {
+          message: { content: '{"answer":"hi"}' },
+          finish_reason: "stop",
+          logprobs: { content: [{ token: "hi", logprob: -0.2, top_logprobs: [] }] },
+        },
+      ],
+      usage: { prompt_tokens: 3, completion_tokens: 3, total_tokens: 6 },
+    };
+    const completions = [invalid, valid];
+    let call = 0;
+    const provider = logprobProvider();
+    (provider as any).client.chat.completions.create = () => ({
+      withResponse: async () => ({
+        data: completions[Math.min(call++, completions.length - 1)],
+        response: undefined,
+      }),
+    });
+    const result = await provider.textSync({
+      model: "gpt-4o",
+      provider: "openai",
+      messages: [userMessage("give me json")],
+      logprobs: {},
+      responseFormat: z.object({ answer: z.string() }),
+      responseFormatOptions: { strict: true },
+    } as SmolConfig);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    expect(call).toBe(2); // the first reply failed validation and was retried
+    expect(result.value.logprobs).toEqual([{ token: "hi", logprob: -0.2 }]);
   });
 });
 
