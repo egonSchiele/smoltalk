@@ -28,6 +28,11 @@ import { extractHttpErrorFields } from "../util/httpError.js";
 import { zodToOpenAITool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import { normalizeOpenAIStopReason } from "../util/stopReason.js";
+import {
+  fromOpenAILogprobs,
+  openAIChatLogprobParams,
+  type OpenAILogprob,
+} from "./logprobs.js";
 import { ModelName } from "../models.js";
 import { Model } from "../model.js";
 import { CostEstimate, TokenUsage } from "../types.js";
@@ -188,6 +193,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       ...(config.reasoningEffort && {
         reasoning_effort: config.reasoningEffort,
       }),
+      ...openAIChatLogprobParams(config.logprobs),
       ...this.maxTokensParam(config),
       ...sanitizeAttributes(config.rawAttributes),
       ...this.buildRequestExtras(config),
@@ -298,6 +304,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     const rawStopReason = completion.choices[0]?.finish_reason ?? undefined;
 
+    const logprobs = fromOpenAILogprobs(
+      completion.choices[0]?.logprobs?.content,
+    );
+
     const result: PromptResult = {
       output,
       toolCalls,
@@ -311,6 +321,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
     if (hostedToolResults.length > 0) {
       result.hostedToolResults = hostedToolResults;
+    }
+    if (logprobs !== undefined) {
+      result.logprobs = logprobs;
     }
     return success(result);
   }
@@ -347,6 +360,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
     let rawStopReason: string | undefined;
+    const logprobEntries: OpenAILogprob[] = [];
 
     for await (const chunk of completion) {
       const chunkFinish = chunk.choices?.[0]?.finish_reason;
@@ -369,6 +383,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
+
+      const chunkLogprobs = chunk.choices?.[0]?.logprobs?.content;
+      if (chunkLogprobs) {
+        logprobEntries.push(...chunkLogprobs);
+      }
 
       if (delta.content) {
         content += delta.content;
@@ -405,6 +424,8 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
+    const logprobs = fromOpenAILogprobs(logprobEntries);
+
     const result: PromptResult = {
       output: content || null,
       toolCalls,
@@ -415,6 +436,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     };
     if (rawStopReason) {
       result.rawStopReason = rawStopReason;
+    }
+    if (logprobs !== undefined) {
+      result.logprobs = logprobs;
     }
 
     yield { type: "done", result };
