@@ -210,6 +210,7 @@ Two provider notes:
 | `stream` | `boolean` | If `true`, returns an `AsyncGenerator<StreamChunk>` instead of a `Promise`. |
 | `thinking` | `{ enabled, budgetTokens? }` | Enable extended thinking / thought signatures (Anthropic and Google). |
 | `reasoningEffort` | `"low" \| "medium" \| "high"` | Provider-agnostic reasoning effort level. |
+| `logprobs` | `{ top?: number }` | Return each generated token's log probability on `result.logprobs`, with `top` alternatives per token. OpenAI and Google only; other providers ignore it. |
 | `maxMessages` | `number` | If the message list exceeds this count, returns a failure instead of calling the API. |
 | `abortSignal` | `AbortSignal` | Cancel an in-flight request. |
 | `toolLoopDetection` | `ToolLoopDetection` | Detect and break tool-call loops. See below. |

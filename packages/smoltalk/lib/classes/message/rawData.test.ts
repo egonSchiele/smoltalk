@@ -50,4 +50,23 @@ describe("rawData survives toJSON and fromJSON", () => {
     );
     expect(JSON.stringify(new UserMessage("hi"))).not.toContain("rawData");
   });
+
+  it("keeps logprobs through toJSON and fromJSON", () => {
+    const logprobs = [
+      {
+        token: "Hi",
+        logprob: -0.1,
+        top: [
+          { token: "Hi", logprob: -0.1 },
+          { token: "Hello", logprob: -2.3 },
+        ],
+      },
+      { token: "!", logprob: -0.5 },
+    ];
+    const message = new AssistantMessage("Hi!", { logprobs });
+    expect(
+      AssistantMessage.fromJSON(JSON.parse(JSON.stringify(message))).logprobs,
+    ).toEqual(logprobs);
+    expect(JSON.stringify(new AssistantMessage("x"))).not.toContain("logprobs");
+  });
 });
