@@ -14,6 +14,8 @@ export { loadLlamaCpp } from "./clients/llamaCppLoader.js";
 export type { LlamaCppModule } from "./clients/llamaCppLoader.js";
 export * from "./classes/ToolCall.js";
 export * from "./embed.js";
+export * from "./decide.js";
+export { resolveProvider } from "./util/provider.js";
 export * from "./image.js";
 // Explicit (not `export *`) so the test-only `_resetForTests` stays off the public surface.
 export { uploadFile, deleteFile, registerFileProvider, DEFAULT_UPLOAD_BYTES } from "./files.js";

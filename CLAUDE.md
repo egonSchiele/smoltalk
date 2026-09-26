@@ -96,6 +96,18 @@ const result = await textSync("Solve this step by step", {
 // result.thinkingBlocks → [{ text: "Let me think...", signature: "WaUj..." }]
 ```
 
+## Decision models
+
+`decide(state, questions, config)` in `lib/decide.ts` asks a decision model
+(TypeSafe's Jev, or a Laya server) typed `noul`/`choice`/`score` questions and
+returns answers with probabilities. It follows the `embed()` shape: payload
+first, config last, provider/key/base URL through `lib/util/provider.ts`. The
+one provider is `typesafe`, which is the wire protocol; a Laya server is
+reached with `baseUrl.typesafe`. Cost is priced by the requested model's
+registry entry (`decisionModels` in `lib/models.ts`), so an unknown model has
+no cost. `PromptResult.rawData` exists so a caller can carry the full answers
+onto an assistant message.
+
 ## Files API
 
 `uploadFile(source, { provider })` uploads a file to a provider's Files API and
