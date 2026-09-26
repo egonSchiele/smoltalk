@@ -1,5 +1,11 @@
 # Changelog
 
+## smoltalk 0.15.1 (2026-09-26)
+
+### Added
+
+- `rawData` field on all messages.
+
 ## smoltalk 0.15.0 (2026-09-26)
 
 ### Added
