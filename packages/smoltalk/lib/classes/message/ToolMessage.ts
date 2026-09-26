@@ -72,6 +72,7 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       content: this._content,
       name: this.name,
       tool_call_id: this.tool_call_id,
+      rawData: this._rawData,
     };
   }
 

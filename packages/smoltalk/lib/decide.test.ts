@@ -208,6 +208,15 @@ describe("decide", () => {
     if (r.success) return;
     expect(r.error).toMatch(/status 401/);
     expect(r.error).toMatch(/bad key/);
+    expect(r.status).toBe(401);
+  });
+
+  it("carries no status on a failure that is not an HTTP response", async () => {
+    fetchMock.mockRejectedValueOnce(new Error("socket hang up"));
+    const r = await decide("hello", questions, config);
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    expect(r.status).toBeUndefined();
   });
 
   it("fails on a response with no answers", async () => {

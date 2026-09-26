@@ -74,6 +74,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
       role: this.role,
       content: serializeUserContentForJSON(this._content) as UserMessageJSON["content"],
       name: this.name,
+      rawData: this._rawData,
     };
   }
 
