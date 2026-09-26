@@ -309,7 +309,9 @@ export async function decide(
 
   const text = await response.text();
   if (!response.ok) {
-    return failure(`Decision request failed with status ${response.status}: ${text}`);
+    return failure(`Decision request failed with status ${response.status}: ${text}`, {
+      status: response.status,
+    });
   }
 
   let body: unknown;

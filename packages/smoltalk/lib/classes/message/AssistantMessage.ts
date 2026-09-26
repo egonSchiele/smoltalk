@@ -124,6 +124,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       thinkingBlocks: this._thinkingBlocks,
       usage: this._usage,
       cost: this._cost,
+      rawData: this._rawData,
     };
   }
 

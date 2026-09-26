@@ -57,6 +57,7 @@ export class SystemMessage extends BaseMessage implements MessageClass {
       role: this.role,
       content: this._content,
       name: this.name,
+      rawData: this._rawData,
     };
   }
 
