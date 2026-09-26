@@ -1,5 +1,11 @@
 # Changelog
 
+## smoltalk 0.15.0 (2026-09-26)
+
+### Added
+
+Add support for decision models (eg Jev, Laya).
+
 ## smoltalk 0.14.2 (2026-09-21)
 
 ### Added
