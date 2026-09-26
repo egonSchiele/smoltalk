@@ -600,12 +600,18 @@ To use a Laya server, run `laya-serve` and point the provider at it. Laya
 needs no key, but the provider requires one, so pass any value:
 
 ```typescript
-const r = await decide(state, questions, {
-  model: "laya",
-  provider: "typesafe",
-  apiKey: { typesafe: "unused" },
-  baseUrl: { typesafe: "http://localhost:8000" },
-});
+import { decide } from "smoltalk";
+
+const r = await decide(
+  "I was charged twice for my subscription.",
+  { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
+  {
+    model: "laya",
+    provider: "typesafe",
+    apiKey: { typesafe: "unused" },
+    baseUrl: { typesafe: "http://localhost:8000" },
+  },
+);
 ```
 
 `provider: "typesafe"` is required for any model name the registry does not
@@ -616,11 +622,17 @@ TypeSafe account is needed. OpenRouter's model name, `jev-1.13`, is in the
 registry:
 
 ```typescript
-const r = await decide(state, questions, {
-  model: "jev-1.13",
-  apiKey: { typesafe: process.env.OPENROUTER_API_KEY },
-  baseUrl: { typesafe: "https://openrouter.ai/api" },
-});
+import { decide } from "smoltalk";
+
+const r = await decide(
+  "I was charged twice for my subscription.",
+  { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
+  {
+    model: "jev-1.13",
+    apiKey: { typesafe: process.env.OPENROUTER_API_KEY },
+    baseUrl: { typesafe: "https://openrouter.ai/api" },
+  },
+);
 ```
 
 Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
