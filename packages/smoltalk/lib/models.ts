@@ -129,12 +129,28 @@ export type EmbeddingsModel = {
   tokenCost?: number;
 };
 
+/**
+ * A decision model answers typed questions about a state with probabilities
+ * instead of generating text. See `lib/decide.ts`.
+ */
+export type DecisionModel = {
+  type: "decision";
+  modelName: string;
+  provider: string;
+  description?: string;
+  /** Cost per 1M input tokens, in dollars. Output is free. */
+  inputTokenCost?: number;
+  /** The most questions one request may carry. */
+  maxQuestions?: number;
+};
+
 export type ModelType =
   | SpeechToTextModel
   | TextToSpeechModel
   | TextModel
   | EmbeddingsModel
-  | ImageModel;
+  | ImageModel
+  | DecisionModel;
 
 export const speechToTextModels = [
   {
@@ -2093,6 +2109,18 @@ export const embeddingsModels: EmbeddingsModel[] = [
   },
 ];
 
+export const decisionModels: DecisionModel[] = [
+  {
+    type: "decision",
+    modelName: "jev-latest",
+    provider: "typesafe",
+    description:
+      "TypeSafe's System One model. Answers yes/no, choice, and score questions about a state with calibrated probabilities. Does not generate text.",
+    inputTokenCost: 0.042,
+    maxQuestions: 64,
+  },
+];
+
 export type TextModelName = (typeof textModels)[number]["modelName"];
 export type ImageModelName = (typeof imageModels)[number]["modelName"];
 export type SpeechToTextModelName =
@@ -2253,6 +2281,7 @@ function baselineModels(): ModelType[] {
     ...textToSpeechModels,
     ...registeredTextModels,
     ...embeddingsModels,
+    ...decisionModels,
   ] as ModelType[];
 }
 
@@ -2458,6 +2487,10 @@ export function audioInputConstraints(
 }
 export function isEmbeddingsModel(model: ModelType): model is EmbeddingsModel {
   return model.type === "embeddings";
+}
+
+export function isDecisionModel(model: ModelType): model is DecisionModel {
+  return model.type === "decision";
 }
 
 export const ModelNameSchema = z

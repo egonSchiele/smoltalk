@@ -200,6 +200,10 @@ export type PromptResult = {
   stopReason?: StopReason;
   /** The untouched provider finish/stop-reason value (e.g. `end_turn`, `MAX_TOKENS`). */
   rawStopReason?: string;
+  /** Whatever the provider returned beyond the text, for callers that want
+   *  it on the assistant message. A decision model puts its full answers
+   *  with probabilities here. */
+  rawData?: unknown;
 };
 
 export function promptResult({
@@ -212,6 +216,7 @@ export function promptResult({
   hostedToolResults,
   stopReason,
   rawStopReason,
+  rawData,
 }: Partial<PromptResult>): PromptResult {
   return {
     output: output || null,
@@ -223,6 +228,7 @@ export function promptResult({
     hostedToolResults,
     stopReason,
     rawStopReason,
+    rawData,
   };
 }
 

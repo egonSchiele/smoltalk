@@ -548,6 +548,69 @@ same way and needs `smoltalk-llama-cpp` >= 0.5.0; the vector is computed in
 process. See that package's README for the embedding caveats (dimension
 truncation, one model file per role).
 
+## Decision models (Jev, Laya)
+
+A decision model does not write text. You send it a state and a map of typed
+questions, and it answers every question in one pass with probabilities.
+TypeSafe's Jev is one. Laya is an open-weights model that speaks the same
+protocol.
+
+```typescript
+import { decide } from "smoltalk";
+
+const r = await decide(
+  { subject: "Refund not received", body: "I cancelled two weeks ago..." },
+  {
+    department: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: { billing: "payments, refunds", support: "help, bugs" },
+    },
+    urgency: {
+      type: "score",
+      instructions: "How urgent?",
+      criteria: ["not urgent", "urgent", "critical"],
+    },
+    churn: { type: "noul", instructions: "Likely to cancel?" },
+  },
+  { model: "jev-latest" },
+);
+if (r.success) {
+  r.value.answers.department; // { type: "choice", choice: "billing", confidence: 0.86, probabilities: {...} }
+  r.value.answers.urgency;    // { type: "score", score: 1.2, confidence: 0.6, legend: {...}, probabilities: {...} }
+  r.value.answers.churn;      // { type: "noul", noul: 0.1 }
+}
+```
+
+The three question types:
+
+- `noul` is a yes/no question. The answer is the probability of yes.
+- `choice` picks one option from `criteria`, a map of option key to
+  description. The answer is the key, a confidence, and a probability per
+  option.
+- `score` places the state on `criteria`, an ordered list of level
+  descriptions. The answer is an expected level, which may be fractional, a
+  confidence, a legend, and a probability per level.
+
+The key comes from `config.apiKey.typesafe` or `TYPESAFE_API_KEY`. Cost is
+priced from the registry entry of the model you asked for, so a model the
+registry does not know has no cost.
+
+To use a Laya server, run `laya-serve` and point the provider at it. Laya
+needs no key, but the provider requires one, so pass any value:
+
+```typescript
+const r = await decide(state, questions, {
+  model: "laya",
+  provider: "typesafe",
+  apiKey: { typesafe: "unused" },
+  baseUrl: { typesafe: "http://localhost:8000" },
+});
+```
+
+`provider: "typesafe"` is required for any model name the registry does not
+know. It says "this endpoint speaks the decision protocol".
+
 ## Audio (STT/TTS)
 
 Three audio primitives. `transcribe()` (speech-to-text) and `speak()`

@@ -38,6 +38,7 @@ type NestedKeyConfig = {
     liteLlm?: string;
     openAiCompat?: string;
     groq?: string;
+    typesafe?: string;
     /** Arbitrary provider names, for keys targeting a custom-registered provider. */
     [provider: string]: string | undefined;
   };
@@ -48,6 +49,7 @@ type NestedKeyConfig = {
     liteLlm?: string;
     openAiCompat?: string;
     mlx?: string;
+    typesafe?: string;
   };
 };
 
@@ -79,6 +81,8 @@ export function resolveApiKey(
       return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
     case "groq":
       return k?.groq || process.env.GROQ_API_KEY;
+    case "typesafe":
+      return k?.typesafe || process.env.TYPESAFE_API_KEY;
     default:
       return config.apiKey?.[provider];
   }
@@ -110,6 +114,9 @@ export function resolveBaseUrl(
       return b?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
     case "mlx":
       return b?.mlx || process.env.MLX_BASE_URL || "http://127.0.0.1:8080/v1";
+    case "typesafe":
+      // A Laya server (`laya-serve`) speaks the same protocol; point this at it.
+      return b?.typesafe || process.env.TYPESAFE_BASE_URL || "https://api.typesafe.ai";
     default:
       return undefined;
   }

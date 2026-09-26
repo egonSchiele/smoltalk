@@ -69,9 +69,10 @@ export class Model {
       return null;
     }
     // This token engine prices text generation and token-billed audio models
-    // (e.g. Gemini TTS). Image and embeddings models have their own cost paths,
-    // so they are never priced here even if they carry text-token rates.
-    if (model.type === "image" || model.type === "embeddings") {
+    // (e.g. Gemini TTS). Image, embeddings, and decision models have their own
+    // cost paths, so they are never priced here even if they carry text-token
+    // rates.
+    if (model.type === "image" || model.type === "embeddings" || model.type === "decision") {
       return null;
     }
     // BaseModel token-rate fields, read structurally across the model union.
