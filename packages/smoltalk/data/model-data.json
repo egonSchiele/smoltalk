@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-08-09T19:59:05.416Z",
+  "generatedAt": "2026-09-26T06:16:26.286Z",
   "models": [
     {
       "type": "text",
@@ -570,7 +570,7 @@
       "family": "gpt",
       "openWeights": false,
       "structuredOutput": true,
-      "temperatureSupported": false,
+      "temperatureSupported": true,
       "provider": "openai"
     },
     {
@@ -610,7 +610,7 @@
       "family": "gpt",
       "openWeights": false,
       "structuredOutput": true,
-      "temperatureSupported": false,
+      "temperatureSupported": true,
       "provider": "openai"
     },
     {
@@ -688,7 +688,7 @@
       "family": "gpt",
       "openWeights": false,
       "structuredOutput": true,
-      "temperatureSupported": false,
+      "temperatureSupported": true,
       "provider": "openai"
     },
     {
@@ -729,7 +729,7 @@
       "family": "gpt-mini",
       "openWeights": false,
       "structuredOutput": true,
-      "temperatureSupported": false,
+      "temperatureSupported": true,
       "provider": "openai"
     },
     {
@@ -770,7 +770,7 @@
       "family": "gpt-nano",
       "openWeights": false,
       "structuredOutput": true,
-      "temperatureSupported": false,
+      "temperatureSupported": true,
       "provider": "openai"
     },
     {
@@ -910,17 +910,67 @@
     },
     {
       "type": "text",
-      "modelName": "gpt-5.6-sol",
-      "description": "GPT-5.6 Sol is the flagship model of the GPT-5.6 family for the most complex coding and agentic tasks. 1M context window. Standard pricing for ≤272K tokens, 2x input/1.5x output for >272K. Knowledge cutoff: February 2026.",
+      "modelName": "gpt-6-astra",
+      "description": "GPT-6 Astra is OpenAI's most capable model, built for the hardest end-to-end work: complex reasoning, coding, computer use, research, and document creation. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Knowledge cutoff: April 2026.",
       "maxInputTokens": 1050000,
       "maxOutputTokens": 128000,
-      "inputTokenCost": 5,
-      "cachedInputTokenCost": 0.5,
-      "outputTokenCost": 30,
+      "inputTokenCost": 10,
+      "cachedInputTokenCost": 1,
+      "outputTokenCost": 50,
+      "outputTokensPerSecond": 69,
       "longContext": {
-        "inputTokenCost": 10,
-        "cachedInputTokenCost": 1,
-        "outputTokenCost": 45,
+        "inputTokenCost": 20,
+        "cachedInputTokenCost": 2,
+        "outputTokenCost": 75,
+        "thresholdTokens": 200000
+      },
+      "reasoning": {
+        "levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "defaultLevel": "medium",
+        "canDisable": false,
+        "outputsThinking": false,
+        "outputsSignatures": false
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2026-04-30",
+      "releaseDate": "2026-09-04",
+      "lastUpdated": "2026-09-04",
+      "family": "gpt-astra",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "provider": "openai",
+      "cacheCreationInputTokenCost": 12.5
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5.6-sol",
+      "description": "GPT-5.6 Sol is the flagship model of the GPT-5.6 family for the most complex coding and agentic tasks. 1M context window. Standard pricing for ≤272K tokens, 2x input/1.5x output for >272K. Reflects the August 21, 2026 promotional price cut (input $5→$4, output $30→$20), which runs through at least November 21, 2026. Knowledge cutoff: February 2026.",
+      "maxInputTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 4,
+      "cachedInputTokenCost": 0.4,
+      "outputTokenCost": 20,
+      "outputTokensPerSecond": 77,
+      "longContext": {
+        "inputTokenCost": 8,
+        "cachedInputTokenCost": 0.8,
+        "outputTokenCost": 30,
         "thresholdTokens": 200000
       },
       "reasoning": {
@@ -950,11 +1000,12 @@
       "knowledge": "2026-02-16",
       "releaseDate": "2026-07-09",
       "lastUpdated": "2026-07-09",
-      "family": "gpt",
+      "family": "gpt-sol",
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai"
+      "provider": "openai",
+      "cacheCreationInputTokenCost": 5
     },
     {
       "type": "text",
@@ -965,6 +1016,7 @@
       "inputTokenCost": 2,
       "cachedInputTokenCost": 0.2,
       "outputTokenCost": 12,
+      "outputTokensPerSecond": 106,
       "longContext": {
         "inputTokenCost": 4,
         "cachedInputTokenCost": 0.4,
@@ -998,11 +1050,12 @@
       "knowledge": "2026-02-16",
       "releaseDate": "2026-07-09",
       "lastUpdated": "2026-07-09",
-      "family": "gpt",
+      "family": "gpt-terra",
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai"
+      "provider": "openai",
+      "cacheCreationInputTokenCost": 2.5
     },
     {
       "type": "text",
@@ -1013,6 +1066,7 @@
       "inputTokenCost": 0.2,
       "cachedInputTokenCost": 0.02,
       "outputTokenCost": 1.2,
+      "outputTokensPerSecond": 165,
       "longContext": {
         "inputTokenCost": 0.4,
         "cachedInputTokenCost": 0.04,
@@ -1046,11 +1100,12 @@
       "knowledge": "2026-02-16",
       "releaseDate": "2026-07-09",
       "lastUpdated": "2026-07-09",
-      "family": "gpt",
+      "family": "gpt-luna",
       "openWeights": false,
       "structuredOutput": true,
       "temperatureSupported": false,
-      "provider": "openai"
+      "provider": "openai",
+      "cacheCreationInputTokenCost": 0.25
     },
     {
       "type": "text",
@@ -1061,7 +1116,7 @@
       "inputTokenCost": 2,
       "cachedInputTokenCost": 0.2,
       "outputTokenCost": 12,
-      "outputTokensPerSecond": 133,
+      "outputTokensPerSecond": 124,
       "longContext": {
         "inputTokenCost": 4,
         "cachedInputTokenCost": 0.4,
@@ -1139,14 +1194,100 @@
     },
     {
       "type": "text",
-      "modelName": "gemini-3.6-flash",
-      "description": "Latest Gemini 3.6 Flash model (GA July 21, 2026). Supersedes Gemini 3.5 Flash with better token efficiency and agentic planning at a lower output price ($7.50 vs $9.00/1M). 1M context window, 64K output. Context caching: $0.15/1M read.",
+      "modelName": "gemini-3.8-flash",
+      "description": "Google's most intelligent Flash model (GA September 2, 2026), built on Gemini 3.7 Flash and engineered for long-horizon software engineering, autonomous agents, and complex enterprise workflows. 1M context window, 64K output. Introductory pricing $0.75 input / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Thinking levels low/medium/high — `minimal` returns an error.",
       "maxInputTokens": 1048576,
       "maxOutputTokens": 65536,
-      "inputTokenCost": 1.5,
-      "cachedInputTokenCost": 0.15,
-      "outputTokenCost": 7.5,
-      "inputAudioTokenCost": 1.5,
+      "inputTokenCost": 0.75,
+      "cachedInputTokenCost": 0.075,
+      "outputTokenCost": 3.75,
+      "outputTokensPerSecond": 329,
+      "inputAudioTokenCost": 0.75,
+      "reasoning": {
+        "levels": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "defaultLevel": "medium",
+        "canDisable": false,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2026-03",
+      "releaseDate": "2026-09-02",
+      "lastUpdated": "2026-09-02",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-3.7-flash",
+      "description": "Gemini 3.7 Flash (GA August 13, 2026) for complex coding, agentic workflows, and reliable multi-step execution. Superseded by gemini-3.8-flash but fully supported. 1M context window, 64K output. Introductory pricing $0.75 input / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Thinking levels low/medium/high — `minimal` returns an error.",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0.75,
+      "cachedInputTokenCost": 0.075,
+      "outputTokenCost": 3.75,
+      "outputTokensPerSecond": 272,
+      "inputAudioTokenCost": 0.75,
+      "reasoning": {
+        "levels": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "defaultLevel": "medium",
+        "canDisable": false,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2026-03",
+      "releaseDate": "2026-08-13",
+      "lastUpdated": "2026-08-13",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "provider": "google"
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-3.6-flash",
+      "description": "Gemini 3.6 Flash (GA July 21, 2026), balancing speed and multimodal capabilities across general agentic and everyday tasks. Superseded by gemini-3.7-flash / gemini-3.8-flash. 1M context window, 64K output. Introductory pricing $0.75 input / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Context caching: $0.075/1M read.",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0.75,
+      "cachedInputTokenCost": 0.075,
+      "outputTokenCost": 3.75,
+      "inputAudioTokenCost": 0.75,
       "reasoning": {
         "levels": [
           "minimal",
@@ -1276,6 +1417,7 @@
       "inputTokenCost": 0.3,
       "cachedInputTokenCost": 0.03,
       "outputTokenCost": 2.5,
+      "outputTokensPerSecond": 347,
       "inputAudioTokenCost": 0.5,
       "reasoning": {
         "levels": [
@@ -1301,7 +1443,7 @@
           "text"
         ]
       },
-      "knowledge": "2025-01",
+      "knowledge": "2026-03",
       "releaseDate": "2026-07-21",
       "lastUpdated": "2026-07-21",
       "family": "gemini-flash-lite",
@@ -1624,14 +1766,103 @@
     },
     {
       "type": "text",
+      "modelName": "claude-fable-5-1",
+      "description": "Anthropic's most capable widely released model, for the most demanding reasoning and long-horizon agentic work. Successor to claude-fable-5 in the same tier at the same per-token price, but cache reads are 0.025x base input ($0.25/MTok) rather than the standard 0.1x. Thinking is always on (cannot be disabled); the raw chain of thought is never returned. Forced tool use (tool_choice any/tool) returns a 400. Requires 30-day data retention (not available under zero data retention). 1M context window, 128K max output.",
+      "maxInputTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 10,
+      "cachedInputTokenCost": 0.25,
+      "cacheCreationInputTokenCost": 12.5,
+      "outputTokenCost": 50,
+      "outputTokensPerSecond": 69,
+      "reasoning": {
+        "thinkingStyle": "adaptive",
+        "levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "defaultLevel": "high",
+        "canDisable": false,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2026-06",
+      "releaseDate": "2026-09-01",
+      "lastUpdated": "2026-09-01",
+      "family": "claude-fable",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "provider": "anthropic",
+      "structuredOutput": true
+    },
+    {
+      "type": "text",
+      "modelName": "claude-opus-5",
+      "description": "Opus-tier model above Opus 4.8, strongest on deep reasoning, agentic and long-horizon work, at half the cost of claude-fable-5-1. Thinking is on by default; it can be disabled only at effort `high` or below (xhigh/max return a 400). 1M context window, 128K max output.",
+      "maxInputTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 5,
+      "cachedInputTokenCost": 0.5,
+      "cacheCreationInputTokenCost": 6.25,
+      "outputTokenCost": 25,
+      "outputTokensPerSecond": 59,
+      "reasoning": {
+        "thinkingStyle": "adaptive",
+        "levels": [
+          "low",
+          "medium",
+          "high",
+          "xhigh",
+          "max"
+        ],
+        "defaultLevel": "high",
+        "canDisable": true,
+        "outputsThinking": true,
+        "outputsSignatures": true
+      },
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      },
+      "knowledge": "2026-05",
+      "releaseDate": "2026-07-24",
+      "lastUpdated": "2026-07-24",
+      "family": "claude-opus",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "provider": "anthropic",
+      "structuredOutput": true
+    },
+    {
+      "type": "text",
       "modelName": "claude-fable-5",
-      "description": "Anthropic's most capable widely released model, for the most demanding reasoning and long-horizon agentic work. Thinking is always on (cannot be disabled); the raw chain of thought is never returned. Requires 30-day data retention (not available under zero data retention). 1M context window, 128K max output.",
+      "description": "Previous-generation Fable model, superseded by claude-fable-5-1 at the same per-token price (5.1 also cuts cache reads to $0.25/MTok). Thinking is always on (cannot be disabled); the raw chain of thought is never returned. Requires 30-day data retention (not available under zero data retention). 1M context window, 128K max output.",
       "maxInputTokens": 1000000,
       "maxOutputTokens": 128000,
       "inputTokenCost": 10,
       "cachedInputTokenCost": 1,
       "cacheCreationInputTokenCost": 12.5,
       "outputTokenCost": 50,
+      "outputTokensPerSecond": 65,
       "reasoning": {
         "thinkingStyle": "adaptive",
         "levels": [
@@ -1657,12 +1888,13 @@
         ]
       },
       "knowledge": "2026-01",
-      "releaseDate": "2026-06-09",
+      "releaseDate": "2026-06-07",
       "lastUpdated": "2026-06-09",
       "family": "claude-fable",
       "openWeights": false,
       "temperatureSupported": false,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -1695,7 +1927,9 @@
       "family": "claude-opus",
       "openWeights": false,
       "temperatureSupported": false,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "knowledge": "2026-01",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -1725,12 +1959,13 @@
         ]
       },
       "knowledge": "2026-01-31",
-      "releaseDate": "2026-04-16",
+      "releaseDate": "2026-04-14",
       "lastUpdated": "2026-04-16",
       "family": "claude-opus",
       "openWeights": false,
       "temperatureSupported": false,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -1760,23 +1995,25 @@
         ]
       },
       "knowledge": "2025-05-31",
-      "releaseDate": "2026-02-05",
+      "releaseDate": "2026-02-04",
       "lastUpdated": "2026-03-13",
       "family": "claude-opus",
       "openWeights": false,
       "temperatureSupported": true,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
       "modelName": "claude-sonnet-5",
-      "description": "The best combination of speed and intelligence in the Sonnet tier, with near-Opus quality on coding and agentic work. Adaptive thinking on by default; supports the full low/medium/high/xhigh/max effort range. New tokenizer (~30% more tokens for the same text vs Sonnet 4.6). Standard pricing $3/$15; introductory $2/$10 per MTok through 2026-08-31. 1M context window, 128K max output.",
+      "description": "The best combination of speed and intelligence in the Sonnet tier, with near-Opus quality on coding and agentic work. Adaptive thinking on by default; supports the full low/medium/high/xhigh/max effort range. New tokenizer (~30% more tokens for the same text vs Sonnet 4.6). The $2/$10 per MTok launch rate is now the standard price — the increase to $3/$15 scheduled for 2026-09-01 was cancelled. 1M context window, 128K max output.",
       "maxInputTokens": 1000000,
       "maxOutputTokens": 128000,
-      "inputTokenCost": 3,
-      "cachedInputTokenCost": 0.3,
-      "cacheCreationInputTokenCost": 3.75,
-      "outputTokenCost": 15,
+      "inputTokenCost": 2,
+      "cachedInputTokenCost": 0.2,
+      "cacheCreationInputTokenCost": 2.5,
+      "outputTokenCost": 10,
+      "outputTokensPerSecond": 81,
       "reasoning": {
         "thinkingStyle": "adaptive",
         "levels": [
@@ -1801,20 +2038,21 @@
           "text"
         ]
       },
-      "knowledge": "2026-01",
-      "releaseDate": "2026-06-30",
+      "knowledge": "2026-01-31",
+      "releaseDate": "2026-06-29",
       "lastUpdated": "2026-06-30",
       "family": "claude-sonnet",
       "openWeights": false,
       "temperatureSupported": false,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
       "modelName": "claude-sonnet-4-6",
       "description": "The best combination of speed and intelligence. 1M context window, 64K max output.",
       "maxInputTokens": 1000000,
-      "maxOutputTokens": 64000,
+      "maxOutputTokens": 128000,
       "inputTokenCost": 3,
       "cachedInputTokenCost": 0.3,
       "cacheCreationInputTokenCost": 3.75,
@@ -1842,7 +2080,8 @@
       "family": "claude-sonnet",
       "openWeights": false,
       "temperatureSupported": true,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -1877,7 +2116,8 @@
       "family": "claude-haiku",
       "openWeights": false,
       "temperatureSupported": true,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -1941,7 +2181,8 @@
       "family": "claude-haiku",
       "openWeights": false,
       "temperatureSupported": true,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -1969,19 +2210,20 @@
           "text"
         ]
       },
-      "knowledge": "2025-03-31",
+      "knowledge": "2025-05",
       "releaseDate": "2025-11-24",
       "lastUpdated": "2025-11-24",
       "family": "claude-opus",
       "openWeights": false,
       "temperatureSupported": true,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
       "modelName": "claude-sonnet-4-5",
       "description": "Claude Sonnet 4.5 — earlier Sonnet generation. Prefer claude-sonnet-4-6.",
-      "maxInputTokens": 200000,
+      "maxInputTokens": 1000000,
       "maxOutputTokens": 64000,
       "inputTokenCost": 3,
       "cachedInputTokenCost": 0.3,
@@ -2009,7 +2251,8 @@
       "family": "claude-sonnet",
       "openWeights": false,
       "temperatureSupported": true,
-      "provider": "anthropic"
+      "provider": "anthropic",
+      "structuredOutput": true
     },
     {
       "type": "text",
@@ -2075,11 +2318,32 @@
       "costPerImage": 0.25
     },
     {
-      "type": "image",
+      "type": "text",
       "modelName": "gemini-2.5-flash-image",
       "provider": "google",
       "description": "aka nano-banana. Graduated from preview (was gemini-2.5-flash-image-preview).",
-      "costPerImage": 0.04
+      "costPerImage": 0.04,
+      "maxInputTokens": 32768,
+      "maxOutputTokens": 32768,
+      "inputTokenCost": 0.3,
+      "outputTokenCost": 30,
+      "cachedInputTokenCost": 0.075,
+      "knowledge": "2024-06",
+      "releaseDate": "2025-08-26",
+      "lastUpdated": "2025-08-26",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
     },
     {
       "type": "image",
@@ -2089,33 +2353,117 @@
       "costPerImage": 0.04
     },
     {
-      "type": "image",
+      "type": "text",
       "modelName": "gemini-3-pro-image-preview",
       "provider": "google",
       "description": "High-fidelity image generation with reasoning-enhanced composition. Supports legible text rendering, complex multi-turn editing, and character consistency using up to 14 reference inputs.",
-      "costPerImage": 0.05
+      "costPerImage": 0.05,
+      "maxInputTokens": 131072,
+      "maxOutputTokens": 32768,
+      "inputTokenCost": 2,
+      "outputTokenCost": 120,
+      "knowledge": "2025-01",
+      "releaseDate": "2025-11-20",
+      "lastUpdated": "2025-11-20",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
     },
     {
-      "type": "image",
+      "type": "text",
       "modelName": "gemini-3.1-flash-image-preview",
       "provider": "google",
       "description": "DEPRECATED: Preview version. Use gemini-3.1-flash-image instead.",
       "costPerImage": 0.067,
-      "disabled": true
+      "disabled": true,
+      "maxInputTokens": 65536,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0.5,
+      "outputTokenCost": 60,
+      "knowledge": "2025-01",
+      "releaseDate": "2026-02-26",
+      "lastUpdated": "2026-02-26",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
     },
     {
-      "type": "image",
+      "type": "text",
       "modelName": "gemini-3.1-flash-image",
       "provider": "google",
       "description": "Fast image generation with Gemini 3.1 Flash (GA). Supports resolutions from 512px to 4096px. ~$0.045/image at 512px, $0.067 at 1K, $0.101 at 2K, $0.151 at 4K.",
-      "costPerImage": 0.067
+      "costPerImage": 0.067,
+      "maxInputTokens": 131072,
+      "maxOutputTokens": 32768,
+      "inputTokenCost": 0.5,
+      "outputTokenCost": 60,
+      "knowledge": "2025-01",
+      "releaseDate": "2026-05-28",
+      "lastUpdated": "2026-05-28",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "pdf"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
     },
     {
-      "type": "image",
+      "type": "text",
       "modelName": "gemini-3.1-flash-lite-image",
       "provider": "google",
       "description": "aka Nano Banana 2 Lite (GA 2026-06-30). Fastest, most cost-effective Gemini image model (~4s generation). ~$0.034/image at 1K. Recommended replacement for gemini-2.5-flash-image.",
-      "costPerImage": 0.034
+      "costPerImage": 0.034,
+      "maxInputTokens": 65536,
+      "maxOutputTokens": 4096,
+      "inputTokenCost": 0.25,
+      "outputTokenCost": 30,
+      "knowledge": "2025-01",
+      "releaseDate": "2026-06-30",
+      "lastUpdated": "2026-06-30",
+      "family": "gemini-flash-lite",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
     },
     {
       "type": "speech-to-text",
@@ -2227,6 +2575,17 @@
     },
     {
       "type": "text-to-speech",
+      "modelName": "gemini-3.1-flash-tts-preview",
+      "provider": "google",
+      "inputTokenCost": 1,
+      "outputAudioTokenCost": 20,
+      "formats": [
+        "pcm",
+        "wav"
+      ]
+    },
+    {
+      "type": "text-to-speech",
       "modelName": "gemini-2.5-flash-preview-tts",
       "provider": "google",
       "inputTokenCost": 0.5,
@@ -2248,28 +2607,991 @@
       ]
     },
     {
-      "type": "embeddings",
+      "type": "text",
       "modelName": "text-embedding-3-small",
       "provider": "openai",
-      "tokenCost": 0.02
+      "tokenCost": 0.02,
+      "maxInputTokens": 8191,
+      "maxOutputTokens": 1536,
+      "inputTokenCost": 0.02,
+      "outputTokenCost": 0,
+      "knowledge": "2024-01",
+      "releaseDate": "2024-01-25",
+      "lastUpdated": "2024-01-25",
+      "family": "text-embedding",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      }
     },
     {
-      "type": "embeddings",
+      "type": "text",
       "modelName": "text-embedding-3-large",
       "provider": "openai",
-      "tokenCost": 0.13
+      "tokenCost": 0.13,
+      "maxInputTokens": 8191,
+      "maxOutputTokens": 3072,
+      "inputTokenCost": 0.13,
+      "outputTokenCost": 0,
+      "knowledge": "2024-01",
+      "releaseDate": "2024-01-25",
+      "lastUpdated": "2024-01-25",
+      "family": "text-embedding",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      }
     },
     {
-      "type": "embeddings",
+      "type": "text",
       "modelName": "gemini-embedding-001",
       "provider": "google",
-      "tokenCost": 0.15
+      "tokenCost": 0.15,
+      "maxInputTokens": 2048,
+      "maxOutputTokens": 1,
+      "inputTokenCost": 0.15,
+      "outputTokenCost": 0,
+      "knowledge": "2025-05",
+      "releaseDate": "2025-05-20",
+      "lastUpdated": "2025-05-20",
+      "family": "gemini",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      }
     },
     {
       "type": "embeddings",
       "modelName": "gemini-embedding-2-preview",
       "provider": "google",
       "tokenCost": 0.2
+    },
+    {
+      "type": "text",
+      "modelName": "claude-opus-5-5",
+      "provider": "anthropic",
+      "maxInputTokens": 1000000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 4,
+      "outputTokenCost": 20,
+      "cachedInputTokenCost": 0.2,
+      "cacheCreationInputTokenCost": 5,
+      "knowledge": "2026-06",
+      "releaseDate": "2026-09-22",
+      "lastUpdated": "2026-09-22",
+      "family": "claude-opus",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "claude-opus-4-5-20251101",
+      "provider": "anthropic",
+      "maxInputTokens": 200000,
+      "maxOutputTokens": 64000,
+      "inputTokenCost": 5,
+      "outputTokenCost": 25,
+      "cachedInputTokenCost": 0.5,
+      "cacheCreationInputTokenCost": 6.25,
+      "knowledge": "2025-05",
+      "releaseDate": "2025-11-24",
+      "lastUpdated": "2025-11-01",
+      "family": "claude-opus",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "claude-sonnet-4-5-20250929",
+      "provider": "anthropic",
+      "maxInputTokens": 1000000,
+      "maxOutputTokens": 64000,
+      "inputTokenCost": 3,
+      "outputTokenCost": 15,
+      "cachedInputTokenCost": 0.3,
+      "cacheCreationInputTokenCost": 3.75,
+      "knowledge": "2025-07-31",
+      "releaseDate": "2025-09-29",
+      "lastUpdated": "2025-09-29",
+      "family": "claude-sonnet",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "chatgpt-image-latest",
+      "provider": "openai",
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0,
+      "releaseDate": "2025-12-16",
+      "lastUpdated": "2025-12-16",
+      "family": "gpt-image",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-realtime-2.1",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 32000,
+      "inputTokenCost": 4,
+      "outputTokenCost": 24,
+      "cachedInputTokenCost": 0.4,
+      "inputAudioTokenCost": 32,
+      "outputAudioTokenCost": 64,
+      "knowledge": "2024-09-30",
+      "releaseDate": "2026-07-06",
+      "lastUpdated": "2026-07-06",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "audio",
+          "image"
+        ],
+        "output": [
+          "text",
+          "audio"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-4o-2024-05-13",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 4096,
+      "inputTokenCost": 5,
+      "outputTokenCost": 15,
+      "knowledge": "2023-09",
+      "releaseDate": "2024-05-13",
+      "lastUpdated": "2024-05-13",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "text-embedding-ada-002",
+      "provider": "openai",
+      "maxInputTokens": 8192,
+      "maxOutputTokens": 1536,
+      "inputTokenCost": 0.1,
+      "outputTokenCost": 0,
+      "knowledge": "2022-12",
+      "releaseDate": "2022-12-15",
+      "lastUpdated": "2022-12-15",
+      "family": "text-embedding",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5.3-codex",
+      "provider": "openai",
+      "maxInputTokens": 400000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 1.75,
+      "outputTokenCost": 14,
+      "cachedInputTokenCost": 0.175,
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-02-05",
+      "lastUpdated": "2026-02-05",
+      "family": "gpt-codex",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5.6",
+      "provider": "openai",
+      "maxInputTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 4,
+      "outputTokenCost": 20,
+      "cachedInputTokenCost": 0.4,
+      "cacheCreationInputTokenCost": 5,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 8,
+        "outputTokenCost": 30,
+        "cachedInputTokenCost": 0.8
+      },
+      "knowledge": "2026-02-16",
+      "releaseDate": "2026-07-09",
+      "lastUpdated": "2026-07-09",
+      "family": "gpt-sol",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5.2-chat-latest",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 16384,
+      "inputTokenCost": 1.75,
+      "outputTokenCost": 14,
+      "cachedInputTokenCost": 0.175,
+      "knowledge": "2025-08-31",
+      "releaseDate": "2025-12-11",
+      "lastUpdated": "2025-12-11",
+      "family": "gpt-codex",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5.3-codex-spark",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 32000,
+      "inputTokenCost": 1.75,
+      "outputTokenCost": 14,
+      "cachedInputTokenCost": 0.175,
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-02-05",
+      "lastUpdated": "2026-02-05",
+      "family": "gpt-codex-spark",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-4o-2024-08-06",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 16384,
+      "inputTokenCost": 2.5,
+      "outputTokenCost": 10,
+      "cachedInputTokenCost": 1.25,
+      "knowledge": "2023-09",
+      "releaseDate": "2024-08-06",
+      "lastUpdated": "2024-08-06",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-4o-2024-11-20",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 16384,
+      "inputTokenCost": 2.5,
+      "outputTokenCost": 10,
+      "cachedInputTokenCost": 1.25,
+      "knowledge": "2023-09",
+      "releaseDate": "2024-11-20",
+      "lastUpdated": "2024-11-20",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-6-luna",
+      "provider": "openai",
+      "maxInputTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 0.1,
+      "outputTokenCost": 0.5,
+      "cachedInputTokenCost": 0.01,
+      "cacheCreationInputTokenCost": 0.125,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 0.2,
+        "outputTokenCost": 0.75,
+        "cachedInputTokenCost": 0.02
+      },
+      "knowledge": "2026-05-18",
+      "releaseDate": "2026-09-22",
+      "lastUpdated": "2026-09-22",
+      "family": "gpt-luna",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-5.3-chat-latest",
+      "provider": "openai",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 16384,
+      "inputTokenCost": 1.75,
+      "outputTokenCost": 14,
+      "cachedInputTokenCost": 0.175,
+      "knowledge": "2025-08-31",
+      "releaseDate": "2026-03-03",
+      "lastUpdated": "2026-03-03",
+      "family": "gpt",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-image-1-mini",
+      "provider": "openai",
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0,
+      "releaseDate": "2025-09-26",
+      "lastUpdated": "2025-09-26",
+      "family": "gpt-image",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-image-1.5",
+      "provider": "openai",
+      "maxInputTokens": 0,
+      "maxOutputTokens": 0,
+      "releaseDate": "2025-11-25",
+      "lastUpdated": "2025-11-25",
+      "family": "gpt-image",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gpt-6-sol",
+      "provider": "openai",
+      "maxInputTokens": 1050000,
+      "maxOutputTokens": 128000,
+      "inputTokenCost": 2,
+      "outputTokenCost": 10,
+      "cachedInputTokenCost": 0.2,
+      "cacheCreationInputTokenCost": 2.5,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 4,
+        "outputTokenCost": 15,
+        "cachedInputTokenCost": 0.4
+      },
+      "knowledge": "2026-04-20",
+      "releaseDate": "2026-09-22",
+      "lastUpdated": "2026-09-22",
+      "family": "gpt-sol",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "o1-pro",
+      "provider": "openai",
+      "maxInputTokens": 200000,
+      "maxOutputTokens": 100000,
+      "inputTokenCost": 150,
+      "outputTokenCost": 600,
+      "knowledge": "2023-09",
+      "releaseDate": "2025-03-19",
+      "lastUpdated": "2025-03-19",
+      "family": "o-pro",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-flash-latest",
+      "provider": "google",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0.75,
+      "outputTokenCost": 3.75,
+      "cachedInputTokenCost": 0.075,
+      "inputAudioTokenCost": 0.75,
+      "knowledge": "2026-03",
+      "releaseDate": "2026-08-13",
+      "lastUpdated": "2026-08-13",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemma-4-31b-it",
+      "provider": "google",
+      "maxInputTokens": 262144,
+      "maxOutputTokens": 32768,
+      "releaseDate": "2026-04-02",
+      "lastUpdated": "2026-04-02",
+      "family": "gemma",
+      "openWeights": true,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "lyria-3-pro-preview",
+      "provider": "google",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0,
+      "outputTokenCost": 0,
+      "releaseDate": "2026-03-25",
+      "lastUpdated": "2026-03-25",
+      "family": "lyria",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "audio"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-flash-lite-latest",
+      "provider": "google",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0.3,
+      "outputTokenCost": 2.5,
+      "cachedInputTokenCost": 0.03,
+      "knowledge": "2026-03",
+      "releaseDate": "2026-07-21",
+      "lastUpdated": "2026-07-21",
+      "family": "gemini-flash-lite",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-embedding-2",
+      "provider": "google",
+      "maxInputTokens": 8192,
+      "maxOutputTokens": 1,
+      "inputTokenCost": 0.2,
+      "outputTokenCost": 0,
+      "inputAudioTokenCost": 6.5,
+      "knowledge": "2025-11",
+      "releaseDate": "2026-04-22",
+      "lastUpdated": "2026-04-22",
+      "family": "gemini",
+      "openWeights": false,
+      "temperatureSupported": false,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "audio",
+          "video",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemma-4-26b-a4b-it",
+      "provider": "google",
+      "maxInputTokens": 262144,
+      "maxOutputTokens": 32768,
+      "releaseDate": "2026-04-02",
+      "lastUpdated": "2026-04-02",
+      "family": "gemma",
+      "openWeights": true,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "lyria-3-clip-preview",
+      "provider": "google",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0,
+      "outputTokenCost": 0,
+      "releaseDate": "2026-03-25",
+      "lastUpdated": "2026-03-25",
+      "family": "lyria",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "audio"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-2.5-computer-use-preview-10-2025",
+      "provider": "google",
+      "maxInputTokens": 128000,
+      "maxOutputTokens": 64000,
+      "inputTokenCost": 1.25,
+      "outputTokenCost": 10,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 2.5,
+        "outputTokenCost": 15
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2025-10-07",
+      "lastUpdated": "2025-10-07",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-3-pro-image",
+      "provider": "google",
+      "maxInputTokens": 65536,
+      "maxOutputTokens": 32768,
+      "inputTokenCost": 2,
+      "outputTokenCost": 120,
+      "knowledge": "2025-01",
+      "releaseDate": "2026-05-28",
+      "lastUpdated": "2026-05-28",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "deep-research-preview-04-2026",
+      "provider": "google",
+      "maxInputTokens": 131072,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 2,
+      "outputTokenCost": 12,
+      "cachedInputTokenCost": 0.2,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 4,
+        "outputTokenCost": 18,
+        "cachedInputTokenCost": 0.4
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2026-04-21",
+      "lastUpdated": "2026-04-21",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "deep-research-max-preview-04-2026",
+      "provider": "google",
+      "maxInputTokens": 131072,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 2,
+      "outputTokenCost": 12,
+      "cachedInputTokenCost": 0.2,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 4,
+        "outputTokenCost": 18,
+        "cachedInputTokenCost": 0.4
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2026-04-21",
+      "lastUpdated": "2026-04-21",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text",
+          "image"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-3.1-pro-preview-customtools",
+      "provider": "google",
+      "maxInputTokens": 1048576,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 2,
+      "outputTokenCost": 12,
+      "cachedInputTokenCost": 0.2,
+      "longContext": {
+        "thresholdTokens": 200000,
+        "inputTokenCost": 4,
+        "outputTokenCost": 18,
+        "cachedInputTokenCost": 0.4
+      },
+      "knowledge": "2025-01",
+      "releaseDate": "2026-02-19",
+      "lastUpdated": "2026-02-19",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "structuredOutput": true,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio",
+          "pdf"
+        ],
+        "output": [
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-3.5-live-translate-preview",
+      "provider": "google",
+      "maxInputTokens": 16384,
+      "maxOutputTokens": 32768,
+      "inputTokenCost": 3.5,
+      "outputTokenCost": 21,
+      "inputAudioTokenCost": 3.5,
+      "outputAudioTokenCost": 21,
+      "knowledge": "2025-01",
+      "releaseDate": "2026-06-09",
+      "lastUpdated": "2026-06-09",
+      "family": "gemini-pro",
+      "openWeights": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "audio"
+        ],
+        "output": [
+          "audio",
+          "text"
+        ]
+      }
+    },
+    {
+      "type": "text",
+      "modelName": "gemini-3.1-flash-live-preview",
+      "provider": "google",
+      "maxInputTokens": 131072,
+      "maxOutputTokens": 65536,
+      "inputTokenCost": 0.75,
+      "outputTokenCost": 4.5,
+      "inputAudioTokenCost": 3,
+      "outputAudioTokenCost": 12,
+      "knowledge": "2025-01",
+      "releaseDate": "2026-03-26",
+      "lastUpdated": "2026-03-26",
+      "family": "gemini-flash",
+      "openWeights": false,
+      "structuredOutput": false,
+      "temperatureSupported": true,
+      "modalities": {
+        "input": [
+          "text",
+          "image",
+          "video",
+          "audio"
+        ],
+        "output": [
+          "text",
+          "audio"
+        ]
+      }
     }
   ],
   "hostedTools": [
@@ -2305,8 +3627,8 @@
       "pricing": {
         "unit": "per_hour",
         "amount": 0.05,
-        "freeAllowance": "50 container-hours/day",
-        "note": "Free when used with web_search or web_fetch."
+        "freeAllowance": "1,550 container-hours/month",
+        "note": "Free when used with web_search or web_fetch. 5-minute minimum execution time per container."
       }
     },
     {
@@ -2420,12 +3742,16 @@
         "gemini-3-flash-preview",
         "gemini-3.5-flash",
         "gemini-3.6-flash",
+        "gemini-3.7-flash",
+        "gemini-3.8-flash",
         "gemini-3.1-flash-lite",
         "gemini-3.5-flash-lite"
       ],
       "pricing": {
         "unit": "per_call",
-        "note": "Gemini 3 family only; see Google pricing."
+        "amount": 0.014,
+        "freeAllowance": "5,000 grounded prompts/month (Gemini 3)",
+        "note": "$14 per 1,000 search queries on the Gemini 3 family."
       }
     },
     {
