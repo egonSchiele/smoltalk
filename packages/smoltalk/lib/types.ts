@@ -133,6 +133,11 @@ export type SmolConfig = {
   /** Provider-agnostic reasoning effort level. */
   reasoningEffort?: "low" | "medium" | "high";
 
+  /** Ask for the probability of each generated token. `top` is how many
+   *  alternatives to return per token, 0 or absent for none. Honoured by
+   *  OpenAI (both APIs) and Google; other providers ignore it. */
+  logprobs?: { top?: number };
+
   responseFormatOptions?: Partial<{
     name: string;
     strict: boolean;
@@ -192,6 +197,9 @@ export type PromptResult = {
   output: string | null;
   toolCalls: ToolCall[];
   thinkingBlocks?: ThinkingBlock[];
+  /** Per-token log probabilities, when the call asked for them and the
+   *  provider returned them. Absent otherwise. */
+  logprobs?: TokenLogprob[];
   usage?: TokenUsage;
   cost?: CostEstimate;
   model?: ModelName;
@@ -210,6 +218,7 @@ export function promptResult({
   output,
   toolCalls,
   thinkingBlocks,
+  logprobs,
   usage,
   cost,
   model,
@@ -222,6 +231,7 @@ export function promptResult({
     output: output || null,
     toolCalls: toolCalls || [],
     thinkingBlocks: thinkingBlocks,
+    logprobs,
     usage,
     cost,
     model,
@@ -270,4 +280,27 @@ export type ThinkingBlock = {
 export const ThinkingBlockSchema = z.object({
   text: z.string(),
   signature: z.string(),
+});
+
+/** A token the model could have produced at a position, and the log of
+ *  its probability. */
+export type TokenAlternative = { token: string; logprob: number };
+
+const TokenAlternativeSchema = z.object({
+  token: z.string(),
+  logprob: z.number(),
+});
+
+/** One generated token and the log of its probability. `top` holds the
+ *  most likely alternatives at that position when the call asked for them. */
+export type TokenLogprob = {
+  token: string;
+  logprob: number;
+  top?: TokenAlternative[];
+};
+
+export const TokenLogprobSchema = z.object({
+  token: z.string(),
+  logprob: z.number(),
+  top: z.array(TokenAlternativeSchema).optional(),
 });

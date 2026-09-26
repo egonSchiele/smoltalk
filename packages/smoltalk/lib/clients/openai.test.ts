@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
+import { z } from "zod";
 import { SmolOpenAi } from "./openai.js";
+import { userMessage } from "../classes/message/index.js";
 import type { SmolConfig } from "../types.js";
 import type { ModelDataBlob } from "../modelData.js";
 
@@ -219,6 +221,197 @@ describe("SmolOpenAi audio token cost seam", () => {
       completion_tokens_details: { audio_tokens: 1_000_000 },
     });
     expect(cost?.totalCost).toBe(12.34);
+  });
+});
+
+// Feeds a canned SDK value into the real _textSync / _textStream so the
+// logprobs mapping can be tested without a network call. The sync path
+// calls `.create(...).withResponse()`; the stream path awaits `.create(...)`
+// and iterates it.
+class LogprobProvider extends SmolOpenAi {
+  protected resolveClientOptions() {
+    return { apiKey: "k" };
+  }
+  publicBuild(config: SmolConfig) {
+    return (this as any).buildRequest(config);
+  }
+}
+
+function logprobProvider(): LogprobProvider {
+  return new LogprobProvider({ model: "gpt-4o", provider: "openai", messages: [] });
+}
+
+async function textSyncWith(completion: any, config: Partial<SmolConfig>) {
+  const provider = logprobProvider();
+  (provider as any).client.chat.completions.create = () => ({
+    withResponse: async () => ({ data: completion, response: undefined }),
+  });
+  return provider._textSync({
+    model: "gpt-4o",
+    provider: "openai",
+    messages: [],
+    ...config,
+  } as SmolConfig);
+}
+
+async function lastChunkOfStreamWith(chunks: any[], config: Partial<SmolConfig>) {
+  const provider = logprobProvider();
+  (provider as any).client.chat.completions.create = async () => {
+    async function* gen() {
+      for (const chunk of chunks) {
+        yield chunk;
+      }
+    }
+    return gen();
+  };
+  let done: any;
+  for await (const chunk of provider._textStream({
+    model: "gpt-4o",
+    provider: "openai",
+    messages: [],
+    ...config,
+  } as SmolConfig)) {
+    if (chunk.type === "done") {
+      done = chunk;
+    }
+  }
+  return done;
+}
+
+describe("SmolOpenAi logprobs", () => {
+  it("asks the chat API for logprobs, with top_logprobs only when alternatives are wanted", () => {
+    const c = logprobProvider();
+    const base = { model: "gpt-4o", provider: "openai", messages: [] } as SmolConfig;
+    expect(c.publicBuild(base)).not.toHaveProperty("logprobs");
+    expect(c.publicBuild({ ...base, logprobs: {} })).toMatchObject({ logprobs: true });
+    expect(c.publicBuild({ ...base, logprobs: { top: 0 } })).not.toHaveProperty("top_logprobs");
+    expect(c.publicBuild({ ...base, logprobs: { top: 3 } })).toMatchObject({
+      logprobs: true,
+      top_logprobs: 3,
+    });
+  });
+
+  it("maps a chat response's logprobs onto the result", async () => {
+    const completion = {
+      choices: [
+        {
+          message: { content: "Hi!", tool_calls: undefined },
+          finish_reason: "stop",
+          logprobs: {
+            content: [
+              {
+                token: "Hi",
+                bytes: [72, 105],
+                logprob: -0.1,
+                top_logprobs: [
+                  { token: "Hi", bytes: null, logprob: -0.1 },
+                  { token: "Hello", bytes: null, logprob: -2.3 },
+                ],
+              },
+              { token: "!", bytes: [33], logprob: -0.5, top_logprobs: [] },
+            ],
+          },
+        },
+      ],
+      usage: { prompt_tokens: 2, completion_tokens: 2, total_tokens: 4 },
+    };
+    const result = await textSyncWith(completion, { logprobs: { top: 2 } });
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    expect(result.value.logprobs).toEqual([
+      {
+        token: "Hi",
+        logprob: -0.1,
+        top: [
+          { token: "Hi", logprob: -0.1 },
+          { token: "Hello", logprob: -2.3 },
+        ],
+      },
+      { token: "!", logprob: -0.5 },
+    ]);
+  });
+
+  it("collects streamed logprobs onto the done result", async () => {
+    const chunks = [
+      {
+        choices: [
+          {
+            delta: { content: "Hi" },
+            logprobs: { content: [{ token: "Hi", logprob: -0.1, top_logprobs: [] }] },
+          },
+        ],
+      },
+      {
+        choices: [
+          {
+            delta: { content: "!" },
+            finish_reason: "stop",
+            logprobs: { content: [{ token: "!", logprob: -0.5, top_logprobs: [] }] },
+          },
+        ],
+      },
+      { choices: [], usage: { prompt_tokens: 2, completion_tokens: 2, total_tokens: 4 } },
+    ];
+    const done = await lastChunkOfStreamWith(chunks, { logprobs: {} });
+    expect(done.result.logprobs).toEqual([
+      { token: "Hi", logprob: -0.1 },
+      { token: "!", logprob: -0.5 },
+    ]);
+  });
+
+  it("leaves logprobs absent when the response has none", async () => {
+    const completion = {
+      choices: [{ message: { content: "Hi" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    };
+    const result = await textSyncWith(completion, {});
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    expect(result.value).not.toHaveProperty("logprobs");
+  });
+
+  // Review Focus 3: a structured-output reply that fails validation retries;
+  // the retry's logprobs must reach the final result. textWithRetry must not
+  // rebuild the PromptResult in a way that drops them.
+  it("keeps the retry's logprobs when a structured-output reply is retried", async () => {
+    const invalid = {
+      choices: [{ message: { content: "not json" }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    };
+    const valid = {
+      choices: [
+        {
+          message: { content: '{"answer":"hi"}' },
+          finish_reason: "stop",
+          logprobs: { content: [{ token: "hi", logprob: -0.2, top_logprobs: [] }] },
+        },
+      ],
+      usage: { prompt_tokens: 3, completion_tokens: 3, total_tokens: 6 },
+    };
+    const completions = [invalid, valid];
+    let call = 0;
+    const provider = logprobProvider();
+    (provider as any).client.chat.completions.create = () => ({
+      withResponse: async () => ({
+        data: completions[Math.min(call++, completions.length - 1)],
+        response: undefined,
+      }),
+    });
+    const result = await provider.textSync({
+      model: "gpt-4o",
+      provider: "openai",
+      messages: [userMessage("give me json")],
+      logprobs: {},
+      responseFormat: z.object({ answer: z.string() }),
+      responseFormatOptions: { strict: true },
+    } as SmolConfig);
+    if (!result.success) {
+      throw new Error(result.error);
+    }
+    expect(call).toBe(2); // the first reply failed validation and was retried
+    expect(result.value.logprobs).toEqual([{ token: "hi", logprob: -0.2 }]);
   });
 });
 

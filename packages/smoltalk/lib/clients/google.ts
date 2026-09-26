@@ -18,6 +18,12 @@ import { zodToGoogleTool } from "../util/tool.js";
 import { responseFormatToJsonSchema, constToEnum } from "../util/jsonSchema.js";
 import { normalizeGoogleStopReason } from "../util/stopReason.js";
 import {
+  fromGoogleLogprobs,
+  mergeGoogleLogprobs,
+  topAlternatives,
+  type GoogleLogprobsResult,
+} from "./logprobs.js";
+import {
   SmolError,
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -387,6 +393,14 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       };
     }
 
+    if (config.logprobs !== undefined) {
+      genConfig.responseLogprobs = true;
+      const top = topAlternatives(config.logprobs);
+      if (top !== undefined) {
+        genConfig.logprobs = top;
+      }
+    }
+
     return {
       contents: messages,
       model: this.getModel(),
@@ -612,6 +626,10 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     const rawStopReason =
       (result.candidates?.[0] as any)?.finishReason ?? undefined;
 
+    const logprobs = fromGoogleLogprobs(
+      (result.candidates?.[0] as any)?.logprobsResult,
+    );
+
     // Return the response, updating the chat history
     const promptResult: PromptResult = {
       output,
@@ -629,6 +647,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     }
     if (hostedToolResults.length > 0) {
       promptResult.hostedToolResults = hostedToolResults;
+    }
+    if (logprobs !== undefined) {
+      promptResult.logprobs = logprobs;
     }
     return success(promptResult);
   }
@@ -676,6 +697,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
     let rawStopReason: string | undefined;
+    const logprobPieces: GoogleLogprobsResult[] = [];
 
     for await (const chunk of stream) {
       // Extract usage metadata from chunks
@@ -688,6 +710,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       // Iterate raw parts to capture thought signatures and regular content
       for (const candidate of (chunk as any).candidates || []) {
         if (candidate?.finishReason) rawStopReason = candidate.finishReason;
+        if (candidate?.logprobsResult) {
+          logprobPieces.push(candidate.logprobsResult);
+        }
         for (const part of candidate?.content?.parts || []) {
           const p = part as any;
 
@@ -758,6 +783,8 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       yield { type: "tool_call", toolCall };
     }
 
+    const logprobs = fromGoogleLogprobs(mergeGoogleLogprobs(logprobPieces));
+
     const result: PromptResult = {
       output: content || null,
       toolCalls,
@@ -769,6 +796,9 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     };
     if (rawStopReason) {
       result.rawStopReason = rawStopReason;
+    }
+    if (logprobs !== undefined) {
+      result.logprobs = logprobs;
     }
 
     yield { type: "done", result };

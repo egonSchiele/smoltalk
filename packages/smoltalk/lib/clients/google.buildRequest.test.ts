@@ -76,6 +76,24 @@ describe("SmolGoogle.buildRequest — thinking config", () => {
   });
 });
 
+describe("SmolGoogle.buildRequest — logprobs", () => {
+  it("asks Gemini for logprobs, with a count only when alternatives are wanted", () => {
+    expect(build("gemini-2.5-flash", {}).config).not.toHaveProperty(
+      "responseLogprobs",
+    );
+    expect(build("gemini-2.5-flash", { logprobs: {} }).config).toMatchObject({
+      responseLogprobs: true,
+    });
+    expect(build("gemini-2.5-flash", { logprobs: { top: 0 } }).config).not.toHaveProperty(
+      "logprobs",
+    );
+    expect(build("gemini-2.5-flash", { logprobs: { top: 3 } }).config).toMatchObject({
+      responseLogprobs: true,
+      logprobs: 3,
+    });
+  });
+});
+
 describe("SmolGoogle.buildRequest — web_search + function tools", () => {
   it("sets includeServerSideToolInvocations on Gemini 3+", () => {
     const { config } = build("gemini-3-flash-preview", {
