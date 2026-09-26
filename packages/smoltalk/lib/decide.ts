@@ -18,7 +18,7 @@ import { Result, success, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
 import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
-import { isDecisionModel, resolveModelForProvider } from "./models.js";
+import { isDecisionModel, resolveModelForProvider, type DecisionModel } from "./models.js";
 import { round } from "./util/util.js";
 
 export const DECISION_PROVIDER = "typesafe";
@@ -176,7 +176,13 @@ function checkQuestions(
   return undefined;
 }
 
-/** A response that parsed but does not answer what was asked. */
+function isProbability(n: number): boolean {
+  return n >= 0 && n <= 1;
+}
+
+/** A response that parsed but does not answer what was asked. The Zod
+ *  schema only says each field is a number or a string; this checks the
+ *  numbers are probabilities and the answer fits the question it is for. */
 function checkAnswers(
   questions: Record<string, DecisionQuestion>,
   answers: Record<string, DecisionAnswer>,
@@ -190,21 +196,42 @@ function checkAnswers(
     if (a.type !== q.type) {
       return `Question "${name}" is a ${q.type} but the answer is a ${a.type}.`;
     }
-    if (q.type === "choice" && a.type === "choice" && !(a.choice in q.criteria)) {
-      return `Question "${name}" answered "${a.choice}", which is not one of its options.`;
+    if (a.type === "noul" && !isProbability(a.noul)) {
+      return `Question "${name}" has a noul of ${a.noul}, which is not between 0 and 1.`;
+    }
+    if ((a.type === "choice" || a.type === "score") && !isProbability(a.confidence)) {
+      return `Question "${name}" has a confidence of ${a.confidence}, which is not between 0 and 1.`;
+    }
+    if (q.type === "choice" && a.type === "choice") {
+      if (!(a.choice in q.criteria)) {
+        return `Question "${name}" answered "${a.choice}", which is not one of its options.`;
+      }
+      const unknown = Object.keys(a.probabilities).find((k) => !(k in q.criteria));
+      if (unknown !== undefined) {
+        return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
+      }
+    }
+    if (q.type === "score" && a.type === "score") {
+      const levels = q.criteria.length;
+      if (Object.keys(a.legend).length !== levels) {
+        return `Question "${name}" has ${levels} levels but the answer's legend has ${Object.keys(a.legend).length}.`;
+      }
+      if (Object.keys(a.probabilities).length !== levels) {
+        return `Question "${name}" has ${levels} levels but the answer has ${Object.keys(a.probabilities).length} probabilities.`;
+      }
+      if (a.score < 0 || a.score > levels - 1) {
+        return `Question "${name}" has a score of ${a.score}, outside its ${levels} levels.`;
+      }
     }
   }
   return undefined;
 }
 
 function calculateDecisionCost(
-  provider: string,
-  modelName: string,
+  model: DecisionModel | undefined,
   inputTokens: number,
-  modelData?: ModelDataBlob,
 ): CostEstimate | undefined {
-  const model = resolveModelForProvider(provider, modelName, modelData);
-  if (!model || !isDecisionModel(model) || model.inputTokenCost === undefined) {
+  if (model === undefined || model.inputTokenCost === undefined) {
     return undefined;
   }
   const inputCost = round((inputTokens * model.inputTokenCost) / 1_000_000, 6);
@@ -241,10 +268,11 @@ export async function decide(
     );
   }
 
-  const registryModel = resolveModelForProvider(provider, config.model, config.modelData);
-  const maxQuestions =
-    registryModel && isDecisionModel(registryModel) ? registryModel.maxQuestions : undefined;
-  const questionProblem = checkQuestions(questions, maxQuestions);
+  // The registry entry for the requested name, when there is one. It sets
+  // the question cap and the price. A Laya model has no entry and no price.
+  const found = resolveModelForProvider(provider, config.model, config.modelData);
+  const registryModel = found && isDecisionModel(found) ? found : undefined;
+  const questionProblem = checkQuestions(questions, registryModel?.maxQuestions);
   if (questionProblem) {
     return failure(questionProblem);
   }
@@ -303,11 +331,14 @@ export async function decide(
     return failure(answerProblem);
   }
 
+  // Output is free, so only input tokens are priced. The server's output
+  // count is still reported: Jev sends 0, but a gateway may count its own.
   const inputTokens = parsed.data.usage?.input_tokens ?? 0;
+  const outputTokens = parsed.data.usage?.output_tokens ?? 0;
   return success({
     answers,
-    usage: { inputTokens, outputTokens: 0 },
-    cost: calculateDecisionCost(provider, config.model, inputTokens, config.modelData),
+    usage: { inputTokens, outputTokens },
+    cost: calculateDecisionCost(registryModel, inputTokens),
     model: parsed.data.model ?? config.model,
   });
 }

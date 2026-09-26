@@ -86,6 +86,17 @@ describe("decide", () => {
     expect(r.value.model).toBe("jev-1.13");
   });
 
+  it("reports the server's output tokens without pricing them", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ answers, usage: { input_tokens: 1_000_000, output_tokens: 20 } }),
+    );
+    const r = await decide("hello", questions, config);
+    if (!r.success) throw new Error(r.error);
+    expect(r.value.usage).toEqual({ inputTokens: 1_000_000, outputTokens: 20 });
+    expect(r.value.cost?.outputCost).toBe(0);
+    expect(r.value.cost?.totalCost).toBe(0.042);
+  });
+
   it("prices a registry model by the requested name, not the versioned one the server reports", async () => {
     const r = await decide("hello", questions, config);
     if (!r.success) throw new Error(r.error);
@@ -244,6 +255,57 @@ describe("decide", () => {
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.error).toMatch(/"sales", which is not one of its options/);
+  });
+
+  it("fails when a noul or a confidence is not a probability", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ answers: { ...answers, churn: { type: "noul", noul: 1.5 } } }),
+    );
+    const noul = await decide("hello", questions, config);
+    expect(noul.success).toBe(false);
+    if (!noul.success) expect(noul.error).toMatch(/noul of 1.5, which is not between 0 and 1/);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ answers: { ...answers, department: { ...answers.department, confidence: -0.2 } } }),
+    );
+    const conf = await decide("hello", questions, config);
+    expect(conf.success).toBe(false);
+    if (!conf.success) expect(conf.error).toMatch(/confidence of -0.2/);
+  });
+
+  it("fails when a choice has a probability for an option that was not offered", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: {
+          ...answers,
+          department: { ...answers.department, probabilities: { billing: 0.9, sales: 0.1 } },
+        },
+      }),
+    );
+    const r = await decide("hello", questions, config);
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    expect(r.error).toMatch(/probability for "sales", which is not one of its options/);
+  });
+
+  it("fails when a score answer does not match the levels sent", async () => {
+    const twoLevels = { ...answers.urgency, legend: { "0": "a", "1": "b" } };
+    fetchMock.mockResolvedValueOnce(jsonResponse({ answers: { ...answers, urgency: twoLevels } }));
+    const legend = await decide("hello", questions, config);
+    expect(legend.success).toBe(false);
+    if (!legend.success) expect(legend.error).toMatch(/has 3 levels but the answer's legend has 2/);
+
+    const twoProbs = { ...answers.urgency, probabilities: { "0": 0.5, "1": 0.5 } };
+    fetchMock.mockResolvedValueOnce(jsonResponse({ answers: { ...answers, urgency: twoProbs } }));
+    const probs = await decide("hello", questions, config);
+    expect(probs.success).toBe(false);
+    if (!probs.success) expect(probs.error).toMatch(/has 3 levels but the answer has 2 probabilities/);
+
+    const outOfRange = { ...answers.urgency, score: 3.5 };
+    fetchMock.mockResolvedValueOnce(jsonResponse({ answers: { ...answers, urgency: outOfRange } }));
+    const score = await decide("hello", questions, config);
+    expect(score.success).toBe(false);
+    if (!score.success) expect(score.error).toMatch(/score of 3.5, outside its 3 levels/);
   });
 
   it("fails without a request when the signal is already aborted", async () => {
