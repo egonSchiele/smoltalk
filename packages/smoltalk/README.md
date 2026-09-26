@@ -611,6 +611,21 @@ const r = await decide(state, questions, {
 `provider: "typesafe"` is required for any model name the registry does not
 know. It says "this endpoint speaks the decision protocol".
 
+OpenRouter and Vercel AI Gateway also serve Jev over this protocol, so no
+TypeSafe account is needed. OpenRouter's model name, `jev-1.13`, is in the
+registry:
+
+```typescript
+const r = await decide(state, questions, {
+  model: "jev-1.13",
+  apiKey: { typesafe: process.env.OPENROUTER_API_KEY },
+  baseUrl: { typesafe: "https://openrouter.ai/api" },
+});
+```
+
+Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
+name is `typesafe-ai/jev`, which needs `provider: "typesafe"`.
+
 ## Audio (STT/TTS)
 
 Three audio primitives. `transcribe()` (speech-to-text) and `speak()`

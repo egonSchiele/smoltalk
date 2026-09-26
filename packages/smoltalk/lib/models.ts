@@ -2119,6 +2119,15 @@ export const decisionModels: DecisionModel[] = [
     inputTokenCost: 0.042,
     maxQuestions: 64,
   },
+  {
+    type: "decision",
+    modelName: "jev-1.13",
+    provider: "typesafe",
+    description:
+      "Jev 1.13, the name OpenRouter serves it under (baseUrl.typesafe = https://openrouter.ai/api). Same price and protocol as jev-latest.",
+    inputTokenCost: 0.042,
+    maxQuestions: 64,
+  },
 ];
 
 export type TextModelName = (typeof textModels)[number]["modelName"];

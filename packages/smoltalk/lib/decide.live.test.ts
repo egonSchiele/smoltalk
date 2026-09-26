@@ -2,10 +2,13 @@
  * Live decision-model tests. Each suite runs only when its environment
  * variable is set:
  *
- *   TYPESAFE_API_KEY  — one request to Jev.
- *   LAYA_BASE_URL     — one request to a Laya server (`laya-serve`), which
- *                       speaks the same protocol. The key is not used by Laya
- *                       but the provider requires one, so any value is sent.
+ *   TYPESAFE_API_KEY    — one request to Jev at TypeSafe.
+ *   OPENROUTER_API_KEY  — one request to Jev through OpenRouter, which serves
+ *                         it over the same protocol under the name jev-1.13.
+ *   LAYA_BASE_URL       — one request to a Laya server (`laya-serve`), which
+ *                         speaks the same protocol. The key is not used by
+ *                         Laya but the provider requires one, so any value is
+ *                         sent.
  */
 import { describe, it, expect } from "vitest";
 import { decide, type DecisionQuestion } from "./decide.js";
@@ -61,6 +64,20 @@ function checkShape(r: Awaited<ReturnType<typeof decide>>) {
 describe.runIf(Boolean(process.env.TYPESAFE_API_KEY))("decide - Jev real API", () => {
   it("answers the ticket example", { timeout: 30_000 }, async () => {
     const r = await decide(state, questions, { model: "jev-latest" });
+    checkShape(r);
+    if (r.success) {
+      expect(r.value.cost?.totalCost).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe.runIf(Boolean(process.env.OPENROUTER_API_KEY))("decide - Jev through OpenRouter", () => {
+  it("answers the ticket example", { timeout: 30_000 }, async () => {
+    const r = await decide(state, questions, {
+      model: "jev-1.13",
+      apiKey: { typesafe: process.env.OPENROUTER_API_KEY },
+      baseUrl: { typesafe: "https://openrouter.ai/api" },
+    });
     checkShape(r);
     if (r.success) {
       expect(r.value.cost?.totalCost).toBeGreaterThan(0);

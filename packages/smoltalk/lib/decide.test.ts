@@ -270,3 +270,30 @@ describe("decide", () => {
     expect(r.error).toBe("Request was aborted");
   });
 });
+
+describe("decide through OpenRouter", () => {
+  const originalFetch = globalThis.fetch;
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it("knows jev-1.13 without an explicit provider and prices it", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        model: "typesafe/jev-1.13-20260917",
+        answers: { churn: { type: "noul", noul: 0.97 } },
+        usage: { input_tokens: 1_000_000, output_tokens: 0 },
+      }),
+    );
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    const r = await decide(
+      "hello",
+      { churn: { type: "noul", instructions: "Likely to cancel?" } },
+      { model: "jev-1.13", apiKey: { typesafe: "or-key" }, baseUrl: { typesafe: "https://openrouter.ai/api" } },
+    );
+    if (!r.success) throw new Error(r.error);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://openrouter.ai/api/v1/systemone");
+    expect(r.value.cost?.totalCost).toBe(0.042);
+    expect(r.value.model).toBe("typesafe/jev-1.13-20260917");
+  });
+});
