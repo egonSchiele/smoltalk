@@ -36,6 +36,22 @@ function build(client: SmolAnthropic, config: any) {
   return (client as any).buildRequest(config);
 }
 
+describe("SmolAnthropic.buildRequest logprobs", () => {
+  it("ignores the logprobs option, which the Messages API has no equivalent for", () => {
+    const client = new SmolAnthropic({
+      model: "claude-sonnet-4-6",
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    });
+    const request = build(client, {
+      model: "claude-sonnet-4-6" as const,
+      messages: [userMessage("hi")],
+      logprobs: { top: 3 },
+    });
+    expect(JSON.stringify(request)).not.toContain("logprob");
+  });
+});
+
 describe("mergeConsecutiveMessages", () => {
   it("merges two consecutive user string messages into one", () => {
     const out = mergeConsecutiveMessages([

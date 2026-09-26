@@ -96,6 +96,25 @@ const result = await textSync("Solve this step by step", {
 // result.thinkingBlocks → [{ text: "Let me think...", signature: "WaUj..." }]
 ```
 
+## Logprobs
+
+`logprobs: { top? }` on `SmolConfig` asks for each generated token's log
+probability. OpenAI Chat Completions (`logprobs`/`top_logprobs`), OpenAI
+Responses (`include: ["message.output_text.logprobs"]`/`top_logprobs`),
+and Google (`responseLogprobs`/`logprobs`) honour it; every other provider
+ignores it and returns no field. The result is `PromptResult.logprobs`, an
+array of `TokenLogprob` (`{ token, logprob, top? }`), the same shape from
+every provider. Every translation from a wire shape lives in
+`lib/clients/logprobs.ts`; a client only collects raw pieces and calls in.
+The streaming path accumulates per-chunk pieces and puts the whole array
+on the `done` result. Gemini's streamed `logprobsResult` pieces are treated
+as **deltas** (each chunk covers only its own tokens, like OpenAI's chat
+stream) — this is assumed, **not yet verified against a real streamed Gemini
+call** (no key available at implementation time, 2026-09-26); if a real run
+shows the pieces are cumulative, `mergeGoogleLogprobs` must instead keep the
+last piece. `AssistantMessage.logprobs` carries it and `toJSON` and
+`AssistantMessageJSONSchema` both know it, so it survives a checkpoint.
+
 ## Decision models
 
 `decide(state, questions, config)` in `lib/decide.ts` asks a decision model
