@@ -4,8 +4,6 @@ import {
   openAIChatLogprobParams,
   topAlternatives,
   responsesOutputLogprobs,
-  fromGoogleLogprobs,
-  mergeGoogleLogprobs,
 } from "./logprobs.js";
 
 describe("topAlternatives", () => {
@@ -78,53 +76,5 @@ describe("responsesOutputLogprobs", () => {
       { token: "!", logprob: -0.5 },
     ]);
     expect(responsesOutputLogprobs([{ type: "message", content: [] }])).toBeUndefined();
-  });
-});
-
-describe("fromGoogleLogprobs", () => {
-  it("aligns chosen tokens with the top candidates of the same step", () => {
-    expect(
-      fromGoogleLogprobs({
-        chosenCandidates: [
-          { token: "Hi", logProbability: -0.1 },
-          { token: "!", logProbability: -0.5 },
-        ],
-        topCandidates: [
-          {
-            candidates: [
-              { token: "Hi", logProbability: -0.1 },
-              { token: "Hey", logProbability: -1.9 },
-            ],
-          },
-          { candidates: [] },
-        ],
-      }),
-    ).toEqual([
-      {
-        token: "Hi",
-        logprob: -0.1,
-        top: [
-          { token: "Hi", logprob: -0.1 },
-          { token: "Hey", logprob: -1.9 },
-        ],
-      },
-      { token: "!", logprob: -0.5 },
-    ]);
-    expect(fromGoogleLogprobs(undefined)).toBeUndefined();
-  });
-
-  it("merges streamed pieces in chunk order", () => {
-    const first = {
-      chosenCandidates: [{ token: "Hi", logProbability: -0.1 }],
-      topCandidates: [{ candidates: [{ token: "Hey", logProbability: -1.9 }] }],
-    };
-    const second = {
-      chosenCandidates: [{ token: "!", logProbability: -0.5 }],
-      topCandidates: [{ candidates: [] }],
-    };
-    expect(fromGoogleLogprobs(mergeGoogleLogprobs([first, second]))).toEqual([
-      { token: "Hi", logprob: -0.1, top: [{ token: "Hey", logprob: -1.9 }] },
-      { token: "!", logprob: -0.5 },
-    ]);
   });
 });

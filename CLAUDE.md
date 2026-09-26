@@ -99,21 +99,27 @@ const result = await textSync("Solve this step by step", {
 ## Logprobs
 
 `logprobs: { top? }` on `SmolConfig` asks for each generated token's log
-probability. OpenAI Chat Completions (`logprobs`/`top_logprobs`), OpenAI
-Responses (`include: ["message.output_text.logprobs"]`/`top_logprobs`),
-and Google (`responseLogprobs`/`logprobs`) honour it; every other provider
-ignores it and returns no field. The result is `PromptResult.logprobs`, an
-array of `TokenLogprob` (`{ token, logprob, top? }`), the same shape from
-every provider. Every translation from a wire shape lives in
+probability. Only OpenAI honours it: Chat Completions
+(`logprobs`/`top_logprobs`) and Responses
+(`include: ["message.output_text.logprobs"]`/`top_logprobs`). Every other
+provider ignores it and returns no field. The result is
+`PromptResult.logprobs`, an array of `TokenLogprob` (`{ token, logprob,
+top? }`). Every translation from a wire shape lives in
 `lib/clients/logprobs.ts`; a client only collects raw pieces and calls in.
-The streaming path accumulates per-chunk pieces and puts the whole array
-on the `done` result. Gemini's streamed `logprobsResult` pieces are treated
-as **deltas** (each chunk covers only its own tokens, like OpenAI's chat
-stream) — this is assumed, **not yet verified against a real streamed Gemini
-call** (no key available at implementation time, 2026-09-26); if a real run
-shows the pieces are cumulative, `mergeGoogleLogprobs` must instead keep the
-last piece. `AssistantMessage.logprobs` carries it and `toJSON` and
-`AssistantMessageJSONSchema` both know it, so it survives a checkpoint.
+The streaming path accumulates per-chunk pieces (OpenAI chat sends deltas;
+the Responses `response.output_text.done` event carries the whole part) and
+puts the array on the `done` result. `AssistantMessage.logprobs` carries it
+and `toJSON` and `AssistantMessageJSONSchema` both know it, so it survives a
+checkpoint.
+
+Google is deliberately left out: the Gemini Developer API rejects logprobs
+outright (checked 2026-09-26, `@google/genai` 2.10.0, API-key path).
+Non-streamed with `responseLogprobs` returns `400 Logprobs is not enabled
+for this model` (`... for models/<name>` on 2.5 models), and streaming
+returns `400 LogProbs is not supported in streaming mode` before the
+per-model gate, so every model refuses it. `SmolGoogle.buildRequest`
+therefore never sends the parameter (a guard test pins this). Logprobs may
+exist on Vertex AI, which smoltalk's Google client does not speak.
 
 ## Decision models
 

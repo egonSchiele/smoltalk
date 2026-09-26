@@ -135,7 +135,7 @@ export type SmolConfig = {
 
   /** Ask for the probability of each generated token. `top` is how many
    *  alternatives to return per token, 0 or absent for none. Honoured by
-   *  OpenAI (both APIs) and Google; other providers ignore it. */
+   *  OpenAI (both APIs); other providers ignore it. */
   logprobs?: { top?: number };
 
   responseFormatOptions?: Partial<{

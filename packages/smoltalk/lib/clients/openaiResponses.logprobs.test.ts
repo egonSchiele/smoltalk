@@ -59,13 +59,13 @@ async function lastChunkOfStreamWith(events: any[], config: Partial<SmolConfig>)
 
 describe("SmolOpenAiResponses logprobs", () => {
   it("asks the Responses API to include logprobs", () => {
-    const c = logprobProvider();
+    const provider = logprobProvider();
     const base = { model: "gpt-4o", messages: [userMessage("hi")] } as SmolConfig;
-    expect(c.publicBuild(base)).not.toHaveProperty("include");
-    expect(c.publicBuild({ ...base, logprobs: {} })).toMatchObject({
+    expect(provider.publicBuild(base)).not.toHaveProperty("include");
+    expect(provider.publicBuild({ ...base, logprobs: {} })).toMatchObject({
       include: ["message.output_text.logprobs"],
     });
-    expect(c.publicBuild({ ...base, logprobs: { top: 4 } })).toMatchObject({
+    expect(provider.publicBuild({ ...base, logprobs: { top: 4 } })).toMatchObject({
       include: ["message.output_text.logprobs"],
       top_logprobs: 4,
     });

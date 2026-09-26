@@ -365,6 +365,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     for await (const chunk of completion) {
       const chunkFinish = chunk.choices?.[0]?.finish_reason;
       if (chunkFinish) rawStopReason = chunkFinish;
+      const chunkLogprobs = chunk.choices?.[0]?.logprobs?.content;
+      if (chunkLogprobs) {
+        logprobEntries.push(...chunkLogprobs);
+      }
       // Extract usage from the final chunk
       if (chunk.usage) {
         // Header-based cost (LiteLLM) is unsupported while streaming.
@@ -383,11 +387,6 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
-
-      const chunkLogprobs = chunk.choices?.[0]?.logprobs?.content;
-      if (chunkLogprobs) {
-        logprobEntries.push(...chunkLogprobs);
-      }
 
       if (delta.content) {
         content += delta.content;

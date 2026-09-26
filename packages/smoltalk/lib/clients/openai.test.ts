@@ -280,12 +280,14 @@ async function lastChunkOfStreamWith(chunks: any[], config: Partial<SmolConfig>)
 
 describe("SmolOpenAi logprobs", () => {
   it("asks the chat API for logprobs, with top_logprobs only when alternatives are wanted", () => {
-    const c = logprobProvider();
+    const provider = logprobProvider();
     const base = { model: "gpt-4o", provider: "openai", messages: [] } as SmolConfig;
-    expect(c.publicBuild(base)).not.toHaveProperty("logprobs");
-    expect(c.publicBuild({ ...base, logprobs: {} })).toMatchObject({ logprobs: true });
-    expect(c.publicBuild({ ...base, logprobs: { top: 0 } })).not.toHaveProperty("top_logprobs");
-    expect(c.publicBuild({ ...base, logprobs: { top: 3 } })).toMatchObject({
+    expect(provider.publicBuild(base)).not.toHaveProperty("logprobs");
+    expect(provider.publicBuild({ ...base, logprobs: {} })).toMatchObject({ logprobs: true });
+    expect(provider.publicBuild({ ...base, logprobs: { top: 0 } })).not.toHaveProperty(
+      "top_logprobs",
+    );
+    expect(provider.publicBuild({ ...base, logprobs: { top: 3 } })).toMatchObject({
       logprobs: true,
       top_logprobs: 3,
     });
