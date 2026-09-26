@@ -7,6 +7,8 @@ import {
   TextPartSchema,
   ThinkingBlock,
   ThinkingBlockSchema,
+  TokenLogprob,
+  TokenLogprobSchema,
   TokenUsage,
   TokenUsageSchema,
 } from "../../types.js";
@@ -25,6 +27,7 @@ export const AssistantMessageJSONSchema = z.object({
   refusal: z.string().nullable().optional(),
   toolCalls: z.array(ToolCallJSONSchema).optional(),
   thinkingBlocks: z.array(ThinkingBlockSchema).optional(),
+  logprobs: z.array(TokenLogprobSchema).optional(),
   rawData: z.any().optional(),
   usage: TokenUsageSchema.optional(),
   cost: CostEstimateSchema.optional(),
@@ -40,6 +43,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   public _refusal?: string | null;
   public _toolCalls?: ToolCall[];
   public _thinkingBlocks?: ThinkingBlock[];
+  public _logprobs?: TokenLogprob[];
   public _rawData?: any;
   public _usage?: TokenUsage;
   public _cost?: CostEstimate;
@@ -52,6 +56,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal?: string | null;
       toolCalls?: ToolCall[];
       thinkingBlocks?: ThinkingBlock[];
+      logprobs?: TokenLogprob[];
       rawData?: any;
       usage?: TokenUsage;
       cost?: CostEstimate;
@@ -64,6 +69,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     this._refusal = options.refusal;
     this._toolCalls = options.toolCalls;
     this._thinkingBlocks = options.thinkingBlocks;
+    this._logprobs = options.logprobs;
     this._rawData = options.rawData;
     this._usage = options.usage;
     this._cost = options.cost;
@@ -105,6 +111,10 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._thinkingBlocks;
   }
 
+  get logprobs(): TokenLogprob[] | undefined {
+    return this._logprobs;
+  }
+
   get usage(): TokenUsage | undefined {
     return this._usage;
   }
@@ -122,6 +132,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal: this.refusal,
       toolCalls: this.toolCalls?.map((tc) => tc.toJSON()),
       thinkingBlocks: this._thinkingBlocks,
+      logprobs: this._logprobs,
       usage: this._usage,
       cost: this._cost,
       rawData: this._rawData,
@@ -143,6 +154,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal: result.data.refusal,
       toolCalls: result.data.toolCalls?.map((tc) => ToolCall.fromJSON(tc)),
       thinkingBlocks: result.data.thinkingBlocks,
+      logprobs: result.data.logprobs,
       rawData: result.data.rawData,
       usage: result.data.usage,
       cost: result.data.cost,

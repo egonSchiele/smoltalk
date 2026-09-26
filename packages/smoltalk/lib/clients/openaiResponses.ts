@@ -15,6 +15,12 @@ import { BaseClient } from "./baseClient.js";
 import { zodToOpenAIResponsesTool } from "../util/tool.js";
 import { responseFormatToJsonSchema } from "../util/jsonSchema.js";
 import { normalizeOpenAIResponsesStopReason } from "../util/stopReason.js";
+import {
+  fromOpenAILogprobs,
+  responsesOutputLogprobs,
+  topAlternatives,
+  type OpenAILogprob,
+} from "./logprobs.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { ModelName } from "../models.js";
 import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
@@ -192,6 +198,14 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       request.reasoning = { effort: config.reasoningEffort };
     }
 
+    if (config.logprobs !== undefined) {
+      request.include = ["message.output_text.logprobs"];
+      const top = topAlternatives(config.logprobs);
+      if (top !== undefined) {
+        request.top_logprobs = top;
+      }
+    }
+
     Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
     return request;
@@ -288,6 +302,8 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     const incompleteReason = (response as any).incomplete_details?.reason;
     const rawStopReason = incompleteReason ?? response.status ?? undefined;
 
+    const logprobs = responsesOutputLogprobs(response.output);
+
     const result: PromptResult = {
       output,
       toolCalls,
@@ -305,6 +321,9 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     }
     if (hostedToolResults.length > 0) {
       result.hostedToolResults = hostedToolResults;
+    }
+    if (logprobs !== undefined) {
+      result.logprobs = logprobs;
     }
     return success(result);
   }
@@ -336,6 +355,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     let usage: TokenUsage | undefined;
     let cost: CostEstimate | undefined;
     let finalResponse: any;
+    const logprobEntries: OpenAILogprob[] = [];
 
     for await (const event of stream as AsyncIterable<ResponseStreamEvent>) {
       if (
@@ -348,6 +368,11 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
         case "response.output_text.delta": {
           content += event.delta;
           yield { type: "text", text: event.delta };
+          break;
+        }
+
+        case "response.output_text.done": {
+          logprobEntries.push(...((event as any).logprobs ?? []));
           break;
         }
 
@@ -419,6 +444,8 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     const incompleteReason = finalResponse?.incomplete_details?.reason;
     const rawStopReason = incompleteReason ?? finalResponse?.status ?? undefined;
 
+    const logprobs = fromOpenAILogprobs(logprobEntries);
+
     const result: PromptResult = {
       output: content || null,
       toolCalls,
@@ -433,6 +460,9 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     };
     if (rawStopReason) {
       result.rawStopReason = rawStopReason;
+    }
+    if (logprobs !== undefined) {
+      result.logprobs = logprobs;
     }
 
     yield { type: "done", result };

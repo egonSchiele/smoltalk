@@ -11,6 +11,7 @@ import type { ToolMessageJSON } from "./ToolMessage.js";
 import {
   CostEstimate,
   TextPart,
+  TokenLogprob,
   TokenUsage,
   UserContentInput,
   ImagePart,
@@ -81,6 +82,7 @@ export function assistantMessage(
     refusal?: string | null;
     toolCalls?: Array<any>;
     thinkingBlocks?: Array<{ text: string; signature: string }>;
+    logprobs?: TokenLogprob[];
     rawData?: any;
     usage?: TokenUsage;
     cost?: CostEstimate;

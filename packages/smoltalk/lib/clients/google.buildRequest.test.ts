@@ -76,6 +76,20 @@ describe("SmolGoogle.buildRequest — thinking config", () => {
   });
 });
 
+describe("SmolGoogle.buildRequest — logprobs", () => {
+  // The Gemini Developer API rejects logprobs outright — non-streamed returns
+  // "400 Logprobs is not enabled for this model" on every model, and streaming
+  // returns "400 LogProbs is not supported in streaming mode" (checked
+  // 2026-09-26, @google/genai 2.10.0). So Google ignores the option, like
+  // Anthropic, rather than sending a parameter that breaks the call.
+  it("ignores the logprobs option, which the Developer API rejects", () => {
+    const req = build("gemini-2.5-flash", { logprobs: { top: 3 } });
+    expect(req.config).not.toHaveProperty("responseLogprobs");
+    expect(req.config).not.toHaveProperty("logprobs");
+    expect(JSON.stringify(req)).not.toContain("logprob");
+  });
+});
+
 describe("SmolGoogle.buildRequest — web_search + function tools", () => {
   it("sets includeServerSideToolInvocations on Gemini 3+", () => {
     const { config } = build("gemini-3-flash-preview", {
