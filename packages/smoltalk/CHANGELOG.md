@@ -1,5 +1,11 @@
 # Changelog
 
+## smoltalk 0.15.2 (2026-09-26)
+
+### Added
+
+- support for logprobs
+
 ## smoltalk 0.15.1 (2026-09-26)
 
 ### Added
