@@ -28,7 +28,7 @@ describe("openrouter hosted tools", () => {
       (t) => t.provider === "openrouter" && t.name === "web_search",
     );
     expect(tool?.pricing).toEqual(
-      expect.objectContaining({ unit: "per_call", amount: 0.02 }),
+      expect.objectContaining({ unit: "per_call", amount: 0.007 }),
     );
   });
 });
