@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getModel, modelSupportsInputModality } from "./models.js";
+import { getModel, getModelForProvider, modelSupportsInputModality } from "./models.js";
 
 // Rule: provider "openai-responses" is reserved for models that are ONLY
 // available via the Responses API (the *-pro reasoning models). Every other
@@ -60,5 +60,18 @@ describe("modelSupportsInputModality with an API-variant provider", () => {
     expect(
       modelSupportsInputModality("o3-pro", "image", undefined, "openai-responses"),
     ).toBe(true);
+  });
+});
+
+describe("decision model providers", () => {
+  it("resolves OpenRouter decision metadata without changing TypeSafe's default", () => {
+    expect(getModelForProvider("openrouter", "jev-1.13")).toMatchObject({
+      type: "decision",
+      provider: "openrouter",
+      maxQuestions: 64,
+      inputTokenCost: 0.042,
+    });
+    expect(getModel("jev-1.13")?.provider).toBe("typesafe");
+    expect(getModelForProvider("typesafe", "jev-1.13")?.type).toBe("decision");
   });
 });

@@ -615,12 +615,12 @@ const r = await decide(
 );
 ```
 
-`provider: "typesafe"` is required for any model name the registry does not
-know. It says "this endpoint speaks the decision protocol".
+For a Laya model name the registry does not know, set `provider: "typesafe"`
+to select its decision protocol.
 
 OpenRouter and Vercel AI Gateway also serve Jev over this protocol, so no
-TypeSafe account is needed. OpenRouter's model name, `jev-1.13`, is in the
-registry:
+TypeSafe account is needed. To use OpenRouter, set `provider: "openrouter"`
+and provide `OPENROUTER_API_KEY` or `config.apiKey.openRouter`:
 
 ```typescript
 import { decide } from "smoltalk";
@@ -630,11 +630,16 @@ const r = await decide(
   { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
   {
     model: "jev-1.13",
-    apiKey: { typesafe: process.env.OPENROUTER_API_KEY },
-    baseUrl: { typesafe: "https://openrouter.ai/api" },
+    provider: "openrouter",
+    apiKey: { openRouter: process.env.OPENROUTER_API_KEY },
   },
 );
 ```
+
+OpenRouter requests go to `https://openrouter.ai/api/v1/systemone`. Set
+`baseUrl.openRouter` to override the API base URL, including its version
+path; `decide()` appends `/systemone`. Without an explicit provider,
+`jev-1.13` still defaults to TypeSafe.
 
 Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
 name is `typesafe-ai/jev`, which needs `provider: "typesafe"`.

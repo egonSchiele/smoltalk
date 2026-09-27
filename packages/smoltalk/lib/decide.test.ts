@@ -46,6 +46,7 @@ describe("decide", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
+    vi.stubEnv("OPENROUTER_API_KEY", "");
     fetchMock = vi.fn(async () =>
       jsonResponse({ model: "jev-1.13", answers, usage: { input_tokens: 42, output_tokens: 0 } }),
     );
@@ -55,6 +56,7 @@ describe("decide", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     globalThis.fetch = originalFetch;
     if (originalKey === undefined) delete process.env.TYPESAFE_API_KEY;
     else process.env.TYPESAFE_API_KEY = originalKey;
@@ -127,7 +129,7 @@ describe("decide", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("fails before any request for a provider that is not typesafe", async () => {
+  it("fails before any request for an unsupported decision provider", async () => {
     const r = await decide("hello", questions, { model: "gpt-4o-mini", apiKey: { typesafe: "k" } });
     expect(r.success).toBe(false);
     if (r.success) return;
@@ -160,6 +162,84 @@ describe("decide", () => {
       baseUrl: { typesafe: "http://localhost:8000/" },
     });
     expect(fetchMock.mock.calls[0][0]).toBe("http://localhost:8000/v1/systemone");
+  });
+
+  it("uses OpenRouter credentials and its versioned decision endpoint", async () => {
+    vi.stubEnv("OPENROUTER_API_KEY", "env-or-key");
+    const openRouter = { model: "jev-1.13", provider: "openrouter" };
+    const fromEnv = await decide("hello", questions, openRouter);
+    expect(fromEnv.success).toBe(true);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://openrouter.ai/api/v1/systemone");
+    expect((fetchMock.mock.calls[0][1] as RequestInit).headers).toMatchObject({
+      Authorization: "Bearer env-or-key",
+    });
+
+    const fromConfig = await decide("hello", questions, {
+      ...openRouter,
+      apiKey: { openRouter: "config-or-key", typesafe: "unrelated-key" },
+    });
+    expect(fromConfig.success).toBe(true);
+    const init = fetchMock.mock.calls[1][1] as RequestInit;
+    expect(init.headers).toMatchObject({ Authorization: "Bearer config-or-key" });
+    expect(JSON.parse(init.body as string)).toEqual({ model: "jev-1.13", state: "hello", questions });
+  });
+
+  it("names OpenRouter's key setting when only a TypeSafe key is supplied", async () => {
+    const r = await decide("hello", questions, {
+      model: "jev-1.13",
+      provider: "openrouter",
+      apiKey: { typesafe: "unrelated-key" },
+    });
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    expect(r.error).toContain("config.apiKey.openRouter");
+    expect(r.error).toContain("OPENROUTER_API_KEY");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["https://gateway.example/custom/v1", "https://gateway.example/custom/v1/systemone"],
+    ["https://gateway.example/custom/v1///", "https://gateway.example/custom/v1/systemone"],
+  ])("preserves an OpenRouter base URL %s", async (baseUrl, endpoint) => {
+    const r = await decide("hello", questions, {
+      model: "jev-1.13",
+      provider: "openrouter",
+      apiKey: { openRouter: "or-key" },
+      baseUrl: { openRouter: baseUrl },
+    });
+    expect(r.success).toBe(true);
+    expect(fetchMock.mock.calls[0][0]).toBe(endpoint);
+  });
+
+  it("prices the requested OpenRouter decision model", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ model: "typesafe/jev-1.13-20260917", answers, usage: { input_tokens: 1_000_000, output_tokens: 20 } }),
+    );
+    const r = await decide("hello", questions, {
+      model: "jev-1.13",
+      provider: "openrouter",
+      apiKey: { openRouter: "or-key" },
+    });
+    if (!r.success) throw new Error(r.error);
+    expect(r.value.cost).toEqual({ inputCost: 0.042, outputCost: 0, totalCost: 0.042, currency: "USD" });
+    expect(r.value.model).toBe("typesafe/jev-1.13-20260917");
+    expect(r.value.usage).toEqual({ inputTokens: 1_000_000, outputTokens: 20 });
+  });
+
+  it("enforces the OpenRouter model's question cap before sending a request", async () => {
+    const many: Record<string, DecisionQuestion> = {};
+    for (let i = 0; i < 65; i++) {
+      many[`q${i}`] = { type: "noul", instructions: `Question ${i}?` };
+    }
+    const r = await decide("hello", many, {
+      model: "jev-1.13",
+      provider: "openrouter",
+      apiKey: { openRouter: "or-key" },
+    });
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    expect(r.error).toMatch(/at most 64/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("refuses an empty question map", async () => {
@@ -342,7 +422,7 @@ describe("decide", () => {
   });
 });
 
-describe("decide through OpenRouter", () => {
+describe("decide through a TypeSafe-compatible gateway", () => {
   const originalFetch = globalThis.fetch;
   afterEach(() => {
     globalThis.fetch = originalFetch;

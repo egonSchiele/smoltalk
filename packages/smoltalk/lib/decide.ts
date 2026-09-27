@@ -9,8 +9,8 @@
  *
  * `decide()` follows the shape of `embed()`: payload first, config last,
  * provider and key and base URL resolved through the shared helpers. There
- * is one provider, `typesafe`, which is the wire protocol. A Laya server
- * speaks the same protocol, so it is reached by setting `baseUrl.typesafe`.
+ * are two providers: `typesafe` and `openrouter`. A Laya server speaks the
+ * TypeSafe protocol, so it is reached by setting `baseUrl.typesafe`.
  */
 import { z } from "zod";
 import type { ModelDataBlob } from "./modelData.js";
@@ -80,16 +80,19 @@ export type DecideConfig = {
   /** Required when the model is not in the registry. */
   provider?: string;
 
-  /** API keys, nested by provider. Falls back to TYPESAFE_API_KEY. */
+  /** API keys, nested by provider. Falls back to TYPESAFE_API_KEY or OPENROUTER_API_KEY. */
   apiKey?: {
     typesafe?: string;
+    openRouter?: string;
     [provider: string]: string | undefined;
   };
 
-  /** Custom base URLs, nested by provider. Falls back to TYPESAFE_BASE_URL,
-   *  then TypeSafe's host. Point `typesafe` at a Laya server to use Laya. */
+  /** Custom base URLs, nested by provider. TypeSafe falls back to TYPESAFE_BASE_URL,
+   *  then its host. OpenRouter defaults to https://openrouter.ai/api/v1.
+   *  Point `typesafe` at a Laya server to use Laya. */
   baseUrl?: {
     typesafe?: string;
+    openRouter?: string;
     [provider: string]: string | undefined;
   };
 
@@ -262,9 +265,9 @@ export async function decide(
   } catch (err) {
     return failure(errorMessage(err));
   }
-  if (provider !== DECISION_PROVIDER) {
+  if (provider !== DECISION_PROVIDER && provider !== "openrouter") {
     return failure(
-      `Provider "${provider}" does not answer decisions. Only "${DECISION_PROVIDER}" does; set config.provider to it for a model the registry does not know.`,
+      `Provider "${provider}" does not answer decisions. Use "${DECISION_PROVIDER}" or "openrouter"; set config.provider for a model the registry does not know.`,
     );
   }
 
@@ -280,10 +283,13 @@ export async function decide(
   const apiKey = resolveApiKey(provider, config);
   if (!apiKey) {
     return failure(
-      "No TypeSafe API key provided. Set config.apiKey.typesafe or the TYPESAFE_API_KEY environment variable.",
+      provider === "openrouter"
+        ? "No OpenRouter API key provided. Set config.apiKey.openRouter or the OPENROUTER_API_KEY environment variable."
+        : "No TypeSafe API key provided. Set config.apiKey.typesafe or the TYPESAFE_API_KEY environment variable.",
     );
   }
   const baseUrl = resolveBaseUrl(provider, config)!.replace(/\/+$/, "");
+  const endpoint = provider === "openrouter" ? `${baseUrl}/systemone` : `${baseUrl}/v1/systemone`;
 
   if (config.abortSignal?.aborted) {
     return failure("Request was aborted");
@@ -291,7 +297,7 @@ export async function decide(
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}/v1/systemone`, {
+    response = await fetch(endpoint, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
