@@ -1,5 +1,11 @@
 # Changelog
 
+## smoltalk 0.15.3 (2026-09-26)
+
+### Added
+
+- Support OpenRouter decision models with native provider settings
+
 ## smoltalk 0.15.2 (2026-09-26)
 
 ### Added
