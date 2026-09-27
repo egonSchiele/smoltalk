@@ -2124,7 +2124,16 @@ export const decisionModels: DecisionModel[] = [
     modelName: "jev-1.13",
     provider: "typesafe",
     description:
-      "Jev 1.13, the name OpenRouter serves it under (baseUrl.typesafe = https://openrouter.ai/api). Same price and protocol as jev-latest.",
+      "Jev 1.13 through the TypeSafe decision protocol. Same price and question limit as jev-latest.",
+    inputTokenCost: 0.042,
+    maxQuestions: 64,
+  },
+  {
+    type: "decision",
+    modelName: "jev-1.13",
+    provider: "openrouter",
+    description:
+      "Jev 1.13 through OpenRouter. Answers yes/no, choice, and score questions with calibrated probabilities.",
     inputTokenCost: 0.042,
     maxQuestions: 64,
   },
