@@ -32,7 +32,7 @@ describe("getHostedTools filtering", () => {
   });
 
   it("filters by model: provider match + models allowlist", () => {
-    // gemini-2.5-flash is a baked google model; maps_grounding is Gemini-3-only -> excluded.
+    // gemini-2.5-flash is a baked google model; the blob's maps_grounding allowlist omits it -> excluded.
     const names = getHostedTools({ model: "gemini-2.5-flash", modelData: blob }).map((t) => t.name);
     expect(names).toContain("google_search");
     expect(names).not.toContain("maps_grounding");
@@ -65,10 +65,19 @@ describe("baked-in hosted-tool catalog", () => {
     }
   });
 
-  it("maps_grounding is gated to the Gemini 3 family", () => {
+  it("maps_grounding is gated to the Gemini 3 and 2.5 families", () => {
     const maps = hostedTools.find((t) => t.name === "maps_grounding");
     expect(maps?.models?.length).toBeGreaterThan(0);
-    expect(maps?.models?.every((m) => m.startsWith("gemini-3"))).toBe(true);
+    expect(
+      maps?.models?.every((m) => m.startsWith("gemini-3") || m.startsWith("gemini-2.5-")),
+    ).toBe(true);
+    expect(maps?.models).toContain("gemini-2.5-flash");
+  });
+
+  it("prices maps_grounding per prompt on Gemini 2.5", () => {
+    const maps = hostedTools.find((t) => t.name === "maps_grounding")!;
+    expect(hostedToolPricingFor(maps, "gemini-2.5-flash")?.amount).toBe(0.025);
+    expect(hostedToolPricingFor(maps, "gemini-3.8-flash")?.amount).toBe(0.014);
   });
 });
 

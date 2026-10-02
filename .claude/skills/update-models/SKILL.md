@@ -1,6 +1,6 @@
 ---
 name: update-models
-description: Update model data in lib/models.ts with latest specifications from every provider in the registry (OpenAI, Anthropic, Google, Groq)
+description: Update model data in lib/models.ts with latest specifications from every provider in the registry (OpenAI, Anthropic, Google, Groq, TypeSafe/OpenRouter decision models)
 ---
 
 # Update Model Data Skill
@@ -21,9 +21,9 @@ First, read the current `lib/models.ts` file to understand the existing structur
 grep -oE 'provider: "[a-z-]+"' lib/models.ts | sort -u
 ```
 
-Every provider that comes back is in scope for this run. Steps 2–5 below cover the providers present when this skill was last revised; if the grep returns one that has no step, refresh it anyway using the same fields, and add a step for it. A provider silently dropping out of the refresh is the failure mode this check exists to prevent — it is how `claude-opus-5` sat missing from the catalog for six weeks across two "update models" runs.
+Every provider that comes back is in scope for this run. Steps 2–6 below cover the providers present when this skill was last revised; if the grep returns one that has no step, refresh it anyway using the same fields, and add a step for it. A provider silently dropping out of the refresh is the failure mode this check exists to prevent — it is how `claude-opus-5` sat missing from the catalog for six weeks across two "update models" runs.
 
-Note that the grep also matches the `hostedTools` registry at the bottom of the file, so a provider may appear there with no model entries of its own (`openrouter` is currently one). Those are tools, not models — refresh their pricing in step 6, and don't go looking for models the provider doesn't have in the catalog.
+Note that the grep also matches the `hostedTools` registry at the bottom of the file, so a provider may appear there with no model entries of its own. Those are tools, not models — refresh their pricing in step 7, and don't go looking for models the provider doesn't have in the catalog. (`openrouter` has both: a hosted `web_search` tool and a decision-model entry, covered in step 6.)
 
 For each provider, gather:
 
@@ -62,11 +62,15 @@ Cover the current Pro, Flash, and Flash-Lite lines, image generation models, and
 
 ### 5. Fetch Latest Groq Model Information
 
-Official pricing: https://groq.com/pricing
+Official pricing: https://console.groq.com/docs/models (per-model rates), plus https://console.groq.com/docs/speech-to-text and https://console.groq.com/docs/text-to-speech for limits. (`groq.com/pricing` now redirects to the homepage.)
 
 Groq entries are speech-to-text and text-to-speech models (`perMinuteCost` / `perCharacterCost`), not text models. Check the minimum billable duration and upload caps as well as the rates.
 
-### 6. Update the Models File
+### 6. Fetch Latest Decision Model Information (TypeSafe, OpenRouter)
+
+The `decisionModels` array holds TypeSafe's Jev models, cataloged once per route: `provider: "typesafe"` (direct, including the `jev-latest` alias) and `provider: "openrouter"`. They are not text models — the only fields are `inputTokenCost` (output is free) and `maxQuestions` per request. Check TypeSafe's own docs for the current Jev version, what `jev-latest` points to, the per-1M-input price, and the question limit; check the model's openrouter.ai page for the OpenRouter rate. A new Jev version usually needs an entry under both providers.
+
+### 7. Update the Models File
 
 For each model that needs updating:
 
@@ -80,12 +84,12 @@ For each model that needs updating:
 
 Also refresh the `hostedTools` registry in the same file — per-call rates, free allowances, and the `models` allowlists that gate a tool to specific model IDs. A new model added above often belongs in one of those allowlists (e.g. `maps_grounding`), and that is easy to miss when only the model arrays are in view.
 
-### 7. Fetch performance data
+### 8. Fetch performance data
 
 If available, fetch any performance benchmarks or latency information for the models to set the `outputTokensPerSecond` field on models. Here's a site that provides this data:
 https://artificialanalysis.ai/leaderboards/models
 
-### 8. Verify Changes
+### 9. Verify Changes
 
 After making updates:
 
@@ -94,7 +98,7 @@ After making updates:
 - Check that new models follow the existing type structure
 - Verify that pricing information is accurate
 
-### 9. Provide Summary
+### 10. Provide Summary
 
 Create a clear summary for the user showing:
 

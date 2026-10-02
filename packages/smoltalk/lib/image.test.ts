@@ -20,7 +20,7 @@ vi.mock("./image/google.js", () => ({
     success: true,
     value: {
       images: [{ data: new Uint8Array([2]), mimeType: "image/png" }],
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3.1-flash-image",
     },
   }),
 }));
@@ -46,7 +46,7 @@ describe("image", () => {
 
   it("dispatches to Google for Gemini image models", async () => {
     await image("a cat", {
-      model: "gemini-2.5-flash-image",
+      model: "gemini-3.1-flash-image",
       apiKey: { google: "k" },
     });
     expect(googleImage).toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe("image", () => {
           mimeType: "image/png",
         },
       },
-      { model: "gemini-2.5-flash-image", apiKey: { google: "k" } },
+      { model: "gemini-3.1-flash-image", apiKey: { google: "k" } },
     );
     expect(r.success).toBe(false);
     if (!r.success) {

@@ -124,6 +124,7 @@ export type EmbeddingsModel = {
   type: "embeddings";
   modelName: string;
   provider: string;
+  disabled?: boolean;
 
   // costs per 1M tokens, in dollars
   tokenCost?: number;
@@ -291,7 +292,7 @@ export const textModels = [
     inputTokenCost: 0.15,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 0.6,
-    outputTokensPerSecond: 65,
+    outputTokensPerSecond: 110,
     modalities: {
       input: ["text", "image", "pdf"],
       output: ["text"],
@@ -361,7 +362,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "o3-mini",
-    description: "o3-mini is our most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini. o3-mini also supports key developer features, like Structured Outputs, function calling, Batch API, and more. Like other models in the o-series, it is designed to excel at science, math, and coding tasks. Knowledge cutoff: June 2024.",
+    description: "o3-mini is our most recent small reasoning model, providing high intelligence at the same cost and latency targets of o1-mini. o3-mini also supports key developer features, like Structured Outputs, function calling, Batch API, and more. Like other models in the o-series, it is designed to excel at science, math, and coding tasks. Knowledge cutoff: June 2024. Scheduled shutdown October 23, 2026; migrate to gpt-5.6-sol.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 1.1,
@@ -391,7 +392,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "o4-mini",
-    description: "Latest small o-series model optimized for fast, effective reasoning with exceptional performance in coding and visual tasks. Knowledge cutoff: June 2024.",
+    description: "Latest small o-series model optimized for fast, effective reasoning with exceptional performance in coding and visual tasks. Knowledge cutoff: June 2024. Scheduled shutdown October 23, 2026; migrate to gpt-5.6-terra.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 1.1,
@@ -447,7 +448,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "o1",
-    description: "o1 is a reasoning model designed to excel at complex reasoning tasks including science, math, and coding. The knowledge cutoff for o1 models is October, 2023.",
+    description: "o1 is a reasoning model designed to excel at complex reasoning tasks including science, math, and coding. The knowledge cutoff for o1 models is October, 2023. Scheduled shutdown October 23, 2026; migrate to gpt-5.6-sol.",
     maxInputTokens: 200000,
     maxOutputTokens: 100000,
     inputTokenCost: 15,
@@ -550,7 +551,7 @@ export const textModels = [
     inputTokenCost: 2,
     cachedInputTokenCost: 0.5,
     outputTokenCost: 8,
-    outputTokensPerSecond: 105,
+    outputTokensPerSecond: 141,
     modalities: {
       input: ["text", "image", "pdf"],
       output: ["text"],
@@ -573,7 +574,7 @@ export const textModels = [
     inputTokenCost: 0.4,
     cachedInputTokenCost: 0.1,
     outputTokenCost: 1.6,
-    outputTokensPerSecond: 78,
+    outputTokensPerSecond: 142,
     modalities: {
       input: ["text", "image", "pdf"],
       output: ["text"],
@@ -590,7 +591,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "gpt-4.1-nano",
-    description: "GPT-4.1 nano is the fastest and most affordable GPT-4.1 variant with 1M token context window. Knowledge cutoff: June 2024.",
+    description: "GPT-4.1 nano is the fastest and most affordable GPT-4.1 variant with 1M token context window. Knowledge cutoff: June 2024. Scheduled shutdown October 23, 2026; migrate to gpt-5.6-luna.",
     maxInputTokens: 1047576,
     maxOutputTokens: 32768,
     inputTokenCost: 0.1,
@@ -649,7 +650,7 @@ export const textModels = [
     inputTokenCost: 0.25,
     cachedInputTokenCost: 0.025,
     outputTokenCost: 2,
-    outputTokensPerSecond: 69,
+    outputTokensPerSecond: 127,
     reasoning: {
       levels: ["minimal", "low", "medium", "high"],
       defaultLevel: "medium",
@@ -709,6 +710,7 @@ export const textModels = [
     inputTokenCost: 1.25,
     cachedInputTokenCost: 0.125,
     outputTokenCost: 10,
+    outputTokensPerSecond: 106,
     reasoning: {
       levels: ["none", "low", "medium", "high"],
       defaultLevel: "none",
@@ -738,7 +740,7 @@ export const textModels = [
     inputTokenCost: 1.75,
     cachedInputTokenCost: 0.175,
     outputTokenCost: 14,
-    outputTokensPerSecond: 61,
+    outputTokensPerSecond: 79,
     reasoning: {
       levels: ["none", "low", "medium", "high"],
       defaultLevel: "none",
@@ -794,6 +796,7 @@ export const textModels = [
     inputTokenCost: 2.5,
     cachedInputTokenCost: 0.25,
     outputTokenCost: 15,
+    outputTokensPerSecond: 88,
     longContext: {
       inputTokenCost: 5,
       cachedInputTokenCost: 0.5,
@@ -829,7 +832,7 @@ export const textModels = [
     inputTokenCost: 0.75,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 4.5,
-    outputTokensPerSecond: 180,
+    outputTokensPerSecond: 216,
     reasoning: {
       levels: ["none", "low", "medium", "high", "xhigh"],
       defaultLevel: "none",
@@ -922,7 +925,7 @@ export const textModels = [
     inputTokenCost: 5,
     cachedInputTokenCost: 0.5,
     outputTokenCost: 30,
-    outputTokensPerSecond: 66,
+    outputTokensPerSecond: 86,
     longContext: {
       inputTokenCost: 10,
       cachedInputTokenCost: 1,
@@ -991,7 +994,7 @@ export const textModels = [
     inputTokenCost: 10,
     cachedInputTokenCost: 1,
     outputTokenCost: 50,
-    outputTokensPerSecond: 69,
+    outputTokensPerSecond: 52,
     longContext: {
       inputTokenCost: 20,
       cachedInputTokenCost: 2,
@@ -1020,13 +1023,51 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "gpt-6.1-sol",
+    description: "GPT-6.1 Sol (released 2026-09-29) is the newer Sol model, replacing gpt-6-sol in OpenAI's flagship lineup at the same per-token price; cache reads are 0.05x input ($0.10/1M) instead of 0.1x. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Reasoning cannot be set to none. Cataloged under openai-responses because tool calling requires the Responses API (Chat Completions works only without tools). Knowledge cutoff: April 2026.",
+    maxInputTokens: 1050000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 2,
+    cachedInputTokenCost: 0.1,
+    cacheCreationInputTokenCost: 2.5,
+    outputTokenCost: 10,
+    outputTokensPerSecond: 64,
+    longContext: {
+      inputTokenCost: 4,
+      cachedInputTokenCost: 0.2,
+      outputTokenCost: 15,
+      thresholdTokens: 272000,
+    },
+    reasoning: {
+      levels: ["low", "medium", "high", "xhigh", "max"],
+      defaultLevel: "medium",
+      canDisable: false,
+      outputsThinking: false,
+      outputsSignatures: false,
+    },
+    modalities: {
+      input: ["text", "image"],
+      output: ["text"],
+    },
+    knowledge: "2026-04-30",
+    releaseDate: "2026-09-29",
+    lastUpdated: "2026-09-29",
+    family: "gpt",
+    openWeights: false,
+    structuredOutput: true,
+    temperatureSupported: false,
+    provider: "openai-responses",
+  },
+  {
+    type: "text",
     modelName: "gpt-6-sol",
-    description: "GPT-6 Sol balances capability and cost in the GPT-6 family. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Knowledge cutoff: April 2026.",
+    description: "GPT-6 Sol balances capability and cost in the GPT-6 family. Superseded by gpt-6.1-sol (same price, cheaper cache reads); not deprecated. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Knowledge cutoff: April 2026.",
     maxInputTokens: 1050000,
     maxOutputTokens: 128000,
     inputTokenCost: 2,
     cachedInputTokenCost: 0.2,
     outputTokenCost: 10,
+    outputTokensPerSecond: 87,
     longContext: {
       inputTokenCost: 4,
       cachedInputTokenCost: 0.4,
@@ -1062,6 +1103,7 @@ export const textModels = [
     inputTokenCost: 0.1,
     cachedInputTokenCost: 0.01,
     outputTokenCost: 0.5,
+    outputTokensPerSecond: 128,
     longContext: {
       inputTokenCost: 0.2,
       cachedInputTokenCost: 0.02,
@@ -1169,7 +1211,7 @@ export const textModels = [
     inputTokenCost: 0.2,
     cachedInputTokenCost: 0.02,
     outputTokenCost: 1.2,
-    outputTokensPerSecond: 165,
+    outputTokensPerSecond: 124,
     longContext: {
       inputTokenCost: 0.4,
       cachedInputTokenCost: 0.04,
@@ -1264,14 +1306,14 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-3.8-flash",
-    description: "Google's most intelligent Flash model (GA September 2, 2026), built on Gemini 3.7 Flash and engineered for long-horizon software engineering, autonomous agents, and complex enterprise workflows. 1M context window, 64K output. Introductory pricing $0.75 input / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Thinking levels low/medium/high — `minimal` returns an error.",
+    description: "Google's most intelligent Flash model (GA September 2, 2026), built on Gemini 3.7 Flash and engineered for long-horizon software engineering, autonomous agents, and complex enterprise workflows. 1M context window, 64K output. Introductory pricing $0.75 input (all modalities, including audio) / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Thinking levels low/medium/high — `minimal` returns an error.",
     maxInputTokens: 1048576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.75,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 3.75,
-    outputTokensPerSecond: 329,
-    inputAudioTokenCost: 1.5,
+    outputTokensPerSecond: 249,
+    inputAudioTokenCost: 0.75,
     reasoning: {
       levels: ["low", "medium", "high"],
       defaultLevel: "medium",
@@ -1295,14 +1337,14 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-3.7-flash",
-    description: "Gemini 3.7 Flash (GA August 13, 2026) for complex coding, agentic workflows, and reliable multi-step execution. Superseded by gemini-3.8-flash but fully supported. 1M context window, 64K output. Introductory pricing $0.75 input / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Thinking levels low/medium/high — `minimal` returns an error.",
+    description: "Gemini 3.7 Flash (GA August 13, 2026) for complex coding, agentic workflows, and reliable multi-step execution. Superseded by gemini-3.8-flash but fully supported. 1M context window, 64K output. Introductory pricing $0.75 input (all modalities, including audio) / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Thinking levels low/medium/high — `minimal` returns an error.",
     maxInputTokens: 1048576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.75,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 3.75,
     outputTokensPerSecond: 272,
-    inputAudioTokenCost: 1.5,
+    inputAudioTokenCost: 0.75,
     reasoning: {
       levels: ["low", "medium", "high"],
       defaultLevel: "medium",
@@ -1326,16 +1368,17 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-3.6-flash",
-    description: "Gemini 3.6 Flash (GA July 21, 2026), balancing speed and multimodal capabilities across general agentic and everyday tasks. Superseded by gemini-3.7-flash / gemini-3.8-flash. 1M context window, 64K output. Introductory pricing $0.75 input / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Context caching: $0.075/1M read.",
+    description: "Gemini 3.6 Flash (GA July 21, 2026), balancing speed and multimodal capabilities across general agentic and everyday tasks. Superseded by gemini-3.7-flash / gemini-3.8-flash. 1M context window, 64K output. Introductory pricing $0.75 input (all modalities, including audio) / $3.75 output per 1M through December 31, 2026 ($1.50 / $7.50 thereafter). Context caching: $0.075/1M read.",
     maxInputTokens: 1048576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.75,
     cachedInputTokenCost: 0.075,
     outputTokenCost: 3.75,
-    inputAudioTokenCost: 1.5,
+    outputTokensPerSecond: 185,
+    inputAudioTokenCost: 0.75,
     reasoning: {
       levels: ["minimal", "low", "medium", "high"],
-      defaultLevel: "high",
+      defaultLevel: "medium",
       canDisable: false,
       outputsThinking: true,
       outputsSignatures: true,
@@ -1362,10 +1405,11 @@ export const textModels = [
     inputTokenCost: 1.5,
     cachedInputTokenCost: 0.15,
     outputTokenCost: 9,
+    outputTokensPerSecond: 211,
     inputAudioTokenCost: 1.5,
     reasoning: {
       levels: ["minimal", "low", "medium", "high"],
-      defaultLevel: "high",
+      defaultLevel: "medium",
       canDisable: false,
       outputsThinking: true,
       outputsSignatures: true,
@@ -1386,7 +1430,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-3-flash-preview",
-    description: "Gemini 3 Flash preview. Superseded by gemini-3.5-flash. 1M context window and 64K output. Optimized for agentic workflows and coding.",
+    description: "Gemini 3 Flash preview. Superseded by gemini-3.6-flash (Google's named replacement); no shutdown date announced. 1M context window and 64K output. Optimized for agentic workflows and coding.",
     maxInputTokens: 1048576,
     maxOutputTokens: 65536,
     inputTokenCost: 0.5,
@@ -1454,7 +1498,7 @@ export const textModels = [
     inputTokenCost: 0.25,
     cachedInputTokenCost: 0.025,
     outputTokenCost: 1.5,
-    outputTokensPerSecond: 379,
+    outputTokensPerSecond: 267,
     inputAudioTokenCost: 0.5,
     reasoning: {
       levels: ["minimal", "low", "medium", "high"],
@@ -1509,7 +1553,7 @@ export const textModels = [
     inputTokenCost: 1.25,
     cachedInputTokenCost: 0.125,
     outputTokenCost: 10,
-    outputTokensPerSecond: 145,
+    outputTokensPerSecond: 122,
     longContext: {
       inputTokenCost: 2.5,
       cachedInputTokenCost: 0.25,
@@ -1577,7 +1621,7 @@ export const textModels = [
     inputTokenCost: 0.1,
     cachedInputTokenCost: 0.01,
     outputTokenCost: 0.4,
-    outputTokensPerSecond: 400,
+    outputTokensPerSecond: 297,
     inputAudioTokenCost: 0.3,
     reasoning: {
       canDisable: true,
@@ -1702,6 +1746,7 @@ export const textModels = [
     cachedInputTokenCost: 0.2,
     cacheCreationInputTokenCost: 5,
     outputTokenCost: 20,
+    outputTokensPerSecond: 92,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "xhigh", "max"],
@@ -1825,6 +1870,7 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
+    outputTokensPerSecond: 61,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "xhigh", "max"],
@@ -1855,7 +1901,7 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
-    outputTokensPerSecond: 72,
+    outputTokensPerSecond: 48,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "xhigh", "max"],
@@ -1886,7 +1932,7 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
-    outputTokensPerSecond: 53,
+    outputTokensPerSecond: 38,
     reasoning: {
       thinkingStyle: "adaptive",
       levels: ["low", "medium", "high", "max"],
@@ -1909,8 +1955,38 @@ export const textModels = [
   },
   {
     type: "text",
+    modelName: "claude-sonnet-5-5",
+    description: "Current Sonnet-tier model (released 2026-09-28), superseding claude-sonnet-5 at the same price. Adaptive thinking is always on and defaults to effort `high`; `thinking: {type: \"disabled\"}` and `budget_tokens` return a 400. The lowest setting is `thinking: {type: \"between_tools\"}` (low/medium/high effort only), which skips up-front thinking but still emits short thinking blocks between tool calls. Thinking text is omitted unless requested. Forced tool use (tool_choice any/tool) and non-default temperature/top_p/top_k return a 400. Same tokenizer as Sonnet 5. 1M context window, 128K max output.",
+    maxInputTokens: 1000000,
+    maxOutputTokens: 128000,
+    inputTokenCost: 2,
+    cachedInputTokenCost: 0.2,
+    cacheCreationInputTokenCost: 2.5,
+    outputTokenCost: 10,
+    reasoning: {
+      thinkingStyle: "adaptive",
+      levels: ["low", "medium", "high", "xhigh", "max"],
+      defaultLevel: "high",
+      canDisable: false,
+      outputsThinking: true,
+      outputsSignatures: true,
+    },
+    modalities: {
+      input: ["text", "image", "pdf"],
+      output: ["text"],
+    },
+    knowledge: "2026-06",
+    releaseDate: "2026-09-28",
+    lastUpdated: "2026-09-28",
+    family: "claude-sonnet",
+    openWeights: false,
+    temperatureSupported: false,
+    provider: "anthropic",
+  },
+  {
+    type: "text",
     modelName: "claude-sonnet-5",
-    description: "The best combination of speed and intelligence in the Sonnet tier, with near-Opus quality on coding and agentic work. Adaptive thinking on by default; supports the full low/medium/high/xhigh/max effort range. New tokenizer (~30% more tokens for the same text vs Sonnet 4.6). The $2/$10 per MTok launch rate is now the standard price — the increase to $3/$15 scheduled for 2026-09-01 was cancelled. 1M context window, 128K max output.",
+    description: "Legacy Sonnet-tier model, superseded by claude-sonnet-5-5 at the same price. Near-Opus quality on coding and agentic work. Adaptive thinking on by default; supports the full low/medium/high/xhigh/max effort range. New tokenizer (~30% more tokens for the same text vs Sonnet 4.6). The $2/$10 per MTok launch rate is now the standard price — the increase to $3/$15 scheduled for 2026-09-01 was cancelled. 1M context window, 128K max output.",
     maxInputTokens: 1000000,
     maxOutputTokens: 128000,
     inputTokenCost: 2,
@@ -2038,6 +2114,7 @@ export const textModels = [
     cachedInputTokenCost: 0.1,
     cacheCreationInputTokenCost: 1.25,
     outputTokenCost: 5,
+    outputTokensPerSecond: 97,
     reasoning: {
       thinkingStyle: "budget",
       canDisable: true,
@@ -2066,6 +2143,7 @@ export const textModels = [
     cachedInputTokenCost: 0.5,
     cacheCreationInputTokenCost: 6.25,
     outputTokenCost: 25,
+    outputTokensPerSecond: 49,
     reasoning: {
       thinkingStyle: "budget",
       canDisable: true,
@@ -2087,13 +2165,14 @@ export const textModels = [
   {
     type: "text",
     modelName: "claude-sonnet-4-5",
-    description: "Claude Sonnet 4.5 — earlier Sonnet generation. Prefer claude-sonnet-4-6.",
+    description: "Claude Sonnet 4.5 — earlier Sonnet generation. Deprecated 2026-09-30; retires November 30, 2026. Migrate to claude-sonnet-5-5.",
     maxInputTokens: 200000,
     maxOutputTokens: 64000,
     inputTokenCost: 3,
     cachedInputTokenCost: 0.3,
     cacheCreationInputTokenCost: 3.75,
     outputTokenCost: 15,
+    outputTokensPerSecond: 46,
     reasoning: {
       thinkingStyle: "budget",
       canDisable: true,
@@ -2158,6 +2237,7 @@ export const imageModels = [
     type: "image",
     modelName: "gpt-image-1",
     provider: "openai",
+    description: "Scheduled shutdown October 23, 2026; migrate to gpt-image-2.5-sunburst or gpt-image-2.5-flare.",
     // Token-based pricing per https://platform.openai.com/docs/models/gpt-image-1
     inputTokenCost: 5,
     cachedInputTokenCost: 1.25,
@@ -2201,8 +2281,9 @@ export const imageModels = [
     modelName: "gemini-2.5-flash-image",
     provider: "google",
     description:
-      "aka nano-banana. Graduated from preview (was gemini-2.5-flash-image-preview). Scheduled shutdown October 2, 2026; use gemini-3.1-flash-image or gemini-3.1-flash-lite-image.",
+      "aka nano-banana. RETIRED: shut down October 2, 2026. Use gemini-3.1-flash-image or gemini-3.1-flash-lite-image.",
     costPerImage: 0.039,
+    disabled: true,
   },
   {
     type: "image",
@@ -2251,7 +2332,7 @@ export const imageModels = [
     modelName: "gemini-3.1-flash-lite-image",
     provider: "google",
     description:
-      "aka Nano Banana 2 Lite (GA 2026-06-30). Fastest, most cost-effective Gemini image model (~4s generation). ~$0.034/image at 1K. Recommended replacement for gemini-2.5-flash-image.",
+      "aka Nano Banana 2 Lite (GA 2026-06-30). Fastest, most cost-effective Gemini image model (~4s generation). ~$0.034/image at 1K.",
     costPerImage: 0.034,
   },
 ] as const;
@@ -2280,6 +2361,7 @@ export const embeddingsModels: EmbeddingsModel[] = [
     modelName: "gemini-embedding-2-preview",
     provider: "google",
     tokenCost: 0.2,
+    disabled: true, // shut down 2026-08-10; use gemini-embedding-2
   },
   {
     type: "embeddings",
@@ -2382,9 +2464,9 @@ export const hostedTools: HostedTool[] = [
     name: "image_generation",
     provider: "openai-responses",
     category: "image_generation",
-    description: "Generate images with gpt-image-1 as a tool.",
+    description: "Generate images with a GPT Image model as a tool.",
     providerToolId: "image_generation",
-    pricing: { unit: "tokens", note: "gpt-image-1 token pricing: $5/$10/$40 per 1M text-in/image-in/image-out." },
+    pricing: { unit: "tokens", note: "Billed at the image model's token rates: gpt-image-2.5-sunburst/flare $5/$8/$30 per 1M text-in/image-in/image-out; gpt-image-1 (shuts down 2026-10-23) $5/$10/$40." },
   },
   {
     name: "google_search",
@@ -2424,14 +2506,19 @@ export const hostedTools: HostedTool[] = [
     name: "maps_grounding",
     provider: "google",
     category: "maps_grounding",
-    description: "Grounding with Google Maps (Gemini 3 only).",
+    description: "Grounding with Google Maps (Gemini 3 and Gemini 2.5).",
     providerToolId: "google_maps",
-    models: ["gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite"],
+    models: ["gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
     pricing: {
       unit: "per_call",
       amount: 0.014,
       freeAllowance: "5,000 grounded prompts/month (Gemini 3)",
       note: "$14 per 1,000 search queries on the Gemini 3 family.",
+      perModel: {
+        "gemini-2.5-pro": { amount: 0.025, freeAllowance: "10,000/day", note: "$25 per 1,000 grounded prompts (Gemini 2.5)." },
+        "gemini-2.5-flash": { amount: 0.025, freeAllowance: "1,500/day", note: "$25 per 1,000 grounded prompts (Gemini 2.5)." },
+        "gemini-2.5-flash-lite": { amount: 0.025, freeAllowance: "1,500/day", note: "$25 per 1,000 grounded prompts (Gemini 2.5)." },
+      },
     },
   },
   {

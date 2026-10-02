@@ -30,7 +30,7 @@ describe.runIf(Boolean(process.env.GEMINI_API_KEY))(
   () => {
     it("text-to-image", { timeout: TIMEOUT }, async () => {
       const r = await image("a small red cube on a white background", {
-        model: "gemini-2.5-flash-image",
+        model: "gemini-3.1-flash-image",
       });
       if (!r.success) {
         // Surface the API error in the test output for easier debugging.
