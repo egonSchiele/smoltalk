@@ -23,9 +23,8 @@ const {
 } = modelData;
 
 /**
- * Embeddings models carry no `disabled` field, so they widen to Filterable
- * without one. Collecting across every type keeps the provider list and the
- * deprecated count honest for the page as a whole.
+ * Collecting across every type keeps the provider list and the deprecated
+ * count honest for the page as a whole.
  */
 const everyModel: Filterable[] = [
   ...text,
