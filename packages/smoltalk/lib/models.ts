@@ -1024,7 +1024,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "gpt-6.1-sol",
-    description: "GPT-6.1 Sol (released 2026-09-29) is the newer Sol model, replacing gpt-6-sol in OpenAI's flagship lineup at the same per-token price; cache reads are 0.05x input ($0.10/1M) instead of 0.1x. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Reasoning cannot be set to none. Chat Completions works only without tools; tool calling requires the Responses API. Knowledge cutoff: April 2026.",
+    description: "GPT-6.1 Sol (released 2026-09-29) is the newer Sol model, replacing gpt-6-sol in OpenAI's flagship lineup at the same per-token price; cache reads are 0.05x input ($0.10/1M) instead of 0.1x. 1M context window. Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Reasoning cannot be set to none. Cataloged under openai-responses because tool calling requires the Responses API (Chat Completions works only without tools). Knowledge cutoff: April 2026.",
     maxInputTokens: 1050000,
     maxOutputTokens: 128000,
     inputTokenCost: 2,
@@ -1056,7 +1056,7 @@ export const textModels = [
     openWeights: false,
     structuredOutput: true,
     temperatureSupported: false,
-    provider: "openai",
+    provider: "openai-responses",
   },
   {
     type: "text",
@@ -2275,6 +2275,15 @@ export const imageModels = [
     cachedInputTokenCost: 1.25,
     inputImageTokenCost: 8,
     outputImageTokenCost: 30,
+  },
+  {
+    type: "image",
+    modelName: "gemini-2.5-flash-image",
+    provider: "google",
+    description:
+      "aka nano-banana. RETIRED: shut down October 2, 2026. Use gemini-3.1-flash-image or gemini-3.1-flash-lite-image.",
+    costPerImage: 0.039,
+    disabled: true,
   },
   {
     type: "image",

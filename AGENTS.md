@@ -79,7 +79,7 @@ lib/
 
 Two providers support returning encrypted reasoning state alongside responses:
 
-- **Anthropic** (`Codex-opus-4-5`, `Codex-sonnet-*`, etc.): Enable via `thinking: { enabled: true, budgetTokens: 5000 }` in `SmolConfig`. Returns `ThinkingBlock[]` in `PromptResult.thinkingBlocks`. Each block has `text` (the visible reasoning) and `signature` (encrypted verification token).
+- **Anthropic** (`claude-opus-4-5`, `claude-sonnet-*`, etc.): Enable via `thinking: { enabled: true, budgetTokens: 5000 }` in `SmolConfig`. Returns `ThinkingBlock[]` in `PromptResult.thinkingBlocks`. Each block has `text` (the visible reasoning) and `signature` (encrypted verification token).
 - **Google Gemini** (Gemini 3+ models): Thought signatures are returned automatically on thinking models. Parts with `thought: true` are captured into `PromptResult.thinkingBlocks`.
 - **OpenAI**: No equivalent — o1/o3 reasoning is fully hidden.
 
@@ -90,11 +90,50 @@ Two providers support returning encrypted reasoning state alongside responses:
 **Usage**:
 ```typescript
 const result = await textSync("Solve this step by step", {
-  model: "Codex-opus-4-5",
+  model: "claude-opus-4-5",
   thinking: { enabled: true, budgetTokens: 8000 },
 });
 // result.thinkingBlocks → [{ text: "Let me think...", signature: "WaUj..." }]
 ```
+
+## Logprobs
+
+`logprobs: { top? }` on `SmolConfig` asks for each generated token's log
+probability. Only OpenAI honours it: Chat Completions
+(`logprobs`/`top_logprobs`) and Responses
+(`include: ["message.output_text.logprobs"]`/`top_logprobs`). Every other
+provider ignores it and returns no field. The result is
+`PromptResult.logprobs`, an array of `TokenLogprob` (`{ token, logprob,
+top? }`). Every translation from a wire shape lives in
+`lib/clients/logprobs.ts`; a client only collects raw pieces and calls in.
+The streaming path accumulates per-chunk pieces (OpenAI chat sends deltas;
+the Responses `response.output_text.done` event carries the whole part) and
+puts the array on the `done` result. `AssistantMessage.logprobs` carries it
+and `toJSON` and `AssistantMessageJSONSchema` both know it, so it survives a
+checkpoint.
+
+Google is deliberately left out: the Gemini Developer API rejects logprobs
+outright (checked 2026-09-26, `@google/genai` 2.10.0, API-key path).
+Non-streamed with `responseLogprobs` returns `400 Logprobs is not enabled
+for this model` (`... for models/<name>` on 2.5 models), and streaming
+returns `400 LogProbs is not supported in streaming mode` before the
+per-model gate, so every model refuses it. `SmolGoogle.buildRequest`
+therefore never sends the parameter (a guard test pins this). Logprobs may
+exist on Vertex AI, which smoltalk's Google client does not speak.
+
+## Decision models
+
+`decide(state, questions, config)` in `lib/decide.ts` asks a decision model
+(TypeSafe's Jev, or a Laya server) typed `noul`/`choice`/`score` questions and
+returns answers with probabilities. It follows the `embed()` shape: payload
+first, config last, provider/key/base URL through `lib/util/provider.ts`. The
+providers are `typesafe` and `openrouter`; a Laya server is reached with
+`baseUrl.typesafe`. OpenRouter uses `apiKey.openRouter` or `OPENROUTER_API_KEY`
+and appends `/systemone` to its normal `/api/v1` base URL. TypeSafe and Laya
+append `/v1/systemone` to their base URL. Cost is priced by the requested model's
+registry entry (`decisionModels` in `lib/models.ts`), so an unknown model has
+no cost. `PromptResult.rawData` exists so a caller can carry the full answers
+onto an assistant message.
 
 ## Files API
 
