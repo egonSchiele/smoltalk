@@ -20,6 +20,8 @@ const h = vi.hoisted(() => {
     grammarTexts: [] as string[],
     schemas: [] as any[],
     generateOptions: [] as any[],
+    // How many items each generate call's history held.
+    historyLengths: [] as number[],
     chatWrappers: [] as any[],
     resolved: [] as any[],
   };
@@ -38,6 +40,7 @@ const h = vi.hoisted(() => {
     record.grammarTexts = [];
     record.schemas = [];
     record.generateOptions = [];
+    record.historyLengths = [];
     record.chatWrappers = [];
     record.resolved = [];
     wrapper.name = "General";
@@ -54,8 +57,9 @@ vi.mock("node-llama-cpp", () => {
     constructor(opts: any) {
       h.record.chatWrappers.push(opts.chatWrapper);
     }
-    async generateResponse(_history: any[], options: any) {
+    async generateResponse(history: any[], options: any) {
       h.record.generateOptions.push(options);
+      h.record.historyLengths.push(history.length);
       return { response: "{}", functionCalls: undefined };
     }
     dispose() {}
@@ -358,13 +362,29 @@ describe("the grammar for a typed reply", () => {
     expect(h.record.generateOptions[0].functions).toBeUndefined();
   });
 
-  it("drops the grammar for the tools when there are any", async () => {
-    const tool = {
-      name: "t",
-      description: "a tool",
-      schema: { toJSONSchema: () => ({ type: "object" }) },
-    };
-    await call({ tools: [tool] });
+  const tool = {
+    name: "t",
+    description: "a tool",
+    schema: { toJSONSchema: () => ({ type: "object" }) },
+  };
+
+  it("makes the tool round without the grammar, then asks for the format without the tools", async () => {
+    const result = await call({ tools: [tool] });
+    expect(h.record.generateOptions).toHaveLength(2);
+    // The tool round.
+    expect(h.record.generateOptions[0].grammar).toBeUndefined();
+    expect(Object.keys(h.record.generateOptions[0].functions)).toEqual(["t"]);
+    // The format round: the schema's grammar, and no functions to drop it.
+    expect(h.record.generateOptions[1].grammar.grammar).toBe(SCHEMA_GBNF);
+    expect(h.record.generateOptions[1].functions).toBeUndefined();
+    // It keeps the conversation and adds the model's answer and the ask.
+    expect(h.record.historyLengths[1]).toBe(h.record.historyLengths[0] + 2);
+    expect(result.success && result.value.toolCalls).toEqual([]);
+  });
+
+  it("sends one request with the tools when separateFromTools is false", async () => {
+    await call({ tools: [tool], responseFormatOptions: { separateFromTools: false } });
+    expect(h.record.generateOptions).toHaveLength(1);
     expect(h.record.generateOptions[0].grammar).toBeUndefined();
     expect(Object.keys(h.record.generateOptions[0].functions)).toEqual(["t"]);
   });

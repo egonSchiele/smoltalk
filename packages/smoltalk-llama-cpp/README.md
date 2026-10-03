@@ -51,8 +51,13 @@ Pass `responseFormat` as usual and the reply is held to the schema with a
 llama.cpp grammar. A thinking model such as Qwen3.5 is left free inside its
 `<think>` block, and only the text after it has to fit the schema, so the
 thought still arrives in `thinkingBlocks` and `output` holds the JSON. When
-tools are passed as well, the schema is not enforced, because node-llama-cpp
-cannot apply a grammar and functions together. A model told not to think
+tools are passed as well, the call is made as two requests, because
+node-llama-cpp cannot apply a grammar and functions together. The first
+request carries the tools and no grammar. If the model calls a tool, that is
+the result. Once it answers instead, a second request sends the same
+conversation with no tools, and asks for that answer in the schema. Set
+`responseFormatOptions.separateFromTools` to `false` to send one request and
+leave the schema unenforced; a streamed call is always one request. A model told not to think
 (below) is held to the schema from its first token. A schema's `anyOf`, which
 is what zod writes for a union, is rewritten as `oneOf` or `enum` on the way
 to node-llama-cpp's grammar builder, which does not read `anyOf`.

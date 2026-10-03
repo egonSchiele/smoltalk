@@ -1,5 +1,13 @@
 # Changelog
 
+## smoltalk 0.16.0 (2026-10-02)
+
+### Added
+
+- The `mlx` client makes a call with both tools and a `responseFormat` as two requests, the way the Google client does. A local server cannot hold a reply to a schema while the model may still call a tool, so the schema was left unenforced and a local model often answered in prose. The first request carries the tools and no schema. Once the model answers, the second asks for that answer in the schema, with the same conversation and tool list and `tool_choice: "none"`. Streaming calls are not split.
+- `responseFormatOptions.separateFromTools`, which defaults to `true`. Set it to `false` to send one request and leave the schema unenforced.
+- `separatesStructuredOutput`, `toolsThenStructuredOutput`, and `STRUCTURED_FOLLOW_UP` are exported for provider plugins with the same limit.
+
 ## smoltalk 0.15.3 (2026-09-26)
 
 ### Added

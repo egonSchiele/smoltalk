@@ -1,6 +1,6 @@
 {
   "name": "smoltalk-llama-cpp",
-  "version": "0.7.2",
+  "version": "0.8.0",
   "description": "node-llama-cpp provider for smoltalk",
   "type": "module",
   "scripts": {
@@ -30,7 +30,7 @@
     "node-llama-cpp": "^3.21.1"
   },
   "peerDependencies": {
-    "smoltalk": ">=0.5.1 <1.0.0"
+    "smoltalk": ">=0.16.0 <1.0.0"
   },
   "devDependencies": {
     "smoltalk": "workspace:*"
