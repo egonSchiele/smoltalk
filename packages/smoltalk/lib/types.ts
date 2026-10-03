@@ -143,6 +143,12 @@ export type SmolConfig = {
     strict: boolean;
     numRetries: number;
     allowExtraKeys: boolean;
+    /** Local providers (`mlx`, `llama-cpp`) cannot enforce a schema on a
+     *  request that carries tools, so a call with both is made as two
+     *  requests: the tool round first, then the reply in the schema. Set
+     *  this to `false` to send one request and leave the schema unenforced.
+     *  Defaults to `true`. Google always makes two requests. */
+    separateFromTools: boolean;
   }>;
 
   /** Arbitrary provider-specific attributes passed directly to the underlying API call. */

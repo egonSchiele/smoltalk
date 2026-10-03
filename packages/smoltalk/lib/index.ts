@@ -25,6 +25,12 @@ export type { BlobRef } from "./util/blobRef.js";
 export { getLogger, EgonLog } from "./util/logger.js";
 export type { LogLevel } from "./util/logger.js";
 export { redactAttachments } from "./util/redact.js";
+// For provider plugins whose backend cannot enforce a schema alongside tools.
+export {
+  separatesStructuredOutput,
+  toolsThenStructuredOutput,
+  STRUCTURED_FOLLOW_UP,
+} from "./clients/structuredAfterTools.js";
 // Explicit (not `export *`) so internal factories and test helpers stay private.
 export {
   transcribe,

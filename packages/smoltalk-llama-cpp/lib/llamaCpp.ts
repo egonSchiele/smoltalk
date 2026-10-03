@@ -33,7 +33,9 @@ import {
   failure,
   getLogger,
   sanitizeAttributes,
+  separatesStructuredOutput,
   success,
+  toolsThenStructuredOutput,
 } from "smoltalk";
 import type { Message } from "smoltalk";
 import path from "path";
@@ -718,7 +720,22 @@ export class LlamaCPP extends BaseClient {
     );
   }
 
+  // node-llama-cpp cannot apply a grammar and functions together, so a call
+  // with both tools and a response format is made as two requests: the tool
+  // round with the functions and no grammar, then, once the model answers,
+  // the same conversation with no functions and the grammar.
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
+    if (!separatesStructuredOutput(config)) {
+      return this.textOnce(config);
+    }
+    return toolsThenStructuredOutput({
+      config,
+      run: (one) => this.textOnce(one),
+      formatConfig: (followUp) => ({ ...followUp, tools: undefined }),
+    });
+  }
+
+  private async textOnce(config: SmolConfig): Promise<Result<PromptResult>> {
     const { chatHistory } = this.convertMessages(config.messages);
 
     if (chatHistory.length === 0) {

@@ -3,6 +3,8 @@ import * as http from "node:http";
 import { getClient } from "../client.js";
 import { embed } from "../embed.js";
 import { UserMessage } from "../classes/message/index.js";
+import { STRUCTURED_FOLLOW_UP } from "./structuredAfterTools.js";
+import { z } from "zod";
 
 type Received = { body: any; url: string };
 
@@ -11,6 +13,9 @@ let server: http.Server;
 let baseUrl: string;
 let received: Received[] = [];
 let reply: { status: number; body: unknown } = { status: 200, body: {} };
+// Replies for the next requests, in order, for a call that makes several.
+// When it is empty, every request gets `reply`.
+let replies: { status: number; body: unknown }[] = [];
 
 function chatReply(model: string, content: string | undefined, extra: Record<string, unknown> = {}) {
   const message: Record<string, unknown> = { role: "assistant", ...extra };
@@ -30,8 +35,9 @@ beforeAll(async () => {
     req.on("data", (c) => (raw += c));
     req.on("end", () => {
       received.push({ body: raw === "" ? null : JSON.parse(raw), url: req.url ?? "" });
-      res.writeHead(reply.status, { "content-type": "application/json" });
-      res.end(JSON.stringify(reply.body));
+      const next = replies.shift() ?? reply;
+      res.writeHead(next.status, { "content-type": "application/json" });
+      res.end(JSON.stringify(next.body));
     });
   });
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
@@ -42,6 +48,7 @@ beforeAll(async () => {
 afterAll(() => server.close());
 afterEach(() => {
   received = [];
+  replies = [];
   delete process.env.MLX_BASE_URL;
 });
 
@@ -157,5 +164,188 @@ describe("SmolMlx", () => {
     if (!result.success) {
       expect(result.error).toContain("no embedding model loaded");
     }
+  });
+});
+
+// The server cannot hold a reply to a schema while the model may still call
+// a tool, so a call with both is made as two requests.
+describe("SmolMlx with tools and a response format", () => {
+  const tools = [
+    {
+      name: "getTemperature",
+      description: "The temperature in a city.",
+      schema: z.object({ city: z.string() }),
+    },
+  ];
+  const responseFormat = z.object({ answer: z.string() });
+  const toolCallReply = chatReply("m", undefined, {
+    tool_calls: [
+      {
+        id: "call-1",
+        type: "function",
+        function: { name: "getTemperature", arguments: '{"city":"Oslo"}' },
+      },
+    ],
+  });
+
+  function mlxClient() {
+    return getClient({ provider: "mlx", model: "m", baseUrl: { mlx: baseUrl } });
+  }
+
+  it("asks for the format in a second request once the model answers", async () => {
+    replies = [
+      { status: 200, body: chatReply("m", "It is 21 degrees in Oslo.") },
+      { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') },
+    ];
+    const result = await mlxClient().textSync({ messages, tools, responseFormat });
+    if (!result.success) throw new Error(result.error);
+
+    expect(received).toHaveLength(2);
+    // The tool round: the tools, and no schema for the server to drop.
+    expect(received[0].body.tools).toHaveLength(1);
+    expect(received[0].body.response_format).toBeUndefined();
+    expect(received[0].body.tool_choice).toBeUndefined();
+    // The format round: the same tools so the prompt prefix is unchanged,
+    // tool calls ruled out, and the schema.
+    expect(received[1].body.tools).toEqual(received[0].body.tools);
+    expect(received[1].body.tool_choice).toBe("none");
+    expect(received[1].body.response_format.type).toBe("json_schema");
+    // It keeps the conversation and adds the model's answer and the ask.
+    const sent = received[1].body.messages;
+    expect(sent.slice(0, -2)).toEqual(received[0].body.messages);
+    expect(sent[sent.length - 2]).toMatchObject({
+      role: "assistant",
+      content: "It is 21 degrees in Oslo.",
+    });
+    expect(sent[sent.length - 1]).toMatchObject({ role: "user", content: STRUCTURED_FOLLOW_UP });
+
+    expect(result.value.output).toBe('{"answer":"21 degrees"}');
+    expect(result.value.toolCalls).toEqual([]);
+    // Both requests are counted.
+    expect(result.value.usage.inputTokens).toBe(24);
+    expect(result.value.usage.outputTokens).toBe(10);
+  });
+
+  it("returns a tool call from the first request without a second", async () => {
+    replies = [{ status: 200, body: toolCallReply }];
+    const result = await mlxClient().textSync({ messages, tools, responseFormat });
+    if (!result.success) throw new Error(result.error);
+    expect(received).toHaveLength(1);
+    expect(result.value.toolCalls).toHaveLength(1);
+    expect(result.value.toolCalls[0].name).toBe("getTemperature");
+  });
+
+  it("drops a tool call a server returns from the format request", async () => {
+    // A server that does not honour tool_choice could still return one. The
+    // tool round is over, so it must not reach the caller. The model's own
+    // answer stands in for the missing reply.
+    replies = [
+      { status: 200, body: chatReply("m", "It is 21 degrees in Oslo.") },
+      { status: 200, body: toolCallReply },
+    ];
+    const result = await mlxClient().textSync({ messages, tools, responseFormat });
+    if (!result.success) throw new Error(result.error);
+    expect(received).toHaveLength(2);
+    expect(result.value.toolCalls).toEqual([]);
+    expect(result.value.output).toBe("It is 21 degrees in Oslo.");
+  });
+
+  it("asks again, without throwing, when a strict format request returns a tool call", async () => {
+    replies = [
+      { status: 200, body: chatReply("m", "It is 21 degrees in Oslo.") },
+      { status: 200, body: toolCallReply },
+      { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') },
+    ];
+    const result = await mlxClient().textSync({
+      messages,
+      tools,
+      responseFormat,
+      responseFormatOptions: { strict: true },
+    });
+    if (!result.success) throw new Error(result.error);
+    expect(received).toHaveLength(3);
+    expect(result.value.output).toEqual({ answer: "21 degrees" });
+    expect(result.value.toolCalls).toEqual([]);
+  });
+
+  it("makes only the format request when a reply failed validation", async () => {
+    // The retry must not open another tool round: the model could answer
+    // "fix this JSON" with a tool call, and a tool would run a second time.
+    replies = [
+      { status: 200, body: chatReply("m", "It is 21 degrees in Oslo.") },
+      { status: 200, body: chatReply("m", '{"reply":"21 degrees"}') },
+      { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') },
+    ];
+    const result = await mlxClient().textSync({
+      messages,
+      tools,
+      responseFormat,
+      responseFormatOptions: { strict: true },
+    });
+    if (!result.success) throw new Error(result.error);
+
+    expect(received).toHaveLength(3);
+    const retry = received[2].body;
+    expect(retry.tool_choice).toBe("none");
+    expect(retry.response_format.type).toBe("json_schema");
+    expect(retry.tools).toEqual(received[0].body.tools);
+    // The conversation, the reply that failed, and the request to fix it.
+    const sent = retry.messages;
+    expect(sent.slice(0, -2)).toEqual(received[0].body.messages);
+    expect(sent[sent.length - 2]).toMatchObject({
+      role: "assistant",
+      content: '{"reply":"21 degrees"}',
+    });
+    expect(sent[sent.length - 1].content).toContain("failed validation");
+    expect(result.value.output).toEqual({ answer: "21 degrees" });
+  });
+
+  it("drops a tool call a server returns from a validation retry", async () => {
+    replies = [
+      { status: 200, body: chatReply("m", "It is 21 degrees in Oslo.") },
+      { status: 200, body: chatReply("m", '{"reply":"21 degrees"}') },
+      { status: 200, body: toolCallReply },
+      { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') },
+    ];
+    const result = await mlxClient().textSync({
+      messages,
+      tools,
+      responseFormat,
+      responseFormatOptions: { strict: true, numRetries: 3 },
+    });
+    if (!result.success) throw new Error(result.error);
+    expect(received).toHaveLength(4);
+    expect(received[3].body.tool_choice).toBe("none");
+    expect(result.value.toolCalls).toEqual([]);
+    expect(result.value.output).toEqual({ answer: "21 degrees" });
+  });
+
+  it("sends one request when separateFromTools is false", async () => {
+    reply = { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') };
+    const result = await mlxClient().textSync({
+      messages,
+      tools,
+      responseFormat,
+      responseFormatOptions: { separateFromTools: false },
+    });
+    expect(result.success).toBe(true);
+    expect(received).toHaveLength(1);
+    expect(received[0].body.tools).toHaveLength(1);
+    expect(received[0].body.response_format.type).toBe("json_schema");
+  });
+
+  it("sends one request when the call has no tools", async () => {
+    reply = { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') };
+    const result = await mlxClient().textSync({ messages, responseFormat });
+    expect(result.success).toBe(true);
+    expect(received).toHaveLength(1);
+    expect(received[0].body.response_format.type).toBe("json_schema");
+  });
+
+  it("sends one request when the tool list is empty", async () => {
+    reply = { status: 200, body: chatReply("m", '{"answer":"21 degrees"}') };
+    const result = await mlxClient().textSync({ messages, tools: [], responseFormat });
+    expect(result.success).toBe(true);
+    expect(received).toHaveLength(1);
   });
 });

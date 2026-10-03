@@ -229,6 +229,31 @@ Used with `responseFormat` to control validation behavior (currently OpenAI only
 | `strict` | `boolean` | | Whether to use strict schema validation. |
 | `numRetries` | `number` | `2` | How many times to retry if the response fails schema validation. |
 | `allowExtraKeys` | `boolean` | | If `true`, strips unexpected keys instead of failing validation. |
+| `separateFromTools` | `boolean` | `true` | Local providers only (`mlx`, `llama-cpp`). See below. |
+
+#### Tools and a response format in one call
+
+Some providers cannot hold a reply to a schema while the model may still call
+a tool. Google rejects the combination. A local server (`mlx`, `llama-cpp`)
+accepts it but leaves the schema unenforced, because a tool call is not JSON,
+and a local model then tends to answer in prose.
+
+For these providers smoltalk makes the call as two requests. The first
+carries the tools and no schema. If the model calls a tool, that is the
+result, and your tool loop carries on as usual. Once the model answers in
+words, a second request asks for that answer in the schema, and that is the
+`output` you get. Usage and cost cover both requests.
+
+On the local providers the second request keeps the whole conversation, so a
+field such as "did this cover everything the user asked?" can be answered.
+`mlx` also keeps the tool list and sends `tool_choice: "none"`, so the server
+can reuse its cached prompt. `responseFormatOptions.separateFromTools: false`
+sends one request instead and leaves the schema unenforced. A streamed call
+is never split.
+
+With `strict: true`, a reply that fails validation is retried as usual. The
+retry repeats only the second request, so the model cannot answer "fix this
+JSON" with another tool call.
 
 ### `toolLoopDetection`
 

@@ -1,4 +1,8 @@
-import { userMessage, assistantMessage } from "../classes/message/index.js";
+import { assistantMessage } from "../classes/message/index.js";
+import {
+  failedValidationMessage,
+  returnedUndefinedMessage,
+} from "./validationRetry.js";
 import { getLogger } from "../util/logger.js";
 import { ModelName } from "../models.js";
 import { SmolStructuredOutputError } from "../smolError.js";
@@ -417,9 +421,7 @@ export class BaseClient implements SmolClient {
       if (!("output" in result.value)) {
         const retryMessages = [
           ...promptConfig.messages,
-          userMessage(
-            `You returned "undefined" instead of a valid response. Please provide a valid response.`,
-          ),
+          returnedUndefinedMessage(),
         ];
 
         return this.textWithRetry(
@@ -473,9 +475,7 @@ export class BaseClient implements SmolClient {
           const retryMessages = [
             ...promptConfig.messages,
             assistantMessage(output),
-            userMessage(
-              `Your previous response failed validation. Please fix the following errors and try again:\n${errorMessage}`,
-            ),
+            failedValidationMessage(errorMessage),
           ];
 
           return this.textWithRetry(

@@ -1,3 +1,7 @@
+## version 0.8.0 (10/02/2026)
+- A call with both tools and a `responseFormat` is made as two requests. node-llama-cpp cannot apply a grammar and functions together, so the schema used to be dropped whenever tools were passed, and the model was free to answer in prose. Now the first request carries the tools. Once the model answers, the second asks for that answer in the schema, with the same conversation, no tools, and the grammar. `responseFormatOptions.separateFromTools: false` keeps the old single request. Streaming calls are not split.
+- Needs smoltalk 0.16.0 or later, which exports the helper both local clients share.
+
 ## version 0.7.2 (09/25/2026)
 - A typed reply from a model told not to think is held to the schema from its first token. The grammar used to offer the thought block as an option, and Qwen3.5 and Gemma 4 took it: they opened the block, wrote their answer as prose inside, and never closed it, so the JSON never came. A wrapper that opens the block on every reply regardless (DeepSeek) still gets to close it first.
 - A schema's `anyOf` is rewritten as `oneOf`, or as an `enum` when every alternative is a string constant, before the grammar is built. node-llama-cpp's grammar builder does not read `anyOf` and quietly treated the field as any JSON value, so a union of string literals, which is what zod writes for one, came back as `null`.
