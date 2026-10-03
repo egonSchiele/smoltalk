@@ -1,14 +1,21 @@
 # Changelog
 
-## smoltalk 0.16.0 (2026-10-02)
+## smoltalk 0.16.0 (2026-10-03)
 
 ### Added
 
-- The `mlx` client makes a call with both tools and a `responseFormat` as two requests, the way the Google client does. A local server cannot hold a reply to a schema while the model may still call a tool, so the schema was left unenforced and a local model often answered in prose. The first request carries the tools and no schema. Once the model answers, the second asks for that answer in the schema, with the same conversation and tool list and `tool_choice: "none"`. Streaming calls are not split.
+- New models in the registry: `claude-opus-5-5`, `claude-sonnet-5-5`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6.1-sol`, `gpt-image-2`, `gpt-image-2.5-sunburst`, `gpt-transcribe`, `gemini-3.8-flash-tts`, `gemini-3.8-flash-lite-tts`, `gemini-3-pro-image`, and `gemini-embedding-2`.
+- Embeddings models can now be marked `disabled`, like other model types.
+
+- A local model can't handle tool calls + structured output in the same call, so the `mlx` client makes a call with both tools and a `responseFormat` as two requests. You can set `responseFormatOptions.separateFromTools` to false to disable this and just make one request.
 - When a strict reply fails validation, the retry repeats only the second request. A repeated tool round would let the model answer the request to fix its JSON with a tool call, and a tool that had already run would run again.
 - If the second request comes back with no text (a server that ignores `tool_choice: "none"` can return a tool call there), the model's answer from the first request is used. A strict call then fails validation on it and retries, where it used to throw.
-- `responseFormatOptions.separateFromTools`, which defaults to `true`. Set it to `false` to send one request and leave the schema unenforced.
 - `separatesStructuredOutput`, `toolsThenStructuredOutput`, and `STRUCTURED_FOLLOW_UP` are exported for provider plugins with the same limit.
+
+### Changed
+
+- Pricing, token limits, and descriptions refreshed across the model registry (model data updates of 2026-09-27 and 2026-10-01).
+- `gemini-2.5-flash-image` and `gemini-embedding-2-preview` (shut down 2026-08-10; use `gemini-embedding-2`) are now marked disabled.
 
 ## smoltalk 0.15.3 (2026-09-26)
 
