@@ -251,6 +251,10 @@ can reuse its cached prompt. `responseFormatOptions.separateFromTools: false`
 sends one request instead and leaves the schema unenforced. A streamed call
 is never split.
 
+With `strict: true`, a reply that fails validation is retried as usual. The
+retry repeats only the second request, so the model cannot answer "fix this
+JSON" with another tool call.
+
 ### `toolLoopDetection`
 
 Detects when the model is stuck in a repetitive tool-call loop.

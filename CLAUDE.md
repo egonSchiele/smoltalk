@@ -109,6 +109,14 @@ backend is made to enforce the schema (`tool_choice: "none"` for `mlx`, no
 tools for `llama-cpp`). `responseFormatOptions.separateFromTools: false`
 turns it off for the local clients. Streaming is never split.
 
+`textWithRetry` calls `_textSync` again when a strict reply fails validation.
+The shared helper must not run the tool round on that call: the model could
+answer the request to fix its JSON with a tool call, and the caller would run
+a tool a second time. It recognises the retry by the last message, which
+`lib/clients/validationRetry.ts` both builds and tests for, and then makes
+only the format request. Keep the retry messages in that file so the two
+cannot drift apart.
+
 ## Logprobs
 
 `logprobs: { top? }` on `SmolConfig` asks for each generated token's log

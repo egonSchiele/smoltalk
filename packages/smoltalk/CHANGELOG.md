@@ -5,6 +5,8 @@
 ### Added
 
 - The `mlx` client makes a call with both tools and a `responseFormat` as two requests, the way the Google client does. A local server cannot hold a reply to a schema while the model may still call a tool, so the schema was left unenforced and a local model often answered in prose. The first request carries the tools and no schema. Once the model answers, the second asks for that answer in the schema, with the same conversation and tool list and `tool_choice: "none"`. Streaming calls are not split.
+- When a strict reply fails validation, the retry repeats only the second request. A repeated tool round would let the model answer the request to fix its JSON with a tool call, and a tool that had already run would run again.
+- If the second request comes back with no text (a server that ignores `tool_choice: "none"` can return a tool call there), the model's answer from the first request is used. A strict call then fails validation on it and retries, where it used to throw.
 - `responseFormatOptions.separateFromTools`, which defaults to `true`. Set it to `false` to send one request and leave the schema unenforced.
 - `separatesStructuredOutput`, `toolsThenStructuredOutput`, and `STRUCTURED_FOLLOW_UP` are exported for provider plugins with the same limit.
 
