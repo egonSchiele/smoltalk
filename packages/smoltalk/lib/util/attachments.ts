@@ -1,3 +1,4 @@
+import { bytesToBase64 } from "./base64.js";
 import type { ImageRef } from "./blobRef.js";
 
 /** Filename sent to providers that require one when a file part omits its own. */
@@ -21,7 +22,7 @@ export function refToBase64(ref: ImageRef): { base64: string; mimeType: string }
     return { base64: ref.base64, mimeType: ref.mimeType };
   }
   if (ref.kind === "bytes") {
-    return { base64: Buffer.from(ref.data).toString("base64"), mimeType: ref.mimeType };
+    return { base64: bytesToBase64(ref.data), mimeType: ref.mimeType };
   }
   throw new Error(
     `Attachment ref must be resolved to base64 or bytes before serialization ` +

@@ -1,3 +1,4 @@
+import { base64ToBytes } from "../util/base64.js";
 import { GoogleGenAI } from "@google/genai";
 import { Result, success, failure } from "../types/result.js";
 import { pcmToWav } from "../util/audioMime.js";
@@ -47,7 +48,7 @@ export class GoogleSpeechClient extends BaseSpeechClient {
     if (!dataB64) {
       return failure("Gemini returned no audio data.");
     }
-    const pcm = new Uint8Array(Buffer.from(dataB64, "base64"));
+    const pcm = base64ToBytes(dataB64);
 
     let audio: Uint8Array = pcm;
     let mimeType = "application/octet-stream";

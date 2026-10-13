@@ -1,3 +1,4 @@
+import { bytesToBase64, utf8ByteLength } from "../util/base64.js";
 import { GoogleGenAI } from "@google/genai";
 import { Result, success, failure } from "../types/result.js";
 import { BaseTranscriptionClient } from "./baseTranscriptionClient.js";
@@ -31,7 +32,7 @@ export class GoogleTranscriptionClient extends BaseTranscriptionClient {
       instruction += ` ${this.config.prompt}`;
     }
 
-    const base64 = Buffer.from(data).toString("base64");
+    const base64 = bytesToBase64(data);
     const request = {
       model: this.config.model,
       contents: [{
@@ -42,7 +43,7 @@ export class GoogleTranscriptionClient extends BaseTranscriptionClient {
         ],
       }],
     };
-    if (Buffer.byteLength(JSON.stringify(request), "utf8") > GOOGLE_INLINE_REQUEST_MAX_BYTES) {
+    if (utf8ByteLength(JSON.stringify(request)) > GOOGLE_INLINE_REQUEST_MAX_BYTES) {
       return failure(
         "Audio and instructions exceed Gemini's 20 MB inline request limit; use a smaller source.",
       );

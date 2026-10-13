@@ -1,3 +1,4 @@
+import { bytesToBase64 } from "../util/base64.js";
 import { Message, UserMessage } from "../classes/message/index.js";
 import {
   AudioPart,
@@ -67,7 +68,7 @@ async function toBase64Source(
     allowedMimePrefixes: allowed,
     maxBytes,
   });
-  return { kind: "base64", base64: Buffer.from(data).toString("base64"), mimeType };
+  return { kind: "base64", base64: bytesToBase64(data), mimeType };
 }
 
 /** Error message when a providerFile ref targets the wrong provider family, else null. */
