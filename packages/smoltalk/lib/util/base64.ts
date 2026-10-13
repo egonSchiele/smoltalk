@@ -21,7 +21,15 @@ export function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
+/**
+ * Decodes standard base64 and base64url (`-` and `_` for `+` and `/`),
+ * with or without padding. Any other character throws. `Buffer`, which
+ * this replaced, skipped characters it did not know.
+ */
 export function base64ToBytes(text: string): Uint8Array {
+  if (text.includes("-") || text.includes("_")) {
+    text = text.replace(/-/g, "+").replace(/_/g, "/");
+  }
   const native = (Uint8Array as unknown as WithFromBase64).fromBase64;
   if (typeof native === "function") {
     return native.call(Uint8Array, text);

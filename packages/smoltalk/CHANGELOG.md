@@ -9,8 +9,9 @@
 
 ### Changed
 
-- The `openai` and `@anthropic-ai/sdk` clients are constructed with `dangerouslyAllowBrowser: true`. The flag does nothing in Node. In a browser it means a key passed to smoltalk is visible to whoever can open the page; a production browser app points `baseUrl` at a proxy that holds the key.
+- The `openai` and `@anthropic-ai/sdk` clients are constructed with `dangerouslyAllowBrowser: true`. The flag does nothing in Node. In a browser it means a key passed to smoltalk is visible to whoever can open the page; a production browser app keeps the key on a server and reaches it with the `openai-compat` provider and `baseUrl.openAiCompat` (the built-in OpenAI, Anthropic, and Google clients take no base URL).
 - `Buffer` is gone from the library. Bytes are `Uint8Array` everywhere; `NormalizedBlob.data`, generated image data, and speech audio were already typed that way, and the values are now plain `Uint8Array`s rather than `Buffer`s. A caller that passed a `Buffer` still type-checks (`Buffer` is a `Uint8Array`); a caller that called `Buffer` methods on returned data must wrap it with `Buffer.from(data)`.
+- Base64 decoding (a `{ kind: "base64" }` BlobRef, embeddings, generated images, speech) accepts standard base64 and base64url, padded or not, and throws on any other character. `Buffer` skipped characters it did not recognise.
 
 ## smoltalk 0.16.0 (2026-10-03)
 

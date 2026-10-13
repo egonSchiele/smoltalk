@@ -16,6 +16,16 @@ describe("base64", () => {
     }
   });
 
+  it("decodes base64url, as Buffer did", () => {
+    expect(base64ToBytes("-_8=")).toEqual(new Uint8Array([251, 255]));
+    expect(base64ToBytes("-_8")).toEqual(new Uint8Array([251, 255]));
+    expect(base64ToBytes("+/8=")).toEqual(new Uint8Array([251, 255]));
+  });
+
+  it("throws on a stray character, unlike Buffer", () => {
+    expect(() => base64ToBytes("Zm9v!!")).toThrow();
+  });
+
   it("decodes known pairs", () => {
     for (const [text, b64] of pairs) {
       expect(new TextDecoder().decode(base64ToBytes(b64))).toBe(text);
