@@ -19,7 +19,7 @@ type OpenAITranscriptionResponse = {
 export class OpenAITranscriptionClient extends BaseTranscriptionClient {
   /** Build the OpenAI SDK client. Subclasses override to point at a compatible base URL. */
   protected makeClient(): OpenAI {
-    return new OpenAI({ apiKey: this.config.apiKey });
+    return new OpenAI({ dangerouslyAllowBrowser: true, apiKey: this.config.apiKey });
   }
 
   /** Provider-specific diagnostic when no API key is resolved. Subclasses override. */

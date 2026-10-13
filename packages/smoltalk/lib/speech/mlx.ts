@@ -25,6 +25,7 @@ export class MlxSpeechClient extends OpenAISpeechClient {
     const baseURL = resolveBaseUrl("mlx", { baseUrl: this.config.baseUrl })!;
     // The OpenAI SDK refuses an empty key. The local server never reads it.
     return new OpenAI({
+      dangerouslyAllowBrowser: true,
       apiKey: "mlx-local",
       baseURL,
       maxRetries: 0,

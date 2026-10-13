@@ -1,3 +1,4 @@
+import { env } from "#platform";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   MessageParam,
@@ -293,11 +294,11 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
 
   constructor(config: SmolAnthropicConfig) {
     super(config);
-    const apiKey = config.apiKey?.anthropic || process.env.ANTHROPIC_API_KEY;
+    const apiKey = config.apiKey?.anthropic || env("ANTHROPIC_API_KEY");
     if (!apiKey) {
       throw new Error("Anthropic API key is required for SmolAnthropic client.");
     }
-    this.client = new Anthropic({ apiKey });
+    this.client = new Anthropic({ dangerouslyAllowBrowser: true, apiKey });
     this.logger = getLogger();
     this.model = new Model(config.model, config.provider, config.modelData);
   }

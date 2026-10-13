@@ -17,7 +17,7 @@ export class OpenAiCompatTranscriptionClient extends OpenAITranscriptionClient {
         "openai-compat: base URL required (config.baseUrl.openAiCompat or OPENAI_COMPAT_BASE_URL).",
       );
     }
-    return new OpenAI({ apiKey: this.config.apiKey, baseURL });
+    return new OpenAI({ dangerouslyAllowBrowser: true, apiKey: this.config.apiKey, baseURL });
   }
 
   protected override noKeyMessage(): string {

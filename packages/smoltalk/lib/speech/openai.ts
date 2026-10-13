@@ -12,7 +12,7 @@ import type { SpeechResult } from "../speech.js";
 export class OpenAISpeechClient extends BaseSpeechClient {
   /** Build the OpenAI SDK client. Subclasses override to point at a compatible base URL. */
   protected makeClient(): OpenAI {
-    return new OpenAI({ apiKey: this.config.apiKey });
+    return new OpenAI({ dangerouslyAllowBrowser: true, apiKey: this.config.apiKey });
   }
 
   /** Provider default used when the declarative call omits format. */
