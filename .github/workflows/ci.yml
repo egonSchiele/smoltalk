@@ -22,6 +22,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       # Build smoltalk first so smoltalk-llama-cpp can resolve types via dist/
       - run: pnpm --filter smoltalk build
+      # smoltalk must bundle for the browser: no Node import in its own files.
+      - run: pnpm --filter smoltalk check:browser
       # Build smoltalk-llama-cpp too: its loader integration test dynamically
       # imports this package's dist/index.js, built fresh right here.
       - run: pnpm --filter smoltalk-llama-cpp build

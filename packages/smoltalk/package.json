@@ -1,6 +1,6 @@
 {
   "name": "smoltalk",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "description": "A common interface for LLM APIs",
   "homepage": "https://github.com/egonSchiele/smoltalk",
   "scripts": {
@@ -12,7 +12,8 @@
     "doc": "typedoc --disableSources --out docs lib && prettier docs/ --write",
     "typecheck": "tsc --noEmit",
     "seed-data": "tsx scripts/seed-model-data.ts",
-    "refresh-data": "tsx scripts/refresh-from-modelsdev.ts"
+    "refresh-data": "tsx scripts/refresh-from-modelsdev.ts",
+    "check:browser": "node scripts/check-browser-bundle.mjs"
   },
   "files": [
     "./dist"
@@ -34,6 +35,16 @@
       "require": "./dist/testing/index.js"
     }
   },
+  "imports": {
+    "#platform": {
+      "browser": "./dist/platform.browser.js",
+      "default": "./dist/platform.node.js"
+    },
+    "#ollama": {
+      "browser": "ollama/browser",
+      "default": "ollama"
+    }
+  },
   "type": "module",
   "types": "./dist/index.d.ts",
   "keywords": [
@@ -52,6 +63,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "esbuild": "^0.28.2",
     "tsx": "^4.19.2"
   },
   "peerDependencies": {

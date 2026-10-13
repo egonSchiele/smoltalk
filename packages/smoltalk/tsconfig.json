@@ -27,7 +27,8 @@
 
     /* Modules */
     "module": "nodenext" /* Specify what module code is generated. */,
-    // "rootDir": "./",                                  /* Specify the root folder within your source files. */
+    // Named so TypeScript can resolve the "#..." entries in package.json's "imports".
+    "rootDir": "./lib",
     // should stay commented out since I'm not using any 3rd party modules in dist
     "moduleResolution": "nodenext" /* Specify how TypeScript looks up a file from a given module specifier. */,
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
