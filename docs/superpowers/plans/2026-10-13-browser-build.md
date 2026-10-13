@@ -59,8 +59,9 @@ and `--external:node:*`, it fails on nothing.
   keeps local-model modules out of a browser program.
 - **Node reads move behind a condition.** A `#platform` entry in
   `imports` (`lib/platform.node.ts`, `lib/platform.browser.ts`) carries
-  five functions: `readFileBytes(path, maxBytes)`, `fileExtension(path)`,
-  `readTextFromFileUrl(url)`, `pathToFileUrl(path)`, and `env(name)`. The
+  four functions: `readFileBytes(path, maxBytes)`,
+  `readTextFromFileUrl(url)`, `pathToFileUrl(path)`, and `env(name)`. A
+  path's extension is string work and stays shared (`lib/util/fileExtension.ts`). The
   Node file implements them with `node:fs`, `node:path`, `node:url`, and
   `process.env`; the browser file throws for the four file functions,
   naming the function, and returns `undefined` for `env`. Shared code
@@ -95,7 +96,11 @@ and `--external:node:*`, it fails on nothing.
 - **A CI check** bundles `lib/index.ts` with esbuild for the browser,
   with Node builtins external, and fails when any file under smoltalk's
   own `lib/` imports a `node:` module or a Node builtin, read from the
-  metafile. It does not fail on the Anthropic SDK's lazy imports, which
+  metafile, and greps the same files for `Buffer` and `process.env`,
+  which the metafile cannot show. When `dist/` exists it also bundles
+  `dist/index.js` with no aliases, so the `imports` entries are resolved
+  as a consumer's bundler resolves them, and checks the browser files were
+  chosen. It does not fail on the Anthropic SDK's lazy imports, which
   smoltalk cannot change. Agency's own bundle check (its PR 15, Task 34)
   needs the same `--external:node:*` and the same scoping.
 
@@ -144,16 +149,23 @@ Set aside, on purpose:
    `lib/utils/packageImports.d.ts`), and nothing in `paths` in
    `tsconfig.json`.
 2. `lib/platform.ts` holds the shared types; `platform.node.ts` and
-   `platform.browser.ts` implement `readFileBytes`, `fileExtension`,
+   `platform.browser.ts` implement `readFileBytes`,
    `readTextFromFileUrl`, `pathToFileUrl`, `env`.
 3. Vitest resolves `#platform` to the Node file. Try `resolve.conditions`
    or Vite's native `imports` support first; fall back to `resolve.alias`
    in `vitest.config.ts` as Agency does.
 
+   A hazard to know: TypeScript resolves `#platform` through the
+   package.json self-reference, to `dist/platform.node.d.ts` when `dist/`
+   exists and to the ambient declaration when it does not. A stale
+   `dist/` therefore gives `#platform` old types and can hide a mismatch
+   with `platform.ts`. CI builds before it typechecks, so CI always sees
+   fresh types; locally, rebuild after changing the platform files.
+
 ### Task 3: `blobRef.ts`, `modelRefresh.ts`, and `llamaCppLoader.ts`
 
 1. `blobRef.ts`: `readFile`/`stat` become `readFileBytes`; `extname`
-   becomes `fileExtension`. A path ref in a browser throws the platform
+   becomes a shared `fileExtension` in `lib/util/fileExtension.ts`. A path ref in a browser throws the platform
    file's error, which names the function. Keep the size gate before the
    read: `readFileBytes` takes `maxBytes` and refuses before reading,
    which is better on both platforms.
@@ -217,6 +229,6 @@ agency-lang references.
    That is the first time an Agency program in a browser can talk to a
    model, and it is the point of this plan.
 
-Review focus: the `#platform` surface (five functions, nothing more), the
+Review focus: the `#platform` surface (four functions, nothing more), the
 `Buffer` type change in public types, and the bundle check's scoping to
 smoltalk's own files.

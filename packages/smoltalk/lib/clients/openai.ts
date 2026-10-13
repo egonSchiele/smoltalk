@@ -58,8 +58,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   }
 
   /**
-   * Build the `new OpenAI({ dangerouslyAllowBrowser: true,...})` options. Subclasses override to inject a
-   * different baseURL or to pull the key from a different config field.
+   * Build the `new OpenAI({...})` options. Subclasses override to inject a
+   * different baseURL or to pull the key from a different config field. The
+   * constructor adds `dangerouslyAllowBrowser` itself.
    *
    * Default behavior: read OPENAI_API_KEY (or config.apiKey.openAi). Throws
    * if the key is missing — subclasses with required keys do their own check.

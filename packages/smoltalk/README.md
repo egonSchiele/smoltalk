@@ -851,19 +851,29 @@ the path it takes when no API key is passed (Vite does this for you):
 esbuild app.ts --bundle --platform=browser --format=esm --external:node:*
 ```
 
-Differences from Node, all of which throw with a message naming the
-function:
+Differences from Node:
 
-- There are no environment variables, so pass keys in `apiKey`.
-- A `{ kind: "path" }` attachment cannot be read.
-- `refreshModels` accepts `https:` URLs only; `file:` throws.
-- `loadLlamaCpp` fails: it loads a native module. Local inference in a
-  browser is the `smoltalk-webllm` plugin.
+- There are no environment variables. `env` reads as unset, nothing
+  throws, and a client built without a key fails with the SDK's own
+  missing-key error. Pass keys in `apiKey`.
+- A `{ kind: "path" }` attachment throws: "readFileBytes is not available
+  in a browser build of smoltalk."
+- `refreshModels` accepts `https:` URLs only; a `file:` URL fails the
+  same way, from `readTextFromFileUrl`.
+- `loadLlamaCpp` fails: it loads a native module. Without `entryPath` the
+  error is the loader's "Failed to load smoltalk-llama-cpp", wrapping the
+  browser's refusal to resolve the bare specifier; with `entryPath` it is
+  `pathToFileUrl`'s. Local inference in a browser is the `smoltalk-webllm`
+  plugin.
 
 The `openai` and `@anthropic-ai/sdk` clients are constructed with
 `dangerouslyAllowBrowser: true`. That flag exists because a key sent to a
 browser is visible to anyone who can open the page. For a production app,
-keep the key on a server and point `baseUrl` at a proxy.
+keep the key on a server. The built-in OpenAI, Anthropic, and Google
+clients take no base URL, so the browser side reaches such a server as an
+OpenAI-compatible endpoint: `provider: "openai-compat"` with
+`baseUrl.openAiCompat` set to the proxy, and the proxy holding the real
+key.
 
 ## Limitations
 Smoltalk has support for a limited number of providers right now, and is mostly focused on the stateless APIs for text completion, though I plan to add support for more providers as well as image and speech models later. Smoltalk is also a personal project, and there are alternatives backed by companies:
