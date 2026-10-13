@@ -1,5 +1,17 @@
 # Changelog
 
+## smoltalk 0.17.0 (2026-10-13)
+
+### Added
+
+- smoltalk bundles for the browser. `esbuild --platform=browser`, Vite, and webpack with `target: "web"` pick the browser side of two new `imports` entries in `package.json`: `#platform` (file and environment reads) and `#ollama` (`ollama/browser`). The package has one entry point and one set of types on both platforms. A browser bundle needs Node builtins marked external (`--external:node:*` for esbuild; Vite does it on its own), because `@anthropic-ai/sdk` lazily imports `node:fs` on the path taken when no API key is passed. `pnpm check:browser` bundles the package and fails on any Node import in smoltalk's own files; CI runs it.
+- In a browser, these throw: a `{ kind: "path" }` attachment, `refreshModels` with a `file:` URL, and `loadLlamaCpp`. Environment variables read as unset, so a browser caller passes API keys in `apiKey`. See "In the browser" in the README.
+
+### Changed
+
+- The `openai` and `@anthropic-ai/sdk` clients are constructed with `dangerouslyAllowBrowser: true`. The flag does nothing in Node. In a browser it means a key passed to smoltalk is visible to whoever can open the page; a production browser app points `baseUrl` at a proxy that holds the key.
+- `Buffer` is gone from the library. Bytes are `Uint8Array` everywhere; `NormalizedBlob.data`, generated image data, and speech audio were already typed that way, and the values are now plain `Uint8Array`s rather than `Buffer`s. A caller that passed a `Buffer` still type-checks (`Buffer` is a `Uint8Array`); a caller that called `Buffer` methods on returned data must wrap it with `Buffer.from(data)`.
+
 ## smoltalk 0.16.0 (2026-10-03)
 
 ### Added
