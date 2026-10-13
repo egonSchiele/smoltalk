@@ -1,5 +1,6 @@
-import { readFile, stat } from "node:fs/promises";
-import { extname } from "node:path";
+import { fileExtension, readFileBytes } from "#platform";
+import { FileTooLargeError } from "../platform.js";
+import { base64ToBytes, concatBytes } from "./base64.js";
 import { EXT_TO_MIME } from "./mime.js";
 
 export type BlobRef =
@@ -104,7 +105,7 @@ async function readBodyWithLimit(
     chunks.push(value);
   }
   // Pass the known total so concat doesn't re-scan the chunk list for its length.
-  return new Uint8Array(Buffer.concat(chunks, total));
+  return concatBytes(chunks, total);
 }
 
 async function loadRef(
@@ -117,19 +118,22 @@ async function loadRef(
       return { data: ref.data, mimeType: ref.mimeType };
     case "base64":
       return {
-        data: new Uint8Array(Buffer.from(ref.base64, "base64")),
+        data: base64ToBytes(ref.base64),
         mimeType: ref.mimeType,
       };
     case "path": {
-      // S1: bound memory — reject on stat before reading the whole file.
-      if (maxBytes !== undefined) {
-        const info = await stat(ref.path);
-        if (info.size > maxBytes) {
-          throw tooLargeError(maxBytes, info.size);
+      // S1: bound memory — readFileBytes rejects on the file's size before
+      // reading it. In a browser it throws: there is no file system.
+      let buf: Uint8Array;
+      try {
+        buf = await readFileBytes(ref.path, maxBytes);
+      } catch (err) {
+        if (err instanceof FileTooLargeError) {
+          throw tooLargeError(err.maxBytes, err.size);
         }
+        throw err;
       }
-      const buf = await readFile(ref.path);
-      const ext = extname(ref.path).toLowerCase();
+      const ext = fileExtension(ref.path);
       const inferred = EXT_TO_MIME[ext];
       const mimeType = ref.mimeType ?? inferred;
       if (allowed !== null && (!mimeType || !isAllowedMime(mimeType, allowed))) {
@@ -138,7 +142,7 @@ async function loadRef(
             `Allowed: ${allowed.join(", ")}. Pass an explicit mimeType on the BlobRef.`,
         );
       }
-      return { data: new Uint8Array(buf), mimeType };
+      return { data: buf, mimeType };
     }
     case "url": {
       // S2: only http(s) — reject file:/ftp:/gopher:/data: etc.

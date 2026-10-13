@@ -1,4 +1,4 @@
-import { pathToFileURL } from "url";
+import { pathToFileUrl } from "#platform";
 import type { BaseClient } from "./baseClient.js";
 import { hasProvider, registerProvider } from "../client.js";
 import { SmolError } from "../smolError.js";
@@ -86,7 +86,7 @@ export function loadLlamaCpp(options?: {
 async function doLoad(entryPath?: string): Promise<LlamaCppModule> {
   let importSource: string;
   if (entryPath) {
-    importSource = pathToFileURL(entryPath).href;
+    importSource = pathToFileUrl(entryPath);
   } else {
     importSource = "smoltalk-llama-cpp";
   }

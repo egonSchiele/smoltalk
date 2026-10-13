@@ -2,12 +2,12 @@
  * Fetching refreshed model data from a remote or on-disk catalog.
  *
  * Split out of modelData.ts so that module — and therefore models.ts, and
- * therefore the model registry — carries no Node dependency. Everything here
- * needs a Node runtime (node:fs, Buffer, process.env); everything in
- * modelData.ts is pure and bundles for the browser.
+ * therefore the model registry — stays pure. This file reaches the platform
+ * through #platform: a `file:` URL works on Node and throws in a browser,
+ * and `https:` works on both.
  */
-import { readFile } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import { env, readTextFromFileUrl } from "#platform";
+import { utf8ByteLength } from "./util/base64.js";
 import { parseModelDataBlob, type ModelDataBlob } from "./modelData.js";
 import { Result, failure } from "./types/result.js";
 
@@ -26,7 +26,7 @@ export type RefreshOptions = {
 };
 
 function enforceSizeCap(text: string): string {
-  if (Buffer.byteLength(text, "utf8") > MAX_BYTES) {
+  if (utf8ByteLength(text) > MAX_BYTES) {
     throw new Error(`Model data exceeds the ${MAX_BYTES}-byte cap`);
   }
   return text;
@@ -37,9 +37,7 @@ function enforceSizeCap(text: string): string {
 // integration test). Any other scheme is rejected.
 async function defaultFetcher(url: string, signal?: AbortSignal): Promise<string> {
   if (url.startsWith("file://")) {
-    const path = fileURLToPath(url);
-    const text = await readFile(path, "utf8");
-    return enforceSizeCap(text);
+    return enforceSizeCap(await readTextFromFileUrl(url));
   }
   if (url.startsWith("https://")) {
     const res = await fetch(url, { signal });
@@ -57,8 +55,9 @@ export async function refreshModels(
   opts: RefreshOptions = {},
 ): Promise<Result<ModelDataBlob>> {
   let url = DEFAULT_MODEL_DATA_URL;
-  if (process.env.SMOLTALK_MODEL_DATA_URL) {
-    url = process.env.SMOLTALK_MODEL_DATA_URL;
+  const fromEnv = env("SMOLTALK_MODEL_DATA_URL");
+  if (fromEnv) {
+    url = fromEnv;
   }
   if (opts.url) {
     url = opts.url;
