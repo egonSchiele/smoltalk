@@ -1,3 +1,4 @@
+import { base64ToBytes } from "../util/base64.js";
 import OpenAI from "openai";
 import {
   ImageInput,
@@ -35,7 +36,7 @@ export async function openaiCompatImage(
       );
     }
 
-    const client = new OpenAI({ apiKey, baseURL });
+    const client = new OpenAI({ dangerouslyAllowBrowser: true, apiKey, baseURL });
     const params = omitUndefined({
       model: config.model,
       prompt: normalized.prompt,
@@ -50,7 +51,7 @@ export async function openaiCompatImage(
     const response = await (client.images.generate as any)(params);
     const mimeType = mimeFromFormat(config.outputFormat) ?? "image/png";
     const images: GeneratedImage[] = (response.data ?? []).map((d: any) => ({
-      data: new Uint8Array(Buffer.from(d.b64_json, "base64")),
+      data: base64ToBytes(d.b64_json),
       mimeType,
       revisedPrompt: d.revised_prompt,
     }));

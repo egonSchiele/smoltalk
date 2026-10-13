@@ -33,6 +33,7 @@ describe("mlxEmbed", () => {
     expect((OpenAI as any).lastOptions).toEqual({
       apiKey: "mlx-local",
       baseURL: "http://127.0.0.1:9000/v1",
+      dangerouslyAllowBrowser: true,
     });
     expect(mockCreate).toHaveBeenCalledWith({
       model: "mlx-community/Qwen3-Embedding-4B-4bit-DWQ",

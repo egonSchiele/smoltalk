@@ -8,6 +8,7 @@ import { OpenAITranscriptionClient } from "./openai.js";
 export class GroqTranscriptionClient extends OpenAITranscriptionClient {
   protected override makeClient(): OpenAI {
     return new OpenAI({
+      dangerouslyAllowBrowser: true,
       apiKey: this.config.apiKey,
       baseURL: "https://api.groq.com/openai/v1",
     });

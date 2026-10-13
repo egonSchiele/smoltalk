@@ -1,3 +1,4 @@
+import { env } from "#platform";
 import { nanoid } from "nanoid";
 import { ModelLike, PromptResult } from "./types.js";
 import { failure, mergeResults, Result, success } from "./types/result.js";
@@ -477,7 +478,7 @@ export function getStatelogClient(config: {
   const statelogConfig = {
     host: config.host,
     traceId: config.traceId || nanoid(),
-    apiKey: process.env.STATELOG_SMOLTALK_API_KEY || "",
+    apiKey: env("STATELOG_SMOLTALK_API_KEY") || "",
     projectId: config.projectId,
     debugMode: config.debugMode || false,
   };

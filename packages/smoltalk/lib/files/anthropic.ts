@@ -13,14 +13,14 @@ class AnthropicFileProvider extends BaseFileProvider {
   protected readonly label = "Anthropic";
 
   protected async doUpload(data: Uint8Array, mimeType: string, ctx: FileProviderContext): Promise<ProviderFileRef> {
-    const client = new Anthropic({ apiKey: ctx.apiKey });
+    const client = new Anthropic({ dangerouslyAllowBrowser: true, apiKey: ctx.apiKey });
     const file = await toFile(data, ctx.filename ?? "upload", { type: mimeType });
     const uploaded = await client.beta.files.upload({ file, betas: [FILES_BETA] });
     return anthropicFileRef(uploaded, mimeType);
   }
 
   protected async doDelete(ref: ProviderFileRef, ctx: { apiKey: string }): Promise<void> {
-    const client = new Anthropic({ apiKey: ctx.apiKey });
+    const client = new Anthropic({ dangerouslyAllowBrowser: true, apiKey: ctx.apiKey });
     await client.beta.files.delete(ref.id, { betas: [FILES_BETA] });
   }
 }

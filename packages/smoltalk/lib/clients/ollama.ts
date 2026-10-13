@@ -1,6 +1,6 @@
 import { EgonLog } from "../util/logger.js";
-import { ChatRequest, Message, Ollama } from "ollama";
-import { ToolCall as OllamaToolCall } from "ollama";
+import { ChatRequest, Message, Ollama } from "#ollama";
+import { ToolCall as OllamaToolCall } from "#ollama";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
 import { redactAttachments } from "../util/redact.js";

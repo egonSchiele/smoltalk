@@ -1,3 +1,4 @@
+import { base64ToBytes, bytesToBase64 } from "../util/base64.js";
 import { GoogleGenAI } from "@google/genai";
 import {
   ImageInput,
@@ -29,7 +30,7 @@ export async function googleImage(
         parts.push({
           inlineData: {
             mimeType: img.mimeType,
-            data: Buffer.from(img.data).toString("base64"),
+            data: bytesToBase64(img.data),
           },
         });
       }
@@ -49,7 +50,7 @@ export async function googleImage(
       for (const part of candidate.content?.parts ?? []) {
         if (part.inlineData?.data && part.inlineData?.mimeType) {
           images.push({
-            data: new Uint8Array(Buffer.from(part.inlineData.data, "base64")),
+            data: base64ToBytes(part.inlineData.data),
             mimeType: part.inlineData.mimeType,
           });
         }

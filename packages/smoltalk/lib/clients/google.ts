@@ -1,3 +1,4 @@
+import { env } from "#platform";
 import { Content, GenerateContentConfig, GoogleGenAI } from "@google/genai";
 import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
@@ -246,7 +247,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
   private model: Model;
   constructor(config: SmolGoogleConfig) {
     super(config);
-    const apiKey = config.apiKey?.google || process.env.GEMINI_API_KEY;
+    const apiKey = config.apiKey?.google || env("GEMINI_API_KEY");
     if (!apiKey) {
       throw new Error("Google API key is required for SmolGoogle client.");
     }

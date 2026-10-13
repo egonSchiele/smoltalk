@@ -13,7 +13,7 @@ class OpenAIFileProvider extends BaseFileProvider {
   protected readonly label = "OpenAI";
 
   protected async doUpload(data: Uint8Array, mimeType: string, ctx: FileProviderContext): Promise<ProviderFileRef> {
-    const client = new OpenAI({ apiKey: ctx.apiKey });
+    const client = new OpenAI({ dangerouslyAllowBrowser: true, apiKey: ctx.apiKey });
     const file = await toFile(data, ctx.filename ?? "upload", { type: mimeType });
     // S5: the mapper below is trivial and won't throw post-create, so no orphan
     // is left here; a provider whose mapper does real work should best-effort delete.
@@ -22,7 +22,7 @@ class OpenAIFileProvider extends BaseFileProvider {
   }
 
   protected async doDelete(ref: ProviderFileRef, ctx: { apiKey: string }): Promise<void> {
-    const client = new OpenAI({ apiKey: ctx.apiKey });
+    const client = new OpenAI({ dangerouslyAllowBrowser: true, apiKey: ctx.apiKey });
     await client.files.delete(ref.id);
   }
 }

@@ -1,3 +1,4 @@
+import { env } from "#platform";
 import OpenAI from "openai";
 import {
   PromptResult,
@@ -46,7 +47,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   constructor(config: SmolOpenAiConfig) {
     super(config);
     const options = this.resolveClientOptions(config);
-    this.client = new OpenAI(options);
+    this.client = new OpenAI({ ...options, dangerouslyAllowBrowser: true });
     this.logger = getLogger();
     this.model = new Model(config.model, config.provider, config.modelData);
   }
@@ -58,7 +59,8 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   /**
    * Build the `new OpenAI({...})` options. Subclasses override to inject a
-   * different baseURL or to pull the key from a different config field.
+   * different baseURL or to pull the key from a different config field. The
+   * constructor adds `dangerouslyAllowBrowser` itself.
    *
    * Default behavior: read OPENAI_API_KEY (or config.apiKey.openAi). Throws
    * if the key is missing — subclasses with required keys do their own check.
@@ -67,7 +69,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     apiKey?: string;
     baseURL?: string;
   } {
-    const apiKey = config.apiKey?.openAi || process.env.OPENAI_API_KEY;
+    const apiKey = config.apiKey?.openAi || env("OPENAI_API_KEY");
     if (!apiKey) {
       throw new Error("OpenAI API key is required for SmolOpenAi client.");
     }

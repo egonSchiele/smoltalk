@@ -8,6 +8,7 @@ import type { SpeakFormat } from "../util/audioMime.js";
 export class GroqSpeechClient extends OpenAISpeechClient {
   protected override makeClient(): OpenAI {
     return new OpenAI({
+      dangerouslyAllowBrowser: true,
       apiKey: this.config.apiKey,
       baseURL: "https://api.groq.com/openai/v1",
     });

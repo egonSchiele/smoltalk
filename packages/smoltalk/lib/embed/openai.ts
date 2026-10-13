@@ -1,3 +1,4 @@
+import { base64ToBytes } from "../util/base64.js";
 import OpenAI from "openai";
 import { EmbedConfig, EmbedResult } from "../embed.js";
 import { Result, success, failure } from "../types/result.js";
@@ -24,7 +25,7 @@ export type OpenAiEmbedOptions = {
  */
 function toFloats(embedding: number[] | string): number[] {
   if (typeof embedding === "string") {
-    const bytes = Buffer.from(embedding, "base64");
+    const bytes = base64ToBytes(embedding);
     const view = new Float32Array(
       bytes.buffer,
       bytes.byteOffset,
@@ -49,7 +50,7 @@ export async function openaiEmbed(
   options?: OpenAiEmbedOptions,
 ): Promise<Result<EmbedResult>> {
   try {
-    const client = new OpenAI({ apiKey, ...(baseURL ? { baseURL } : {}) });
+    const client = new OpenAI({ dangerouslyAllowBrowser: true, apiKey, ...(baseURL ? { baseURL } : {}) });
     const body: OpenAI.EmbeddingCreateParams = {
       model: config.model,
       input: inputs,

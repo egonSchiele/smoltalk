@@ -1,3 +1,4 @@
+import { env } from "#platform";
 import OpenAI from "openai";
 import {
   PromptResult,
@@ -88,13 +89,13 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
 
   constructor(config: SmolOpenAiResponsesConfig) {
     super(config);
-    const apiKey = config.apiKey?.openAi || process.env.OPENAI_API_KEY;
+    const apiKey = config.apiKey?.openAi || env("OPENAI_API_KEY");
     if (!apiKey) {
       throw new Error(
         "OpenAI API key is required for SmolOpenAiResponses client.",
       );
     }
-    this.client = new OpenAI({ apiKey });
+    this.client = new OpenAI({ dangerouslyAllowBrowser: true, apiKey });
     this.logger = getLogger();
     this.model = new Model(config.model, config.provider, config.modelData);
   }

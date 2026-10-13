@@ -27,7 +27,10 @@
 
     /* Modules */
     "module": "nodenext" /* Specify what module code is generated. */,
-    // "rootDir": "./",                                  /* Specify the root folder within your source files. */
+    // The "#..." entries in package.json's "imports" point into dist/, and
+    // without a named root TypeScript reports TS2210 ("the project root is
+    // ambiguous") when it reads them. tests/tsconfig.json widens it to "..".
+    "rootDir": "./lib",
     // should stay commented out since I'm not using any 3rd party modules in dist
     "moduleResolution": "nodenext" /* Specify how TypeScript looks up a file from a given module specifier. */,
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */

@@ -1,3 +1,4 @@
+import { env } from "#platform";
 import { getModel } from "../models.js";
 import { SmolError } from "../smolError.js";
 import type { ModelDataBlob } from "../modelData.js";
@@ -55,6 +56,7 @@ type NestedKeyConfig = {
 
 /**
  * Resolve the API key for a provider, checking config then env vars.
+ * In a browser `env` answers nothing, so the caller passes the key.
  */
 export function resolveApiKey(
   provider: string,
@@ -64,25 +66,25 @@ export function resolveApiKey(
   switch (provider) {
     case "openai":
     case "openai-responses":
-      return k?.openAi || process.env.OPENAI_API_KEY;
+      return k?.openAi || env("OPENAI_API_KEY");
     case "google":
-      return k?.google || process.env.GEMINI_API_KEY;
+      return k?.google || env("GEMINI_API_KEY");
     case "anthropic":
-      return k?.anthropic || process.env.ANTHROPIC_API_KEY;
+      return k?.anthropic || env("ANTHROPIC_API_KEY");
     case "ollama":
       return k?.ollama;
     case "openrouter":
-      return k?.openRouter || process.env.OPENROUTER_API_KEY;
+      return k?.openRouter || env("OPENROUTER_API_KEY");
     case "deepinfra":
-      return k?.deepInfra || process.env.DEEPINFRA_API_KEY;
+      return k?.deepInfra || env("DEEPINFRA_API_KEY");
     case "litellm":
-      return k?.liteLlm || process.env.LITELLM_API_KEY;
+      return k?.liteLlm || env("LITELLM_API_KEY");
     case "openai-compat":
-      return k?.openAiCompat || process.env.OPENAI_COMPAT_API_KEY;
+      return k?.openAiCompat || env("OPENAI_COMPAT_API_KEY");
     case "groq":
-      return k?.groq || process.env.GROQ_API_KEY;
+      return k?.groq || env("GROQ_API_KEY");
     case "typesafe":
-      return k?.typesafe || process.env.TYPESAFE_API_KEY;
+      return k?.typesafe || env("TYPESAFE_API_KEY");
     default:
       return config.apiKey?.[provider];
   }
@@ -103,20 +105,20 @@ export function resolveBaseUrl(
   const b = config.baseUrl;
   switch (provider) {
     case "ollama":
-      return b?.ollama || process.env.OLLAMA_HOST;
+      return b?.ollama || env("OLLAMA_HOST");
     case "openrouter":
       return b?.openRouter || "https://openrouter.ai/api/v1";
     case "deepinfra":
       return b?.deepInfra || "https://api.deepinfra.com/v1/openai";
     case "litellm":
-      return b?.liteLlm || process.env.LITELLM_BASE_URL;
+      return b?.liteLlm || env("LITELLM_BASE_URL");
     case "openai-compat":
-      return b?.openAiCompat || process.env.OPENAI_COMPAT_BASE_URL;
+      return b?.openAiCompat || env("OPENAI_COMPAT_BASE_URL");
     case "mlx":
-      return b?.mlx || process.env.MLX_BASE_URL || "http://127.0.0.1:8080/v1";
+      return b?.mlx || env("MLX_BASE_URL") || "http://127.0.0.1:8080/v1";
     case "typesafe":
       // A Laya server (`laya-serve`) speaks the same protocol; point this at it.
-      return b?.typesafe || process.env.TYPESAFE_BASE_URL || "https://api.typesafe.ai";
+      return b?.typesafe || env("TYPESAFE_BASE_URL") || "https://api.typesafe.ai";
     default:
       return undefined;
   }
