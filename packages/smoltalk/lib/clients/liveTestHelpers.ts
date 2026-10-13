@@ -4,6 +4,7 @@
  * Not exported from the package's public surface. Excluded from the dist
  * build via tsconfig so it doesn't ship in the published tarball.
  */
+import { env } from "#platform";
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { text, textStream } from "../functions.js";
@@ -42,7 +43,7 @@ export interface LiveProviderTestConfig {
 }
 
 export function liveProviderSuite(config: LiveProviderTestConfig): void {
-  const haveKey = Boolean(process.env[config.envKey]);
+  const haveKey = Boolean(env(config.envKey));
   const timeout = config.timeout ?? DEFAULT_TIMEOUT;
 
   // A small maxTokens keeps the smoke tests cheap. OpenRouter in particular
