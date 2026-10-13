@@ -9,14 +9,13 @@
  * The browser file throws from every file function and answers `undefined`
  * for every environment variable, so a browser caller passes API keys in
  * and cannot use path attachments, `file:` model data, or the llama.cpp
- * loader's `entryPath`.
+ * loader's `entryPath`. Pure string work such as a path's extension is not
+ * on the platform; see `lib/util/fileExtension.ts`.
  */
 export type Platform = {
   /** The bytes of the file at `path`. With `maxBytes`, refuses a larger
    *  file before reading it, with a {@link FileTooLargeError}. */
   readFileBytes(path: string, maxBytes?: number): Promise<Uint8Array>;
-  /** The extension of `path` including the dot, lower-cased, or "". */
-  fileExtension(path: string): string;
   /** The text of the file a `file:` URL names, as UTF-8. */
   readTextFromFileUrl(url: string): Promise<string>;
   /** The `file:` URL for a file system path. */

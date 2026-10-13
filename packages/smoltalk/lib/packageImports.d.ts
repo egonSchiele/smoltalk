@@ -9,7 +9,6 @@
 declare module "#platform" {
   import type { Platform } from "./platform.js";
   export const readFileBytes: Platform["readFileBytes"];
-  export const fileExtension: Platform["fileExtension"];
   export const readTextFromFileUrl: Platform["readTextFromFileUrl"];
   export const pathToFileUrl: Platform["pathToFileUrl"];
   export const env: Platform["env"];

@@ -1,6 +1,7 @@
-import { fileExtension, readFileBytes } from "#platform";
+import { readFileBytes } from "#platform";
 import { FileTooLargeError } from "../platform.js";
 import { base64ToBytes, concatBytes } from "./base64.js";
+import { fileExtension } from "./fileExtension.js";
 import { EXT_TO_MIME } from "./mime.js";
 
 export type BlobRef =

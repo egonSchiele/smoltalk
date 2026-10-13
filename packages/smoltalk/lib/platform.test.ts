@@ -8,7 +8,6 @@ import { FileTooLargeError, type Platform } from "./platform.js";
 
 const NAMES: (keyof Platform)[] = [
   "readFileBytes",
-  "fileExtension",
   "readTextFromFileUrl",
   "pathToFileUrl",
   "env",
@@ -36,11 +35,6 @@ describe("#platform on Node", () => {
     const file = path.join(dir, "a.txt");
     await writeFile(file, "héllo", "utf8");
     expect(await node.readTextFromFileUrl(node.pathToFileUrl(file))).toBe("héllo");
-  });
-
-  it("gives a lower-cased extension with its dot", () => {
-    expect(node.fileExtension("/x/photo.PNG")).toBe(".png");
-    expect(node.fileExtension("/x/noext")).toBe("");
   });
 
   it("gives a file: URL", () => {
@@ -71,9 +65,6 @@ describe("#platform in a browser", () => {
     );
     await expect(browser.readTextFromFileUrl("file:///x")).rejects.toThrow(
       "readTextFromFileUrl is not available in a browser build of smoltalk.",
-    );
-    expect(() => browser.fileExtension("/x.png")).toThrow(
-      "fileExtension is not available in a browser build of smoltalk.",
     );
     expect(() => browser.pathToFileUrl("/x")).toThrow(
       "pathToFileUrl is not available in a browser build of smoltalk.",

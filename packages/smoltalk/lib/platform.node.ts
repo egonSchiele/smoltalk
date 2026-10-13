@@ -1,6 +1,5 @@
 // The Node side of #platform. See platform.ts.
 import { readFile, stat } from "node:fs/promises";
-import { extname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { FileTooLargeError, type Platform } from "./platform.js";
 
@@ -14,8 +13,6 @@ export const readFileBytes: Platform["readFileBytes"] = async (path, maxBytes) =
   const buf = await readFile(path);
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
 };
-
-export const fileExtension: Platform["fileExtension"] = (path) => extname(path).toLowerCase();
 
 export const readTextFromFileUrl: Platform["readTextFromFileUrl"] = (url) =>
   readFile(fileURLToPath(url), "utf8");

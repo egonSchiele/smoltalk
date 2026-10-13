@@ -11,10 +11,6 @@ export const readFileBytes: Platform["readFileBytes"] = async () => {
   throw unavailable("readFileBytes");
 };
 
-export const fileExtension: Platform["fileExtension"] = () => {
-  throw unavailable("fileExtension");
-};
-
 export const readTextFromFileUrl: Platform["readTextFromFileUrl"] = async () => {
   throw unavailable("readTextFromFileUrl");
 };
