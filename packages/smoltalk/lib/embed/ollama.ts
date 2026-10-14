@@ -1,4 +1,4 @@
-import { Ollama } from "ollama";
+import { Ollama } from "#ollama";
 import { EmbedConfig, EmbedResult } from "../embed.js";
 import { Result, success, failure } from "../types/result.js";
 import { DEFAULT_OLLAMA_HOST } from "../clients/ollama.js";
