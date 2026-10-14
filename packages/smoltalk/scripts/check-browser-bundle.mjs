@@ -130,6 +130,10 @@ if (existsSync(path.join(packageRoot, "dist/index.js"))) {
   expect(inputs.includes("dist/platform.browser.js"), "#platform did not resolve to dist/platform.browser.js");
   expect(!inputs.includes("dist/platform.node.js"), "dist/platform.node.js is in the browser bundle");
   expect(inputs.some((f) => /ollama\/dist\/browser\./.test(f)), "#ollama did not resolve to ollama/browser");
+  // An import of "ollama" by name, instead of "#ollama", pulls in the Node
+  // build beside the browser one. Its node:fs import sits in node_modules,
+  // where the import check above does not look, so check for the file.
+  expect(!inputs.some((f) => /ollama\/dist\/index\./.test(f)), "ollama's Node build is in the browser bundle: import it from #ollama");
   for (const [file, input] of Object.entries(dist.inputs)) {
     if (!file.startsWith("dist/")) {
       continue;
