@@ -273,12 +273,15 @@ export class SmolGoogle extends BaseClient implements SmolClient {
 
     if (usageMetadata) {
       const cached = usageMetadata.cachedContentTokenCount ?? 0;
+      // Thinking is reported in thoughtsTokenCount, separate from
+      // candidatesTokenCount, and billed at the output rate.
+      const thoughts = usageMetadata.thoughtsTokenCount ?? 0;
       usage = {
         inputTokens: Math.max(
           0,
           (usageMetadata.promptTokenCount || 0) - cached,
         ),
-        outputTokens: usageMetadata.candidatesTokenCount || 0,
+        outputTokens: (usageMetadata.candidatesTokenCount || 0) + thoughts,
         totalTokens: usageMetadata.totalTokenCount,
       };
       if (cached > 0) {
