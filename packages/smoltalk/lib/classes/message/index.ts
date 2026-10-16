@@ -106,7 +106,7 @@ export function systemMessage(
 }
 
 export function toolMessage(
-  content: string | Array<TextPart>,
+  content: unknown,
   options: { tool_call_id: string; rawData?: any; name: string },
 ) {
   return new ToolMessage(content, options);
