@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { BaseMessage, MessageClass } from "./BaseMessage.js";
-import { TextPart, TextPartSchema } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, FunctionResponse } from "@google/genai";
 import { Message } from "ollama";
@@ -26,13 +25,16 @@ export type ToolMessageJSON = {
 
 export class ToolMessage extends BaseMessage implements MessageClass {
   public _role = "tool" as const;
-  public _content: string | Array<TextPart>;
+  // A tool result is whatever the tool returned: text, text parts, or a
+  // plain value such as an array of records. Every provider conversion
+  // reads it through the `content` getter, which turns any value into text.
+  public _content: unknown;
   public _tool_call_id: string;
   public _rawData?: any;
   public _name: string;
 
   constructor(
-    content: string | Array<TextPart>,
+    content: unknown,
     options: { tool_call_id: string; rawData?: any; name: string },
   ) {
     super();
@@ -86,22 +88,10 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       logger.debug("ToolMessage payload that failed to parse:", JSON.stringify(json, null, 2));
       throw new Error("Failed to parse ToolMessage");
     }
-    const TextPartArraySchema = z.array(TextPartSchema);
-
-    const textPartArrayResult = TextPartArraySchema.safeParse(
-      result.data.content,
-    );
-    if (textPartArrayResult.success) {
-      result.data.content = textPartArrayResult.data;
-    } else if (typeof result.data.content === "string") {
-      // do nothing, it's already a string
-    } else {
-      getLogger().debug(
-        "ToolMessage content is neither a string nor an array of TextParts. Converting to string using JSON.stringify.",
-      );
-      result.data.content = JSON.stringify(result.data.content);
-    }
-
+    // Content is kept exactly as saved. Rebuilding a non-text value as its
+    // JSON text here would make a saved-and-rebuilt thread differ from one
+    // that was never saved, while what a provider sees is the same either
+    // way (the `content` getter stringifies both).
     return new ToolMessage(result.data.content, {
       tool_call_id: result.data.tool_call_id,
       name: result.data.name,

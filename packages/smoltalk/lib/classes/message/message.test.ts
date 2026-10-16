@@ -396,6 +396,25 @@ describe("ToolMessage", () => {
       expect(restored.tool_call_id).toBe("tc-1");
       expect(restored.name).toBe("get_weather");
     });
+
+    // A tool result is often a value, not text. A rebuilt message must hold
+    // the same value the original held, so a thread that was saved and
+    // rebuilt (a resumed run, a subthread) matches one that never was.
+    it.each([
+      ["a string", "sunny"],
+      ["a text-part array", [{ type: "text", text: "sunny" }]],
+      ["a text part with an extra field", [{ type: "text", text: "sunny", cache: "yes" }]],
+      ["an array of records", [{ city: "Oslo", temp: 3 }, { city: "Rome", temp: 19 }]],
+      ["an object", { city: "Oslo", temp: 3 }],
+      ["a number", 42],
+      ["a boolean", false],
+      ["null", null],
+    ])("keeps %s as it was", (_name, content) => {
+      const original = new ToolMessage(content, opts);
+      const restored = ToolMessage.fromJSON(JSON.parse(JSON.stringify(original.toJSON())));
+      expect(restored.toJSON()).toEqual(original.toJSON());
+      expect(restored.content).toBe(original.content);
+    });
   });
 
   describe("toOpenAIMessage", () => {
