@@ -4,7 +4,7 @@ import { ChatCompletionMessageParam } from "openai/resources";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 
 export class BaseMessage {
-  protected contentToString(content: string | unknown[] | null | undefined): string {
+  protected contentToString(content: unknown): string {
     if (content === null || content === undefined) return "";
     return typeof content === "string" ? content : JSON.stringify(content);
   }
