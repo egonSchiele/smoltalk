@@ -1,5 +1,10 @@
 # Changelog
 
+## smoltalk 0.18.0 (2026-10-15)
+
+- Billing fix: Bill Gemini thinking tokens, and long-context rates, in cost estimates
+- Keep tool message content as saved when rebuilding from JSON
+
 ## smoltalk 0.17.0 (2026-10-13)
 
 ### Added
