@@ -94,6 +94,61 @@ describe("Model", () => {
       expect(cost!.totalCost).toBeCloseTo(3.9, 6);
     });
 
+    describe("long-context pricing", () => {
+      // gemini-2.5-pro: base input=1.25, cached=0.125, output=10;
+      // above 200k prompt tokens: input=2.5, cached=0.25, output=15.
+      it("uses base rates at or below the threshold", () => {
+        const model = new Model("gemini-2.5-pro");
+        const cost = model.calculateCost({
+          inputTokens: 200_000,
+          outputTokens: 100_000,
+        });
+        // 200_000 @ $1.25/M = $0.25; 100_000 @ $10/M = $1.00
+        expect(cost!.inputCost).toBeCloseTo(0.25, 6);
+        expect(cost!.outputCost).toBeCloseTo(1.0, 6);
+      });
+
+      it("uses long-context rates for the whole request above the threshold", () => {
+        const model = new Model("gemini-2.5-pro");
+        const cost = model.calculateCost({
+          inputTokens: 300_000,
+          outputTokens: 100_000,
+        });
+        // 300_000 @ $2.50/M = $0.75; 100_000 @ $15/M = $1.50
+        expect(cost!.inputCost).toBeCloseTo(0.75, 6);
+        expect(cost!.outputCost).toBeCloseTo(1.5, 6);
+        expect(cost!.totalCost).toBeCloseTo(2.25, 6);
+      });
+
+      it("counts cached tokens toward the threshold and prices them at the long rate", () => {
+        const model = new Model("gemini-2.5-pro");
+        // 150k uncached + 100k cached = 250k prompt tokens, over 200k.
+        const cost = model.calculateCost({
+          inputTokens: 150_000,
+          outputTokens: 0,
+          cachedInputTokens: 100_000,
+        });
+        // 150_000 @ $2.50/M = $0.375; 100_000 @ $0.25/M = $0.025
+        expect(cost!.inputCost).toBeCloseTo(0.375, 6);
+        expect(cost!.cachedInputCost).toBeCloseTo(0.025, 6);
+      });
+
+      it("keeps the base rate for a field the long-context tier leaves out", () => {
+        // gpt-5.4-pro: base input=30, output=180; its long tier sets only
+        // input=60 and output=270, and the model has no cached rate at all.
+        const model = new Model("gpt-5.4-pro");
+        const cost = model.calculateCost({
+          inputTokens: 300_000,
+          outputTokens: 0,
+          cachedInputTokens: 100_000,
+        });
+        // Cached tokens fold into input at the long input rate:
+        // 400_000 @ $60/M = $24
+        expect(cost!.inputCost).toBeCloseTo(24, 6);
+        expect(cost!.cachedInputCost).toBeUndefined();
+      });
+    });
+
     it("falls back to full input price when cache prices are missing", () => {
       // Legacy/disabled model without cachedInputTokenCost in the registry.
       // The provider still billed for those tokens, so we charge at the

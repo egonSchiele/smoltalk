@@ -76,14 +76,41 @@ export class Model {
       return null;
     }
     // BaseModel token-rate fields, read structurally across the model union.
-    const rates = model as {
+    const baseRates = model as {
       inputTokenCost?: number;
       cachedInputTokenCost?: number;
       cacheCreationInputTokenCost?: number;
       outputTokenCost?: number;
       inputAudioTokenCost?: number;
       outputAudioTokenCost?: number;
+      longContext?: {
+        thresholdTokens: number;
+        inputTokenCost?: number;
+        outputTokenCost?: number;
+        cachedInputTokenCost?: number;
+      };
     };
+    const rates = { ...baseRates };
+    // A prompt over the long-context threshold is billed at the long-context
+    // rates for the whole request, input and output alike. The prompt size
+    // counts every input bucket, cached ones included.
+    const promptTokens =
+      usage.inputTokens +
+      (usage.cachedInputTokens ?? 0) +
+      (usage.cacheCreationInputTokens ?? 0) +
+      (usage.inputAudioTokens ?? 0);
+    const longContext = baseRates.longContext;
+    if (longContext !== undefined && promptTokens > longContext.thresholdTokens) {
+      if (longContext.inputTokenCost !== undefined) {
+        rates.inputTokenCost = longContext.inputTokenCost;
+      }
+      if (longContext.outputTokenCost !== undefined) {
+        rates.outputTokenCost = longContext.outputTokenCost;
+      }
+      if (longContext.cachedInputTokenCost !== undefined) {
+        rates.cachedInputTokenCost = longContext.cachedInputTokenCost;
+      }
+    }
     // Price only models that carry at least one token rate; those without
     // (per-minute STT, per-char TTS) return null so their dedicated helpers apply.
     if (
