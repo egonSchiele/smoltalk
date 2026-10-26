@@ -298,6 +298,8 @@ const r = await textSync({
 OpenRouter sends each model to one of several companies that host it. `openRouter.provider` chooses which ones it may use. The fields mirror OpenRouter's [provider routing options](https://openrouter.ai/docs/features/provider-routing), in camelCase (`allowFallbacks` is sent as `allow_fallbacks`):
 
 ```ts
+import { textSync, userMessage } from "smoltalk";
+
 const r = await textSync({
   model: "z-ai/glm-5.3-flash",
   provider: "openrouter",
