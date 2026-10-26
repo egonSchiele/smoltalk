@@ -105,6 +105,13 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
    * reject `max_tokens` outright. Compat servers override this to send
    * `max_tokens`, which is the field they reliably accept.
    */
+  protected maxTokensParam(config: SmolConfig): Record<string, number> {
+    if (config.maxTokens === undefined) {
+      return {};
+    }
+    return { max_completion_tokens: config.maxTokens };
+  }
+
   /** The company that ran the model, read from a completion or one stream
    *  chunk. Routers override this; a direct provider has none. */
   protected readServedBy(_body: any): string | undefined {
@@ -115,13 +122,6 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
    *  chunk's delta. Providers that send it override this. */
   protected readReasoning(_part: any): string | undefined {
     return undefined;
-  }
-
-  protected maxTokensParam(config: SmolConfig): Record<string, number> {
-    if (config.maxTokens === undefined) {
-      return {};
-    }
-    return { max_completion_tokens: config.maxTokens };
   }
 
   /**
