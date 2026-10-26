@@ -21,6 +21,10 @@ const OPENROUTER_PROVIDER_FIELDS: Record<
   quantizations: "quantizations",
 };
 
+function nonEmptyString(value: unknown): string | undefined {
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
 /** The request's `provider` object: only the fields that are set, under
  *  OpenRouter's names. */
 export function toOpenRouterProvider(
@@ -43,6 +47,8 @@ export function toOpenRouterProvider(
  *   response (in the final SSE chunk when streaming); no request flag needed.
  * - Provider routing: config.openRouter.provider becomes the request's
  *   `provider` field, in OpenRouter's snake_case names.
+ * - The reply's top-level `provider` (the company that ran the model) and
+ *   `message.reasoning` become `servedBy` and `reasoning` on the result.
  * - Hosted web_search: when config.hostedTools includes "web_search",
  *   injects `plugins: [{ id: "web", max_results: 5 }]` and parses
  *   message.annotations into a HostedToolResult.
@@ -65,6 +71,14 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
 
   protected resolveCostUsd(usage: any): number | undefined {
     return typeof usage?.cost === "number" ? usage.cost : undefined;
+  }
+
+  protected readServedBy(body: any): string | undefined {
+    return nonEmptyString(body?.provider);
+  }
+
+  protected readReasoning(part: any): string | undefined {
+    return nonEmptyString(part?.reasoning);
   }
 
   protected buildRequestExtras(config: SmolConfig): Record<string, unknown> {

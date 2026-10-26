@@ -50,3 +50,24 @@ d("OpenRouter - hosted web_search", () => {
     },
   );
 });
+
+d("OpenRouter - provider routing", () => {
+  it(
+    "routes to the provider it was told to and reports it",
+    { timeout: 60_000 },
+    async () => {
+      const r = await text({
+        model: "z-ai/glm-5.3-flash",
+        provider: "openrouter",
+        apiKey: { openRouter: KEY! },
+        messages: [userMessage("Say hi.")],
+        openRouter: { provider: { only: ["fireworks"], allowFallbacks: false } },
+        maxTokens: 2000,
+      });
+      expect(r.success).toBe(true);
+      if (r.success) {
+        expect(r.value.servedBy).toBe("Fireworks");
+      }
+    },
+  );
+});

@@ -240,6 +240,13 @@ export type PromptResult = {
    *  it on the assistant message. A decision model puts its full answers
    *  with probabilities here. */
   rawData?: unknown;
+  /** The company that ran the model, when the call went through a router
+   *  such as OpenRouter, e.g. "OpenInference". Absent otherwise. */
+  servedBy?: string;
+  /** Reasoning text the provider returned with no signature. It cannot be
+   *  sent back to a model, so smoltalk never puts it on a message; compare
+   *  `thinkingBlocks`, which can be. Absent when the provider sent none. */
+  reasoning?: string;
 };
 
 export function promptResult({
@@ -254,6 +261,8 @@ export function promptResult({
   stopReason,
   rawStopReason,
   rawData,
+  servedBy,
+  reasoning,
 }: Partial<PromptResult>): PromptResult {
   return {
     output: output || null,
@@ -267,6 +276,8 @@ export function promptResult({
     stopReason,
     rawStopReason,
     rawData,
+    ...(servedBy !== undefined && { servedBy }),
+    ...(reasoning !== undefined && { reasoning }),
   };
 }
 
