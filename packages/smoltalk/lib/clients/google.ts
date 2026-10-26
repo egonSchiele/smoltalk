@@ -43,6 +43,9 @@ export function googleWebSearchEntries(hostedTools?: string[]): any[] {
   return [];
 }
 
+/** Request fields the Google client builds itself; rawAttributes cannot replace them. */
+const GOOGLE_OWNED_KEYS = ["model", "contents", "config"];
+
 /**
  * Whether a Gemini model can combine built-in tools (e.g. hosted web search)
  * with function calling in a single request. Confirmed against the live API:
@@ -395,7 +398,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       contents: messages,
       model: this.getModel(),
       config: genConfig,
-      ...sanitizeAttributes(config.rawAttributes),
+      ...sanitizeAttributes(config.rawAttributes, GOOGLE_OWNED_KEYS, this.logger),
     };
   }
 

@@ -40,6 +40,16 @@ import { CostEstimate, TokenUsage } from "../types.js";
 
 export type SmolOpenAiConfig = SmolConfig;
 
+
+/** Request fields the chat client builds itself; rawAttributes cannot replace them. */
+const OPENAI_OWNED_KEYS = [
+  "model",
+  "messages",
+  "tools",
+  "response_format",
+  "stream",
+  "stream_options",
+];
 export class SmolOpenAi extends BaseClient implements SmolClient {
   protected client: OpenAI;
   protected logger: EgonLog;
@@ -197,7 +207,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }),
       ...openAIChatLogprobParams(config.logprobs),
       ...this.maxTokensParam(config),
-      ...sanitizeAttributes(config.rawAttributes),
+      ...sanitizeAttributes(config.rawAttributes, OPENAI_OWNED_KEYS, this.logger),
       ...this.buildRequestExtras(config),
     };
     if (config.responseFormat) {

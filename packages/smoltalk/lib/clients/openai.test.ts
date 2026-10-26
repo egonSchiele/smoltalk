@@ -447,3 +447,28 @@ describe("SmolOpenAi default constructor", () => {
     ).not.toThrow();
   });
 });
+
+describe("SmolOpenAi rawAttributes", () => {
+  const base = { model: "gpt-4o", provider: "openai", messages: [] } as SmolConfig;
+
+  it("rawAttributes cannot replace the model, messages, or tools", () => {
+    const request = logprobProvider().publicBuild({
+      ...base,
+      messages: [userMessage("hi")],
+      rawAttributes: { model: "other-model", messages: [], tools: [], stream: true, top_k: 5 },
+    });
+    expect(request.model).toBe("gpt-4o");
+    expect(request.messages).toHaveLength(1);
+    expect(request.tools).toBeUndefined();
+    expect(request.stream).toBeUndefined();
+    expect(request.top_k).toBe(5);
+  });
+
+  it("rawAttributes can still set tool_choice", () => {
+    const request = logprobProvider().publicBuild({
+      ...base,
+      rawAttributes: { tool_choice: "none" },
+    });
+    expect(request.tool_choice).toBe("none");
+  });
+});

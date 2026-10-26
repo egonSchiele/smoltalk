@@ -35,6 +35,7 @@ import {
   smolErrorForStatus,
 } from "../smolError.js";
 import { extractHttpErrorFields } from "../util/httpError.js";
+import { sanitizeAttributes } from "../util/util.js";
 import { BaseClient } from "./baseClient.js";
 import { ModelName, TextModelName, getModel, isTextModel } from "../models.js";
 import { Model } from "../model.js";
@@ -205,6 +206,18 @@ function thinkingStyleFor(
   }
   return "adaptive";
 }
+
+/** Request fields the Anthropic client builds itself; rawAttributes cannot replace them. */
+const ANTHROPIC_OWNED_KEYS = [
+  "model",
+  "max_tokens",
+  "messages",
+  "system",
+  "tools",
+  "thinking",
+  "output_config",
+  "stream",
+];
 
 /**
  * Attach ephemeral cache_control breakpoints to (up to) three places:
@@ -512,7 +525,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(config.temperature !== undefined && {
             temperature: config.temperature,
           }),
-          ...(config.rawAttributes || {}),
+          ...sanitizeAttributes(config.rawAttributes, ANTHROPIC_OWNED_KEYS, this.logger),
           stream: false,
         } as any,
         { ...(signal && { signal }) },
@@ -610,7 +623,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(config.temperature !== undefined && {
             temperature: config.temperature,
           }),
-          ...(config.rawAttributes || {}),
+          ...sanitizeAttributes(config.rawAttributes, ANTHROPIC_OWNED_KEYS, this.logger),
           stream: true,
         } as any,
         { ...(signal && { signal }) },

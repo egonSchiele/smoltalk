@@ -82,6 +82,9 @@ export function parseOpenAIResponsesHostedTools(
   return [webSearchResult(provider, { queries, sources, citations, callCount, raw })];
 }
 
+
+/** Request fields the Responses client builds itself; rawAttributes cannot replace them. */
+const RESPONSES_OWNED_KEYS = ["model", "input", "instructions", "tools", "text", "stream"];
 export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   private client: OpenAI;
   private logger: EgonLog;
@@ -207,7 +210,10 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       }
     }
 
-    Object.assign(request, sanitizeAttributes(config.rawAttributes));
+    Object.assign(
+      request,
+      sanitizeAttributes(config.rawAttributes, RESPONSES_OWNED_KEYS, this.logger),
+    );
 
     return request;
   }

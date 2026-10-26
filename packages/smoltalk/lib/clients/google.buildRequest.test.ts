@@ -165,3 +165,16 @@ describe("SmolGoogle.buildRequest — responseFormat literal unions", () => {
     ]);
   });
 });
+
+describe("SmolGoogle.buildRequest — rawAttributes", () => {
+  it("rawAttributes cannot replace the model, contents, or config", () => {
+    const request = build("gemini-2.5-flash", {
+      maxTokens: 100,
+      rawAttributes: { model: "other-model", contents: [], config: {}, labels: { a: "b" } },
+    });
+    expect(request.model).toBe("gemini-2.5-flash");
+    expect(request.contents).toHaveLength(1);
+    expect(request.config.maxOutputTokens).toBe(100);
+    expect(request.labels).toEqual({ a: "b" });
+  });
+});
