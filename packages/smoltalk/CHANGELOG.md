@@ -1,5 +1,12 @@
 # Changelog
 
+## smoltalk 0.19.0 (2026-10-26)
+
+### Added
+
+- OpenRouter: new `openRouter.provider` config chooses which companies may serve a model (`order`, `only`, `ignore`, `allowFallbacks`, etc.), mirroring OpenRouter's provider routing options.
+- OpenRouter: `PromptResult` gains `servedBy` (company that ran the model) and `reasoning` (unsigned reasoning text), in both sync and stream. `reasoning` is kept apart from `thinkingBlocks` and never sent back to a model.
+
 ## smoltalk 0.18.0 (2026-10-15)
 
 - Billing fix: Bill Gemini thinking tokens, and long-context rates, in cost estimates
