@@ -112,6 +112,18 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return { max_completion_tokens: config.maxTokens };
   }
 
+  /** The company that ran the model, read from a completion or one stream
+   *  chunk. Routers override this; a direct provider has none. */
+  protected readServedBy(_body: any): string | undefined {
+    return undefined;
+  }
+
+  /** Unsigned reasoning text, read from a completion's message or one
+   *  chunk's delta. Providers that send it override this. */
+  protected readReasoning(_part: any): string | undefined {
+    return undefined;
+  }
+
   /**
    * Extract provider-specific hosted-tool results (e.g. OpenRouter web_search
    * annotations) from a completion. Subclasses override; default returns none.
@@ -327,6 +339,14 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     if (logprobs !== undefined) {
       result.logprobs = logprobs;
     }
+    const servedBy = this.readServedBy(completion);
+    if (servedBy !== undefined) {
+      result.servedBy = servedBy;
+    }
+    const reasoning = this.readReasoning(message);
+    if (reasoning !== undefined) {
+      result.reasoning = reasoning;
+    }
     return success(result);
   }
 
@@ -363,8 +383,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     let cost: CostEstimate | undefined;
     let rawStopReason: string | undefined;
     const logprobEntries: OpenAILogprob[] = [];
+    let servedBy: string | undefined;
+    let reasoning = "";
 
     for await (const chunk of completion) {
+      servedBy ??= this.readServedBy(chunk);
       const chunkFinish = chunk.choices?.[0]?.finish_reason;
       if (chunkFinish) rawStopReason = chunkFinish;
       const chunkLogprobs = chunk.choices?.[0]?.logprobs?.content;
@@ -389,6 +412,8 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
+
+      reasoning += this.readReasoning(delta) ?? "";
 
       if (delta.content) {
         content += delta.content;
@@ -440,6 +465,12 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
     if (logprobs !== undefined) {
       result.logprobs = logprobs;
+    }
+    if (servedBy !== undefined) {
+      result.servedBy = servedBy;
+    }
+    if (reasoning !== "") {
+      result.reasoning = reasoning;
     }
 
     yield { type: "done", result };

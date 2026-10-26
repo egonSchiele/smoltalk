@@ -447,3 +447,24 @@ describe("SmolOpenAi default constructor", () => {
     ).not.toThrow();
   });
 });
+
+describe("SmolOpenAi ignores router-only fields", () => {
+  it("does not read provider or reasoning off a plain OpenAI reply", async () => {
+    const result = await textSyncWith(
+      {
+        provider: "OpenInference",
+        choices: [
+          {
+            message: { content: "Hi", reasoning: "Let me think", tool_calls: undefined },
+            finish_reason: "stop",
+          },
+        ],
+        usage: { prompt_tokens: 1, completion_tokens: 1 },
+      },
+      {},
+    );
+    if (!result.success) throw new Error(result.error);
+    expect("servedBy" in result.value).toBe(false);
+    expect("reasoning" in result.value).toBe(false);
+  });
+});

@@ -210,6 +210,7 @@ Two provider notes:
 | `stream` | `boolean` | If `true`, returns an `AsyncGenerator<StreamChunk>` instead of a `Promise`. |
 | `thinking` | `{ enabled, budgetTokens? }` | Enable extended thinking / thought signatures (Anthropic and Google). |
 | `reasoningEffort` | `"low" \| "medium" \| "high"` | Provider-agnostic reasoning effort level. |
+| `openRouter` | `{ provider?: { order?, only?, ignore?, allowFallbacks?, requireParameters?, dataCollection?, sort?, quantizations? } }` | Which companies OpenRouter may send the call to. OpenRouter only; other providers ignore it. |
 | `logprobs` | `{ top?: number }` | Return each generated token's log probability on `result.logprobs`, with `top` alternatives per token. OpenAI only; other providers ignore it. |
 | `maxMessages` | `number` | If the message list exceeds this count, returns a failure instead of calling the API. |
 | `abortSignal` | `AbortSignal` | Cancel an in-flight request. |
@@ -292,6 +293,19 @@ const r = await textSync({
   messages: [userMessage("hi")],
 });
 // r.value.cost.totalCost is a real OpenRouter-reported USD cost.
+```
+
+OpenRouter sends each model to one of several companies that host it. `openRouter.provider` chooses which ones it may use. The fields mirror OpenRouter's [provider routing options](https://openrouter.ai/docs/features/provider-routing), in camelCase (`allowFallbacks` is sent as `allow_fallbacks`):
+
+```ts
+import { textSync, userMessage } from "smoltalk";
+
+const r = await textSync({
+  model: "z-ai/glm-5.3-flash",
+  provider: "openrouter",
+  openRouter: { provider: { ignore: ["open-inference"] } },
+  messages: [userMessage("hi")],
+});
 ```
 
 **Capability matrix:**

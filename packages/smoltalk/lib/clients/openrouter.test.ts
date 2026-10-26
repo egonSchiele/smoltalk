@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { SmolOpenRouter } from "./openrouter.js";
 import { userMessage } from "../classes/message/index.js";
+import type { SmolConfig } from "../types.js";
 
 const baseModel = "z-ai/glm-5.2";
 
@@ -153,5 +154,139 @@ describe("SmolOpenRouter", () => {
       { hostedTools: ["web_search"] },
     );
     expect(results).toEqual([]);
+  });
+});
+
+describe("openRouter.provider", () => {
+  function build(config: Record<string, unknown>) {
+    const c = new SmolOpenRouter({
+      model: baseModel,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    return (c as any).buildRequest({
+      model: baseModel,
+      messages: [userMessage("hi")],
+      ...config,
+    });
+  }
+
+  it("sends provider preferences in OpenRouter's field names", () => {
+    const request = build({
+      openRouter: {
+        provider: {
+          order: ["z-ai", "fireworks"],
+          allowFallbacks: false,
+          requireParameters: true,
+          dataCollection: "deny",
+          sort: "throughput",
+          quantizations: ["fp8"],
+        },
+      },
+    });
+    expect(request.provider).toEqual({
+      order: ["z-ai", "fireworks"],
+      allow_fallbacks: false,
+      require_parameters: true,
+      data_collection: "deny",
+      sort: "throughput",
+      quantizations: ["fp8"],
+    });
+  });
+
+  it("sends no provider field when the option is absent", () => {
+    expect(build({}).provider).toBeUndefined();
+  });
+
+  it("the openRouter option wins over rawAttributes.provider", () => {
+    const request = build({
+      rawAttributes: { provider: { order: ["open-inference"] } },
+      openRouter: { provider: { ignore: ["open-inference"] } },
+    });
+    expect(request.provider).toEqual({ ignore: ["open-inference"] });
+  });
+});
+
+describe("SmolOpenRouter servedBy and reasoning", () => {
+  function client(): SmolOpenRouter {
+    return new SmolOpenRouter({
+      model: baseModel,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+  }
+
+  const config = { model: baseModel, provider: "openrouter", messages: [] } as SmolConfig;
+
+  async function textSyncWith(completion: any) {
+    const c = client();
+    (c as any).client.chat.completions.create = () => ({
+      withResponse: async () => ({ data: completion, response: undefined }),
+    });
+    const result = await c._textSync(config);
+    if (!result.success) throw new Error(result.error);
+    return result.value;
+  }
+
+  async function lastChunkOfStreamWith(chunks: any[]) {
+    const c = client();
+    (c as any).client.chat.completions.create = async () => {
+      async function* gen() {
+        for (const chunk of chunks) yield chunk;
+      }
+      return gen();
+    };
+    let done: any;
+    for await (const chunk of c._textStream(config)) {
+      if (chunk.type === "done") done = chunk;
+    }
+    return done;
+  }
+
+  it("reads the serving provider and reasoning from a reply", async () => {
+    const result = await textSyncWith({
+      provider: "OpenInference",
+      choices: [
+        {
+          message: { content: "", reasoning: "Let me search", tool_calls: undefined },
+          finish_reason: "stop",
+        },
+      ],
+      usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.001 },
+    });
+    expect(result.servedBy).toBe("OpenInference");
+    expect(result.reasoning).toBe("Let me search");
+    expect(result.output).toBe("");
+    expect(result.toolCalls).toEqual([]);
+  });
+
+  it("keeps reasoning on a streamed reply with no text", async () => {
+    const done = await lastChunkOfStreamWith([
+      { provider: "OpenInference", choices: [{ delta: { reasoning: "Let me " } }] },
+      {
+        provider: "OpenInference",
+        choices: [{ delta: { reasoning: "search" }, finish_reason: "stop" }],
+      },
+      {
+        provider: "OpenInference",
+        choices: [],
+        usage: { prompt_tokens: 10, completion_tokens: 5, cost: 0.001 },
+      },
+    ]);
+    expect(done.result.servedBy).toBe("OpenInference");
+    expect(done.result.reasoning).toBe("Let me search");
+    expect(done.result.output).toBeNull();
+    expect(done.result.toolCalls).toEqual([]);
+  });
+
+  it("leaves both fields off when OpenRouter sends neither", async () => {
+    const result = await textSyncWith({
+      choices: [{ message: { content: "Hi", tool_calls: undefined }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 1, completion_tokens: 1 },
+    });
+    expect("servedBy" in result).toBe(false);
+    expect("reasoning" in result).toBe(false);
   });
 });
