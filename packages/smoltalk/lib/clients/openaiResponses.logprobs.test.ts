@@ -142,19 +142,3 @@ describe("SmolOpenAiResponses logprobs", () => {
     expect(result.value).not.toHaveProperty("logprobs");
   });
 });
-
-describe("SmolOpenAiResponses rawAttributes", () => {
-  it("rawAttributes cannot replace the model, input, or tools", () => {
-    const request = logprobProvider().publicBuild({
-      model: "gpt-4o",
-      provider: "openai-responses",
-      messages: [userMessage("hi")],
-      rawAttributes: { model: "other-model", input: [], tools: [], text: {}, top_k: 5 },
-    } as SmolConfig);
-    expect(request.model).toBe("gpt-4o");
-    expect(request.input).toHaveLength(1);
-    expect(request.tools).toBeUndefined();
-    expect(request.text).toBeUndefined();
-    expect(request.top_k).toBe(5);
-  });
-});

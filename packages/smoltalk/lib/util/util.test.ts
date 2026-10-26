@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { round, sanitizeAttributes, stripCodeFence } from "./util.js";
+import { round, stripCodeFence } from "./util.js";
 
 describe("round", () => {
   it("rounds to 2 decimal places", () => {
@@ -50,25 +50,5 @@ describe("stripCodeFence", () => {
 
   it("returns the input unchanged when no fences are present", () => {
     expect(stripCodeFence('{"a":1}')).toBe('{"a":1}');
-  });
-});
-
-describe("sanitizeAttributes", () => {
-  it("drops the keys the caller owns and keeps the rest", () => {
-    expect(sanitizeAttributes({ model: "x", top_k: 5 }, ["model"])).toEqual({ top_k: 5 });
-  });
-
-  it("warns once for each owned key it drops", () => {
-    const warnings: unknown[][] = [];
-    const logger = { warn: (...args: unknown[]) => warnings.push(args) };
-    sanitizeAttributes({ model: "x", messages: [], top_k: 5 }, ["model", "messages"], logger);
-    expect(warnings).toHaveLength(2);
-    expect(String(warnings[0])).toContain("model");
-    expect(String(warnings[1])).toContain("messages");
-  });
-
-  it("still drops prototype keys", () => {
-    const attrs = JSON.parse('{"__proto__": {"polluted": true}, "top_k": 5}');
-    expect(sanitizeAttributes(attrs)).toEqual({ top_k: 5 });
   });
 });

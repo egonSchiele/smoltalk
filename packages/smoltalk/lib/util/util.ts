@@ -65,27 +65,18 @@ const DANGEROUS_KEYS = new Set([
 ]);
 
 /**
- * Sanitizes `rawAttributes` before a client spreads them into its request.
- * Drops keys that could cause prototype pollution, and the `owned` keys: the
- * fields the client builds itself (the model, the messages, the tools), which
- * a raw attribute must not replace. Warns once for each owned key it drops.
+ * Sanitizes an object by removing keys that could cause prototype pollution.
+ * Returns a shallow copy with dangerous keys filtered out.
  */
 export function sanitizeAttributes(
   attrs: Record<string, any> | undefined,
-  owned: string[] = [],
-  logger?: { warn: (...args: unknown[]) => void },
 ): Record<string, any> {
   if (!attrs) return {};
   const result: Record<string, any> = {};
   for (const key of Object.keys(attrs)) {
-    if (DANGEROUS_KEYS.has(key)) continue;
-    if (owned.includes(key)) {
-      logger?.warn(
-        `rawAttributes.${key} ignored: the client builds this request field itself.`,
-      );
-      continue;
+    if (!DANGEROUS_KEYS.has(key)) {
+      result[key] = attrs[key];
     }
-    result[key] = attrs[key];
   }
   return result;
 }
