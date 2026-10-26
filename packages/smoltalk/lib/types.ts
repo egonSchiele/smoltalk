@@ -15,6 +15,25 @@ export * from "./types/costEstimate.js";
 export * from "./types/tokenUsage.js";
 export * from "./types/stopReason.js";
 
+/** How OpenRouter picks the company that runs the model. Each field maps
+ *  to OpenRouter's `provider` request field of the same name in
+ *  snake_case. Provider names are OpenRouter's slugs, e.g. "z-ai". See
+ *  https://openrouter.ai/docs/features/provider-routing. */
+export type OpenRouterProviderPreferences = {
+  order?: string[];
+  only?: string[];
+  ignore?: string[];
+  allowFallbacks?: boolean;
+  requireParameters?: boolean;
+  dataCollection?: "allow" | "deny";
+  sort?: "price" | "throughput" | "latency";
+  quantizations?: string[];
+};
+
+export type OpenRouterOptions = {
+  provider?: OpenRouterProviderPreferences;
+};
+
 export type SmolConfig = {
   /** The model to use. */
   model: ModelName;
@@ -100,6 +119,9 @@ export type SmolConfig = {
    *  name (catalog category), e.g. ["web_search"]. Distinct from `tools`
    *  (client functions) — hosted tools run server-side and can't be intercepted. */
   hostedTools?: string[];
+
+  /** OpenRouter-only request options. Other providers ignore them. */
+  openRouter?: OpenRouterOptions;
 
   /** Maximum number of tokens the model can generate in its response. */
   maxTokens?: number;

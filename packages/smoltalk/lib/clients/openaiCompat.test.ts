@@ -92,4 +92,17 @@ describe("SmolOpenAiCompat", () => {
     expect(req.max_tokens).toBe(400);
     expect(req.max_completion_tokens).toBeUndefined();
   });
+
+  it("other OpenAI-shaped clients ignore openRouter", () => {
+    const c = new SmolOpenAiCompat({
+      ...base,
+      apiKey: { openAiCompat: "k" },
+      baseUrl: { openAiCompat: "https://host.test/v1" },
+    });
+    const req = (c as any).buildRequest({
+      ...base,
+      openRouter: { provider: { order: ["z-ai"] } },
+    });
+    expect(req.provider).toBeUndefined();
+  });
 });

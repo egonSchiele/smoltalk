@@ -155,3 +155,54 @@ describe("SmolOpenRouter", () => {
     expect(results).toEqual([]);
   });
 });
+
+describe("openRouter.provider", () => {
+  function build(config: Record<string, unknown>) {
+    const c = new SmolOpenRouter({
+      model: baseModel,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    return (c as any).buildRequest({
+      model: baseModel,
+      messages: [userMessage("hi")],
+      ...config,
+    });
+  }
+
+  it("sends provider preferences in OpenRouter's field names", () => {
+    const request = build({
+      openRouter: {
+        provider: {
+          order: ["z-ai", "fireworks"],
+          allowFallbacks: false,
+          requireParameters: true,
+          dataCollection: "deny",
+          sort: "throughput",
+          quantizations: ["fp8"],
+        },
+      },
+    });
+    expect(request.provider).toEqual({
+      order: ["z-ai", "fireworks"],
+      allow_fallbacks: false,
+      require_parameters: true,
+      data_collection: "deny",
+      sort: "throughput",
+      quantizations: ["fp8"],
+    });
+  });
+
+  it("sends no provider field when the option is absent", () => {
+    expect(build({}).provider).toBeUndefined();
+  });
+
+  it("the openRouter option wins over rawAttributes.provider", () => {
+    const request = build({
+      rawAttributes: { provider: { order: ["open-inference"] } },
+      openRouter: { provider: { ignore: ["open-inference"] } },
+    });
+    expect(request.provider).toEqual({ ignore: ["open-inference"] });
+  });
+});
