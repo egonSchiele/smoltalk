@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getModel, getModelForProvider, modelSupportsInputModality } from "./models.js";
+import {
+  getModel,
+  getModelForProvider,
+  modelAcceptsTemperature,
+  modelSupportsInputModality,
+} from "./models.js";
 
 // Rule: provider "openai-responses" is reserved for models that are ONLY
 // available via the Responses API (the *-pro reasoning models). Every other
@@ -73,5 +78,23 @@ describe("decision model providers", () => {
     });
     expect(getModel("jev-1.13")?.provider).toBe("typesafe");
     expect(getModelForProvider("typesafe", "jev-1.13")?.type).toBe("decision");
+  });
+});
+
+describe("modelAcceptsTemperature", () => {
+  it("is false when the provider's entry says temperatureSupported: false", () => {
+    expect(modelAcceptsTemperature("anthropic", "claude-haiku-5-5")).toBe(false);
+  });
+
+  it("falls back from openai-responses to the openai entry", () => {
+    expect(modelAcceptsTemperature("openai-responses", "gpt-6.1-terra")).toBe(false);
+  });
+
+  it("does not read another provider's entry for the same name", () => {
+    expect(modelAcceptsTemperature("openrouter", "claude-haiku-5-5")).toBe(true);
+  });
+
+  it("is true for a model the registry doesn't know", () => {
+    expect(modelAcceptsTemperature("anthropic", "claude-future-model")).toBe(true);
   });
 });

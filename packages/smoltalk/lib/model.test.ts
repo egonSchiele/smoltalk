@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { Model } from "../lib/model.js";
 import { promptResult } from "../lib/types.js";
 
@@ -220,6 +220,37 @@ describe("Model", () => {
         outputTokens: 500,
       });
       expect(cost).toBeNull();
+    });
+
+    describe("priceChange", () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      // gemini-4-argon: $2 input / $10 output until 2026-12-01, then $4 / $20.
+      it("uses the base rates before the change date", () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-11-30T23:59:59Z"));
+        const cost = new Model("gemini-4-argon").calculateCost({
+          inputTokens: 1_000_000,
+          outputTokens: 1_000_000,
+        });
+        expect(cost!.inputCost).toBeCloseTo(2, 6);
+        expect(cost!.outputCost).toBeCloseTo(10, 6);
+      });
+
+      it("uses the changed rates from the change date on", () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-12-01T00:00:00Z"));
+        const cost = new Model("gemini-4-argon").calculateCost({
+          inputTokens: 1_000_000,
+          outputTokens: 1_000_000,
+          cachedInputTokens: 1_000_000,
+        });
+        expect(cost!.inputCost).toBeCloseTo(4, 6);
+        expect(cost!.outputCost).toBeCloseTo(20, 6);
+        expect(cost!.cachedInputCost).toBeCloseTo(0.2, 6);
+      });
     });
   });
 

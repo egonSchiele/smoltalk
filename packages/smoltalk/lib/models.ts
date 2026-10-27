@@ -119,6 +119,18 @@ export type TextModel = BaseModel & {
     cachedInputTokenCost?: number;
     cacheCreationInputTokenCost?: number;
   };
+  /**
+   * Rates that replace the base ones from `date` (YYYY-MM-DD, UTC) on, for
+   * an announced price change such as the end of an introductory price.
+   */
+  priceChange?: {
+    date: string;
+    inputTokenCost?: number;
+    outputTokenCost?: number;
+    cachedInputTokenCost?: number;
+    cacheCreationInputTokenCost?: number;
+    inputAudioTokenCost?: number;
+  };
 };
 
 export type EmbeddingsModel = {
@@ -1290,14 +1302,21 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-4-argon",
-    description: "Google's flagship model (GA October 13, 2026). 1M context window (a unified input and output limit), 64K output per synchronous request. Introductory pricing $2.00 input (all modalities) / $10.00 output / $0.10 cache read per 1M through November 30, 2026 ($4.00 / $20.00 / $0.20 from December 1, 2026). Implicit caching only; explicit caching is not supported. No long-context tier. Thinking levels low/medium/high — `minimal` and `thinking_budget` return a 400. temperature/top_p/top_k are ignored.",
-    maxInputTokens: 1048576,
+    description: "Google's flagship model (GA October 13, 2026). 1M context window (a unified input and output limit), 64K output per synchronous request; maxInputTokens leaves room for a full 64K output. Introductory pricing $2.00 input (all modalities) / $10.00 output / $0.10 cache read per 1M through November 30, 2026 ($4.00 / $20.00 / $0.20 from December 1, 2026, recorded in priceChange). Implicit caching only; explicit caching is not supported. No long-context tier. Thinking levels low/medium/high — `minimal` and `thinking_budget` return a 400. temperature/top_p/top_k are ignored.",
+    maxInputTokens: 983040,
     maxOutputTokens: 65536,
     inputTokenCost: 2,
     cachedInputTokenCost: 0.1,
     outputTokenCost: 10,
     outputTokensPerSecond: 97,
     inputAudioTokenCost: 2,
+    priceChange: {
+      date: "2026-12-01",
+      inputTokenCost: 4,
+      cachedInputTokenCost: 0.2,
+      outputTokenCost: 20,
+      inputAudioTokenCost: 4,
+    },
     reasoning: {
       levels: ["low", "medium", "high"],
       defaultLevel: "medium",
@@ -2790,6 +2809,23 @@ export function resolveModelForProvider(
     return undefined;
   }
   return getModelForProvider(family, modelName, requestData);
+}
+
+/**
+ * False when the provider's registry entry for the model says
+ * `temperatureSupported: false`. Models the registry doesn't know, and
+ * entries that don't say, accept a temperature.
+ */
+export function modelAcceptsTemperature(
+  provider: string,
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): boolean {
+  const model = resolveModelForProvider(provider, modelName, requestData);
+  if (model && isTextModel(model) && model.temperatureSupported === false) {
+    return false;
+  }
+  return true;
 }
 
 /**

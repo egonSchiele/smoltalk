@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   SmolAnthropic,
   applyCacheBreakpoints,
@@ -11,6 +11,7 @@ import {
   ToolMessage,
 } from "../classes/message/index.js";
 import { z } from "zod";
+import { getLogger } from "../util/logger.js";
 
 describe("applyCacheBreakpoints with image content", () => {
   it("marks the last block of a user message ending in an image", () => {
@@ -365,6 +366,22 @@ describe("SmolAnthropic.buildRequest temperature", () => {
       temperature: 0.2,
     });
     expect(temperature).toBe(0.2);
+  });
+
+  it("warns once per client, not on every request it builds", () => {
+    const warn = vi.spyOn(getLogger(), "warn").mockImplementation(() => {});
+    try {
+      const client = clientFor("claude-haiku-5-5");
+      for (let i = 0; i < 4; i++) {
+        build(client, { messages: [userMessage("hi")], temperature: 0.2 });
+      }
+      const temperatureWarnings = warn.mock.calls.filter((args) =>
+        String(args[0]).includes("does not accept temperature"),
+      );
+      expect(temperatureWarnings).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

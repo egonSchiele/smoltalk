@@ -410,29 +410,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       ? applyCacheBreakpoints(baseRequest)
       : baseRequest;
 
-    const temperature = this.resolveTemperature(config);
+    const temperature = this.resolveTemperature(config, "anthropic", this.getModel());
 
     return { ...finalRequest, thinking, outputConfig, temperature };
-  }
-
-  /**
-   * The temperature to send. A model the registry marks
-   * `temperatureSupported: false` returns a 400 for a non-default
-   * temperature, so it is dropped with a warning instead. Models the
-   * registry doesn't know get the temperature as given.
-   */
-  private resolveTemperature(config: SmolConfig): number | undefined {
-    if (config.temperature === undefined) {
-      return undefined;
-    }
-    const model = getModel(this.getModel(), this.config.modelData);
-    if (model && isTextModel(model) && model.temperatureSupported === false) {
-      this.logger.warn(
-        `${this.getModel()} does not accept temperature; ignoring temperature ${config.temperature}.`,
-      );
-      return undefined;
-    }
-    return config.temperature;
   }
 
   /**
@@ -532,7 +512,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(tools && { tools }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
-          ...(temperature !== undefined && { temperature }),
+          // Undefined when unset or unsupported; JSON drops the key.
+          temperature,
           ...(config.rawAttributes || {}),
           stream: false,
         } as any,
@@ -628,7 +609,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(tools && { tools }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
-          ...(temperature !== undefined && { temperature }),
+          // Undefined when unset or unsupported; JSON drops the key.
+          temperature,
           ...(config.rawAttributes || {}),
           stream: true,
         } as any,

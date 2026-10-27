@@ -173,8 +173,9 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       request.tools = [...existing, ...hostedEntries];
     }
 
-    if (config.temperature !== undefined) {
-      request.temperature = config.temperature;
+    const temperature = this.resolveTemperature(config, "openai-responses", this.getModel());
+    if (temperature !== undefined) {
+      request.temperature = temperature;
     }
 
     if (config.maxTokens !== undefined) {

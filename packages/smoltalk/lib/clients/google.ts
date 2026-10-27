@@ -64,8 +64,7 @@ export function geminiSupportsToolCirculation(model: string): boolean {
   return parseInt(m[1], 10) >= 3;
 }
 
-const THINKING_LEVELS: Record<string, ThinkingLevel> = {
-  minimal: ThinkingLevel.MINIMAL,
+const THINKING_LEVELS: Record<NonNullable<SmolConfig["reasoningEffort"]>, ThinkingLevel> = {
   low: ThinkingLevel.LOW,
   medium: ThinkingLevel.MEDIUM,
   high: ThinkingLevel.HIGH,
