@@ -255,7 +255,8 @@ describe("decide", () => {
     for (let i = 0; i < 65; i++) {
       many[`q${i}`] = { type: "noul", instructions: `Question ${i}?` };
     }
-    const r = await decide("hello", many, config);
+    // jev-latest has no question limit; jev-1.13 still carries one.
+    const r = await decide("hello", many, { ...config, model: "jev-1.13" });
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.error).toMatch(/at most 64/);
