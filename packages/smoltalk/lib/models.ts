@@ -117,6 +117,7 @@ export type TextModel = BaseModel & {
     inputTokenCost?: number;
     outputTokenCost?: number;
     cachedInputTokenCost?: number;
+    cacheCreationInputTokenCost?: number;
   };
 };
 
@@ -1044,6 +1045,7 @@ export const textModels = [
     longContext: {
       inputTokenCost: 4,
       cachedInputTokenCost: 0.2,
+      cacheCreationInputTokenCost: 5,
       outputTokenCost: 15,
       thresholdTokens: 272000,
     },
@@ -1071,7 +1073,7 @@ export const textModels = [
     type: "text",
     modelName: "gpt-6.1-terra",
     description: "GPT-6.1 Terra (released 2026-10-26) is a fast, efficient model for visual reasoning, precise computer use, and clear, natural writing. 1M context window (maximum input 922K tokens). Standard pricing for ≤272K input tokens; prompts above that are billed at 2x input/cache and 1.5x output for the whole request. Cache writes are priced at the 30-minute tier ($1.25/1M); 12-hour writes are $2.50/1M. Cataloged under openai-responses because tool calling requires the Responses API (Chat Completions works only without tools). Knowledge cutoff: June 2026.",
-    maxInputTokens: 1050000,
+    maxInputTokens: 922000,
     maxOutputTokens: 128000,
     inputTokenCost: 1,
     cachedInputTokenCost: 0.05,
@@ -1081,6 +1083,7 @@ export const textModels = [
     longContext: {
       inputTokenCost: 2,
       cachedInputTokenCost: 0.1,
+      cacheCreationInputTokenCost: 2.5,
       outputTokenCost: 7.5,
       thresholdTokens: 272000,
     },
@@ -1476,14 +1479,10 @@ export const textModels = [
   {
     type: "text",
     modelName: "gemini-3.5-flash",
-    description: "DEPRECATED October 8, 2026: requests to gemini-3.5-flash are now routed to gemini-3.6-flash, and its own rates are no longer on Google's pricing page (whether routed requests bill at 3.6 rates is unconfirmed). Gemini 3.5 Flash (GA May 2026). Outperforms Gemini 3.1 Pro on coding and agentic suites at 4x the speed. 1M context window, 64K output. Context caching: $0.15/1M read.",
+    description: "DEPRECATED October 8, 2026: requests to gemini-3.5-flash are now routed to gemini-3.6-flash. Its own rates ($1.50 input / $9.00 output per 1M) are no longer on Google's pricing page, and Google doesn't say which rates routed requests bill at, so no cost fields are recorded and cost estimates are omitted. Gemini 3.5 Flash (GA May 2026). Outperforms Gemini 3.1 Pro on coding and agentic suites at 4x the speed. 1M context window, 64K output.",
     maxInputTokens: 1048576,
     maxOutputTokens: 65536,
-    inputTokenCost: 1.5,
-    cachedInputTokenCost: 0.15,
-    outputTokenCost: 9,
     outputTokensPerSecond: 211,
-    inputAudioTokenCost: 1.5,
     reasoning: {
       levels: ["minimal", "low", "medium", "high"],
       defaultLevel: "medium",
@@ -2127,7 +2126,7 @@ export const textModels = [
   {
     type: "text",
     modelName: "claude-haiku-5-5",
-    description: "Current Haiku-tier model (released 2026-10-07), Anthropic's fastest and cheapest. Prompts over 100K input tokens (cache reads and writes included) are billed at 5x for the whole request: $0.50 input / $0.05 cache read / $2.50 output per MTok; the >100K 5-minute cache write ($0.625/MTok) is not modeled, so cost estimates undercount it. Adaptive thinking on by default (effort `medium`); it can be disabled only at effort `high` or below (xhigh/max return a 400), and `budget_tokens` returns a 400. Thinking text is omitted unless `display: \"summarized\"` is requested. Supports forced tool use. Assistant prefill and non-default temperature/top_p/top_k return a 400. Uses the newer tokenizer (~30% more tokens than Haiku 4.5). 1M context window, 128K max output.",
+    description: "Current Haiku-tier model (released 2026-10-07), Anthropic's fastest and cheapest. Prompts over 100K input tokens (cache reads and writes included) are billed at 5x for the whole request: $0.50 input / $0.05 cache read / $0.625 5-minute cache write / $2.50 output per MTok. Adaptive thinking on by default (effort `medium`); it can be disabled only at effort `high` or below (xhigh/max return a 400), and `budget_tokens` returns a 400. Thinking text is omitted unless `display: \"summarized\"` is requested. Supports forced tool use. Assistant prefill and non-default temperature/top_p/top_k return a 400. Uses the newer tokenizer (~30% more tokens than Haiku 4.5). 1M context window, 128K max output.",
     maxInputTokens: 1000000,
     maxOutputTokens: 128000,
     inputTokenCost: 0.1,
@@ -2138,6 +2137,7 @@ export const textModels = [
     longContext: {
       inputTokenCost: 0.5,
       cachedInputTokenCost: 0.05,
+      cacheCreationInputTokenCost: 0.625,
       outputTokenCost: 2.5,
       thresholdTokens: 100000,
     },
@@ -2651,7 +2651,7 @@ export const hostedTools: HostedTool[] = [
     category: "maps_grounding",
     description: "Grounding with Google Maps (Gemini 4, Gemini 3 and Gemini 2.5).",
     providerToolId: "google_maps",
-    models: ["gemini-4-argon", "gemini-3-pro-preview", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-3.7-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
+    models: ["gemini-4-argon", "gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.6-flash", "gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-3.5-flash-lite", "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite"],
     pricing: {
       unit: "per_call",
       amount: 0.014,

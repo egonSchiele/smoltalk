@@ -1,5 +1,5 @@
 import { env } from "#platform";
-import { Content, GenerateContentConfig, GoogleGenAI } from "@google/genai";
+import { Content, GenerateContentConfig, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { EgonLog } from "../util/logger.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import { getLogger } from "../util/logger.js";
@@ -27,7 +27,8 @@ import {
 import { extractHttpErrorFields } from "../util/httpError.js";
 import { sanitizeAttributes } from "../util/util.js";
 import { BaseClient } from "./baseClient.js";
-import { ModelName } from "../models.js";
+import { ModelName, getModelForProvider, isTextModel } from "../models.js";
+import type { ModelDataBlob } from "../modelData.js";
 import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import { Model } from "../model.js";
@@ -61,6 +62,29 @@ export function geminiSupportsToolCirculation(model: string): boolean {
   const m = /^gemini-(\d+)/.exec(model);
   if (!m) return true;
   return parseInt(m[1], 10) >= 3;
+}
+
+const THINKING_LEVELS: Record<string, ThinkingLevel> = {
+  minimal: ThinkingLevel.MINIMAL,
+  low: ThinkingLevel.LOW,
+  medium: ThinkingLevel.MEDIUM,
+  high: ThinkingLevel.HIGH,
+};
+
+/**
+ * The thinking levels a Gemini model accepts, from its registry entry.
+ * Empty for budget-based models (Gemini 2.5) and models the registry
+ * doesn't know, which keep getting a thinkingBudget.
+ */
+export function geminiThinkingLevels(
+  model: ModelName,
+  modelData?: ModelDataBlob,
+): readonly string[] {
+  const entry = getModelForProvider("google", model, modelData);
+  if (entry && isTextModel(entry) && entry.reasoning?.levels) {
+    return entry.reasoning.levels;
+  }
+  return [];
 }
 
 // Reorder each round's tool results to match the order of the calls that
@@ -372,6 +396,16 @@ export class SmolGoogle extends BaseClient implements SmolClient {
       genConfig.responseJsonSchema = constToEnum(responseFormatToJsonSchema(config.responseFormat));
     }
 
+    // Gemini 3 and later take reasoningEffort as a thinkingLevel; some
+    // (gemini-4-argon) reject a thinkingBudget outright.
+    let thinkingLevel: ThinkingLevel | undefined;
+    if (config.reasoningEffort) {
+      const levels = geminiThinkingLevels(this.getModel(), config.modelData);
+      if (levels.includes(config.reasoningEffort)) {
+        thinkingLevel = THINKING_LEVELS[config.reasoningEffort];
+      }
+    }
+
     if (config.thinking?.enabled) {
       // Gemini only returns thought-summary parts (parts with `thought: true`,
       // which populate PromptResult.thinkingBlocks) when includeThoughts is set.
@@ -384,6 +418,12 @@ export class SmolGoogle extends BaseClient implements SmolClient {
           thinkingBudget: config.thinking.budgetTokens,
         }),
       };
+      // A request can't carry both a budget and a level.
+      if (config.thinking.budgetTokens === undefined && thinkingLevel !== undefined) {
+        genConfig.thinkingConfig.thinkingLevel = thinkingLevel;
+      }
+    } else if (thinkingLevel !== undefined) {
+      genConfig.thinkingConfig = { thinkingLevel };
     } else if (config.reasoningEffort) {
       const budgetMap = { low: 2048, medium: 8192, high: 16384 } as const;
       genConfig.thinkingConfig = {

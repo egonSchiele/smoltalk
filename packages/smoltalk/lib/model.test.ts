@@ -133,6 +133,21 @@ describe("Model", () => {
         expect(cost!.cachedInputCost).toBeCloseTo(0.025, 6);
       });
 
+      it("prices cache writes at the long-context cache-write rate above the threshold", () => {
+        // claude-haiku-5-5: base cache write=0.125; above 100k prompt tokens
+        // input=0.5 and cache write=0.625.
+        const model = new Model("claude-haiku-5-5");
+        // 90k uncached + 20k cache writes = 110k prompt tokens, over 100k.
+        const cost = model.calculateCost({
+          inputTokens: 90_000,
+          outputTokens: 0,
+          cacheCreationInputTokens: 20_000,
+        });
+        // 90_000 @ $0.50/M = $0.045; 20_000 @ $0.625/M = $0.0125
+        expect(cost!.inputCost).toBeCloseTo(0.045, 6);
+        expect(cost!.cacheCreationInputCost).toBeCloseTo(0.0125, 6);
+      });
+
       it("keeps the base rate for a field the long-context tier leaves out", () => {
         // gpt-5.4-pro: base input=30, output=180; its long tier sets only
         // input=60 and output=270, and the model has no cached rate at all.

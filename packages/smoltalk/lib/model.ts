@@ -88,6 +88,7 @@ export class Model {
         inputTokenCost?: number;
         outputTokenCost?: number;
         cachedInputTokenCost?: number;
+        cacheCreationInputTokenCost?: number;
       };
     };
     const rates = { ...baseRates };
@@ -109,6 +110,9 @@ export class Model {
       }
       if (longContext.cachedInputTokenCost !== undefined) {
         rates.cachedInputTokenCost = longContext.cachedInputTokenCost;
+      }
+      if (longContext.cacheCreationInputTokenCost !== undefined) {
+        rates.cacheCreationInputTokenCost = longContext.cacheCreationInputTokenCost;
       }
     }
     // Price only models that carry at least one token rate; those without

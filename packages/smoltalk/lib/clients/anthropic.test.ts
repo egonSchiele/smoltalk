@@ -334,6 +334,40 @@ describe("SmolAnthropic.buildRequest thinking normalization", () => {
   });
 });
 
+describe("SmolAnthropic.buildRequest temperature", () => {
+  function clientFor(model: string) {
+    return new SmolAnthropic({
+      model: model as any,
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    });
+  }
+
+  it("drops temperature for a model that rejects it", () => {
+    const { temperature } = build(clientFor("claude-haiku-5-5"), {
+      messages: [userMessage("hi")],
+      temperature: 0.2,
+    });
+    expect(temperature).toBeUndefined();
+  });
+
+  it("keeps temperature for a model that accepts it", () => {
+    const { temperature } = build(clientFor("claude-haiku-4-5"), {
+      messages: [userMessage("hi")],
+      temperature: 0.2,
+    });
+    expect(temperature).toBe(0.2);
+  });
+
+  it("keeps temperature for a model the registry doesn't know", () => {
+    const { temperature } = build(clientFor("claude-future-model"), {
+      messages: [userMessage("hi")],
+      temperature: 0.2,
+    });
+    expect(temperature).toBe(0.2);
+  });
+});
+
 describe("SmolAnthropic.calculateUsageAndCost", () => {
   const client = new SmolAnthropic({
     model: "claude-sonnet-4-6",

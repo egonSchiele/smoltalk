@@ -340,6 +340,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     tools: Tool[] | undefined;
     thinking: ThinkingParam | undefined;
     outputConfig: OutputConfig | undefined;
+    temperature: number | undefined;
   } {
     // Split system/developer messages out into the top-level `system` param
     const systemParts = config.messages
@@ -409,7 +410,29 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       ? applyCacheBreakpoints(baseRequest)
       : baseRequest;
 
-    return { ...finalRequest, thinking, outputConfig };
+    const temperature = this.resolveTemperature(config);
+
+    return { ...finalRequest, thinking, outputConfig, temperature };
+  }
+
+  /**
+   * The temperature to send. A model the registry marks
+   * `temperatureSupported: false` returns a 400 for a non-default
+   * temperature, so it is dropped with a warning instead. Models the
+   * registry doesn't know get the temperature as given.
+   */
+  private resolveTemperature(config: SmolConfig): number | undefined {
+    if (config.temperature === undefined) {
+      return undefined;
+    }
+    const model = getModel(this.getModel(), this.config.modelData);
+    if (model && isTextModel(model) && model.temperatureSupported === false) {
+      this.logger.warn(
+        `${this.getModel()} does not accept temperature; ignoring temperature ${config.temperature}.`,
+      );
+      return undefined;
+    }
+    return config.temperature;
   }
 
   /**
@@ -482,7 +505,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
-    const { system, messages, tools, thinking, outputConfig } =
+    const { system, messages, tools, thinking, outputConfig, temperature } =
       this.buildRequest(config);
 
     let debugData = {
@@ -509,9 +532,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(tools && { tools }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
-          ...(config.temperature !== undefined && {
-            temperature: config.temperature,
-          }),
+          ...(temperature !== undefined && { temperature }),
           ...(config.rawAttributes || {}),
           stream: false,
         } as any,
@@ -577,7 +598,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
-    const { system, messages, tools, thinking, outputConfig } =
+    const { system, messages, tools, thinking, outputConfig, temperature } =
       this.buildRequest(config);
 
     const streamDebugData = {
@@ -607,9 +628,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(tools && { tools }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
-          ...(config.temperature !== undefined && {
-            temperature: config.temperature,
-          }),
+          ...(temperature !== undefined && { temperature }),
           ...(config.rawAttributes || {}),
           stream: true,
         } as any,
