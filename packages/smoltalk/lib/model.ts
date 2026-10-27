@@ -88,9 +88,38 @@ export class Model {
         inputTokenCost?: number;
         outputTokenCost?: number;
         cachedInputTokenCost?: number;
+        cacheCreationInputTokenCost?: number;
+      };
+      priceChange?: {
+        date: string;
+        inputTokenCost?: number;
+        outputTokenCost?: number;
+        cachedInputTokenCost?: number;
+        cacheCreationInputTokenCost?: number;
+        inputAudioTokenCost?: number;
       };
     };
     const rates = { ...baseRates };
+    // An announced price change takes over from its date on, so an
+    // introductory price stops being used once it ends.
+    const priceChange = baseRates.priceChange;
+    if (priceChange !== undefined && Date.now() >= Date.parse(priceChange.date)) {
+      if (priceChange.inputTokenCost !== undefined) {
+        rates.inputTokenCost = priceChange.inputTokenCost;
+      }
+      if (priceChange.outputTokenCost !== undefined) {
+        rates.outputTokenCost = priceChange.outputTokenCost;
+      }
+      if (priceChange.cachedInputTokenCost !== undefined) {
+        rates.cachedInputTokenCost = priceChange.cachedInputTokenCost;
+      }
+      if (priceChange.cacheCreationInputTokenCost !== undefined) {
+        rates.cacheCreationInputTokenCost = priceChange.cacheCreationInputTokenCost;
+      }
+      if (priceChange.inputAudioTokenCost !== undefined) {
+        rates.inputAudioTokenCost = priceChange.inputAudioTokenCost;
+      }
+    }
     // A prompt over the long-context threshold is billed at the long-context
     // rates for the whole request, input and output alike. The prompt size
     // counts every input bucket, cached ones included.
@@ -109,6 +138,9 @@ export class Model {
       }
       if (longContext.cachedInputTokenCost !== undefined) {
         rates.cachedInputTokenCost = longContext.cachedInputTokenCost;
+      }
+      if (longContext.cacheCreationInputTokenCost !== undefined) {
+        rates.cacheCreationInputTokenCost = longContext.cacheCreationInputTokenCost;
       }
     }
     // Price only models that carry at least one token rate; those without

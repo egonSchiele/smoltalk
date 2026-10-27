@@ -65,11 +65,13 @@ describe("baked-in hosted-tool catalog", () => {
     }
   });
 
-  it("maps_grounding is gated to the Gemini 3 and 2.5 families", () => {
+  it("maps_grounding is gated to the Gemini 4, 3 and 2.5 families", () => {
     const maps = hostedTools.find((t) => t.name === "maps_grounding");
     expect(maps?.models?.length).toBeGreaterThan(0);
     expect(
-      maps?.models?.every((m) => m.startsWith("gemini-3") || m.startsWith("gemini-2.5-")),
+      maps?.models?.every(
+        (m) => m.startsWith("gemini-4") || m.startsWith("gemini-3") || m.startsWith("gemini-2.5-"),
+      ),
     ).toBe(true);
     expect(maps?.models).toContain("gemini-2.5-flash");
   });

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import { Model } from "../lib/model.js";
 import { promptResult } from "../lib/types.js";
 
@@ -133,6 +133,21 @@ describe("Model", () => {
         expect(cost!.cachedInputCost).toBeCloseTo(0.025, 6);
       });
 
+      it("prices cache writes at the long-context cache-write rate above the threshold", () => {
+        // claude-haiku-5-5: base cache write=0.125; above 100k prompt tokens
+        // input=0.5 and cache write=0.625.
+        const model = new Model("claude-haiku-5-5");
+        // 90k uncached + 20k cache writes = 110k prompt tokens, over 100k.
+        const cost = model.calculateCost({
+          inputTokens: 90_000,
+          outputTokens: 0,
+          cacheCreationInputTokens: 20_000,
+        });
+        // 90_000 @ $0.50/M = $0.045; 20_000 @ $0.625/M = $0.0125
+        expect(cost!.inputCost).toBeCloseTo(0.045, 6);
+        expect(cost!.cacheCreationInputCost).toBeCloseTo(0.0125, 6);
+      });
+
       it("keeps the base rate for a field the long-context tier leaves out", () => {
         // gpt-5.4-pro: base input=30, output=180; its long tier sets only
         // input=60 and output=270, and the model has no cached rate at all.
@@ -205,6 +220,37 @@ describe("Model", () => {
         outputTokens: 500,
       });
       expect(cost).toBeNull();
+    });
+
+    describe("priceChange", () => {
+      afterEach(() => {
+        vi.useRealTimers();
+      });
+
+      // gemini-4-argon: $2 input / $10 output until 2026-12-01, then $4 / $20.
+      it("uses the base rates before the change date", () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-11-30T23:59:59Z"));
+        const cost = new Model("gemini-4-argon").calculateCost({
+          inputTokens: 1_000_000,
+          outputTokens: 1_000_000,
+        });
+        expect(cost!.inputCost).toBeCloseTo(2, 6);
+        expect(cost!.outputCost).toBeCloseTo(10, 6);
+      });
+
+      it("uses the changed rates from the change date on", () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-12-01T00:00:00Z"));
+        const cost = new Model("gemini-4-argon").calculateCost({
+          inputTokens: 1_000_000,
+          outputTokens: 1_000_000,
+          cachedInputTokens: 1_000_000,
+        });
+        expect(cost!.inputCost).toBeCloseTo(4, 6);
+        expect(cost!.outputCost).toBeCloseTo(20, 6);
+        expect(cost!.cachedInputCost).toBeCloseTo(0.2, 6);
+      });
     });
   });
 

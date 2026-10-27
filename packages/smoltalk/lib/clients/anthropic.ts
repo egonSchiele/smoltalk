@@ -340,6 +340,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     tools: Tool[] | undefined;
     thinking: ThinkingParam | undefined;
     outputConfig: OutputConfig | undefined;
+    temperature: number | undefined;
   } {
     // Split system/developer messages out into the top-level `system` param
     const systemParts = config.messages
@@ -409,7 +410,9 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
       ? applyCacheBreakpoints(baseRequest)
       : baseRequest;
 
-    return { ...finalRequest, thinking, outputConfig };
+    const temperature = this.resolveTemperature(config, "anthropic", this.getModel());
+
+    return { ...finalRequest, thinking, outputConfig, temperature };
   }
 
   /**
@@ -482,7 +485,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async _textSync(config: SmolConfig): Promise<Result<PromptResult>> {
-    const { system, messages, tools, thinking, outputConfig } =
+    const { system, messages, tools, thinking, outputConfig, temperature } =
       this.buildRequest(config);
 
     let debugData = {
@@ -509,9 +512,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(tools && { tools }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
-          ...(config.temperature !== undefined && {
-            temperature: config.temperature,
-          }),
+          // Undefined when unset or unsupported; JSON drops the key.
+          temperature,
           ...(config.rawAttributes || {}),
           stream: false,
         } as any,
@@ -577,7 +579,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
   }
 
   async *_textStream(config: SmolConfig): AsyncGenerator<StreamChunk> {
-    const { system, messages, tools, thinking, outputConfig } =
+    const { system, messages, tools, thinking, outputConfig, temperature } =
       this.buildRequest(config);
 
     const streamDebugData = {
@@ -607,9 +609,8 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
           ...(tools && { tools }),
           ...(thinking && { thinking }),
           ...(outputConfig && { output_config: outputConfig }),
-          ...(config.temperature !== undefined && {
-            temperature: config.temperature,
-          }),
+          // Undefined when unset or unsupported; JSON drops the key.
+          temperature,
           ...(config.rawAttributes || {}),
           stream: true,
         } as any,

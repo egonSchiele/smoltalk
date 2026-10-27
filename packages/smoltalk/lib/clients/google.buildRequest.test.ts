@@ -64,10 +64,41 @@ describe("SmolGoogle.buildRequest — thinking config", () => {
     expect(req.config.thinkingConfig?.thinkingBudget).toBeUndefined();
   });
 
-  it("maps reasoningEffort to a budget without includeThoughts when thinking is off", () => {
-    const req = build("gemini-3-flash-preview", { reasoningEffort: "medium" });
+  it("maps reasoningEffort to a budget on a budget-based model when thinking is off", () => {
+    const req = build("gemini-2.5-flash", { reasoningEffort: "medium" });
     expect(req.config.thinkingConfig?.thinkingBudget).toBe(8192);
     expect(req.config.thinkingConfig?.includeThoughts).toBeUndefined();
+  });
+
+  it("maps reasoningEffort to a thinkingLevel on a level-based model", () => {
+    const req = build("gemini-4-argon", { reasoningEffort: "high" });
+    expect(req.config.thinkingConfig?.thinkingLevel).toBe("HIGH");
+    expect(req.config.thinkingConfig?.thinkingBudget).toBeUndefined();
+  });
+
+  it("adds the thinkingLevel to includeThoughts when thinking is on with no budget", () => {
+    const req = build("gemini-4-argon", {
+      thinking: { enabled: true },
+      reasoningEffort: "low",
+    });
+    expect(req.config.thinkingConfig?.includeThoughts).toBe(true);
+    expect(req.config.thinkingConfig?.thinkingLevel).toBe("LOW");
+    expect(req.config.thinkingConfig?.thinkingBudget).toBeUndefined();
+  });
+
+  it("sends an explicit budget instead of a level when both are given", () => {
+    const req = build("gemini-3.8-flash", {
+      thinking: { enabled: true, budgetTokens: 2000 },
+      reasoningEffort: "low",
+    });
+    expect(req.config.thinkingConfig?.thinkingBudget).toBe(2000);
+    expect(req.config.thinkingConfig?.thinkingLevel).toBeUndefined();
+  });
+
+  it("falls back to a budget for a model the registry doesn't know", () => {
+    const req = build("gemini-9-unknown", { reasoningEffort: "medium" });
+    expect(req.config.thinkingConfig?.thinkingBudget).toBe(8192);
+    expect(req.config.thinkingConfig?.thinkingLevel).toBeUndefined();
   });
 
   it("sets no thinkingConfig when neither thinking nor reasoningEffort is set", () => {

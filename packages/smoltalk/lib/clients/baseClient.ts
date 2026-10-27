@@ -23,7 +23,7 @@ import {
   neededInputModalities,
   MODALITIES_REQUIRING_DECLARATION,
 } from "../util/modalities.js";
-import { modelSupportsInputModality } from "../models.js";
+import { modelAcceptsTemperature, modelSupportsInputModality } from "../models.js";
 import { resolveProvider } from "../util/provider.js";
 import { isUnconstrainedSchema } from "../util/jsonSchema.js";
 import { z } from "zod";
@@ -53,6 +53,7 @@ function clientSupportsAttachment(
 export class BaseClient implements SmolClient {
   protected config: SmolConfig;
   protected statelogClient?: StatelogClient;
+  private temperatureWarned = false;
 
   constructor(config: SmolConfig) {
     this.config = config || {};
@@ -62,6 +63,33 @@ export class BaseClient implements SmolClient {
     if (this.config.statelog) {
       this.statelogClient = getStatelogClient(this.config.statelog as any);
     }
+  }
+
+  /**
+   * The temperature to send. A model the registry marks
+   * `temperatureSupported: false` returns a 400 for a non-default
+   * temperature, so it is dropped instead. The warning is logged once per
+   * client, not on every tool round or validation retry. Models the
+   * registry doesn't know get the temperature as given.
+   */
+  protected resolveTemperature(
+    config: SmolConfig,
+    provider: string,
+    modelName: ModelName,
+  ): number | undefined {
+    if (config.temperature === undefined) {
+      return undefined;
+    }
+    if (modelAcceptsTemperature(provider, modelName, config.modelData)) {
+      return config.temperature;
+    }
+    if (!this.temperatureWarned) {
+      this.temperatureWarned = true;
+      getLogger().warn(
+        `${modelName} does not accept temperature; ignoring temperature ${config.temperature}.`,
+      );
+    }
+    return undefined;
   }
 
   protected getAbortSignal(

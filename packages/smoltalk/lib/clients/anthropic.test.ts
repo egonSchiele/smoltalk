@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import {
   SmolAnthropic,
   applyCacheBreakpoints,
@@ -11,6 +11,7 @@ import {
   ToolMessage,
 } from "../classes/message/index.js";
 import { z } from "zod";
+import { getLogger } from "../util/logger.js";
 
 describe("applyCacheBreakpoints with image content", () => {
   it("marks the last block of a user message ending in an image", () => {
@@ -331,6 +332,56 @@ describe("SmolAnthropic.buildRequest thinking normalization", () => {
       thinking: { enabled: true },
     });
     expect(thinking).toEqual({ type: "adaptive" });
+  });
+});
+
+describe("SmolAnthropic.buildRequest temperature", () => {
+  function clientFor(model: string) {
+    return new SmolAnthropic({
+      model: model as any,
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    });
+  }
+
+  it("drops temperature for a model that rejects it", () => {
+    const { temperature } = build(clientFor("claude-haiku-5-5"), {
+      messages: [userMessage("hi")],
+      temperature: 0.2,
+    });
+    expect(temperature).toBeUndefined();
+  });
+
+  it("keeps temperature for a model that accepts it", () => {
+    const { temperature } = build(clientFor("claude-haiku-4-5"), {
+      messages: [userMessage("hi")],
+      temperature: 0.2,
+    });
+    expect(temperature).toBe(0.2);
+  });
+
+  it("keeps temperature for a model the registry doesn't know", () => {
+    const { temperature } = build(clientFor("claude-future-model"), {
+      messages: [userMessage("hi")],
+      temperature: 0.2,
+    });
+    expect(temperature).toBe(0.2);
+  });
+
+  it("warns once per client, not on every request it builds", () => {
+    const warn = vi.spyOn(getLogger(), "warn").mockImplementation(() => {});
+    try {
+      const client = clientFor("claude-haiku-5-5");
+      for (let i = 0; i < 4; i++) {
+        build(client, { messages: [userMessage("hi")], temperature: 0.2 });
+      }
+      const temperatureWarnings = warn.mock.calls.filter((args) =>
+        String(args[0]).includes("does not accept temperature"),
+      );
+      expect(temperatureWarnings).toHaveLength(1);
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
 

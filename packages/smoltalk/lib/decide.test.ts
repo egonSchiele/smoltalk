@@ -255,11 +255,23 @@ describe("decide", () => {
     for (let i = 0; i < 65; i++) {
       many[`q${i}`] = { type: "noul", instructions: `Question ${i}?` };
     }
-    const r = await decide("hello", many, config);
+    // jev-latest has no question limit; jev-1.13 still carries one.
+    const r = await decide("hello", many, { ...config, model: "jev-1.13" });
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.error).toMatch(/at most 64/);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends more than 64 questions to a model with no question limit", async () => {
+    const many: Record<string, DecisionQuestion> = {};
+    for (let i = 0; i < 65; i++) {
+      many[`q${i}`] = { type: "noul", instructions: `Question ${i}?` };
+    }
+    await decide("hello", many, config);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(Object.keys(JSON.parse(init.body as string).questions)).toHaveLength(65);
   });
 
   it("refuses a choice with one option and a score with one level", async () => {
