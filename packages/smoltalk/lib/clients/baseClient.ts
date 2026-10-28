@@ -280,9 +280,13 @@ export class BaseClient implements SmolClient {
    * The tool calls with any arguments a provider sent as JSON text put back
    * as values, checked against each tool's schema (see
    * repairStringifiedArguments). A call to a tool not in `config.tools` is
-   * returned as it came.
+   * returned as it came, as is every call when
+   * `config.toolOptions.repairStringifiedArguments` is `false`.
    */
   protected repairToolCalls(toolCalls: ToolCall[], config: SmolConfig): ToolCall[] {
+    if (config.toolOptions?.repairStringifiedArguments === false) {
+      return toolCalls;
+    }
     if (!config.tools?.length) {
       return toolCalls;
     }

@@ -468,6 +468,36 @@ describe("stringified tool arguments", () => {
     expect(done?.type === "done" && done.result.toolCalls[0].arguments.allowedDomains).toEqual([]);
   });
 
+  it("leaves the arguments as they came when toolOptions.repairStringifiedArguments is false", async () => {
+    const call = stringified();
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [call], model: "gpt-4o" } },
+    ]);
+    const result = await client.textSync({
+      ...config(),
+      toolOptions: { repairStringifiedArguments: false },
+    });
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.toolCalls[0]).toBe(call);
+    expect(result.value.toolCalls[0].arguments.allowedDomains).toBe("[]");
+  });
+
+  it("does not throw on a tool schema with an async refinement", async () => {
+    const asyncTools = [
+      {
+        name: "fetchPage",
+        schema: z.object({ url: z.string().refine(async () => true), allowedDomains: z.array(z.string()).nullable() }),
+      },
+    ];
+    const call = stringified();
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [call], model: "gpt-4o" } },
+    ]);
+    const result = await client.textSync({ ...config(), tools: asyncTools });
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.toolCalls[0]).toBe(call);
+  });
+
   it("leaves a call to a tool the request does not list as it came", async () => {
     const other = new ToolCall("c2", "unknownTool", { count: "3" });
     const client = new SpyClient([

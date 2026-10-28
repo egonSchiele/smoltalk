@@ -267,6 +267,19 @@ Detects when the model is stuck in a repetitive tool-call loop.
 | `intervention` | `string` | Action to take: `"remove-tool"`, `"remove-all-tools"`, `"throw-error"`, or `"halt-execution"`. |
 | `excludeTools` | `string[]` | Tool names to ignore when counting calls. |
 
+### `toolOptions`
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `repairStringifiedArguments` | `boolean` | Defaults to `true`. Some endpoints (seen on OpenRouter when a server tool is in the request) send every tool argument as JSON text: `timeout: "30"`, `headers: "{}"`, `allowedDomains: "[]"`. Each tool call's arguments are checked against the tool's zod schema; any rejected string that parses as JSON is replaced by its value, and the change is kept only if the whole set then fits the schema. Set to `false` to receive arguments exactly as the provider sent them. |
+
+The repair never touches a string the schema accepts, so a parameter typed
+`string | object` (or `z.any()`) that such an endpoint sends as `"{}"` arrives
+as that string. The text `"null"` is the one exception: once another argument
+on the same call has been repaired, a remaining `"null"` becomes `null` where
+the schema allows it. A tool schema with an async refinement cannot be checked
+synchronously, so its arguments are passed through unchanged.
+
 ## Hosted OpenAI-compatible providers
 
 Smoltalk ships four built-in providers for hosted open-source models that all

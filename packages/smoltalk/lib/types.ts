@@ -184,6 +184,19 @@ export type SmolConfig = {
 
   /** Define behavior if too many repeated tool calls are detected (loop prevention). */
   toolLoopDetection?: ToolLoopDetection;
+
+  /** Options for how tool calls coming back from the model are handled. */
+  toolOptions?: ToolOptions;
+};
+
+export type ToolOptions = {
+  /** Some endpoints send every tool argument as JSON text (`timeout: "30"`,
+   *  `headers: "{}"`). When `true`, each tool call's arguments are checked
+   *  against the tool's zod schema and any rejected string that parses as
+   *  JSON is replaced by its value, kept only if the whole set then fits.
+   *  Set to `false` to pass arguments through exactly as the provider sent
+   *  them. Defaults to `true`. */
+  repairStringifiedArguments?: boolean;
 };
 
 export type ToolLoopDetection = {

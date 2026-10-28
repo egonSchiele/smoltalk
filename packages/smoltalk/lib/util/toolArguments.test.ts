@@ -36,12 +36,47 @@ describe("repairStringifiedArguments", () => {
 
   it("leaves a string the schema accepts, even when it reads as JSON", () => {
     const result = repairStringifiedArguments(
+      { baseUrl: "https://example.com", allowedDomains: "[]", headers: null, timeout: null, body: "{}" },
+      fetchSchema,
+    );
+    expect(result.args.allowedDomains).toEqual([]);
+    expect(result.args.body).toBe("{}");
+    expect(result.repairedKeys).toEqual(["allowedDomains"]);
+  });
+
+  it('also turns "null" into null for a parameter that takes null, once a repair proves the endpoint stringifies', () => {
+    const result = repairStringifiedArguments(
       { baseUrl: "https://example.com", allowedDomains: "[]", headers: null, timeout: null, body: "null" },
       fetchSchema,
     );
     expect(result.args.allowedDomains).toEqual([]);
-    expect(result.args.body).toBe("null");
-    expect(result.repairedKeys).toEqual(["allowedDomains"]);
+    expect(result.args.body).toBeNull();
+    expect(result.repairedKeys).toEqual(["allowedDomains", "body"]);
+  });
+
+  it('leaves "null" as text when nothing else needed repairing', () => {
+    const args = { baseUrl: "https://example.com", allowedDomains: [], headers: null, timeout: null, body: "null" };
+    const result = repairStringifiedArguments(args, fetchSchema);
+    expect(result.args).toBe(args);
+    expect(result.repairedKeys).toEqual([]);
+  });
+
+  it('leaves "null" as text for a parameter that does not take null', () => {
+    const schema = z.object({ baseUrl: z.string(), timeout: z.number() });
+    const result = repairStringifiedArguments({ baseUrl: "null", timeout: "30" }, schema);
+    expect(result.args).toEqual({ baseUrl: "null", timeout: 30 });
+    expect(result.repairedKeys).toEqual(["timeout"]);
+  });
+
+  it("changes nothing when the schema cannot be checked synchronously", () => {
+    const schema = z.object({
+      url: z.string().refine(async () => true),
+      timeout: z.number(),
+    });
+    const args = { url: "https://example.com", timeout: "30" };
+    const result = repairStringifiedArguments(args, schema);
+    expect(result.args).toBe(args);
+    expect(result.repairedKeys).toEqual([]);
   });
 
   it("changes nothing when parsing the strings does not make the arguments fit", () => {
