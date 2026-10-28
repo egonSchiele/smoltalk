@@ -1,5 +1,20 @@
 # Changelog
 
+## smoltalk 0.20.0 (2026-10-28)
+
+### Added
+
+- New models in the registry: `gpt-6.1-terra`, `claude-haiku-5-5`, `gemini-4-argon`, `gemini-nano-banana-2.1`, and `jev-1.14` (under `typesafe` and `openrouter`).
+- OpenRouter: streamed calls now return `hostedToolResults` for web search
+- Openrouter: we now get search count from `usage.server_tool_use`
+
+### Changed
+
+- OpenRouter web search: a request with function tools now uses the `openrouter:web_search` server tool, so the model decides when to search instead of searching on every round of a tool loop. A request without function tools still uses the `web` plugin, which works with models that can't call tools.
+- Google: Gemini 3+ models get `reasoningEffort` as `thinkingConfig.thinkingLevel` instead of a thinking budget, since `gemini-4-argon` rejects budgets. An explicit `thinking.budgetTokens` is still sent as given.
+- Anthropic and OpenAI Responses: `temperature` is dropped with a warning for models the registry marks `temperatureSupported: false`, which would otherwise return a 400.
+- `o1`, `o3-mini`, `o4-mini`, `gpt-4.1-nano`, `gpt-image-1`, `gemini-3.7-flash`, and `gemini-3.5-flash` are now marked disabled. Pricing, limits, and shutdown dates refreshed across the registry (model data update of 2026-10-26).
+
 ## smoltalk 0.19.0 (2026-10-26)
 
 ### Added
