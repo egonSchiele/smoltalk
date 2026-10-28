@@ -4,6 +4,7 @@ import { BaseClient } from "./baseClient.js";
 import { userMessage, assistantMessage, AssistantMessage, imagePart } from "../classes/message/index.js";
 import { SmolConfig, PromptResult, Result, StreamChunk } from "../types.js";
 import { SmolStructuredOutputError } from "../smolError.js";
+import { ToolCall } from "../classes/ToolCall.js";
 
 class TestClient extends BaseClient {
   async _textSync(config: SmolConfig) {
@@ -421,5 +422,89 @@ describe("normalizeResponseFormat (whole-schema any)", () => {
       chunks.push(c);
     }
     expect(spy.calls[0].responseFormat).toBeUndefined();
+  });
+});
+
+describe("stringified tool arguments", () => {
+  const tools = [
+    {
+      name: "fetchPage",
+      schema: z.object({ url: z.string(), allowedDomains: z.array(z.string()).nullable() }),
+    },
+  ];
+  const stringified = () =>
+    new ToolCall("c1", "fetchPage", { url: "https://example.com", allowedDomains: "[]" }, {
+      thoughtSignature: "sig",
+    });
+  const config = (): SmolConfig => ({
+    model: "gpt-4o",
+    messages: [userMessage("fetch it")],
+    tools,
+  });
+
+  it("textSync returns the arguments as values, keeping the call's id and signature", async () => {
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [stringified()], model: "gpt-4o" } },
+    ]);
+    const result = await client.textSync(config());
+    if (!result.success) throw new Error(result.error);
+    const [call] = result.value.toolCalls;
+    expect(call.arguments).toEqual({ url: "https://example.com", allowedDomains: [] });
+    expect(call.id).toBe("c1");
+    expect(call.thoughtSignature).toBe("sig");
+  });
+
+  it("textStream repairs the tool_call chunk and the done result", async () => {
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [stringified()], model: "gpt-4o" } },
+    ]);
+    const chunks: StreamChunk[] = [];
+    for await (const chunk of client.textStream(config())) {
+      chunks.push(chunk);
+    }
+    const toolChunk = chunks.find((c) => c.type === "tool_call");
+    const done = chunks.find((c) => c.type === "done");
+    expect(toolChunk?.type === "tool_call" && toolChunk.toolCall.arguments.allowedDomains).toEqual([]);
+    expect(done?.type === "done" && done.result.toolCalls[0].arguments.allowedDomains).toEqual([]);
+  });
+
+  it("leaves the arguments as they came when toolOptions.repairStringifiedArguments is false", async () => {
+    const call = stringified();
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [call], model: "gpt-4o" } },
+    ]);
+    const result = await client.textSync({
+      ...config(),
+      toolOptions: { repairStringifiedArguments: false },
+    });
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.toolCalls[0]).toBe(call);
+    expect(result.value.toolCalls[0].arguments.allowedDomains).toBe("[]");
+  });
+
+  it("does not throw on a tool schema with an async refinement", async () => {
+    const asyncTools = [
+      {
+        name: "fetchPage",
+        schema: z.object({ url: z.string().refine(async () => true), allowedDomains: z.array(z.string()).nullable() }),
+      },
+    ];
+    const call = stringified();
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [call], model: "gpt-4o" } },
+    ]);
+    const result = await client.textSync({ ...config(), tools: asyncTools });
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.toolCalls[0]).toBe(call);
+  });
+
+  it("leaves a call to a tool the request does not list as it came", async () => {
+    const other = new ToolCall("c2", "unknownTool", { count: "3" });
+    const client = new SpyClient([
+      { success: true, value: { output: null, toolCalls: [other], model: "gpt-4o" } },
+    ]);
+    const result = await client.textSync(config());
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.toolCalls[0]).toBe(other);
   });
 });

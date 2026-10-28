@@ -18,6 +18,8 @@ import {
   failure,
 } from "../types.js";
 import { validateHostedTools } from "../util/hostedTools.js";
+import { repairStringifiedArguments } from "../util/toolArguments.js";
+import { ToolCall } from "../classes/ToolCall.js";
 import { resolveMessageAttachments, messagesHaveAttachments, DEFAULT_MAX_ATTACHMENT_BYTES } from "./resolveAttachments.js";
 import {
   neededInputModalities,
@@ -255,7 +257,13 @@ export class BaseClient implements SmolClient {
         newSmolConfig.responseFormatOptions?.numRetries ||
           DEFAULT_NUM_RETRIES,
       );
-      return result;
+      if (!result.success) {
+        return result;
+      }
+      return success({
+        ...result.value,
+        toolCalls: this.repairToolCalls(result.value.toolCalls, newSmolConfig),
+      });
     } catch (err) {
       if (this.isAbortError(err)) {
         this.statelogClient?.debug("Request aborted or timed out", {
@@ -266,6 +274,60 @@ export class BaseClient implements SmolClient {
       }
       throw err;
     }
+  }
+
+  /**
+   * The tool calls with any arguments a provider sent as JSON text put back
+   * as values, checked against each tool's schema (see
+   * repairStringifiedArguments). A call to a tool not in `config.tools` is
+   * returned as it came, as is every call when
+   * `config.toolOptions.repairStringifiedArguments` is `false`.
+   */
+  protected repairToolCalls(toolCalls: ToolCall[], config: SmolConfig): ToolCall[] {
+    if (config.toolOptions?.repairStringifiedArguments === false) {
+      return toolCalls;
+    }
+    if (!config.tools?.length) {
+      return toolCalls;
+    }
+    return toolCalls.map((toolCall) => {
+      const tool = config.tools!.find((t) => t.name === toolCall.name);
+      if (!tool) {
+        return toolCall;
+      }
+      const { args, repairedKeys } = repairStringifiedArguments(
+        toolCall.arguments,
+        tool.schema,
+      );
+      if (repairedKeys.length === 0) {
+        return toolCall;
+      }
+      this.statelogClient?.debug("Repaired stringified tool arguments", {
+        tool: toolCall.name,
+        toolCallId: toolCall.id,
+        keys: repairedKeys,
+      });
+      return new ToolCall(toolCall.id, toolCall.name, args, {
+        thoughtSignature: toolCall.thoughtSignature,
+      });
+    });
+  }
+
+  /** A stream chunk with its tool calls repaired, the same as textSync's. */
+  private repairChunk(chunk: StreamChunk, config: SmolConfig): StreamChunk {
+    if (chunk.type === "tool_call") {
+      return { ...chunk, toolCall: this.repairToolCalls([chunk.toolCall], config)[0] };
+    }
+    if (chunk.type === "done") {
+      return {
+        ...chunk,
+        result: {
+          ...chunk.result,
+          toolCalls: this.repairToolCalls(chunk.result.toolCalls, config),
+        },
+      };
+    }
+    return chunk;
   }
 
   checkForToolLoops(promptConfig: SmolConfig): {
@@ -572,7 +634,7 @@ export class BaseClient implements SmolClient {
     }
     try {
       for await (const chunk of this._textStream(newSmolConfig)) {
-        yield chunk;
+        yield this.repairChunk(chunk, newSmolConfig);
       }
     } catch (err) {
       if (this.isAbortError(err)) {
