@@ -79,7 +79,7 @@ describe("SmolOpenRouter", () => {
     expect(request.tools).toBeUndefined();
   });
 
-  it("adds the web_search server tool, not the web plugin, when web_search is requested", () => {
+  it("uses the web plugin for web_search when the request has no function tools", () => {
     const c = new SmolOpenRouter({
       model: baseModel,
       provider: "openrouter",
@@ -92,14 +92,14 @@ describe("SmolOpenRouter", () => {
       messages: [userMessage("hi")],
       hostedTools: ["web_search"],
     });
-    // The plugin searched on every request; the server tool lets the model decide.
-    expect(request.plugins).toBeUndefined();
-    expect(request.tools).toEqual([
-      { type: "openrouter:web_search", parameters: { max_results: 5 } },
-    ]);
+    // A server tool would make OpenRouter refuse a model that cannot call
+    // tools ("No endpoints found that support tool use"); the plugin works
+    // with any model.
+    expect(request.plugins).toEqual([{ id: "web", max_results: 5 }]);
+    expect(request.tools).toBeUndefined();
   });
 
-  it("keeps function tools ahead of the web_search server tool", () => {
+  it("uses the web_search server tool, after the function tools, when the request has function tools", () => {
     const c = new SmolOpenRouter({
       model: baseModel,
       provider: "openrouter",
@@ -118,6 +118,9 @@ describe("SmolOpenRouter", () => {
         },
       ],
     });
+    // The plugin would search on every round of the tool loop; the server
+    // tool lets the model decide.
+    expect(request.plugins).toBeUndefined();
     expect(request.tools).toHaveLength(2);
     expect(request.tools[0].type).toBe("function");
     expect(request.tools[0].function.name).toBe("lookup");
@@ -218,6 +221,9 @@ describe("SmolOpenRouter", () => {
     expect(results[0].sources[0].url).toBe("https://example.com/a");
     expect(results[0].citations[0].startIndex).toBe(0);
     expect(results[0].sources[1].snippet).toBe("snip");
+    // No usage.server_tool_use (the plugin reports none), so the citations
+    // stand for one search.
+    expect(results[0].callCount).toBe(1);
   });
 
   it("emits no hosted-tool results when annotations are absent", () => {
@@ -367,5 +373,53 @@ describe("SmolOpenRouter servedBy and reasoning", () => {
     });
     expect("servedBy" in result).toBe(false);
     expect("reasoning" in result).toBe(false);
+  });
+});
+
+describe("streamed web_search results", () => {
+  it("gathers annotations from the deltas and the count from the final usage", async () => {
+    const c = new SmolOpenRouter({
+      model: baseModel,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    const chunks = [
+      { choices: [{ delta: { content: "See " } }] },
+      {
+        choices: [
+          { delta: { annotations: [{ type: "url_citation", url_citation: { url: "https://example.com/a", title: "A" } }] } },
+        ],
+      },
+      {
+        choices: [
+          { delta: { annotations: [{ type: "url_citation", url_citation: { url: "https://example.com/b" } }] }, finish_reason: "stop" },
+        ],
+      },
+      { choices: [], usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2, cost: 0.01, server_tool_use: { web_search_requests: 2 } } },
+    ];
+    (c as any).client.chat.completions.create = async () => {
+      async function* gen() {
+        for (const chunk of chunks) {
+          yield chunk;
+        }
+      }
+      return gen();
+    };
+    let done: any;
+    for await (const chunk of c._textStream({
+      model: baseModel,
+      provider: "openrouter",
+      messages: [userMessage("hi")],
+      hostedTools: ["web_search"],
+    } as SmolConfig)) {
+      if (chunk.type === "done") done = chunk;
+    }
+    const [result] = done.result.hostedToolResults;
+    expect(result.callCount).toBe(2);
+    expect(result.sources.map((s: { url: string }) => s.url)).toEqual([
+      "https://example.com/a",
+      "https://example.com/b",
+    ]);
   });
 });

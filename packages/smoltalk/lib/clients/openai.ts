@@ -106,7 +106,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
    */
   protected hostedToolDefinitions(
     _config: SmolConfig,
-  ): Record<string, unknown>[] {
+  ): OpenAI.Chat.ChatCompletionTool[] {
     return [];
   }
 
@@ -212,14 +212,15 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
         description: tool.description,
       });
     });
+    let tools: OpenAI.Chat.ChatCompletionTool[] | undefined = functionTools;
     const hostedTools = this.hostedToolDefinitions(config);
+    if (hostedTools.length > 0) {
+      tools = [...(functionTools ?? []), ...hostedTools];
+    }
     const request = {
       model: this.getModel(),
       messages,
-      tools:
-        hostedTools.length > 0
-          ? [...(functionTools ?? []), ...(hostedTools as any[])]
-          : functionTools,
+      tools,
       ...(config.reasoningEffort && {
         reasoning_effort: config.reasoningEffort,
       }),
@@ -401,6 +402,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     const logprobEntries: OpenAILogprob[] = [];
     let servedBy: string | undefined;
     let reasoning = "";
+    // Hosted-tool results arrive spread over the stream: annotations one
+    // per delta, the search count in the final usage. They are gathered
+    // into a completion's shape for parseHostedToolResults.
+    let rawUsage: any;
+    const annotations: unknown[] = [];
 
     for await (const chunk of completion) {
       servedBy ??= this.readServedBy(chunk);
@@ -412,6 +418,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
       // Extract usage from the final chunk
       if (chunk.usage) {
+        rawUsage = chunk.usage;
         // Header-based cost (LiteLLM) is unsupported while streaming.
         // Body-based cost (OpenRouter/DeepInfra) still works because it
         // comes through chunk.usage.
@@ -430,6 +437,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       if (!delta) continue;
 
       reasoning += this.readReasoning(delta) ?? "";
+      const deltaAnnotations = (delta as any).annotations;
+      if (Array.isArray(deltaAnnotations)) {
+        annotations.push(...deltaAnnotations);
+      }
 
       if (delta.content) {
         content += delta.content;
@@ -467,6 +478,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
 
     const logprobs = fromOpenAILogprobs(logprobEntries);
+    const hostedToolResults = this.parseHostedToolResults(
+      { usage: rawUsage, choices: [{ message: { annotations } }] },
+      config,
+    );
 
     const result: PromptResult = {
       output: content || null,
@@ -487,6 +502,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
     if (reasoning !== "") {
       result.reasoning = reasoning;
+    }
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
     }
 
     yield { type: "done", result };

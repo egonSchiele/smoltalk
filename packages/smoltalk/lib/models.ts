@@ -2688,7 +2688,7 @@ export const hostedTools: HostedTool[] = [
     provider: "openrouter",
     category: "web_search",
     description:
-      "Web search via OpenRouter's openrouter:web_search server tool (native search where the model supports it, otherwise Exa). The model decides when to search. Adds citations as annotations.",
+      "Web search via OpenRouter. A request with function tools gets the openrouter:web_search server tool, and the model decides when to search; a request without them gets the web plugin, which searches once per request and works with models that cannot call tools. Native search where the model supports it, otherwise Exa. Adds citations as annotations.",
     providerToolId: "openrouter:web_search",
     pricing: {
       unit: "per_call",
