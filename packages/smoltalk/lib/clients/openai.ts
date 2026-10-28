@@ -91,12 +91,23 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   /**
    * Extra request body fields injected on every call. Subclasses override to
-   * add provider-specific request shapes (e.g. OpenRouter's
-   * `plugins: [{ id: "web" }]` for web search). Merged into the request
-   * after the standard params so it can override them.
+   * add provider-specific request shapes (e.g. OpenRouter's `provider`
+   * routing preferences). Merged into the request after the standard params
+   * so it can override them.
    */
   protected buildRequestExtras(_config: SmolConfig): Record<string, unknown> {
     return {};
+  }
+
+  /**
+   * Provider-run tools appended to the request's `tools` array after the
+   * function tools (e.g. OpenRouter's `openrouter:web_search` server tool).
+   * Subclasses override; default adds none.
+   */
+  protected hostedToolDefinitions(
+    _config: SmolConfig,
+  ): Record<string, unknown>[] {
+    return [];
   }
 
   /**
@@ -196,14 +207,19 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   private buildRequest(config: SmolConfig) {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
+    const functionTools = config.tools?.map((tool) => {
+      return zodToOpenAITool(tool.name, tool.schema, {
+        description: tool.description,
+      });
+    });
+    const hostedTools = this.hostedToolDefinitions(config);
     const request = {
       model: this.getModel(),
       messages,
-      tools: config.tools?.map((tool) => {
-        return zodToOpenAITool(tool.name, tool.schema, {
-          description: tool.description,
-        });
-      }),
+      tools:
+        hostedTools.length > 0
+          ? [...(functionTools ?? []), ...(hostedTools as any[])]
+          : functionTools,
       ...(config.reasoningEffort && {
         reasoning_effort: config.reasoningEffort,
       }),

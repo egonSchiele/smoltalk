@@ -50,8 +50,10 @@ export function toOpenRouterProvider(
  * - The reply's top-level `provider` (the company that ran the model) and
  *   `message.reasoning` become `servedBy` and `reasoning` on the result.
  * - Hosted web_search: when config.hostedTools includes "web_search",
- *   injects `plugins: [{ id: "web", max_results: 5 }]` and parses
- *   message.annotations into a HostedToolResult.
+ *   adds the `openrouter:web_search` server tool to `tools`, so the model
+ *   decides when to search, and parses message.annotations into a
+ *   HostedToolResult. The older `web` plugin is not used: it ran one
+ *   search on every request, whatever the model was doing.
  */
 export class SmolOpenRouter extends SmolOpenAiCompat {
   protected resolveClientOptions(config: SmolConfig): {
@@ -83,13 +85,17 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
 
   protected buildRequestExtras(config: SmolConfig): Record<string, unknown> {
     const extras: Record<string, unknown> = {};
-    if (config.hostedTools?.includes("web_search")) {
-      extras.plugins = [{ id: "web", max_results: 5 }];
-    }
     if (config.openRouter?.provider) {
       extras.provider = toOpenRouterProvider(config.openRouter.provider);
     }
     return extras;
+  }
+
+  protected hostedToolDefinitions(
+    config: SmolConfig,
+  ): Record<string, unknown>[] {
+    if (!config.hostedTools?.includes("web_search")) return [];
+    return [{ type: "openrouter:web_search", parameters: { max_results: 5 } }];
   }
 
   protected parseHostedToolResults(
@@ -97,8 +103,12 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
     config: SmolConfig,
   ): HostedToolResult[] {
     if (!config.hostedTools?.includes("web_search")) return [];
+    const searches = completion?.usage?.server_tool_use?.web_search_requests;
+    const callCount = typeof searches === "number" ? searches : 0;
     const annotations = completion?.choices?.[0]?.message?.annotations;
-    if (!Array.isArray(annotations) || annotations.length === 0) return [];
+    if (!Array.isArray(annotations) || annotations.length === 0) {
+      return callCount > 0 ? [webSearchResult("openrouter", { callCount })] : [];
+    }
 
     const sources: { url: string; title?: string; snippet?: string }[] = [];
     const citations: {
@@ -131,12 +141,13 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
       citations.push(citation);
     }
 
-    if (sources.length === 0) return [];
+    if (sources.length === 0 && callCount === 0) return [];
     return [
       webSearchResult("openrouter", {
         sources,
         citations,
-        callCount: 1,
+        // Citations mean at least one search ran, even when usage omits the count.
+        callCount: sources.length > 0 ? Math.max(callCount, 1) : callCount,
       }),
     ];
   }

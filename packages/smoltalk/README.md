@@ -312,7 +312,7 @@ const r = await textSync({
 
 |                 | chat | embeddings | image generation | `web_search` hosted tool |
 |-----------------|------|------------|------------------|--------------------------|
-| `openrouter`    | ✅   | ❌         | ❌               | ✅ (via `:online` / web plugin) |
+| `openrouter`    | ✅   | ❌         | ❌               | ✅ (via the `openrouter:web_search` server tool) |
 | `deepinfra`     | ✅   | ✅         | ❌ (uses per-model endpoints, not OpenAI shape) | ❌ |
 | `litellm`       | ✅   | ✅         | ✅ (if the upstream model supports it) | ✅ (if upstream supports it) |
 | `openai-compat` | ✅   | ✅         | ✅ (backend-dependent) | depends on backend |
