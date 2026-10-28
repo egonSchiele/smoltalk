@@ -91,12 +91,23 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   /**
    * Extra request body fields injected on every call. Subclasses override to
-   * add provider-specific request shapes (e.g. OpenRouter's
-   * `plugins: [{ id: "web" }]` for web search). Merged into the request
-   * after the standard params so it can override them.
+   * add provider-specific request shapes (e.g. OpenRouter's `provider`
+   * routing preferences). Merged into the request after the standard params
+   * so it can override them.
    */
   protected buildRequestExtras(_config: SmolConfig): Record<string, unknown> {
     return {};
+  }
+
+  /**
+   * Provider-run tools appended to the request's `tools` array after the
+   * function tools (e.g. OpenRouter's `openrouter:web_search` server tool).
+   * Subclasses override; default adds none.
+   */
+  protected hostedToolDefinitions(
+    _config: SmolConfig,
+  ): OpenAI.Chat.ChatCompletionTool[] {
+    return [];
   }
 
   /**
@@ -196,14 +207,20 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   private buildRequest(config: SmolConfig) {
     const messages = config.messages.map((msg) => msg.toOpenAIMessage());
+    const functionTools = config.tools?.map((tool) => {
+      return zodToOpenAITool(tool.name, tool.schema, {
+        description: tool.description,
+      });
+    });
+    let tools: OpenAI.Chat.ChatCompletionTool[] | undefined = functionTools;
+    const hostedTools = this.hostedToolDefinitions(config);
+    if (hostedTools.length > 0) {
+      tools = [...(functionTools ?? []), ...hostedTools];
+    }
     const request = {
       model: this.getModel(),
       messages,
-      tools: config.tools?.map((tool) => {
-        return zodToOpenAITool(tool.name, tool.schema, {
-          description: tool.description,
-        });
-      }),
+      tools,
       ...(config.reasoningEffort && {
         reasoning_effort: config.reasoningEffort,
       }),
@@ -385,6 +402,11 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     const logprobEntries: OpenAILogprob[] = [];
     let servedBy: string | undefined;
     let reasoning = "";
+    // Hosted-tool results arrive spread over the stream: annotations one
+    // per delta, the search count in the final usage. They are gathered
+    // into a completion's shape for parseHostedToolResults.
+    let rawUsage: any;
+    const annotations: unknown[] = [];
 
     for await (const chunk of completion) {
       servedBy ??= this.readServedBy(chunk);
@@ -396,6 +418,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       }
       // Extract usage from the final chunk
       if (chunk.usage) {
+        rawUsage = chunk.usage;
         // Header-based cost (LiteLLM) is unsupported while streaming.
         // Body-based cost (OpenRouter/DeepInfra) still works because it
         // comes through chunk.usage.
@@ -414,6 +437,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       if (!delta) continue;
 
       reasoning += this.readReasoning(delta) ?? "";
+      const deltaAnnotations = (delta as any).annotations;
+      if (Array.isArray(deltaAnnotations)) {
+        annotations.push(...deltaAnnotations);
+      }
 
       if (delta.content) {
         content += delta.content;
@@ -451,6 +478,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
 
     const logprobs = fromOpenAILogprobs(logprobEntries);
+    const hostedToolResults = this.parseHostedToolResults(
+      { usage: rawUsage, choices: [{ message: { annotations } }] },
+      config,
+    );
 
     const result: PromptResult = {
       output: content || null,
@@ -471,6 +502,9 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     }
     if (reasoning !== "") {
       result.reasoning = reasoning;
+    }
+    if (hostedToolResults.length > 0) {
+      result.hostedToolResults = hostedToolResults;
     }
 
     yield { type: "done", result };

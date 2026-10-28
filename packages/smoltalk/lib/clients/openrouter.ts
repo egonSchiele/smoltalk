@@ -1,3 +1,4 @@
+import type OpenAI from "openai";
 import { SmolOpenAiCompat } from "./openaiCompat.js";
 import type {
   SmolConfig,
@@ -49,9 +50,11 @@ export function toOpenRouterProvider(
  *   `provider` field, in OpenRouter's snake_case names.
  * - The reply's top-level `provider` (the company that ran the model) and
  *   `message.reasoning` become `servedBy` and `reasoning` on the result.
- * - Hosted web_search: when config.hostedTools includes "web_search",
- *   injects `plugins: [{ id: "web", max_results: 5 }]` and parses
- *   message.annotations into a HostedToolResult.
+ * - Hosted web_search: when config.hostedTools includes "web_search", a
+ *   request that carries function tools gets the `openrouter:web_search`
+ *   server tool, so the model decides when to search. A request with no
+ *   function tools gets the `web` plugin instead (see usesSearchTool).
+ *   Either way message.annotations becomes a HostedToolResult.
  */
 export class SmolOpenRouter extends SmolOpenAiCompat {
   protected resolveClientOptions(config: SmolConfig): {
@@ -81,9 +84,26 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
     return nonEmptyString(part?.reasoning);
   }
 
+  /**
+   * Whether this request searches with the `openrouter:web_search` server
+   * tool rather than the `web` plugin. The server tool lets the model
+   * decide when to search; the plugin runs one search on every request,
+   * which in a tool loop means one on every round. But a server tool goes
+   * in `tools`, and OpenRouter answers a request carrying `tools` for a
+   * model that cannot call tools with 404 "No endpoints found that support
+   * tool use". A request that already carries function tools can only be
+   * served by a model that can call tools, so it is the one place the
+   * server tool is safe. A request with none gets the plugin, which works
+   * with any model, and with no tool loop it searches once.
+   */
+  private usesSearchTool(config: SmolConfig): boolean {
+    if (!config.hostedTools?.includes("web_search")) return false;
+    return (config.tools?.length ?? 0) > 0;
+  }
+
   protected buildRequestExtras(config: SmolConfig): Record<string, unknown> {
     const extras: Record<string, unknown> = {};
-    if (config.hostedTools?.includes("web_search")) {
+    if (config.hostedTools?.includes("web_search") && !this.usesSearchTool(config)) {
       extras.plugins = [{ id: "web", max_results: 5 }];
     }
     if (config.openRouter?.provider) {
@@ -92,13 +112,34 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
     return extras;
   }
 
+  protected hostedToolDefinitions(
+    config: SmolConfig,
+  ): OpenAI.Chat.ChatCompletionTool[] {
+    if (!this.usesSearchTool(config)) return [];
+    // Not in the SDK's tool union, which only knows OpenAI's own types.
+    const searchTool = {
+      type: "openrouter:web_search",
+      parameters: { max_results: 5 },
+    } as unknown as OpenAI.Chat.ChatCompletionTool;
+    return [searchTool];
+  }
+
   protected parseHostedToolResults(
     completion: any,
     config: SmolConfig,
   ): HostedToolResult[] {
     if (!config.hostedTools?.includes("web_search")) return [];
+    // The server tool reports how many searches it ran; the plugin does not.
+    let callCount = 0;
+    const searches = completion?.usage?.server_tool_use?.web_search_requests;
+    if (typeof searches === "number") {
+      callCount = searches;
+    }
     const annotations = completion?.choices?.[0]?.message?.annotations;
-    if (!Array.isArray(annotations) || annotations.length === 0) return [];
+    if (!Array.isArray(annotations) || annotations.length === 0) {
+      if (callCount === 0) return [];
+      return [webSearchResult("openrouter", { callCount })];
+    }
 
     const sources: { url: string; title?: string; snippet?: string }[] = [];
     const citations: {
@@ -131,12 +172,17 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
       citations.push(citation);
     }
 
-    if (sources.length === 0) return [];
+    if (sources.length === 0 && callCount === 0) return [];
+    let reportedCount = callCount;
+    if (sources.length > 0 && reportedCount === 0) {
+      // Citations mean at least one search ran, even when usage omits the count.
+      reportedCount = 1;
+    }
     return [
       webSearchResult("openrouter", {
         sources,
         citations,
-        callCount: 1,
+        callCount: reportedCount,
       }),
     ];
   }
