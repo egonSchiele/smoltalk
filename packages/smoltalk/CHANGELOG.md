@@ -1,5 +1,9 @@
 # Changelog
 
+## smoltalk 0.20.2 (2026-10-30)
+
+- Messages can contain arbitrary metadata.
+
 ## smoltalk 0.20.1 (2026-10-28)
 
 - Repair tool call args.
