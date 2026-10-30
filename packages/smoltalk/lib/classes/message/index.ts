@@ -46,7 +46,7 @@ export function messageFromJSON(json: MessageJSON): Message {
 
 export function userMessage(
   content: UserContentInput,
-  options: { name?: string; rawData?: any } = {},
+  options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
 ) {
   return new UserMessage(content, options);
 }
@@ -84,6 +84,7 @@ export function assistantMessage(
     thinkingBlocks?: Array<{ text: string; signature: string }>;
     logprobs?: TokenLogprob[];
     rawData?: any;
+    metadata?: Record<string, unknown>;
     usage?: TokenUsage;
     cost?: CostEstimate;
   } = {},
@@ -93,21 +94,21 @@ export function assistantMessage(
 
 export function developerMessage(
   content: string | Array<TextPart>,
-  options: { name?: string; rawData?: any } = {},
+  options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
 ) {
   return new DeveloperMessage(content, options);
 }
 
 export function systemMessage(
   content: string | Array<TextPart>,
-  options: { name?: string; rawData?: any } = {},
+  options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
 ) {
   return new SystemMessage(content, options);
 }
 
 export function toolMessage(
   content: unknown,
-  options: { tool_call_id: string; rawData?: any; name: string },
+  options: { tool_call_id: string; rawData?: any; name: string; metadata?: Record<string, unknown> },
 ) {
   return new ToolMessage(content, options);
 }

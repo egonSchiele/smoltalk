@@ -29,6 +29,7 @@ export const AssistantMessageJSONSchema = z.object({
   thinkingBlocks: z.array(ThinkingBlockSchema).optional(),
   logprobs: z.array(TokenLogprobSchema).optional(),
   rawData: z.any().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   usage: TokenUsageSchema.optional(),
   cost: CostEstimateSchema.optional(),
 });
@@ -45,6 +46,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   public _thinkingBlocks?: ThinkingBlock[];
   public _logprobs?: TokenLogprob[];
   public _rawData?: any;
+  public _metadata?: Record<string, unknown>;
   public _usage?: TokenUsage;
   public _cost?: CostEstimate;
 
@@ -58,6 +60,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       thinkingBlocks?: ThinkingBlock[];
       logprobs?: TokenLogprob[];
       rawData?: any;
+      metadata?: Record<string, unknown>;
       usage?: TokenUsage;
       cost?: CostEstimate;
     } = {},
@@ -71,6 +74,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     this._thinkingBlocks = options.thinkingBlocks;
     this._logprobs = options.logprobs;
     this._rawData = options.rawData;
+    this._metadata = options.metadata;
     this._usage = options.usage;
     this._cost = options.cost;
   }
@@ -107,6 +111,12 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  /** Opaque data the caller keeps on the message. Round-tripped through
+   *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
+  get metadata(): Record<string, unknown> | undefined {
+    return this._metadata;
+  }
+
   get thinkingBlocks(): ThinkingBlock[] | undefined {
     return this._thinkingBlocks;
   }
@@ -136,6 +146,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       usage: this._usage,
       cost: this._cost,
       rawData: this._rawData,
+      metadata: this._metadata,
     };
   }
 
@@ -156,6 +167,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       thinkingBlocks: result.data.thinkingBlocks,
       logprobs: result.data.logprobs,
       rawData: result.data.rawData,
+      metadata: result.data.metadata,
       usage: result.data.usage,
       cost: result.data.cost,
     });

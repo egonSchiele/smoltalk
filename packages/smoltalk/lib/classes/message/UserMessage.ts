@@ -24,6 +24,7 @@ export const UserMessageJSONSchema = z.object({
   content: UserContentSchema,
   name: z.string().optional(),
   rawData: z.any().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type UserMessageJSON = z.infer<typeof UserMessageJSONSchema>;
@@ -33,12 +34,14 @@ export class UserMessage extends BaseMessage implements MessageClass {
   public _content: UserContent;
   public _name?: string;
   public _rawData?: any;
+  public _metadata?: Record<string, unknown>;
 
-  constructor(content: UserContentInput, options: { name?: string; rawData?: any } = {}) {
+  constructor(content: UserContentInput, options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {}) {
     super();
     this._content = normalizeUserContent(content);
     this._name = options.name;
     this._rawData = options.rawData;
+    this._metadata = options.metadata;
   }
 
   get content(): string {
@@ -61,6 +64,12 @@ export class UserMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  /** Opaque data the caller keeps on the message. Round-tripped through
+   *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
+  get metadata(): Record<string, unknown> | undefined {
+    return this._metadata;
+  }
+
   /** The content parts array, or null when content is a plain string. */
   getContentParts(): UserContentPart[] | null {
     if (typeof this._content === "string") {
@@ -75,6 +84,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
       content: serializeUserContentForJSON(this._content) as UserMessageJSON["content"],
       name: this.name,
       rawData: this._rawData,
+      metadata: this._metadata,
     };
   }
 
@@ -90,6 +100,7 @@ export class UserMessage extends BaseMessage implements MessageClass {
     return new UserMessage(result.data.content, {
       name: result.data.name,
       rawData: result.data.rawData,
+      metadata: result.data.metadata,
     });
   }
 

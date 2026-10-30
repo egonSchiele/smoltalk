@@ -22,6 +22,7 @@ export interface MessageClass {
   get role(): string;
   get name(): string | undefined;
   get rawData(): any;
+  get metadata(): Record<string, unknown> | undefined;
 
   toOpenAIMessage(): ChatCompletionMessageParam;
   toOpenAIResponseInputItem(): ResponseInputItem | ResponseInputItem[];
