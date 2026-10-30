@@ -1,5 +1,9 @@
 # Changelog
 
+## smoltalk 0.20.1 (2026-10-28)
+
+- Repair tool call args.
+
 ## smoltalk 0.20.0 (2026-10-28)
 
 ### Added
