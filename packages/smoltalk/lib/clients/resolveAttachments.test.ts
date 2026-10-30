@@ -50,6 +50,19 @@ describe("resolveMessageAttachments — providerFile", () => {
   });
 });
 
+describe("resolveMessageAttachments — metadata", () => {
+  it("keeps a user message's metadata when it rebuilds the message", async () => {
+    const metadata = { label: "screenshot", expires: { at: "llmCall", key: "k1" } };
+    const msg = userMessage(
+      ["look", imagePart({ kind: "bytes", data: new Uint8Array([1]), mimeType: "image/png" })],
+      { metadata },
+    );
+    const res = await resolveMessageAttachments([msg], opts);
+    expect(res.success).toBe(true);
+    if (res.success) expect(res.value[0].metadata).toEqual(metadata);
+  });
+});
+
 describe("acceptsRemoteUrl", () => {
   it("accepts image URLs for openai and anthropic, not google/ollama", () => {
     expect(acceptsRemoteUrl("openai", "image")).toBe(true);

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import {
+  BaseMessage,
+  MessageClass,
+  MessageMetadata,
+  MessageMetadataSchema,
+} from "./BaseMessage.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, FunctionResponse } from "@google/genai";
 import { Message } from "ollama";
@@ -13,6 +18,7 @@ export const ToolMessageJSONSchema = z.object({
   name: z.string(),
   tool_call_id: z.string().default(""),
   rawData: z.any().optional(),
+  metadata: MessageMetadataSchema.optional(),
 });
 
 export type ToolMessageJSON = {
@@ -21,6 +27,7 @@ export type ToolMessageJSON = {
   name: string;
   tool_call_id: string;
   rawData?: any;
+  metadata?: MessageMetadata;
 };
 
 export class ToolMessage extends BaseMessage implements MessageClass {
@@ -31,16 +38,18 @@ export class ToolMessage extends BaseMessage implements MessageClass {
   public _content: unknown;
   public _tool_call_id: string;
   public _rawData?: any;
+  public _metadata?: MessageMetadata;
   public _name: string;
 
   constructor(
     content: unknown,
-    options: { tool_call_id: string; rawData?: any; name: string },
+    options: { tool_call_id: string; rawData?: any; name: string; metadata?: MessageMetadata },
   ) {
     super();
     this._content = content;
     this._tool_call_id = options.tool_call_id;
     this._rawData = options.rawData;
+    this._metadata = options.metadata;
     this._name = options.name;
   }
 
@@ -68,6 +77,16 @@ export class ToolMessage extends BaseMessage implements MessageClass {
     return this._rawData;
   }
 
+  /** Opaque data the caller keeps on the message. Round-tripped through
+   *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
+  get metadata(): MessageMetadata | undefined {
+    return this._metadata;
+  }
+
+  set metadata(value: MessageMetadata | undefined) {
+    this._metadata = value;
+  }
+
   toJSON(): ToolMessageJSON {
     return {
       role: this.role,
@@ -75,6 +94,7 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       name: this.name,
       tool_call_id: this.tool_call_id,
       rawData: this._rawData,
+      metadata: this._metadata,
     };
   }
 
@@ -96,6 +116,7 @@ export class ToolMessage extends BaseMessage implements MessageClass {
       tool_call_id: result.data.tool_call_id,
       name: result.data.name,
       rawData: result.data.rawData,
+      metadata: result.data.metadata,
     });
   }
 

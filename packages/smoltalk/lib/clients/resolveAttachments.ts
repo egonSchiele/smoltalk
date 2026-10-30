@@ -200,7 +200,13 @@ export async function resolveMessageAttachments(
       }
       resolvedParts.push(resolved.value);
     }
-    out.push(new UserMessage(resolvedParts, { name: msg.name, rawData: msg.rawData }));
+    out.push(
+      new UserMessage(resolvedParts, {
+        name: msg.name,
+        rawData: msg.rawData,
+        metadata: msg.metadata,
+      }),
+    );
   }
   return success(out);
 }
