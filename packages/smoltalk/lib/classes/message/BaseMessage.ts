@@ -2,6 +2,13 @@ import { Content, ContentListUnion } from "@google/genai";
 import { Message } from "ollama";
 import { ChatCompletionMessageParam } from "openai/resources";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
+import { z } from "zod";
+
+/** Opaque data a caller keeps on a message. smoltalk never reads it and never
+ *  sends it to a provider. */
+export type MessageMetadata = Record<string, unknown>;
+
+export const MessageMetadataSchema = z.record(z.string(), z.unknown());
 
 /** The text a provider sees for a message's content: a string as is, any
  *  other value as its JSON text, nothing for null. Exported so a consumer
@@ -22,7 +29,8 @@ export interface MessageClass {
   get role(): string;
   get name(): string | undefined;
   get rawData(): any;
-  get metadata(): Record<string, unknown> | undefined;
+  get metadata(): MessageMetadata | undefined;
+  set metadata(value: MessageMetadata | undefined);
 
   toOpenAIMessage(): ChatCompletionMessageParam;
   toOpenAIResponseInputItem(): ResponseInputItem | ResponseInputItem[];

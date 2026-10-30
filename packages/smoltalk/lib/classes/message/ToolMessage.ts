@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import {
+  BaseMessage,
+  MessageClass,
+  MessageMetadata,
+  MessageMetadataSchema,
+} from "./BaseMessage.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content, FunctionResponse } from "@google/genai";
 import { Message } from "ollama";
@@ -13,7 +18,7 @@ export const ToolMessageJSONSchema = z.object({
   name: z.string(),
   tool_call_id: z.string().default(""),
   rawData: z.any().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: MessageMetadataSchema.optional(),
 });
 
 export type ToolMessageJSON = {
@@ -22,7 +27,7 @@ export type ToolMessageJSON = {
   name: string;
   tool_call_id: string;
   rawData?: any;
-  metadata?: Record<string, unknown>;
+  metadata?: MessageMetadata;
 };
 
 export class ToolMessage extends BaseMessage implements MessageClass {
@@ -33,12 +38,12 @@ export class ToolMessage extends BaseMessage implements MessageClass {
   public _content: unknown;
   public _tool_call_id: string;
   public _rawData?: any;
-  public _metadata?: Record<string, unknown>;
+  public _metadata?: MessageMetadata;
   public _name: string;
 
   constructor(
     content: unknown,
-    options: { tool_call_id: string; rawData?: any; name: string; metadata?: Record<string, unknown> },
+    options: { tool_call_id: string; rawData?: any; name: string; metadata?: MessageMetadata },
   ) {
     super();
     this._content = content;
@@ -74,8 +79,12 @@ export class ToolMessage extends BaseMessage implements MessageClass {
 
   /** Opaque data the caller keeps on the message. Round-tripped through
    *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
-  get metadata(): Record<string, unknown> | undefined {
+  get metadata(): MessageMetadata | undefined {
     return this._metadata;
+  }
+
+  set metadata(value: MessageMetadata | undefined) {
+    this._metadata = value;
   }
 
   toJSON(): ToolMessageJSON {

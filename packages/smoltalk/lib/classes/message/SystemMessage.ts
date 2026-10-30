@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import {
+  BaseMessage,
+  MessageClass,
+  MessageMetadata,
+  MessageMetadataSchema,
+} from "./BaseMessage.js";
 import { TextPart, TextPartSchema } from "../../types.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
@@ -12,7 +17,7 @@ export const SystemMessageJSONSchema = z.object({
   content: z.union([z.string(), z.array(TextPartSchema)]),
   name: z.string().optional(),
   rawData: z.any().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: MessageMetadataSchema.optional(),
 });
 
 export type SystemMessageJSON = z.infer<typeof SystemMessageJSONSchema>;
@@ -22,11 +27,11 @@ export class SystemMessage extends BaseMessage implements MessageClass {
   public _content: string | Array<TextPart>;
   public _name?: string;
   public _rawData?: any;
-  public _metadata?: Record<string, unknown>;
+  public _metadata?: MessageMetadata;
 
   constructor(
     content: string | Array<TextPart>,
-    options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
+    options: { name?: string; rawData?: any; metadata?: MessageMetadata } = {},
   ) {
     super();
     this._content = content;
@@ -57,8 +62,12 @@ export class SystemMessage extends BaseMessage implements MessageClass {
 
   /** Opaque data the caller keeps on the message. Round-tripped through
    *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
-  get metadata(): Record<string, unknown> | undefined {
+  get metadata(): MessageMetadata | undefined {
     return this._metadata;
+  }
+
+  set metadata(value: MessageMetadata | undefined) {
+    this._metadata = value;
   }
 
   toJSON(): SystemMessageJSON {

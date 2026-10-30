@@ -8,6 +8,7 @@ import type { AssistantMessageJSON } from "./AssistantMessage.js";
 import type { DeveloperMessageJSON } from "./DeveloperMessage.js";
 import type { SystemMessageJSON } from "./SystemMessage.js";
 import type { ToolMessageJSON } from "./ToolMessage.js";
+import type { MessageMetadata } from "./BaseMessage.js";
 import {
   CostEstimate,
   TextPart,
@@ -46,7 +47,7 @@ export function messageFromJSON(json: MessageJSON): Message {
 
 export function userMessage(
   content: UserContentInput,
-  options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
+  options: { name?: string; rawData?: any; metadata?: MessageMetadata } = {},
 ) {
   return new UserMessage(content, options);
 }
@@ -84,7 +85,7 @@ export function assistantMessage(
     thinkingBlocks?: Array<{ text: string; signature: string }>;
     logprobs?: TokenLogprob[];
     rawData?: any;
-    metadata?: Record<string, unknown>;
+    metadata?: MessageMetadata;
     usage?: TokenUsage;
     cost?: CostEstimate;
   } = {},
@@ -94,21 +95,21 @@ export function assistantMessage(
 
 export function developerMessage(
   content: string | Array<TextPart>,
-  options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
+  options: { name?: string; rawData?: any; metadata?: MessageMetadata } = {},
 ) {
   return new DeveloperMessage(content, options);
 }
 
 export function systemMessage(
   content: string | Array<TextPart>,
-  options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {},
+  options: { name?: string; rawData?: any; metadata?: MessageMetadata } = {},
 ) {
   return new SystemMessage(content, options);
 }
 
 export function toolMessage(
   content: unknown,
-  options: { tool_call_id: string; rawData?: any; name: string; metadata?: Record<string, unknown> },
+  options: { tool_call_id: string; rawData?: any; name: string; metadata?: MessageMetadata },
 ) {
   return new ToolMessage(content, options);
 }

@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import {
+  BaseMessage,
+  MessageClass,
+  MessageMetadata,
+  MessageMetadataSchema,
+} from "./BaseMessage.js";
 import {
   CostEstimate,
   CostEstimateSchema,
@@ -29,7 +34,7 @@ export const AssistantMessageJSONSchema = z.object({
   thinkingBlocks: z.array(ThinkingBlockSchema).optional(),
   logprobs: z.array(TokenLogprobSchema).optional(),
   rawData: z.any().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: MessageMetadataSchema.optional(),
   usage: TokenUsageSchema.optional(),
   cost: CostEstimateSchema.optional(),
 });
@@ -46,7 +51,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   public _thinkingBlocks?: ThinkingBlock[];
   public _logprobs?: TokenLogprob[];
   public _rawData?: any;
-  public _metadata?: Record<string, unknown>;
+  public _metadata?: MessageMetadata;
   public _usage?: TokenUsage;
   public _cost?: CostEstimate;
 
@@ -60,7 +65,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       thinkingBlocks?: ThinkingBlock[];
       logprobs?: TokenLogprob[];
       rawData?: any;
-      metadata?: Record<string, unknown>;
+      metadata?: MessageMetadata;
       usage?: TokenUsage;
       cost?: CostEstimate;
     } = {},
@@ -113,8 +118,12 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
 
   /** Opaque data the caller keeps on the message. Round-tripped through
    *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
-  get metadata(): Record<string, unknown> | undefined {
+  get metadata(): MessageMetadata | undefined {
     return this._metadata;
+  }
+
+  set metadata(value: MessageMetadata | undefined) {
+    this._metadata = value;
   }
 
   get thinkingBlocks(): ThinkingBlock[] | undefined {

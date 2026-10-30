@@ -43,9 +43,17 @@ describe("metadata survives toJSON and fromJSON", () => {
     expect(JSON.stringify(new UserMessage("hi"))).not.toContain("metadata");
     expect(JSON.stringify(new SystemMessage("be brief"))).not.toContain("metadata");
     expect(JSON.stringify(new AssistantMessage("yes"))).not.toContain("metadata");
+    expect(JSON.stringify(new DeveloperMessage("be brief"))).not.toContain("metadata");
     expect(JSON.stringify(new ToolMessage("ok", { tool_call_id: "c1", name: "t" }))).not.toContain(
       "metadata",
     );
+  });
+
+  it("can be set after the message is built", () => {
+    const m = new AssistantMessage("yes");
+    m.metadata = metadata;
+    expect(m.metadata).toEqual(metadata);
+    expect(AssistantMessage.fromJSON(roundTrip(m)).metadata).toEqual(metadata);
   });
 });
 
@@ -61,6 +69,14 @@ describe("metadata never reaches a provider", () => {
 
   it("in any rendering of a system message", () => {
     const m = new SystemMessage("be brief", { metadata });
+    expect(JSON.stringify(m.toOpenAIMessage())).not.toContain("verifier");
+    expect(JSON.stringify(m.toOpenAIResponseInputItem())).not.toContain("verifier");
+    expect(JSON.stringify(m.toGoogleMessage())).not.toContain("verifier");
+    expect(JSON.stringify(m.toOllamaMessage())).not.toContain("verifier");
+  });
+
+  it("in any rendering of a developer message", () => {
+    const m = new DeveloperMessage("be brief", { metadata });
     expect(JSON.stringify(m.toOpenAIMessage())).not.toContain("verifier");
     expect(JSON.stringify(m.toOpenAIResponseInputItem())).not.toContain("verifier");
     expect(JSON.stringify(m.toGoogleMessage())).not.toContain("verifier");

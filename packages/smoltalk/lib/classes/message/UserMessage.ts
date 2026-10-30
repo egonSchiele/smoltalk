@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { BaseMessage, MessageClass } from "./BaseMessage.js";
+import {
+  BaseMessage,
+  MessageClass,
+  MessageMetadata,
+  MessageMetadataSchema,
+} from "./BaseMessage.js";
 import { ChatCompletionMessageParam } from "openai/resources";
 import { Content } from "@google/genai";
 import { Message } from "ollama";
@@ -24,7 +29,7 @@ export const UserMessageJSONSchema = z.object({
   content: UserContentSchema,
   name: z.string().optional(),
   rawData: z.any().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+  metadata: MessageMetadataSchema.optional(),
 });
 
 export type UserMessageJSON = z.infer<typeof UserMessageJSONSchema>;
@@ -34,9 +39,12 @@ export class UserMessage extends BaseMessage implements MessageClass {
   public _content: UserContent;
   public _name?: string;
   public _rawData?: any;
-  public _metadata?: Record<string, unknown>;
+  public _metadata?: MessageMetadata;
 
-  constructor(content: UserContentInput, options: { name?: string; rawData?: any; metadata?: Record<string, unknown> } = {}) {
+  constructor(
+    content: UserContentInput,
+    options: { name?: string; rawData?: any; metadata?: MessageMetadata } = {},
+  ) {
     super();
     this._content = normalizeUserContent(content);
     this._name = options.name;
@@ -66,8 +74,12 @@ export class UserMessage extends BaseMessage implements MessageClass {
 
   /** Opaque data the caller keeps on the message. Round-tripped through
    *  toJSON/fromJSON; never read by smoltalk, never sent to a provider. */
-  get metadata(): Record<string, unknown> | undefined {
+  get metadata(): MessageMetadata | undefined {
     return this._metadata;
+  }
+
+  set metadata(value: MessageMetadata | undefined) {
+    this._metadata = value;
   }
 
   /** The content parts array, or null when content is a plain string. */
