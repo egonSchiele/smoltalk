@@ -139,6 +139,19 @@ describe("decide", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("fails before any request for a text model, even under a decision provider", async () => {
+    // gpt-4o-mini resolves to openai, which answers decisions, but the
+    // catalog lists it only as a text model.
+    vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    const r = await decide("hello", questions, { model: "gpt-4o-mini" });
+    expect(r.success).toBe(false);
+    if (r.success) return;
+    expect(r.error).toBe(
+      'Model "gpt-4o-mini" is a text model under provider "openai", not a decision model.',
+    );
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("reads the key from config, then the environment", async () => {
     process.env.TYPESAFE_API_KEY = "env-key";
     await decide("hello", questions, { model: "jev-latest" });

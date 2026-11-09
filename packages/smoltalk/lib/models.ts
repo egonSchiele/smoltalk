@@ -2991,7 +2991,7 @@ export function getModel(
 /**
  * Like `getModel`, but also matches on `provider`. Use this whenever a
  * modelName may collide across providers (the merge key everywhere else in
- * this module is `provider:modelName`) — plain `getModel` returns whichever
+ * this module is `type:provider:modelName`) — plain `getModel` returns whichever
  * matching entry comes first and can silently pick the wrong provider.
  */
 export function getModelForProvider(
