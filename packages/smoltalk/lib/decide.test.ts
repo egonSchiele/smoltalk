@@ -130,7 +130,9 @@ describe("decide", () => {
   });
 
   it("fails before any request for an unsupported decision provider", async () => {
-    const r = await decide("hello", questions, { model: "gpt-4o-mini", apiKey: { typesafe: "k" } });
+    // An Anthropic text model: anthropic has no decision provider. (This used
+    // gpt-4o-mini until openai became a decision provider.)
+    const r = await decide("hello", questions, { model: "claude-haiku-5-5", apiKey: { typesafe: "k" } });
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.error).toMatch(/does not answer decisions/);
@@ -504,5 +506,115 @@ describe("decide through a TypeSafe-compatible gateway", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("https://openrouter.ai/api/v1/systemone");
     expect(r.value.cost?.totalCost).toBe(0.042);
     expect(r.value.model).toBe("typesafe/jev-1.13-20260917");
+  });
+});
+
+describe("decide through OpenAI's Decisions API", () => {
+  const originalFetch = globalThis.fetch;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  const openAiReply = {
+    model: "gpt-6-luna",
+    answers: [
+      {
+        type: "choice",
+        name: "department",
+        choice: "billing",
+        confidence: 0.86,
+        probabilities: [
+          { value: "billing", probability: 0.91 },
+          { value: "support", probability: 0.09 },
+        ],
+      },
+      {
+        type: "score",
+        name: "urgency",
+        score: 1.2,
+        confidence: 0.6,
+        probabilities: [
+          { value: 0, label: "0", probability: 0.1 },
+          { value: 1, label: "1", probability: 0.6 },
+          { value: 2, label: "2", probability: 0.3 },
+        ],
+      },
+      { type: "predicate", name: "churn", probability: 0.1 },
+    ],
+    usage: { input_tokens: 40, output_tokens: 0 },
+  };
+
+  beforeEach(() => {
+    vi.stubEnv("OPENAI_API_KEY", "");
+    fetchMock = vi.fn(async () => jsonResponse(openAiReply));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    globalThis.fetch = originalFetch;
+  });
+
+  const config = { model: "gpt-6-luna", apiKey: { openAi: "sk-test" } };
+
+  it("sends gpt-6-luna with no provider to OpenAI's decisions endpoint, translated", async () => {
+    await decide("I was charged twice.", questions, config);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.openai.com/v1/decisions");
+    expect((init.headers as Record<string, string>).Authorization).toBe("Bearer sk-test");
+    const body = JSON.parse(init.body as string);
+    expect(body.model).toBe("gpt-6-luna");
+    expect(body.input).toBe("I was charged twice.");
+    expect(body.questions.map((q: { type: string; name: string }) => [q.type, q.name])).toEqual([
+      ["choice", "department"],
+      ["score", "urgency"],
+      ["predicate", "churn"],
+    ]);
+  });
+
+  it("returns System One answer shapes and prices input at $0.10 per million", async () => {
+    const r = await decide("hello", questions, config);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.value.answers).toEqual(answers);
+    expect(r.value.usage).toEqual({ inputTokens: 40, outputTokens: 0 });
+    expect(r.value.model).toBe("gpt-6-luna");
+    expect(r.value.cost).toEqual({
+      inputCost: 0.000004,
+      outputCost: 0,
+      totalCost: 0.000004,
+      currency: "USD",
+    });
+  });
+
+  it("fails before any request without a key", async () => {
+    const r = await decide("hello", questions, { model: "gpt-6-luna" });
+    expect(r).toEqual({
+      success: false,
+      error: "No OpenAI API key provided. Set config.apiKey.openAi or the OPENAI_API_KEY environment variable.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the status of a 429", async () => {
+    fetchMock.mockResolvedValueOnce(new Response("rate limited", { status: 429 }));
+    const r = await decide("hello", questions, config);
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.status).toBe(429);
+  });
+
+  it("refuses 401 questions before any request, from the catalog's cap", async () => {
+    const many: Record<string, DecisionQuestion> = {};
+    for (let i = 0; i < 401; i++) {
+      many[`q${i}`] = { type: "noul", instructions: `Question ${i}?` };
+    }
+    const r = await decide("hello", many, config);
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/401 given, the model accepts at most 400/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("uses baseUrl.openAi when it is set", async () => {
+    await decide("hello", questions, { ...config, baseUrl: { openAi: "http://proxy.test/v1/" } });
+    expect(fetchMock.mock.calls[0][0]).toBe("http://proxy.test/v1/decisions");
   });
 });

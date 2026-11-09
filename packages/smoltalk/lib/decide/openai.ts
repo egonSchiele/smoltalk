@@ -15,13 +15,15 @@
  */
 import { z } from "zod";
 import type {
+  DecideConfig,
   DecisionAnswer,
   DecisionQuestion,
   DecisionState,
   DecideProviderReply,
 } from "../decide.js";
 import { Result, success, failure } from "../types/result.js";
-import { shapeFailure } from "./http.js";
+import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
+import { postDecisionRequest, shapeFailure } from "./http.js";
 
 export type OpenAiJsonPart = { type: "input_json"; data: object };
 
@@ -318,4 +320,34 @@ export function fromOpenAiReply(
     result.model = reply.model;
   }
   return success(result);
+}
+
+/** The `openai` decision provider: translate, POST to `/decisions`,
+ *  translate back. */
+export async function openaiDecide(
+  state: DecisionState,
+  questions: Record<string, DecisionQuestion>,
+  config: DecideConfig,
+): Promise<Result<DecideProviderReply>> {
+  const apiKey = resolveApiKey("openai", config);
+  if (!apiKey) {
+    return failure(
+      "No OpenAI API key provided. Set config.apiKey.openAi or the OPENAI_API_KEY environment variable.",
+    );
+  }
+  const baseUrl = resolveBaseUrl("openai", config)!.replace(/\/+$/, "");
+  const body = await postDecisionRequest({
+    endpoint: `${baseUrl}/decisions`,
+    apiKey,
+    body: toOpenAiRequest(config.model, state, questions),
+    signal: config.abortSignal,
+  });
+  if (!body.success) {
+    return body;
+  }
+  const reply = parseOpenAiReply(body.value);
+  if (!reply.success) {
+    return reply;
+  }
+  return fromOpenAiReply(questions, reply.value);
 }

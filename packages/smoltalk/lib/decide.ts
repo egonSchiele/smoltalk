@@ -27,6 +27,7 @@ import { getDecisionModelForProvider, type DecisionModel } from "./models.js";
 import { round } from "./util/util.js";
 import { errorMessage } from "./util/errorMessage.js";
 import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
+import { openaiDecide } from "./decide/openai.js";
 
 export const DECISION_PROVIDER = "typesafe";
 
@@ -91,19 +92,23 @@ export type DecideConfig = {
   /** Required when the model is not in the registry. */
   provider?: string;
 
-  /** API keys, nested by provider. Falls back to TYPESAFE_API_KEY or OPENROUTER_API_KEY. */
+  /** API keys, nested by provider. Falls back to TYPESAFE_API_KEY,
+   *  OPENROUTER_API_KEY, or OPENAI_API_KEY. */
   apiKey?: {
     typesafe?: string;
     openRouter?: string;
+    openAi?: string;
     [provider: string]: string | undefined;
   };
 
   /** Custom base URLs, nested by provider. TypeSafe falls back to TYPESAFE_BASE_URL,
-   *  then its host. OpenRouter defaults to https://openrouter.ai/api/v1.
-   *  Point `typesafe` at a Laya server to use Laya. */
+   *  then its host. OpenRouter defaults to https://openrouter.ai/api/v1, and
+   *  OpenAI to https://api.openai.com/v1. Point `typesafe` at a Laya server
+   *  to use Laya. */
   baseUrl?: {
     typesafe?: string;
     openRouter?: string;
+    openAi?: string;
     [provider: string]: string | undefined;
   };
 
@@ -171,12 +176,27 @@ export function unregisterDecisionProvider(name: string): boolean {
   return false;
 }
 
+/** Built-in providers with a wire format of their own. Every System One
+ *  server is a row of SYSTEMONE_SERVERS instead. */
+const OTHER_BUILT_INS: Record<string, DecideProvider> = {
+  openai: openaiDecide,
+};
+
 /** The built-in provider function for a name, if there is one. */
 function builtInProvider(provider: string): DecideProvider | undefined {
   if (Object.hasOwn(SYSTEMONE_SERVERS, provider)) {
     return systemoneDecide;
   }
+  if (Object.hasOwn(OTHER_BUILT_INS, provider)) {
+    return OTHER_BUILT_INS[provider];
+  }
   return undefined;
+}
+
+/** Every built-in provider name, from the same tables builtInProvider reads,
+ *  so the "does not answer decisions" message cannot go out of date. */
+function builtInProviderNames(): string[] {
+  return [...Object.keys(SYSTEMONE_SERVERS), ...Object.keys(OTHER_BUILT_INS)];
 }
 
 /** A problem with the questions that no server would accept. Checked before
@@ -302,7 +322,7 @@ export async function decide(
     providerFn = registeredDecideProviders[provider];
   }
   if (providerFn === undefined) {
-    const builtIns = Object.keys(SYSTEMONE_SERVERS).join(", ");
+    const builtIns = builtInProviderNames().join(", ");
     return failure(
       `Provider "${provider}" does not answer decisions. Use one of: ${builtIns}, or register one with registerDecisionProvider(name, fn).`,
     );
