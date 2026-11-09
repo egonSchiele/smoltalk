@@ -2561,6 +2561,240 @@ export const decisionModels: DecisionModel[] = [
     inputTokenCost: 0.042,
     maxQuestions: 64,
   },
+  // Other vendors' decision models on OpenRouter's System One route.
+  //
+  // Hand-maintained: a snapshot of OpenRouter's list taken 2026-11-09. The
+  // list changes often, and nothing refreshes these entries
+  // (scripts/refresh-from-modelsdev.ts writes only text models). To redo
+  // them, fetch the list (no key needed):
+  //
+  //   curl -s "https://openrouter.ai/api/v1/models?output_modalities=decisions"
+  //
+  // modelName is the entry's `id`. inputTokenCost is `pricing.prompt`
+  // (dollars per token) times 1,000,000; Jev must come out at 0.042. Every
+  // `pricing.completion` was "0". Left out: "~" alias ids, the typesafe/jev-*
+  // ids (Jev is listed above by its bare names), and any model whose
+  // `endpoints` is not /api/alpha/decisions (cloudflare/clairic is an
+  // extraction model). The two Span-01 Lite ids list a prompt price of "0";
+  // OpenRouter describes Span-01 Lite as "the free, lighter tier of Span-01".
+  // No entry has maxQuestions: neither the list nor OpenRouter's decisions
+  // reference states a question cap for these models or for the route.
+  {
+    type: "decision",
+    modelName: "parallel/decisions-fast:free",
+    provider: "openrouter",
+    description:
+      "Parallel's web-grounded decision model, the free tier, through OpenRouter.",
+    inputTokenCost: 0,
+  },
+  {
+    type: "decision",
+    modelName: "morph/reflex",
+    provider: "openrouter",
+    description:
+      "Morph's decision model Reflex, through OpenRouter.",
+    inputTokenCost: 0.042,
+  },
+  {
+    type: "decision",
+    modelName: "baseten/joey-1",
+    provider: "openrouter",
+    description:
+      "Joey 1, a 2B decision model from Baseten's Base Labs built on Qwen3.5-2B, through OpenRouter.",
+    inputTokenCost: 0.01,
+  },
+  {
+    type: "decision",
+    modelName: "liquid/d1.1",
+    provider: "openrouter",
+    description:
+      "d1.1, Liquid AI's structured decision model and the successor to d1, through OpenRouter.",
+    inputTokenCost: 0.02,
+  },
+  {
+    type: "decision",
+    modelName: "baseten/mammoth-1",
+    provider: "openrouter",
+    description:
+      "Mammoth 1, a 27B decision model from Baseten's Base Labs built on Qwen3.5-27B, through OpenRouter.",
+    inputTokenCost: 0.1,
+  },
+  {
+    type: "decision",
+    modelName: "baseten/elephant-1",
+    provider: "openrouter",
+    description:
+      "Elephant 1, a 9B decision model from Baseten's Base Labs built on Qwen3.5-9B, through OpenRouter.",
+    inputTokenCost: 0.035,
+  },
+  {
+    type: "decision",
+    modelName: "nace-ai/drex-max",
+    provider: "openrouter",
+    description:
+      "Drex Max, Nace.AI's largest decision model and the successor to Drex v2.0, through OpenRouter.",
+    inputTokenCost: 0.06,
+  },
+  {
+    type: "decision",
+    modelName: "perplexity/pplx-decider-flash-v1.2",
+    provider: "openrouter",
+    description:
+      "Decider Flash V1.2, Perplexity's 4B decision model and the cheaper sibling of Decider V1.2, through OpenRouter.",
+    inputTokenCost: 0.01,
+  },
+  {
+    type: "decision",
+    modelName: "perplexity/pplx-decider-v1.2",
+    provider: "openrouter",
+    description:
+      "Decider V1.2, Perplexity's 27B decision model, through OpenRouter.",
+    inputTokenCost: 0.02,
+  },
+  {
+    type: "decision",
+    modelName: "respan/span-02",
+    provider: "openrouter",
+    description:
+      "Span-02, an open-weight decision model from Respan, through OpenRouter.",
+    inputTokenCost: 0.01,
+  },
+  {
+    type: "decision",
+    modelName: "liquid/d1-ultra",
+    provider: "openrouter",
+    description:
+      "d1-ultra, Liquid AI's largest decision model, through OpenRouter.",
+    inputTokenCost: 0.042,
+  },
+  {
+    type: "decision",
+    modelName: "scaledown/classify-1",
+    provider: "openrouter",
+    description:
+      "Classify-1, ScaleDown's structured decision model, through OpenRouter.",
+    inputTokenCost: 0.04,
+  },
+  {
+    type: "decision",
+    modelName: "nace-ai/drex-v2.0",
+    provider: "openrouter",
+    description:
+      "Drex v2.0, Nace.AI's 35B mixture-of-experts decision model (3B active), through OpenRouter.",
+    inputTokenCost: 0.06,
+  },
+  {
+    type: "decision",
+    modelName: "microsoft/microsoft-decision-1",
+    provider: "openrouter",
+    description:
+      "Microsoft-Decision-1, Microsoft's small model for fast decisions, through OpenRouter.",
+    inputTokenCost: 0.042,
+  },
+  {
+    type: "decision",
+    modelName: "nace-ai/drex-v1.5",
+    provider: "openrouter",
+    description:
+      "Drex v1.5, a 9B decision model from Nace.AI, through OpenRouter.",
+    inputTokenCost: 0.04,
+  },
+  {
+    type: "decision",
+    modelName: "cloudflare/clef-omni",
+    provider: "openrouter",
+    description:
+      "Clef Omni, the mixture-of-experts member of Cloudflare's open-source Clef family (Qwen3-Omni-30B-A3B), through OpenRouter.",
+    inputTokenCost: 0.15,
+  },
+  {
+    type: "decision",
+    modelName: "upstage/solar-decide-flash",
+    provider: "openrouter",
+    description:
+      "Solar Decide Flash, Upstage's low-latency decision model on Solar Mini 4, through OpenRouter.",
+    inputTokenCost: 0.05,
+  },
+  {
+    type: "decision",
+    modelName: "openai/gpt-6-luna-decisions",
+    provider: "openrouter",
+    description:
+      "GPT-6 Luna served through OpenAI's Decisions API, reached through OpenRouter's System One route.",
+    inputTokenCost: 0.1,
+  },
+  {
+    type: "decision",
+    modelName: "liquid/d1",
+    provider: "openrouter",
+    description:
+      "d1, Liquid AI's structured decision model, through OpenRouter.",
+    inputTokenCost: 0.02,
+  },
+  {
+    type: "decision",
+    modelName: "cloudflare/clef-flash",
+    provider: "openrouter",
+    description:
+      "Clef Flash, the fast 9B member of Cloudflare's open-source Clef family (Qwen3.5-9B), through OpenRouter.",
+    inputTokenCost: 0.038,
+  },
+  {
+    type: "decision",
+    modelName: "cloudflare/clef",
+    provider: "openrouter",
+    description:
+      "Clef, Cloudflare's open-source 27B multimodal decision model (Qwen3.8-27B), through OpenRouter.",
+    inputTokenCost: 0.24,
+  },
+  {
+    type: "decision",
+    modelName: "togethercomputer/tev1-4b-experimental",
+    provider: "openrouter",
+    description:
+      "Tev1 4B Experimental, Together AI's experimental decision model fine-tuned from Qwen3.5-4B, through OpenRouter.",
+    inputTokenCost: 0.042,
+  },
+  {
+    type: "decision",
+    modelName: "upstage/solar-decide",
+    provider: "openrouter",
+    description:
+      "Solar Decide, Upstage's structured decision model on Solar Mini 4, through OpenRouter.",
+    inputTokenCost: 0.05,
+  },
+  {
+    type: "decision",
+    modelName: "respan/span-01",
+    provider: "openrouter",
+    description:
+      "Span-01, Respan's behavior scoring model, through OpenRouter.",
+    inputTokenCost: 0.02,
+  },
+  {
+    type: "decision",
+    modelName: "respan/span-01-lite",
+    provider: "openrouter",
+    description:
+      "Span-01 Lite, the free lighter tier of Respan's Span-01 behavior scoring model, through OpenRouter.",
+    inputTokenCost: 0,
+  },
+  {
+    type: "decision",
+    modelName: "respan/span-01-lite:free",
+    provider: "openrouter",
+    description:
+      "Span-01 Lite, the free lighter tier of Respan's Span-01 behavior scoring model, through OpenRouter's free route.",
+    inputTokenCost: 0,
+  },
+  {
+    type: "decision",
+    modelName: "jaredpalmer/kev-4b",
+    provider: "openrouter",
+    description:
+      "Kev 4B, Jared Palmer's small open-weight decision model on Qwen3.5-4B-Base, through OpenRouter.",
+    inputTokenCost: 0.042,
+  },
 ];
 
 export type TextModelName = (typeof textModels)[number]["modelName"];

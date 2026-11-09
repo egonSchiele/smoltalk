@@ -8,18 +8,25 @@
  * `score` on an ordered rubric. Every answer carries probabilities.
  *
  * `decide()` follows the shape of `embed()`: payload first, config last,
- * provider and key and base URL resolved through the shared helpers. There
- * are two providers: `typesafe` and `openrouter`. A Laya server speaks the
- * TypeSafe protocol, so it is reached by setting `baseUrl.typesafe`.
+ * provider and key and base URL resolved through the shared helpers. It picks
+ * a provider function: a built-in one first, then one added with
+ * registerDecisionProvider. Every built-in provider that speaks the System
+ * One format (`typesafe`, `openrouter`) is a row of SYSTEMONE_SERVERS in
+ * `lib/decide/systemone.ts` and shares systemoneDecide. A Laya server speaks
+ * the same format, so it is reached by setting `baseUrl.typesafe`.
+ *
+ * The question check, the answer check, and the cost live here, so every
+ * provider, built in or registered, gets them.
  */
-import { z } from "zod";
 import type { ModelDataBlob } from "./modelData.js";
 import { Result, success, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
+import { resolveProvider } from "./util/provider.js";
 import { isDecisionModel, resolveModelForProvider, type DecisionModel } from "./models.js";
 import { round } from "./util/util.js";
+import { errorMessage } from "./util/errorMessage.js";
+import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
 
 export const DECISION_PROVIDER = "typesafe";
 
@@ -51,23 +58,27 @@ export type NoulAnswer = {
   noul: number;
 };
 
+/** `confidence` and `probabilities` may be absent: some models leave them
+ *  out. */
 export type ChoiceAnswer = {
   type: "choice";
   choice: string;
-  confidence: number;
+  confidence?: number;
   /** Option key to probability. */
-  probabilities: Record<string, number>;
+  probabilities?: Record<string, number>;
 };
 
+/** `confidence`, `legend`, and `probabilities` may be absent: some models
+ *  leave them out. */
 export type ScoreAnswer = {
   type: "score";
   /** Expected level. May be fractional. */
   score: number;
-  confidence: number;
+  confidence?: number;
   /** Level index to description. */
-  legend: Record<string, string>;
+  legend?: Record<string, string>;
   /** Level index to probability. */
-  probabilities: Record<string, number>;
+  probabilities?: Record<string, number>;
 };
 
 export type DecisionAnswer = NoulAnswer | ChoiceAnswer | ScoreAnswer;
@@ -100,6 +111,19 @@ export type DecideConfig = {
   modelData?: ModelDataBlob;
 
   abortSignal?: AbortSignal;
+
+  // Plugin support
+  metadata?: Record<string, unknown>;
+};
+
+/** What a provider function returns: the parsed answers, the token counts,
+ *  and the model name the server reported. `decide()` checks the answers
+ *  and prices the call, so a provider does neither. */
+export type DecideProviderReply = {
+  answers: Record<string, DecisionAnswer>;
+  usage: TokenUsage;
+  /** The model name the server reported, if it sent one. */
+  model?: string;
 };
 
 export type DecideResult = {
@@ -110,48 +134,49 @@ export type DecideResult = {
   model: string;
 };
 
-const NoulAnswerSchema = z.object({
-  type: z.literal("noul"),
-  noul: z.number(),
-});
+/** A function that answers decisions for one provider. It sends the request
+ *  and returns the parsed answers; `decide()` checks the questions before
+ *  calling it, then checks the answers and prices the call. `config.provider`
+ *  is the resolved provider name. */
+export type DecideProvider = (
+  state: DecisionState,
+  questions: Record<string, DecisionQuestion>,
+  config: DecideConfig,
+) => Promise<Result<DecideProviderReply>>;
 
-const ChoiceAnswerSchema = z.object({
-  type: z.literal("choice"),
-  choice: z.string(),
-  confidence: z.number(),
-  probabilities: z.record(z.string(), z.number()),
-});
+// Null-prototype so provider names like "toString"/"__proto__" can't collide
+// with Object.prototype or pollute the registry.
+const registeredDecideProviders: Record<string, DecideProvider> =
+  Object.create(null);
 
-const ScoreAnswerSchema = z.object({
-  type: z.literal("score"),
-  score: z.number(),
-  confidence: z.number(),
-  legend: z.record(z.string(), z.string()),
-  probabilities: z.record(z.string(), z.number()),
-});
+/** Add a decision provider under `name`. Built-in providers win: a
+ *  registration under a built-in name such as `typesafe` or `openrouter` is
+ *  stored but never called, even though hasDecisionProvider reports it. */
+export function registerDecisionProvider(name: string, fn: DecideProvider): void {
+  registeredDecideProviders[name] = fn;
+}
 
-const DecisionAnswerSchema = z.discriminatedUnion("type", [
-  NoulAnswerSchema,
-  ChoiceAnswerSchema,
-  ScoreAnswerSchema,
-]);
+/** True when `name` has a decision provider registered through
+ *  registerDecisionProvider. The built-in providers are not its concern,
+ *  the same as hasEmbeddingProvider. */
+export function hasDecisionProvider(name: string): boolean {
+  return name in registeredDecideProviders;
+}
 
-const ResponseSchema = z.object({
-  model: z.string().optional(),
-  answers: z.record(z.string(), DecisionAnswerSchema),
-  usage: z
-    .object({
-      input_tokens: z.number(),
-      output_tokens: z.number().optional(),
-    })
-    .optional(),
-});
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
+export function unregisterDecisionProvider(name: string): boolean {
+  if (name in registeredDecideProviders) {
+    delete registeredDecideProviders[name];
+    return true;
   }
-  return String(err);
+  return false;
+}
+
+/** The built-in provider function for a name, if there is one. */
+function builtInProvider(provider: string): DecideProvider | undefined {
+  if (Object.hasOwn(SYSTEMONE_SERVERS, provider)) {
+    return systemoneDecide;
+  }
+  return undefined;
 }
 
 /** A problem with the questions that no server would accept. Checked before
@@ -202,24 +227,30 @@ function checkAnswers(
     if (a.type === "noul" && !isProbability(a.noul)) {
       return `Question "${name}" has a noul of ${a.noul}, which is not between 0 and 1.`;
     }
-    if ((a.type === "choice" || a.type === "score") && !isProbability(a.confidence)) {
+    if (
+      (a.type === "choice" || a.type === "score") &&
+      a.confidence !== undefined &&
+      !isProbability(a.confidence)
+    ) {
       return `Question "${name}" has a confidence of ${a.confidence}, which is not between 0 and 1.`;
     }
     if (q.type === "choice" && a.type === "choice") {
-      if (!(a.choice in q.criteria)) {
+      if (!Object.hasOwn(q.criteria, a.choice)) {
         return `Question "${name}" answered "${a.choice}", which is not one of its options.`;
       }
-      const unknown = Object.keys(a.probabilities).find((k) => !(k in q.criteria));
-      if (unknown !== undefined) {
-        return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
+      if (a.probabilities !== undefined) {
+        const unknown = Object.keys(a.probabilities).find((k) => !Object.hasOwn(q.criteria, k));
+        if (unknown !== undefined) {
+          return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
+        }
       }
     }
     if (q.type === "score" && a.type === "score") {
       const levels = q.criteria.length;
-      if (Object.keys(a.legend).length !== levels) {
+      if (a.legend !== undefined && Object.keys(a.legend).length !== levels) {
         return `Question "${name}" has ${levels} levels but the answer's legend has ${Object.keys(a.legend).length}.`;
       }
-      if (Object.keys(a.probabilities).length !== levels) {
+      if (a.probabilities !== undefined && Object.keys(a.probabilities).length !== levels) {
         return `Question "${name}" has ${levels} levels but the answer has ${Object.keys(a.probabilities).length} probabilities.`;
       }
       if (a.score < 0 || a.score > levels - 1) {
@@ -265,9 +296,15 @@ export async function decide(
   } catch (err) {
     return failure(errorMessage(err));
   }
-  if (provider !== DECISION_PROVIDER && provider !== "openrouter") {
+
+  let providerFn = builtInProvider(provider);
+  if (providerFn === undefined) {
+    providerFn = registeredDecideProviders[provider];
+  }
+  if (providerFn === undefined) {
+    const builtIns = Object.keys(SYSTEMONE_SERVERS).join(", ");
     return failure(
-      `Provider "${provider}" does not answer decisions. Use "${DECISION_PROVIDER}" or "openrouter"; set config.provider for a model the registry does not know.`,
+      `Provider "${provider}" does not answer decisions. Use one of: ${builtIns}, or register one with registerDecisionProvider(name, fn).`,
     );
   }
 
@@ -280,73 +317,31 @@ export async function decide(
     return failure(questionProblem);
   }
 
-  const apiKey = resolveApiKey(provider, config);
-  if (!apiKey) {
-    return failure(
-      provider === "openrouter"
-        ? "No OpenRouter API key provided. Set config.apiKey.openRouter or the OPENROUTER_API_KEY environment variable."
-        : "No TypeSafe API key provided. Set config.apiKey.typesafe or the TYPESAFE_API_KEY environment variable.",
-    );
-  }
-  const baseUrl = resolveBaseUrl(provider, config)!.replace(/\/+$/, "");
-  const endpoint = provider === "openrouter" ? `${baseUrl}/systemone` : `${baseUrl}/v1/systemone`;
-
-  if (config.abortSignal?.aborted) {
-    return failure("Request was aborted");
-  }
-
-  let response: Response;
+  // A registered provider is someone else's code: a throw, or a success with
+  // no answers object, comes back as a failure like every other problem here.
+  let reply: Result<DecideProviderReply>;
   try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: config.model, state, questions }),
-      signal: config.abortSignal,
-    });
+    reply = await providerFn(state, questions, { ...config, provider });
   } catch (err) {
-    if (config.abortSignal?.aborted) {
-      return failure("Request was aborted");
-    }
-    return failure(`Decision request failed: ${errorMessage(err)}`);
+    return failure(errorMessage(err));
+  }
+  if (!reply.success) {
+    return reply;
+  }
+  if (typeof reply.value.answers !== "object" || reply.value.answers === null) {
+    return failure(`Provider "${provider}" returned no answers object.`);
   }
 
-  const text = await response.text();
-  if (!response.ok) {
-    return failure(`Decision request failed with status ${response.status}: ${text}`, {
-      status: response.status,
-    });
-  }
-
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return failure(`Decision response is not JSON: ${text.slice(0, 200)}`);
-  }
-  const parsed = ResponseSchema.safeParse(body);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where = issue.path.length > 0 ? ` at ${issue.path.join(".")}` : "";
-    return failure(`Decision response has an unexpected shape${where}: ${issue.message}`);
-  }
-
-  const answers = parsed.data.answers as Record<string, DecisionAnswer>;
+  const answers = reply.value.answers;
   const answerProblem = checkAnswers(questions, answers);
   if (answerProblem) {
     return failure(answerProblem);
   }
 
-  // Output is free, so only input tokens are priced. The server's output
-  // count is still reported: Jev sends 0, but a gateway may count its own.
-  const inputTokens = parsed.data.usage?.input_tokens ?? 0;
-  const outputTokens = parsed.data.usage?.output_tokens ?? 0;
   return success({
     answers,
-    usage: { inputTokens, outputTokens },
-    cost: calculateDecisionCost(registryModel, inputTokens),
-    model: parsed.data.model ?? config.model,
+    usage: reply.value.usage,
+    cost: calculateDecisionCost(registryModel, reply.value.usage.inputTokens),
+    model: reply.value.model ?? config.model,
   });
 }

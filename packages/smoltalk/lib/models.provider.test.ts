@@ -79,6 +79,15 @@ describe("decision model providers", () => {
     expect(getModel("jev-1.13")?.provider).toBe("typesafe");
     expect(getModelForProvider("typesafe", "jev-1.13")?.type).toBe("decision");
   });
+
+  it("knows the other decision models OpenRouter serves, by their full slug", () => {
+    expect(getModel("cloudflare/clef-flash")).toMatchObject({
+      type: "decision",
+      provider: "openrouter",
+      inputTokenCost: 0.038,
+    });
+    expect(getModel("liquid/d1")?.provider).toBe("openrouter");
+  });
 });
 
 describe("modelAcceptsTemperature", () => {

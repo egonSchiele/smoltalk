@@ -145,13 +145,25 @@ exist on Vertex AI, which smoltalk's Google client does not speak.
 ## Decision models
 
 `decide(state, questions, config)` in `lib/decide.ts` asks a decision model
-(TypeSafe's Jev, or a Laya server) typed `noul`/`choice`/`score` questions and
-returns answers with probabilities. It follows the `embed()` shape: payload
-first, config last, provider/key/base URL through `lib/util/provider.ts`. The
-providers are `typesafe` and `openrouter`; a Laya server is reached with
-`baseUrl.typesafe`. OpenRouter uses `apiKey.openRouter` or `OPENROUTER_API_KEY`
-and appends `/systemone` to its normal `/api/v1` base URL. TypeSafe and Laya
-append `/v1/systemone` to their base URL. Cost is priced by the requested model's
+(TypeSafe's Jev, other vendors' models through OpenRouter, or a Laya server)
+typed `noul`/`choice`/`score` questions and returns answers with
+probabilities. It follows the `embed()` shape: payload first, config last,
+provider/key/base URL through `lib/util/provider.ts`.
+
+`decide()` picks a provider function (`DecideProvider`): a built-in one from
+`builtInProvider`, otherwise one added with `registerDecisionProvider` (a
+null-prototype registry, as in `embed.ts`; built-in names win). It keeps the
+work every provider needs: `checkQuestions` before the call, `checkAnswers`
+and the cost after it. A provider only sends the request and returns a
+`DecideProviderReply`. The System One wire format lives in
+`lib/decide/systemone.ts`: each built-in server that speaks it is a row of
+`SYSTEMONE_SERVERS` (path plus missing-key message; look rows up with
+`Object.hasOwn`), and all share `systemoneDecide`. A row with no
+`missingKeyMessage` is a server that takes no key. Today the rows are
+`typesafe` and `openrouter`; a Laya server is reached with `baseUrl.typesafe`.
+OpenRouter uses `apiKey.openRouter` or `OPENROUTER_API_KEY` and appends
+`/systemone` to its normal `/api/v1` base URL. TypeSafe and Laya append
+`/v1/systemone` to their base URL. Cost is priced by the requested model's
 registry entry (`decisionModels` in `lib/models.ts`), so an unknown model has
 no cost. `PromptResult.rawData` exists so a caller can carry the full answers
 onto an assistant message.

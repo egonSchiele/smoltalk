@@ -374,6 +374,73 @@ describe("decide", () => {
     if (!conf.success) expect(conf.error).toMatch(/confidence of -0.2/);
   });
 
+  it("accepts a choice and a score with no confidence, probabilities, or legend", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: {
+          department: { type: "choice", choice: "billing" },
+          urgency: { type: "score", score: 1.2 },
+          churn: { type: "noul", noul: 0.1 },
+        },
+      }),
+    );
+    const r = await decide("hello", questions, config);
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    expect(r.value.answers.department).toEqual({ type: "choice", choice: "billing" });
+    expect(r.value.answers.urgency).toEqual({ type: "score", score: 1.2 });
+  });
+
+  it("still checks an optional field that is present", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: { ...answers, department: { type: "choice", choice: "billing", confidence: 1.4 } },
+      }),
+    );
+    const conf = await decide("hello", questions, config);
+    expect(conf.success).toBe(false);
+    if (!conf.success) expect(conf.error).toMatch(/confidence of 1.4/);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: { ...answers, department: { type: "choice", choice: "billing", probabilities: { sales: 1 } } },
+      }),
+    );
+    const probs = await decide("hello", questions, config);
+    expect(probs.success).toBe(false);
+    if (!probs.success) expect(probs.error).toMatch(/probability for "sales"/);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: { ...answers, urgency: { type: "score", score: 1, legend: { "0": "a" } } },
+      }),
+    );
+    const legend = await decide("hello", questions, config);
+    expect(legend.success).toBe(false);
+    if (!legend.success) expect(legend.error).toMatch(/answer's legend has 1/);
+  });
+
+  it("treats a prototype name as an option that was not offered", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ answers: { ...answers, department: { type: "choice", choice: "toString" } } }),
+    );
+    const choice = await decide("hello", questions, config);
+    expect(choice.success).toBe(false);
+    if (!choice.success) expect(choice.error).toMatch(/answered "toString", which is not one of its options/);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: {
+          ...answers,
+          department: { type: "choice", choice: "billing", probabilities: { constructor: 0.1 } },
+        },
+      }),
+    );
+    const probs = await decide("hello", questions, config);
+    expect(probs.success).toBe(false);
+    if (!probs.success) expect(probs.error).toMatch(/probability for "constructor"/);
+  });
+
   it("fails when a choice has a probability for an option that was not offered", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({

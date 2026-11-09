@@ -601,7 +601,7 @@ same way and needs `smoltalk-llama-cpp` >= 0.5.0; the vector is computed in
 process. See that package's README for the embedding caveats (dimension
 truncation, one model file per role).
 
-## Decision models (Jev, Laya)
+## Decision models
 
 A decision model does not write text. You send it a state and a map of typed
 questions, and it answers every question in one pass with probabilities.
@@ -644,6 +644,35 @@ The three question types:
 - `score` places the state on `criteria`, an ordered list of level
   descriptions. The answer is an expected level, which may be fractional, a
   confidence, a legend, and a probability per level.
+
+Some models leave out `confidence`, `probabilities`, and `legend`, so all
+three are optional in the answer types. Check before reading one:
+
+```typescript
+import { decide } from "smoltalk";
+
+const r = await decide(
+  "I was charged twice for my subscription.",
+  {
+    department: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: { billing: "payments, refunds", support: "help, bugs" },
+    },
+  },
+  { model: "jev-latest" },
+);
+if (r.success) {
+  const department = r.value.answers.department;
+  if (department.type === "choice" && department.confidence !== undefined) {
+    console.log(department.choice, department.confidence);
+  }
+}
+```
+
+When a model does send one of these fields, `decide()` still checks it: a
+confidence outside 0 to 1, or a probability for an option you did not offer,
+fails the call.
 
 The key comes from `config.apiKey.typesafe` or `TYPESAFE_API_KEY`. Cost is
 priced from the registry entry of the model you asked for, so a model the
@@ -695,6 +724,51 @@ path; `decide()` appends `/systemone`. Without an explicit provider,
 
 Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
 name is `typesafe-ai/jev`, which needs `provider: "typesafe"`.
+
+### Other models through OpenRouter
+
+OpenRouter serves many vendors' decision models over the same route, and the
+registry knows them by their full OpenRouter slug, so no `provider` is
+needed:
+
+```typescript
+import { decide } from "smoltalk";
+
+const r = await decide(
+  "I was charged twice for my subscription.",
+  { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
+  { model: "cloudflare/clef-flash" },
+);
+```
+
+The key comes from `config.apiKey.openRouter` or `OPENROUTER_API_KEY`. Each
+entry is priced from OpenRouter's list; see `decisionModels` in
+`lib/models.ts` for the full set.
+
+### Adding a provider
+
+A decision provider is a function. It sends the request and returns the
+parsed answers and token counts; `decide()` checks the questions before
+calling it, then checks the answers and prices the call:
+
+```ts
+// example: skip-typecheck
+import { decide, registerDecisionProvider, success } from "smoltalk";
+
+registerDecisionProvider("my-decider", async (state, questions, config) => {
+  // read credentials from config (e.g. config.metadata), call your service
+  return success({
+    answers: { refund: { type: "noul", noul: 0.93 } },
+    usage: { inputTokens: 120, outputTokens: 0 },
+  });
+});
+
+const r = await decide(state, questions, { provider: "my-decider", model: "v1" });
+```
+
+Built-in providers always take precedence: a registration under `typesafe`
+or `openrouter` is ignored. `hasDecisionProvider` and
+`unregisterDecisionProvider` work like their embedding twins.
 
 ## Audio (STT/TTS)
 
