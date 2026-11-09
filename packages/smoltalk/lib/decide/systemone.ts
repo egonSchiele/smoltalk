@@ -43,6 +43,9 @@ export const SYSTEMONE_SERVERS: Record<string, SystemoneServer> = {
     missingKeyMessage:
       "No OpenRouter API key provided. Set config.apiKey.openRouter or the OPENROUTER_API_KEY environment variable.",
   },
+  // Laya's own server (`laya-serve`) takes no key; apiKey.laya is sent if
+  // set, for a server behind a proxy that wants one.
+  laya: { path: "/v1/systemone" },
 };
 
 const NoulAnswerSchema = z.object({

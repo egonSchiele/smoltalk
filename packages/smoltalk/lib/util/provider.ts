@@ -53,6 +53,7 @@ type NestedKeyConfig = {
     openAiCompat?: string;
     mlx?: string;
     typesafe?: string;
+    laya?: string;
   };
 };
 
@@ -124,8 +125,10 @@ export function resolveBaseUrl(
       // embedding path would change its behavior.
       return b?.openAi || "https://api.openai.com/v1";
     case "typesafe":
-      // A Laya server (`laya-serve`) speaks the same protocol; point this at it.
       return b?.typesafe || env("TYPESAFE_BASE_URL") || "https://api.typesafe.ai";
+    case "laya":
+      // Laya's own server, `laya-serve`, listens on port 8000.
+      return b?.laya || env("LAYA_BASE_URL") || "http://127.0.0.1:8000";
     default:
       return undefined;
   }

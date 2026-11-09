@@ -108,12 +108,14 @@ export type DecideConfig = {
 
   /** Custom base URLs, nested by provider. TypeSafe falls back to TYPESAFE_BASE_URL,
    *  then its host. OpenRouter defaults to https://openrouter.ai/api/v1, and
-   *  OpenAI to https://api.openai.com/v1. Point `typesafe` at a Laya server
-   *  to use Laya. */
+   *  OpenAI to https://api.openai.com/v1. */
   baseUrl?: {
     typesafe?: string;
     openRouter?: string;
     openAi?: string;
+    /** Laya's own server. Falls back to LAYA_BASE_URL, then
+     *  http://127.0.0.1:8000. */
+    laya?: string;
     [provider: string]: string | undefined;
   };
 

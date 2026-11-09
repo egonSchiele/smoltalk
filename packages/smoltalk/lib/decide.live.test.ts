@@ -8,10 +8,9 @@
  *                         serves both over the same protocol.
  *   OPENAI_API_KEY      — one request to gpt-6-luna through OpenAI's
  *                         Decisions API, translated to and from its format.
- *   LAYA_BASE_URL       — one request to a Laya server (`laya-serve`), which
- *                         speaks the same protocol. The key is not used by
- *                         Laya but the provider requires one, so any value is
- *                         sent.
+ *   LAYA_BASE_URL       — one request to a Laya server (`laya-serve`)
+ *                         through the `laya` provider, which reads the
+ *                         address from this variable and sends no key.
  */
 import { describe, it, expect } from "vitest";
 import { decide, type DecisionQuestion } from "./decide.js";
@@ -113,12 +112,7 @@ describe.runIf(Boolean(process.env.OPENAI_API_KEY))("decide - OpenAI Decisions A
 
 describe.runIf(Boolean(process.env.LAYA_BASE_URL))("decide - Laya server", () => {
   it("answers the ticket example through the same protocol", { timeout: 60_000 }, async () => {
-    const r = await decide(state, questions, {
-      model: "laya",
-      provider: "typesafe",
-      apiKey: { typesafe: "unused" },
-      baseUrl: { typesafe: process.env.LAYA_BASE_URL },
-    });
+    const r = await decide(state, questions, { model: "laya", provider: "laya" });
     checkShape(r);
     if (r.success) {
       expect(r.value.cost).toBeUndefined();
