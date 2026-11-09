@@ -2561,6 +2561,15 @@ export const decisionModels: DecisionModel[] = [
     inputTokenCost: 0.042,
     maxQuestions: 64,
   },
+  {
+    type: "decision",
+    modelName: "gpt-6-luna",
+    provider: "openai",
+    description:
+      "GPT-6 Luna through OpenAI's Decisions API. Answers yes/no, choice, and score questions with probabilities. Does not generate text. The cost shown is an upper bound: OpenAI discounts cached input tokens, which this price does not.",
+    inputTokenCost: 0.1,
+    maxQuestions: 400,
+  },
   // Other vendors' decision models on OpenRouter's System One route, from
   // https://openrouter.ai/api/v1/models?output_modalities=decisions
   // (2026-11-09). Prices are the list's per-token prompt price times 1M.
