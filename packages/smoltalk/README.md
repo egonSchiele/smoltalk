@@ -449,10 +449,10 @@ you pass at call time, and an entry in a blob must carry the same `type` as the
 model it updates (`"text"` for a chat model, `"decision"` for a decision model).
 An entry with another type is added as a separate model instead of updating the
 existing one. An entry with no `type` updates the first model with its provider
-and name, which is the one lookups return. Registering `my-model` under `"openai-compat"` but calling it
-with `provider: "openrouter"` looks up a different key, finds no price, and
-silently drops the `cost` field. When in doubt, register under the same provider
-string you call with.
+and name, which is the one lookups return. Registering `my-model` under
+`"openai-compat"` but calling it with `provider: "openrouter"` looks up a
+different key, finds no price, and silently drops the `cost` field. When in
+doubt, register under the same provider string you call with.
 
 Overriding an entry that *is* in the catalog works the same way — merges are
 field-by-field (see "Refreshing model data" above), so registering just
