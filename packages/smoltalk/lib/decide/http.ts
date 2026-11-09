@@ -1,5 +1,5 @@
 import { Result, success, failure } from "../types/result.js";
-import { errorMessage } from "../util/util.js";
+import { errorMessage } from "../util/errorMessage.js";
 
 export type DecisionRequest = {
   endpoint: string;
