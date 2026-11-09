@@ -666,8 +666,9 @@ The key comes from `config.apiKey.typesafe` or `TYPESAFE_API_KEY`. Cost is
 priced from the registry entry of the model you asked for, so a model the
 registry does not know has no cost.
 
-To use a Laya server, run `laya-serve` and point the provider at it. Laya
-needs no key, but the provider requires one, so pass any value:
+To use a Laya server, run `laya-serve` and set `provider: "laya"`. Laya
+needs no key. The address comes from `config.baseUrl.laya`, then
+`LAYA_BASE_URL`, then `http://127.0.0.1:8000`:
 
 ```typescript
 import { decide } from "smoltalk";
@@ -675,17 +676,13 @@ import { decide } from "smoltalk";
 const r = await decide(
   "I was charged twice for my subscription.",
   { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
-  {
-    model: "laya",
-    provider: "typesafe",
-    apiKey: { typesafe: "unused" },
-    baseUrl: { typesafe: "http://localhost:8000" },
-  },
+  { model: "laya", provider: "laya" },
 );
 ```
 
-For a Laya model name the registry does not know, set `provider: "typesafe"`
-to select its decision protocol.
+Set `apiKey.laya` if your server sits behind a proxy that wants a key; it is
+sent as a bearer token. The older way, `provider: "typesafe"` with
+`baseUrl.typesafe` pointed at the server and any key, still works.
 
 OpenRouter and Vercel AI Gateway also serve Jev over this protocol, so no
 TypeSafe account is needed. To use OpenRouter, set `provider: "openrouter"`
@@ -772,6 +769,32 @@ OpenAI enforces some limits that `decide()` does not check: 2 to 10 score
 levels, 2 to 255 choices, and unique choice keys. A request that breaks one
 fails with OpenAI's 400, carried as `status`.
 
+### Local models through llama.cpp
+
+Install the optional plugin, then pass a local `.gguf` path as the model and
+`provider: "llama-cpp"`. The model runs in process, with no server:
+
+```bash
+npm i smoltalk-llama-cpp
+```
+
+```typescript
+import { decide } from "smoltalk";
+
+const r = await decide(
+  "I was charged twice for my subscription.",
+  { refund: { type: "noul", instructions: "Is the customer asking for money back?" } },
+  { model: "/path/to/Qwen3.5-0.8B.Q8_0.gguf", provider: "llama-cpp" },
+);
+```
+
+Any small chat model works: node-llama-cpp reads how likely each answer is,
+so no dedicated decision model is needed. The state and the questions must
+fit in 4,096 tokens, or the call fails. The probabilities are not calibrated
+the way a dedicated model's are, so pick a confidence floor by testing on
+your own data. A local model has no price, so the result has no `cost`. See
+the smoltalk-llama-cpp README for recommended models and caveats.
+
 ### Adding a provider
 
 A decision provider is a function. It sends the request and returns the
@@ -794,7 +817,9 @@ const r = await decide(state, questions, { provider: "my-decider", model: "v1" }
 ```
 
 Built-in providers always take precedence: a registration under `typesafe`,
-`openrouter`, or `openai` is ignored. `hasDecisionProvider` and
+`openrouter`, `laya`, or `openai` is ignored. The one exception is
+`llama-cpp`: a provider registered under that name is used instead of
+loading the plugin, as with `embed()`. `hasDecisionProvider` and
 `unregisterDecisionProvider` work like their embedding twins.
 
 ## Audio (STT/TTS)

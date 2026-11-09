@@ -247,6 +247,70 @@ The vector is computed in process by node-llama-cpp. `model` must be a local
 - Embedding contexts follow the lifecycle rules below: one per model file,
   calls serialized, freed by `disposeAll()` / `disposeModel()`.
 
+## Decisions
+
+Needs `node-llama-cpp` >= 3.22 (this package requires ^3.22.3) and a smoltalk
+whose `decide()` has the `llama-cpp` provider. `decide()` asks typed questions
+about a state and gets probabilities back; see smoltalk's "Decision models"
+section. With this plugin installed it works the same zero-wiring way:
+
+```ts
+import { decide } from "smoltalk";
+
+const result = await decide(
+  "I was charged twice for my subscription.",
+  {
+    team: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: { billing: "payments, refunds", support: "bugs, help" },
+    },
+    refund: { type: "noul", instructions: "Is the customer asking for money back?" },
+  },
+  { provider: "llama-cpp", model: "/path/to/Qwen3.5-0.8B.Q8_0.gguf" },
+);
+```
+
+node-llama-cpp reads how likely each answer is from an ordinary chat model;
+no dedicated decision model is needed. Its guide recommends, smallest first:
+
+| Model | File size | URI |
+| --- | --- | --- |
+| Qwen 3.5 0.8B (Q8_0) | 0.8 GB | `hf:unsloth/Qwen3.5-0.8B-GGUF:Q8_0` |
+| Qwen 3.5 2B (Q4_K_M) | 1.3 GB | `hf:unsloth/Qwen3.5-2B-GGUF:Q4_K_M` |
+| Gemma 4 E2B (Q6_K) | 3.9 GB | `hf:giladgd/gemma-4-E2B-it-GGUF:Q6_K` |
+| Gemma 4 E2B (Q8_0) | 5.0 GB | `hf:giladgd/gemma-4-E2B-it-GGUF:Q8_0` |
+
+`model` must be a local `.gguf` path; `resolveModel` turns an `hf:` URI into
+one. A few caveats:
+
+- The decision context is node-llama-cpp's default, at most **4,096 tokens**,
+  and the state plus the questions must fit in it. A document that does not
+  fit fails with node-llama-cpp's error; it is never truncated, because a
+  decision on a cut-off document is worse than none. (A support ticket and
+  three questions use about 170 tokens on Qwen 3.5 0.8B.)
+- node-llama-cpp allows at most 10 score levels and 256 choices per question;
+  more fails the call.
+- The probabilities come from a general chat model and are not calibrated
+  the way a dedicated decision model's are. Pick a confidence floor by
+  testing on your own data.
+- Chat and decision contexts are held separately. Passing the same `.gguf`
+  to both `text()` and `decide()` loads it twice.
+- Decision contexts follow the lifecycle rules below: one per model file,
+  calls serialized, freed by `disposeAll()` / `disposeModel()`.
+- Dedicated decision models published as GGUF files (Laya, Julia-1, and
+  others) do not work here. Julia-1 (`hf:ggml-org/Julia-1-GGUF`) loads, but
+  node-llama-cpp's decision context gets uniform probabilities from it (1/3
+  per option, 0.5 for a yes/no). Those files are meant for llama.cpp's own
+  HTTP server and its `/v1/systemone` route.
+
+The integration test `lib/decide.integration.test.ts` loads a real model only
+when `LLAMA_CPP_DECIDE_MODEL` holds the path of a local `.gguf`:
+
+```bash
+LLAMA_CPP_DECIDE_MODEL=/path/to/Qwen3.5-0.8B.Q8_0.gguf pnpm vitest run lib/decide.integration.test.ts
+```
+
 ## Lifecycle & concurrency
 
 Native model state is expensive to allocate and cannot be safely torn down
