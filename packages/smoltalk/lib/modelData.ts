@@ -194,8 +194,11 @@ function mergeByKey<T>(base: T[], overlay: T[], keyOf: (item: T) => string): T[]
   return order.map((key) => map.get(key) as T);
 }
 
+/** Entries merge by type, provider, and name. The type is part of the key
+ *  because one provider can serve a text model and a decision model under
+ *  the same name (OpenAI's gpt-6-luna). */
 export function mergeModelData(base: ModelType[], overlay: ModelType[]): ModelType[] {
-  return mergeByKey(base, overlay, (m) => `${m.provider}:${m.modelName}`);
+  return mergeByKey(base, overlay, (m) => `${m.type}:${m.provider}:${m.modelName}`);
 }
 
 export function mergeHostedTools(base: HostedTool[], overlay: HostedTool[]): HostedTool[] {

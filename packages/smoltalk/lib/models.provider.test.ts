@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  getDecisionModelForProvider,
   getModel,
   getModelForProvider,
   modelAcceptsTemperature,
@@ -78,6 +79,17 @@ describe("decision model providers", () => {
     });
     expect(getModel("jev-1.13")?.provider).toBe("typesafe");
     expect(getModelForProvider("typesafe", "jev-1.13")?.type).toBe("decision");
+  });
+
+  it("finds only decision entries with getDecisionModelForProvider", () => {
+    expect(getDecisionModelForProvider("openrouter", "jev-1.13")).toMatchObject({
+      type: "decision",
+      provider: "openrouter",
+      maxQuestions: 64,
+    });
+    // gpt-4o-mini is a text model under openai, never a decision entry.
+    expect(getModelForProvider("openai", "gpt-4o-mini")?.type).toBe("text");
+    expect(getDecisionModelForProvider("openai", "gpt-4o-mini")).toBeUndefined();
   });
 
   it("knows the other decision models OpenRouter serves, by their full slug", () => {

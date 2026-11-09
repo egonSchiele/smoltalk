@@ -34,6 +34,18 @@ describe("mergeModelData", () => {
     expect(out.map((m) => m.modelName)).toEqual(["m1", "m2"]);
   });
 
+  it("keeps a text entry and a decision entry with the same provider and name apart", () => {
+    const both: ModelType[] = [
+      ...base,
+      { type: "decision", modelName: "m1", provider: "openai", inputTokenCost: 0.1 },
+    ];
+    const overlay = [{ type: "text", modelName: "m1", provider: "openai", inputTokenCost: 99 }] as unknown as ModelType[];
+    const out = mergeModelData(both, overlay);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({ type: "text", inputTokenCost: 99, maxInputTokens: 1 });
+    expect(out[1]).toEqual({ type: "decision", modelName: "m1", provider: "openai", inputTokenCost: 0.1 });
+  });
+
   it("treats same name + different provider as distinct entries", () => {
     const overlay = [{ type: "text", modelName: "m1", provider: "google", inputTokenCost: 7 }] as unknown as ModelType[];
     const out = mergeModelData(base, overlay);

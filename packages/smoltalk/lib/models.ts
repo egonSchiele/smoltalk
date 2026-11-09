@@ -2995,6 +2995,19 @@ export function getModelForProvider(
   );
 }
 
+/** The decision-model entry for this provider and name, if there is one.
+ *  A text model may share the name, so this looks only at decision
+ *  entries. */
+export function getDecisionModelForProvider(
+  provider: string,
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): DecisionModel | undefined {
+  return getAllModels(requestData)
+    .filter(isDecisionModel)
+    .find((model) => model.modelName === modelName && model.provider === provider);
+}
+
 /**
  * API-variant provider names mapped to the catalog family whose entries they
  * share. "openai-responses" is the same vendor with the same pricing and
