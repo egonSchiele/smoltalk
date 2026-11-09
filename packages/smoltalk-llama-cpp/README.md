@@ -311,10 +311,13 @@ one. A few caveats:
 
   `decide()` then reuses that entry for the same path.
 - Dedicated decision models published as GGUF files (Laya, Julia-1, and
-  others) do not work here. Julia-1 (`hf:ggml-org/Julia-1-GGUF`) loads, but
-  node-llama-cpp's decision context gets uniform probabilities from it (1/3
-  per option, 0.5 for a yes/no). Those files are meant for llama.cpp's own
-  HTTP server and its `/v1/systemone` route.
+  others) do not work here, and `decide()` refuses them. node-llama-cpp's
+  decision context loads Julia-1 (`hf:ggml-org/Julia-1-GGUF`) but answers
+  every question uniformly (1/3 per option, 0.5 for a yes/no). These files
+  declare `{architecture}.decision.type` in their GGUF metadata, so the plugin
+  checks for it after loading and fails with "is a dedicated decision model;
+  serve it with llama-server". They are meant for llama.cpp's own HTTP server
+  and its `/v1/systemone` route.
 
 The integration test `lib/decide.integration.test.ts` loads a real model only
 when `LLAMA_CPP_DECIDE_MODEL` holds the path of a local `.gguf`:

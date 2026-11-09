@@ -54,6 +54,7 @@ vi.mock("node-llama-cpp", () => {
     async dispose() {}
   }
   class FakeModel {
+    fileInfo = { metadata: { general: { architecture: "qwen35" } } };
     async createDecisionContext() {
       counters.createDecisionContext += 1;
       return new FakeDecisionContext();

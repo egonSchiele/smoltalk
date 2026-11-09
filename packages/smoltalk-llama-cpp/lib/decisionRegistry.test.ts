@@ -16,10 +16,12 @@ const h = vi.hoisted(() => {
   };
   const flags = {
     failCreateDecisionContextOnce: false,
+    dedicatedDecisionFile: false, // the loaded file is a dedicated decision model
   };
   const reset = () => {
     for (const k of Object.keys(counters)) (counters as any)[k] = 0;
     flags.failCreateDecisionContextOnce = false;
+    flags.dedicatedDecisionFile = false;
   };
   return { counters, flags, reset };
 });
@@ -32,6 +34,19 @@ vi.mock("node-llama-cpp", () => {
     }
   }
   class FakeModel {
+    // The GGUF metadata shapes seen on real files: Qwen 3.5 has no decision
+    // key; Julia-1 (a dedicated decision model) has modern-bert.decision.
+    get fileInfo() {
+      if (h.flags.dedicatedDecisionFile) {
+        return {
+          metadata: {
+            general: { architecture: "modern-bert" },
+            "modern-bert": { decision: { type: "laya", block_count: 2, max_head_tokens: 256 } },
+          },
+        };
+      }
+      return { metadata: { general: { architecture: "qwen35" }, qwen35: { block_count: 24 } } };
+    }
     async createDecisionContext() {
       counters.createDecisionContext += 1;
       if (h.flags.failCreateDecisionContextOnce) {
@@ -82,6 +97,19 @@ describe("acquireDecisionEntry", () => {
     await acquireDecisionEntry("/m/decide.gguf");
     expect(h.counters.loadModel).toBe(2);
     expect(h.counters.createDecisionContext).toBe(2);
+  });
+
+  it("refuses a dedicated decision model file, which node-llama-cpp cannot read", async () => {
+    h.flags.dedicatedDecisionFile = true;
+    await expect(acquireDecisionEntry("/m/julia-1.gguf")).rejects.toThrow(
+      "/m/julia-1.gguf is a dedicated decision model (laya). node-llama-cpp cannot read its answers; serve it with llama.cpp's llama-server and its /v1/systemone route.",
+    );
+    // The model is freed and no context is made; the next call tries again.
+    expect(h.counters.modelDispose).toBe(1);
+    expect(h.counters.createDecisionContext).toBe(0);
+    h.flags.dedicatedDecisionFile = false;
+    await acquireDecisionEntry("/m/julia-1.gguf");
+    expect(h.counters.loadModel).toBe(2);
   });
 
   it("keeps entries for different paths apart", async () => {

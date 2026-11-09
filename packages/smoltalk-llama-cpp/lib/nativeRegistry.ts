@@ -353,9 +353,40 @@ export function acquireEmbeddingEntry(
 const decisionRegistry: Record<string, Promise<DecisionEntry>> =
   Object.create(null);
 
+type ArchitectureMetadata = { decision?: { type?: unknown } };
+
+/**
+ * The decision type a dedicated decision model's GGUF declares, if any.
+ * llama.cpp's converter writes `{architecture}.decision.type` on these files
+ * (Julia-1 and Laya are `modern-bert` with type "laya"); an ordinary chat
+ * model has no such key. node-llama-cpp's decision context cannot read their
+ * answers: it loads them and answers every question uniformly.
+ */
+function dedicatedDecisionType(model: LlamaModel): string | undefined {
+  const metadata = model.fileInfo.metadata as Record<string, unknown>;
+  const general = metadata.general as { architecture?: string } | undefined;
+  const architecture = general?.architecture;
+  if (architecture === undefined) {
+    return undefined;
+  }
+  const block = metadata[architecture] as ArchitectureMetadata | undefined;
+  const type = block?.decision?.type;
+  if (typeof type === "string") {
+    return type;
+  }
+  return undefined;
+}
+
 async function createDecisionEntry(modelPath: string): Promise<DecisionEntry> {
   const llama = await getSharedLlama();
   const model = await llama.loadModel({ modelPath });
+  const decisionType = dedicatedDecisionType(model);
+  if (decisionType !== undefined) {
+    await model.dispose();
+    throw new Error(
+      `${modelPath} is a dedicated decision model (${decisionType}). node-llama-cpp cannot read its answers; serve it with llama.cpp's llama-server and its /v1/systemone route.`,
+    );
+  }
   let context: LlamaDecisionContext;
   try {
     // The library's defaults: a context of at most 4,096 tokens.

@@ -184,7 +184,10 @@ one exception to built-ins winning; otherwise `loadLlamaCpp()` and the
 plugin's optional `decide`). The plugin
 (`packages/smoltalk-llama-cpp/lib/decide.ts`) runs a local `.gguf` through
 node-llama-cpp's decision context (default 4,096-token context, one per file
-in `nativeRegistry.ts`, never shared with chat).
+in `nativeRegistry.ts`, never shared with chat). `createDecisionEntry` refuses
+a dedicated decision GGUF (one with `{architecture}.decision.type` in its
+metadata, such as Julia-1 or Laya): node-llama-cpp loads it but answers
+uniformly.
 
 Cost is priced by the requested model's registry entry (`decisionModels` in
 `lib/models.ts`), so an unknown model has no cost. `PromptResult.rawData` exists so a caller can carry the full answers
