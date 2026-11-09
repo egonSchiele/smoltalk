@@ -51,23 +51,27 @@ export type NoulAnswer = {
   noul: number;
 };
 
+/** `confidence` and `probabilities` may be absent: some models leave them
+ *  out. */
 export type ChoiceAnswer = {
   type: "choice";
   choice: string;
-  confidence: number;
+  confidence?: number;
   /** Option key to probability. */
-  probabilities: Record<string, number>;
+  probabilities?: Record<string, number>;
 };
 
+/** `confidence`, `legend`, and `probabilities` may be absent: some models
+ *  leave them out. */
 export type ScoreAnswer = {
   type: "score";
   /** Expected level. May be fractional. */
   score: number;
-  confidence: number;
+  confidence?: number;
   /** Level index to description. */
-  legend: Record<string, string>;
+  legend?: Record<string, string>;
   /** Level index to probability. */
-  probabilities: Record<string, number>;
+  probabilities?: Record<string, number>;
 };
 
 export type DecisionAnswer = NoulAnswer | ChoiceAnswer | ScoreAnswer;
@@ -216,24 +220,30 @@ function checkAnswers(
     if (a.type === "noul" && !isProbability(a.noul)) {
       return `Question "${name}" has a noul of ${a.noul}, which is not between 0 and 1.`;
     }
-    if ((a.type === "choice" || a.type === "score") && !isProbability(a.confidence)) {
+    if (
+      (a.type === "choice" || a.type === "score") &&
+      a.confidence !== undefined &&
+      !isProbability(a.confidence)
+    ) {
       return `Question "${name}" has a confidence of ${a.confidence}, which is not between 0 and 1.`;
     }
     if (q.type === "choice" && a.type === "choice") {
       if (!(a.choice in q.criteria)) {
         return `Question "${name}" answered "${a.choice}", which is not one of its options.`;
       }
-      const unknown = Object.keys(a.probabilities).find((k) => !(k in q.criteria));
-      if (unknown !== undefined) {
-        return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
+      if (a.probabilities !== undefined) {
+        const unknown = Object.keys(a.probabilities).find((k) => !(k in q.criteria));
+        if (unknown !== undefined) {
+          return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
+        }
       }
     }
     if (q.type === "score" && a.type === "score") {
       const levels = q.criteria.length;
-      if (Object.keys(a.legend).length !== levels) {
+      if (a.legend !== undefined && Object.keys(a.legend).length !== levels) {
         return `Question "${name}" has ${levels} levels but the answer's legend has ${Object.keys(a.legend).length}.`;
       }
-      if (Object.keys(a.probabilities).length !== levels) {
+      if (a.probabilities !== undefined && Object.keys(a.probabilities).length !== levels) {
         return `Question "${name}" has ${levels} levels but the answer has ${Object.keys(a.probabilities).length} probabilities.`;
       }
       if (a.score < 0 || a.score > levels - 1) {

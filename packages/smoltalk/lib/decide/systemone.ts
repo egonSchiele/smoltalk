@@ -50,19 +50,21 @@ const NoulAnswerSchema = z.object({
   noul: z.number(),
 });
 
+// confidence, probabilities, and legend may be absent, depending on the
+// model (OpenRouter's reference for this route says so).
 const ChoiceAnswerSchema = z.object({
   type: z.literal("choice"),
   choice: z.string(),
-  confidence: z.number(),
-  probabilities: z.record(z.string(), z.number()),
+  confidence: z.number().optional(),
+  probabilities: z.record(z.string(), z.number()).optional(),
 });
 
 const ScoreAnswerSchema = z.object({
   type: z.literal("score"),
   score: z.number(),
-  confidence: z.number(),
-  legend: z.record(z.string(), z.string()),
-  probabilities: z.record(z.string(), z.number()),
+  confidence: z.number().optional(),
+  legend: z.record(z.string(), z.string()).optional(),
+  probabilities: z.record(z.string(), z.number()).optional(),
 });
 
 const DecisionAnswerSchema = z.discriminatedUnion("type", [
