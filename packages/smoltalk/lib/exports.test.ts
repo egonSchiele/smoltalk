@@ -8,4 +8,10 @@ describe("public exports", () => {
     expect(typeof smoltalk.clearModelData).toBe("function");
     expect(typeof smoltalk.getHostedTools).toBe("function");
   });
+
+  it("exposes the decision provider registry", () => {
+    expect(typeof smoltalk.registerDecisionProvider).toBe("function");
+    expect(typeof smoltalk.hasDecisionProvider).toBe("function");
+    expect(typeof smoltalk.unregisterDecisionProvider).toBe("function");
+  });
 });

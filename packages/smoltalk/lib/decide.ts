@@ -19,7 +19,7 @@ import { CostEstimate } from "./types/costEstimate.js";
 import { resolveProvider } from "./util/provider.js";
 import { isDecisionModel, resolveModelForProvider, type DecisionModel } from "./models.js";
 import { errorMessage, round } from "./util/util.js";
-import { systemoneDecide } from "./decide/systemone.js";
+import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
 
 export const DECISION_PROVIDER = "typesafe";
 
@@ -100,6 +100,9 @@ export type DecideConfig = {
   modelData?: ModelDataBlob;
 
   abortSignal?: AbortSignal;
+
+  // Plugin support
+  metadata?: Record<string, unknown>;
 };
 
 /** What a provider function returns: the parsed answers, the token counts,
@@ -119,6 +122,51 @@ export type DecideResult = {
   /** The versioned model the server reports, e.g. `jev-1.13`. */
   model: string;
 };
+
+/** A function that answers decisions for one provider. It sends the request
+ *  and returns the parsed answers; `decide()` checks the questions before
+ *  calling it, then checks the answers and prices the call. `config.provider`
+ *  is the resolved provider name. */
+export type DecideProvider = (
+  state: DecisionState,
+  questions: Record<string, DecisionQuestion>,
+  config: DecideConfig,
+) => Promise<Result<DecideProviderReply>>;
+
+// Null-prototype so provider names like "toString"/"__proto__" can't collide
+// with Object.prototype or pollute the registry.
+const registeredDecideProviders: Record<string, DecideProvider> =
+  Object.create(null);
+
+/** Add a decision provider under `name`. Built-in providers win: a
+ *  registration under a built-in name such as `typesafe` or `openrouter` is
+ *  stored but never called, even though hasDecisionProvider reports it. */
+export function registerDecisionProvider(name: string, fn: DecideProvider): void {
+  registeredDecideProviders[name] = fn;
+}
+
+/** True when `name` has a decision provider registered through
+ *  registerDecisionProvider. The built-in providers are not its concern,
+ *  the same as hasEmbeddingProvider. */
+export function hasDecisionProvider(name: string): boolean {
+  return name in registeredDecideProviders;
+}
+
+export function unregisterDecisionProvider(name: string): boolean {
+  if (name in registeredDecideProviders) {
+    delete registeredDecideProviders[name];
+    return true;
+  }
+  return false;
+}
+
+/** The built-in provider function for a name, if there is one. */
+function builtInProvider(provider: string): DecideProvider | undefined {
+  if (Object.hasOwn(SYSTEMONE_SERVERS, provider)) {
+    return systemoneDecide;
+  }
+  return undefined;
+}
 
 /** A problem with the questions that no server would accept. Checked before
  *  any request so a bad question map never costs a round trip. */
@@ -231,9 +279,15 @@ export async function decide(
   } catch (err) {
     return failure(errorMessage(err));
   }
-  if (provider !== DECISION_PROVIDER && provider !== "openrouter") {
+
+  let providerFn = builtInProvider(provider);
+  if (providerFn === undefined) {
+    providerFn = registeredDecideProviders[provider];
+  }
+  if (providerFn === undefined) {
+    const builtIns = Object.keys(SYSTEMONE_SERVERS).join(", ");
     return failure(
-      `Provider "${provider}" does not answer decisions. Use "${DECISION_PROVIDER}" or "openrouter"; set config.provider for a model the registry does not know.`,
+      `Provider "${provider}" does not answer decisions. Use one of: ${builtIns}, or register one with registerDecisionProvider(name, fn).`,
     );
   }
 
@@ -246,7 +300,7 @@ export async function decide(
     return failure(questionProblem);
   }
 
-  const reply = await systemoneDecide(state, questions, { ...config, provider });
+  const reply = await providerFn(state, questions, { ...config, provider });
   if (!reply.success) {
     return reply;
   }
