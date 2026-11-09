@@ -7,5 +7,6 @@ export {
   modelKey,
   acquireModelEntry,
   acquireEmbeddingEntry,
+  acquireDecisionEntry,
 } from "./nativeRegistry.js";
-export type { ModelEntry, EmbeddingEntry } from "./nativeRegistry.js";
+export type { ModelEntry, EmbeddingEntry, DecisionEntry } from "./nativeRegistry.js";

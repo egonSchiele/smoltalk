@@ -10,6 +10,7 @@ import type {
   LlamaContext,
   LlamaContextSequence,
   LlamaEmbeddingContext,
+  LlamaDecisionContext,
 } from "node-llama-cpp";
 import { getLogger } from "smoltalk";
 import path from "path";
@@ -65,6 +66,18 @@ export type EmbeddingEntry = {
   llama: Llama;
   model: LlamaModel;
   context: LlamaEmbeddingContext;
+  lock: AsyncLock;
+};
+
+/**
+ * Native resources for one decision model. Like EmbeddingEntry, it never
+ * shares a loaded model with a chat entry: a file used for chat and for
+ * decisions is loaded twice. Sharing would need a rule for who disposes the
+ * model, since disposing it here would take down a chat context using it.
+ */
+export type DecisionEntry = {
+  model: LlamaModel;
+  context: LlamaDecisionContext;
   lock: AsyncLock;
 };
 
@@ -336,6 +349,68 @@ export function acquireEmbeddingEntry(
   return entryPromise;
 }
 
+// Decision entries, keyed by resolved model path like the other registries.
+const decisionRegistry: Record<string, Promise<DecisionEntry>> =
+  Object.create(null);
+
+async function createDecisionEntry(modelPath: string): Promise<DecisionEntry> {
+  const llama = await getSharedLlama();
+  const model = await llama.loadModel({ modelPath });
+  let context: LlamaDecisionContext;
+  try {
+    // The library's defaults: a context of at most 4,096 tokens.
+    context = await model.createDecisionContext();
+  } catch (error) {
+    // The rejection drops this entry from the registry, which would leave
+    // the loaded model unreachable and its native memory leaked.
+    await model.dispose();
+    throw error;
+  }
+  return { model, context, lock: new AsyncLock() };
+}
+
+/**
+ * Get (loading on first use) the decision context for a model file. Lives
+ * until disposeAll()/disposeModel(); never disposed per call, the same rule
+ * as the chat and embedding contexts.
+ */
+export function acquireDecisionEntry(modelPath: string): Promise<DecisionEntry> {
+  const key = path.resolve(modelPath);
+  let entryPromise = decisionRegistry[key];
+  if (!entryPromise) {
+    entryPromise = createDecisionEntry(key);
+    decisionRegistry[key] = entryPromise;
+    // If loading fails, drop the cached rejection so a later call can retry.
+    entryPromise.catch(() => {
+      if (decisionRegistry[key] === entryPromise) {
+        delete decisionRegistry[key];
+      }
+    });
+  }
+  return entryPromise;
+}
+
+async function disposeDecisionEntry(key: string): Promise<void> {
+  const entryPromise = decisionRegistry[key];
+  if (!entryPromise) {
+    return;
+  }
+  delete decisionRegistry[key];
+
+  let entry: DecisionEntry;
+  try {
+    entry = await entryPromise;
+  } catch {
+    // Entry never finished loading; nothing native to free.
+    return;
+  }
+
+  await entry.lock.runExclusive(async () => {
+    await entry.context.dispose();
+    await entry.model.dispose();
+  });
+}
+
 async function disposeEmbeddingEntry(key: string): Promise<void> {
   const entryPromise = embeddingRegistry[key];
   if (!entryPromise) return;
@@ -356,13 +431,15 @@ async function disposeEmbeddingEntry(key: string): Promise<void> {
 }
 
 /**
- * Dispose one model's native state, chat and embedding entries alike. Each
- * half is a safe no-op for a key it does not hold. `key` is the resolved
- * model path (see acquireModelEntry / acquireEmbeddingEntry).
+ * Dispose one model's native state: chat, embedding, and decision entries
+ * alike. Each is a safe no-op for a key it does not hold. `key` is the
+ * resolved model path (see acquireModelEntry / acquireEmbeddingEntry /
+ * acquireDecisionEntry).
  */
 export async function disposeModel(key: string): Promise<void> {
   await disposeChatEntry(key);
   await disposeEmbeddingEntry(key);
+  await disposeDecisionEntry(key);
 }
 
 /**
@@ -424,10 +501,11 @@ export function modelKey(modelDir: string, modelFile: string): string {
  * runs can just exit. Callers must ensure nothing is mid-generation.
  */
 export async function disposeAll(): Promise<void> {
-  // A path held by both registries is disposed once.
+  // A path held by more than one registry is disposed once.
   const keys = new Set([
     ...Object.keys(registry),
     ...Object.keys(embeddingRegistry),
+    ...Object.keys(decisionRegistry),
   ]);
   await Promise.all([...keys].map((key) => disposeModel(key)));
 }
