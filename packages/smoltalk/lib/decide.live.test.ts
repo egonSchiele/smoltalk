@@ -3,8 +3,9 @@
  * variable is set:
  *
  *   TYPESAFE_API_KEY    — one request to Jev at TypeSafe.
- *   OPENROUTER_API_KEY  — one request to Jev through OpenRouter, which serves
- *                         it over the same protocol under the name jev-1.13.
+ *   OPENROUTER_API_KEY  — one request to Jev and one to Cloudflare's Clef
+ *                         Flash through the `openrouter` provider, which
+ *                         serves both over the same protocol.
  *   LAYA_BASE_URL       — one request to a Laya server (`laya-serve`), which
  *                         speaks the same protocol. The key is not used by
  *                         Laya but the provider requires one, so any value is
@@ -44,14 +45,16 @@ function checkShape(r: Awaited<ReturnType<typeof decide>>) {
     expect(["billing", "support", "sales"]).toContain(answers.department.choice);
     expect(answers.department.confidence).toBeGreaterThanOrEqual(0);
     expect(answers.department.confidence).toBeLessThanOrEqual(1);
-    const total = Object.values(answers.department.probabilities).reduce((a, b) => a + b, 0);
+    const probabilities = answers.department.probabilities;
+    if (probabilities === undefined) throw new Error("no choice probabilities");
+    const total = Object.values(probabilities).reduce((a, b) => a + b, 0);
     expect(total).toBeCloseTo(1, 1);
   }
   expect(answers.urgency.type).toBe("score");
   if (answers.urgency.type === "score") {
     expect(answers.urgency.score).toBeGreaterThanOrEqual(0);
     expect(answers.urgency.score).toBeLessThanOrEqual(3);
-    expect(Object.keys(answers.urgency.legend)).toHaveLength(4);
+    expect(Object.keys(answers.urgency.legend ?? {})).toHaveLength(4);
   }
   expect(answers.churn.type).toBe("noul");
   if (answers.churn.type === "noul") {
@@ -71,12 +74,23 @@ describe.runIf(Boolean(process.env.TYPESAFE_API_KEY))("decide - Jev real API", (
   });
 });
 
-describe.runIf(Boolean(process.env.OPENROUTER_API_KEY))("decide - Jev through OpenRouter", () => {
-  it("answers the ticket example", { timeout: 30_000 }, async () => {
+describe.runIf(Boolean(process.env.OPENROUTER_API_KEY))("decide - through OpenRouter", () => {
+  it("answers the ticket example with Jev", { timeout: 30_000 }, async () => {
     const r = await decide(state, questions, {
       model: "jev-1.13",
-      apiKey: { typesafe: process.env.OPENROUTER_API_KEY },
-      baseUrl: { typesafe: "https://openrouter.ai/api" },
+      provider: "openrouter",
+      apiKey: { openRouter: process.env.OPENROUTER_API_KEY },
+    });
+    checkShape(r);
+    if (r.success) {
+      expect(r.value.cost?.totalCost).toBeGreaterThan(0);
+    }
+  });
+
+  it("answers the ticket example with Cloudflare's Clef Flash", { timeout: 30_000 }, async () => {
+    const r = await decide(state, questions, {
+      model: "cloudflare/clef-flash",
+      apiKey: { openRouter: process.env.OPENROUTER_API_KEY },
     });
     checkShape(r);
     if (r.success) {
