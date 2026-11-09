@@ -24,7 +24,8 @@ import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
 import { resolveProvider } from "./util/provider.js";
 import { isDecisionModel, resolveModelForProvider, type DecisionModel } from "./models.js";
-import { errorMessage, round } from "./util/util.js";
+import { round } from "./util/util.js";
+import { errorMessage } from "./util/errorMessage.js";
 import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
 
 export const DECISION_PROVIDER = "typesafe";

@@ -15,7 +15,7 @@ import type {
 } from "../decide.js";
 import { Result, success, failure } from "../types/result.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
-import { errorMessage } from "../util/util.js";
+import { errorMessage } from "../util/errorMessage.js";
 
 /** One server that speaks the System One format. */
 export type SystemoneServer = {
