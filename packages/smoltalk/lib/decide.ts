@@ -32,6 +32,7 @@ import { round } from "./util/util.js";
 import { errorMessage } from "./util/errorMessage.js";
 import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
 import { openaiDecide } from "./decide/openai.js";
+import { loadLlamaCpp, type LlamaCppModule } from "./clients/llamaCppLoader.js";
 
 export const DECISION_PROVIDER = "typesafe";
 
@@ -160,7 +161,9 @@ const registeredDecideProviders: Record<string, DecideProvider> =
 
 /** Add a decision provider under `name`. Built-in providers win: a
  *  registration under a built-in name such as `typesafe` or `openrouter` is
- *  stored but never called, even though hasDecisionProvider reports it. */
+ *  stored but never called, even though hasDecisionProvider reports it. The
+ *  one exception is `llama-cpp`: a registration there wins over loading the
+ *  smoltalk-llama-cpp plugin, as it does for embed(). */
 export function registerDecisionProvider(name: string, fn: DecideProvider): void {
   registeredDecideProviders[name] = fn;
 }
@@ -180,10 +183,38 @@ export function unregisterDecisionProvider(name: string): boolean {
   return false;
 }
 
+/** The `llama-cpp` provider: a model file run in process by the optional
+ *  smoltalk-llama-cpp plugin. The same steps as embed()'s llama-cpp case: a
+ *  provider registered by hand under `llama-cpp` wins; otherwise the plugin
+ *  is loaded (the loader caches its import) and its `decide` is called. */
+async function llamaCppDecide(
+  state: DecisionState,
+  questions: Record<string, DecisionQuestion>,
+  config: DecideConfig,
+): Promise<Result<DecideProviderReply>> {
+  const custom = registeredDecideProviders["llama-cpp"];
+  if (custom) {
+    return custom(state, questions, config);
+  }
+  let plugin: LlamaCppModule;
+  try {
+    plugin = await loadLlamaCpp();
+  } catch (err) {
+    return failure(errorMessage(err));
+  }
+  if (typeof plugin.decide !== "function") {
+    return failure(
+      "Your installed smoltalk-llama-cpp has no decision support. Upgrade it (npm i smoltalk-llama-cpp@latest).",
+    );
+  }
+  return plugin.decide(state, questions, config);
+}
+
 /** Built-in providers with a wire format of their own. Every System One
  *  server is a row of SYSTEMONE_SERVERS instead. */
 const OTHER_BUILT_INS: Record<string, DecideProvider> = {
   openai: openaiDecide,
+  "llama-cpp": llamaCppDecide,
 };
 
 /** The built-in provider function for a name, if there is one. */
