@@ -298,6 +298,18 @@ one. A few caveats:
   to both `text()` and `decide()` loads it twice.
 - Decision contexts follow the lifecycle rules below: one per model file,
   calls serialized, freed by `disposeAll()` / `disposeModel()`.
+- The first call pays for loading the model and evaluating for the first
+  time: about a second for Qwen 3.5 0.8B, against under 200 ms afterwards.
+  For a fast first answer, load and warm the model at startup:
+
+  ```ts
+  import { acquireDecisionEntry } from "smoltalk-llama-cpp";
+
+  const entry = await acquireDecisionEntry("/path/to/Qwen3.5-0.8B.Q8_0.gguf");
+  await entry.context.warmup();
+  ```
+
+  `decide()` then reuses that entry for the same path.
 - Dedicated decision models published as GGUF files (Laya, Julia-1, and
   others) do not work here. Julia-1 (`hf:ggml-org/Julia-1-GGUF`) loads, but
   node-llama-cpp's decision context gets uniform probabilities from it (1/3
