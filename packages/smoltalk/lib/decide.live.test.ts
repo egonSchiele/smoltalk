@@ -6,6 +6,8 @@
  *   OPENROUTER_API_KEY  — one request to Jev and one to Cloudflare's Clef
  *                         Flash through the `openrouter` provider, which
  *                         serves both over the same protocol.
+ *   OPENAI_API_KEY      — one request to gpt-6-luna through OpenAI's
+ *                         Decisions API, translated to and from its format.
  *   LAYA_BASE_URL       — one request to a Laya server (`laya-serve`), which
  *                         speaks the same protocol. The key is not used by
  *                         Laya but the provider requires one, so any value is
@@ -92,6 +94,16 @@ describe.runIf(Boolean(process.env.OPENROUTER_API_KEY))("decide - through OpenRo
       model: "cloudflare/clef-flash",
       apiKey: { openRouter: process.env.OPENROUTER_API_KEY },
     });
+    checkShape(r);
+    if (r.success) {
+      expect(r.value.cost?.totalCost).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe.runIf(Boolean(process.env.OPENAI_API_KEY))("decide - OpenAI Decisions API", () => {
+  it("answers the ticket example with gpt-6-luna", { timeout: 30_000 }, async () => {
+    const r = await decide(state, questions, { model: "gpt-6-luna" });
     checkShape(r);
     if (r.success) {
       expect(r.value.cost?.totalCost).toBeGreaterThan(0);

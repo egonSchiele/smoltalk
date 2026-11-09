@@ -163,7 +163,18 @@ and the cost after it. A provider only sends the request and returns a
 `typesafe` and `openrouter`; a Laya server is reached with `baseUrl.typesafe`.
 OpenRouter uses `apiKey.openRouter` or `OPENROUTER_API_KEY` and appends
 `/systemone` to its normal `/api/v1` base URL. TypeSafe and Laya append
-`/v1/systemone` to their base URL. Cost is priced by the requested model's
+`/v1/systemone` to their base URL.
+
+The one built-in with its own wire format is `openai` (`gpt-6-luna`, OpenAI's
+Decisions API at `<baseUrl.openAi or https://api.openai.com/v1>/decisions`).
+`lib/decide/openai.ts` translates both ways as pure functions
+(`toOpenAiRequest`, `fromOpenAiReply`); a refusal of any question fails the
+whole call. Built-ins with their own format sit in `OTHER_BUILT_INS` in
+`decide.ts`, and the unknown-provider message lists both tables. Both wire
+formats share `postDecisionRequest` and `shapeFailure` in
+`lib/decide/http.ts`. `gpt-6-luna` is in the catalog twice under `openai`
+(text and decision); `decide()` reads its entry with
+`getDecisionModelForProvider`, which sees only decision entries. Cost is priced by the requested model's
 registry entry (`decisionModels` in `lib/models.ts`), so an unknown model has
 no cost. `PromptResult.rawData` exists so a caller can carry the full answers
 onto an assistant message.
@@ -206,9 +217,11 @@ Three ways to supply pricing for a model not in the baked-in catalog, all public
 - **`config.modelData`** — layer a blob over the baseline for a single call.
 
 Precedence: per-call `config.modelData` > `registerModelData` (global) > baked-in
-baseline, deep-merged field-by-field. **The merge key is `provider:modelName`**,
-so the registered `provider` must match the `provider` used at call time or the
-lookup misses and cost is silently dropped. See the "Custom models & pricing"
+baseline, deep-merged field-by-field. **The merge key is
+`type:provider:modelName`**, so the registered `provider` (and `type`) must
+match the entry used at call time or the lookup misses and cost is silently
+dropped. The type is in the key because one provider can serve a text model
+and a decision model under the same name (`gpt-6-luna`). See the "Custom models & pricing"
 section in `packages/smoltalk/README.md` for examples, and `mergeModelData` /
 `getModel` in `lib/models.ts` + `lib/modelData.ts`.
 

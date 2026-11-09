@@ -730,6 +730,45 @@ entry is priced from OpenRouter's list; see `decisionModels` in
 Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
 name is `typesafe-ai/jev`, which needs `provider: "typesafe"`.
 
+### OpenAI
+
+OpenAI's Decisions API serves `gpt-6-luna`. Make the same call with that
+model; the key comes from `config.apiKey.openAi` or `OPENAI_API_KEY`:
+
+```typescript
+import { decide } from "smoltalk";
+
+const r = await decide(
+  { subject: "Refund not received", body: "I cancelled two weeks ago..." },
+  {
+    department: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: { billing: "payments, refunds", support: "help, bugs" },
+    },
+    churn: { type: "noul", instructions: "Likely to cancel?" },
+  },
+  { model: "gpt-6-luna" },
+);
+```
+
+OpenAI's request and reply are shaped differently from Jev's. `decide()`
+translates the questions on the way out and the answers on the way back, so
+the result has the same shape either way. Each score answer's `legend` is
+built from your own `criteria`, since OpenAI does not send one.
+
+OpenAI can refuse to answer a question. A refusal of any question fails the
+whole call, and the error names every refused question. The request may
+still be billed.
+
+The cost shown is priced at the uncached input rate. OpenAI discounts cached
+input tokens, so the real cost can be lower, and `usage` does not split out
+cached tokens.
+
+OpenAI enforces some limits that `decide()` does not check: 2 to 10 score
+levels, 2 to 255 choices, and unique choice keys. A request that breaks one
+fails with OpenAI's 400, carried as `status`.
+
 ### Adding a provider
 
 A decision provider is a function. It sends the request and returns the
@@ -751,8 +790,8 @@ registerDecisionProvider("my-decider", async (state, questions, config) => {
 const r = await decide(state, questions, { provider: "my-decider", model: "v1" });
 ```
 
-Built-in providers always take precedence: a registration under `typesafe`
-or `openrouter` is ignored. `hasDecisionProvider` and
+Built-in providers always take precedence: a registration under `typesafe`,
+`openrouter`, or `openai` is ignored. `hasDecisionProvider` and
 `unregisterDecisionProvider` work like their embedding twins.
 
 ## Audio (STT/TTS)
