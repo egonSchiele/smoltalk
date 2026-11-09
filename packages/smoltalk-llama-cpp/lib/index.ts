@@ -1,6 +1,7 @@
 export { LlamaCPP } from "./llamaCpp.js";
 export { resolveModel } from "./resolveModel.js";
 export { embed } from "./embed.js";
+export { decide } from "./decide.js";
 export {
   disposeAll,
   disposeModel,
