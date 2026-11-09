@@ -63,6 +63,35 @@ describe("decide with provider llama-cpp", () => {
     expect(received).toEqual({ state: "refund please", model: "/models/qwen.gguf" });
   });
 
+  it("answers with a chat model the caller has in the catalog as a text model", async () => {
+    // For llama-cpp the decision model is an ordinary chat model, which a
+    // caller may have registered as text to get its limits and pricing.
+    _setImportForTests(async () => ({
+      LlamaCPP: TestProvider,
+      resolveModel: fakeResolveModel,
+      decide: pluginDecide("billing"),
+    }));
+    const r = await decide("refund please", questions, {
+      ...config,
+      modelData: {
+        schemaVersion: 1,
+        generatedAt: "2026-11-09T00:00:00Z",
+        models: [
+          {
+            type: "text",
+            modelName: "/models/qwen.gguf",
+            provider: "llama-cpp",
+            maxInputTokens: 32768,
+            maxOutputTokens: 8192,
+          },
+        ],
+        hostedTools: [],
+      },
+    });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.value.answers.team).toMatchObject({ choice: "billing" });
+  });
+
   it("says the plugin is too old when it has no decide", async () => {
     _setImportForTests(async () => ({ LlamaCPP: TestProvider, resolveModel: fakeResolveModel }));
     const r = await decide("hi", questions, config);
