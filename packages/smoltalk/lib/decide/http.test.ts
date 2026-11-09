@@ -82,6 +82,15 @@ describe("postDecisionRequest", () => {
     expect(r.status).toBe(503);
   });
 
+  it("fails, without a request, when the body cannot be turned into JSON", async () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const r = await postDecisionRequest({ endpoint: "http://example.test", body: circular });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error).toMatch(/^Decision request body could not be turned into JSON: /);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("fails on a reply that is not JSON", async () => {
     fetchMock.mockResolvedValueOnce(new Response("<html>", { status: 200 }));
     const r = await postDecisionRequest({ endpoint: "http://example.test", body: {} });
