@@ -133,7 +133,15 @@ export const decide: DecideProvider = async (
   if (config.abortSignal?.aborted) {
     return failure("Request was aborted");
   }
-  const document = toDocument(state);
+  let document: string;
+  try {
+    document = toDocument(state);
+  } catch (err) {
+    // A circular object or a BigInt cannot be turned into JSON.
+    return failure(
+      `smoltalk-llama-cpp: the state could not be turned into JSON: ${errorMessage(err)}`,
+    );
+  }
 
   let entry;
   try {

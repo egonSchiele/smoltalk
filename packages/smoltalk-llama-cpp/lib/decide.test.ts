@@ -173,6 +173,17 @@ describe("decide", () => {
     expect(h.calls[0].options).toEqual({ signal: controller.signal });
   });
 
+  it("returns a state that cannot be turned into JSON as a failure instead of throwing", async () => {
+    const circular: Record<string, unknown> = { a: 1 };
+    circular.self = circular;
+    const r = await decide(circular, questions, { model: "/m/qwen.gguf" });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error).toMatch(/^smoltalk-llama-cpp: the state could not be turned into JSON: /);
+    }
+    expect(h.counters.loadModel).toBe(0);
+  });
+
   it("fails before any load for a URI model", async () => {
     const r = await decide("hi", questions, { model: "hf:unsloth/Qwen3.5-0.8B-GGUF:Q8_0" });
     expect(r).toEqual({
