@@ -15,7 +15,7 @@ import type {
 } from "../decide.js";
 import { Result, success, failure } from "../types/result.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
-import { postDecisionRequest } from "./http.js";
+import { postDecisionRequest, shapeFailure } from "./http.js";
 
 /** One server that speaks the System One format. */
 export type SystemoneServer = {
@@ -121,9 +121,7 @@ export async function systemoneDecide(
   }
   const parsed = ResponseSchema.safeParse(body.value);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where = issue.path.length > 0 ? ` at ${issue.path.join(".")}` : "";
-    return failure(`Decision response has an unexpected shape${where}: ${issue.message}`);
+    return shapeFailure(parsed.error);
   }
 
   // Output is free, so only input tokens are priced. The server's output

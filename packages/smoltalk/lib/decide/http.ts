@@ -1,4 +1,5 @@
-import { Result, success, failure } from "../types/result.js";
+import type { z } from "zod";
+import { Result, success, failure, type Failure } from "../types/result.js";
 import { errorMessage } from "../util/errorMessage.js";
 
 export type DecisionRequest = {
@@ -50,4 +51,15 @@ export async function postDecisionRequest(request: DecisionRequest): Promise<Res
   } catch {
     return failure(`Decision response is not JSON: ${text.slice(0, 200)}`);
   }
+}
+
+/** The failure for a reply that parsed as JSON but does not match the
+ *  provider's schema. Every decision provider uses this wording. */
+export function shapeFailure(error: z.ZodError): Failure {
+  const issue = error.issues[0];
+  let where = "";
+  if (issue.path.length > 0) {
+    where = ` at ${issue.path.join(".")}`;
+  }
+  return failure(`Decision response has an unexpected shape${where}: ${issue.message}`);
 }
