@@ -652,9 +652,24 @@ Some models leave out `confidence`, `probabilities`, and `legend`, so all
 three are optional in the answer types. Check before reading one:
 
 ```typescript
-const department = r.value.answers.department;
-if (department.type === "choice" && department.confidence !== undefined) {
-  console.log(department.choice, department.confidence);
+import { decide } from "smoltalk";
+
+const r = await decide(
+  "I was charged twice for my subscription.",
+  {
+    department: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: { billing: "payments, refunds", support: "help, bugs" },
+    },
+  },
+  { model: "jev-latest" },
+);
+if (r.success) {
+  const department = r.value.answers.department;
+  if (department.type === "choice" && department.confidence !== undefined) {
+    console.log(department.choice, department.confidence);
+  }
 }
 ```
 
@@ -710,6 +725,9 @@ OpenRouter requests go to `https://openrouter.ai/api/v1/systemone`. Set
 path; `decide()` appends `/systemone`. Without an explicit provider,
 `jev-1.13` still defaults to TypeSafe.
 
+Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
+name is `typesafe-ai/jev`, which needs `provider: "typesafe"`.
+
 ### Other models through OpenRouter
 
 OpenRouter serves many vendors' decision models over the same route, and the
@@ -729,9 +747,6 @@ const r = await decide(
 The key comes from `config.apiKey.openRouter` or `OPENROUTER_API_KEY`. Each
 entry is priced from OpenRouter's list; see `decisionModels` in
 `lib/models.ts` for the full set.
-
-Vercel's base URL is `https://ai-gateway.vercel.sh/typesafe` and its model
-name is `typesafe-ai/jev`, which needs `provider: "typesafe"`.
 
 ### OpenAI
 

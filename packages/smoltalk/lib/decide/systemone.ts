@@ -107,8 +107,14 @@ export async function systemoneDecide(
   if (!apiKey && server.missingKeyMessage !== undefined) {
     return failure(server.missingKeyMessage);
   }
-  const baseUrl = resolveBaseUrl(provider, config)!.replace(/\/+$/, "");
-  const endpoint = `${baseUrl}${server.path}`;
+  const resolvedBaseUrl = resolveBaseUrl(provider, config);
+  if (resolvedBaseUrl === undefined) {
+    // A row was added without its case in resolveBaseUrl.
+    return failure(
+      `No base URL for provider "${provider}": its row in SYSTEMONE_SERVERS needs a case in resolveBaseUrl (lib/util/provider.ts).`,
+    );
+  }
+  const endpoint = `${resolvedBaseUrl.replace(/\/+$/, "")}${server.path}`;
 
   const body = await postDecisionRequest({
     endpoint,

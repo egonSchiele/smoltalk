@@ -435,6 +435,27 @@ describe("decide", () => {
     if (!legend.success) expect(legend.error).toMatch(/answer's legend has 1/);
   });
 
+  it("treats a prototype name as an option that was not offered", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ answers: { ...answers, department: { type: "choice", choice: "toString" } } }),
+    );
+    const choice = await decide("hello", questions, config);
+    expect(choice.success).toBe(false);
+    if (!choice.success) expect(choice.error).toMatch(/answered "toString", which is not one of its options/);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: {
+          ...answers,
+          department: { type: "choice", choice: "billing", probabilities: { constructor: 0.1 } },
+        },
+      }),
+    );
+    const probs = await decide("hello", questions, config);
+    expect(probs.success).toBe(false);
+    if (!probs.success) expect(probs.error).toMatch(/probability for "constructor"/);
+  });
+
   it("fails when a choice has a probability for an option that was not offered", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({

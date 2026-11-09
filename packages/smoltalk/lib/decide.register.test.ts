@@ -106,6 +106,25 @@ describe("registerDecisionProvider", () => {
     expect(r.status).toBe(429);
   });
 
+  it("returns a registered provider's thrown error as a failure", async () => {
+    registerDecisionProvider("fake-decide", async () => {
+      throw new Error("plugin crashed");
+    });
+    const r = await decide("hi", questions, { provider: "fake-decide", model: "fake" });
+    expect(r).toEqual({ success: false, error: "plugin crashed" });
+  });
+
+  it("fails when a registered provider succeeds with no answers object", async () => {
+    registerDecisionProvider("fake-decide", async () =>
+      success({ usage: { inputTokens: 1, outputTokens: 0 } } as unknown as typeof goodReply),
+    );
+    const r = await decide("hi", questions, { provider: "fake-decide", model: "fake" });
+    expect(r).toEqual({
+      success: false,
+      error: 'Provider "fake-decide" returned no answers object.',
+    });
+  });
+
   it("reports and removes a registration, like the embedding registry", () => {
     expect(hasDecisionProvider("fake-decide")).toBe(false);
     registerDecisionProvider("fake-decide", async () => success(goodReply));
