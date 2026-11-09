@@ -3,19 +3,11 @@ import type { LlamaModel, Token } from "node-llama-cpp";
 import type { EmbedConfig, EmbedProvider, EmbedResult, Result } from "smoltalk";
 import { failure, success } from "smoltalk";
 import { acquireEmbeddingEntry } from "./nativeRegistry.js";
+import { URI_SCHEME, errorMessage } from "./shared.js";
 
-/** Two-plus characters before the colon, so a Windows drive letter is a
- *  path. The same rule LlamaCPP applies to config.model. */
-const URI_SCHEME = /^[a-zA-Z][a-zA-Z0-9+.-]+:/;
 
 const ZERO_COST = { inputCost: 0, outputCost: 0, totalCost: 0, currency: "USD" };
 
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-  return String(err);
-}
 
 /** Cut a vector to `dimensions` entries and scale it back to unit length,
  *  which is what a model trained for truncation (nomic-embed-text v1.5,

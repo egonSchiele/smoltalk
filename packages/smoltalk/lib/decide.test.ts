@@ -661,3 +661,60 @@ describe("decide through OpenAI's Decisions API", () => {
     expect(fetchMock.mock.calls[0][0]).toBe("http://proxy.test/v1/decisions");
   });
 });
+
+describe("decide through a Laya server (provider laya)", () => {
+  const originalFetch = globalThis.fetch;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    vi.stubEnv("LAYA_BASE_URL", "");
+    fetchMock = vi.fn(async () => jsonResponse({ model: "laya", answers }));
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    globalThis.fetch = originalFetch;
+  });
+
+  function sent(call: number): { url: string; headers: Record<string, string> } {
+    const [url, init] = fetchMock.mock.calls[call] as [string, RequestInit];
+    return { url, headers: init.headers as Record<string, string> };
+  }
+
+  it("goes to the local default address with no key and no Authorization header", async () => {
+    const r = await decide("hello", questions, { provider: "laya", model: "laya" });
+    expect(r.success).toBe(true);
+    if (r.success) expect(r.value.cost).toBeUndefined();
+    expect(sent(0).url).toBe("http://127.0.0.1:8000/v1/systemone");
+    expect(sent(0).headers.Authorization).toBeUndefined();
+  });
+
+  it("reads LAYA_BASE_URL, and baseUrl.laya wins over it", async () => {
+    vi.stubEnv("LAYA_BASE_URL", "http://gpu-box:9000/");
+    await decide("hello", questions, { provider: "laya", model: "laya" });
+    expect(sent(0).url).toBe("http://gpu-box:9000/v1/systemone");
+
+    await decide("hello", questions, {
+      provider: "laya",
+      model: "laya",
+      baseUrl: { laya: "http://other:8001" },
+    });
+    expect(sent(1).url).toBe("http://other:8001/v1/systemone");
+  });
+
+  it("sends apiKey.laya when it is set, for a server behind a proxy", async () => {
+    await decide("hello", questions, { provider: "laya", model: "laya", apiKey: { laya: "proxy-key" } });
+    expect(sent(0).headers.Authorization).toBe("Bearer proxy-key");
+  });
+
+  it("still reaches a Laya server the old way, through typesafe", async () => {
+    await decide("hello", questions, {
+      provider: "typesafe",
+      model: "laya",
+      apiKey: { typesafe: "unused" },
+      baseUrl: { typesafe: "http://127.0.0.1:8000" },
+    });
+    expect(sent(0).url).toBe("http://127.0.0.1:8000/v1/systemone");
+  });
+});

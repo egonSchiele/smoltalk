@@ -3,6 +3,7 @@ import type { BaseClient } from "./baseClient.js";
 import { hasProvider, registerProvider } from "../client.js";
 import { SmolError } from "../smolError.js";
 import type { EmbedProvider } from "../embed.js";
+import type { DecideProvider } from "../decide.js";
 
 /**
  * Minimal structural view of smoltalk-llama-cpp's module. Declared here (not
@@ -15,6 +16,9 @@ export type LlamaCppModule = {
   /** Present from smoltalk-llama-cpp 0.5.0. Absent on older plugins, which
    *  then serve chat only. */
   embed?: EmbedProvider;
+  /** Present from the smoltalk-llama-cpp release that adds decisions.
+   *  Absent on older plugins. */
+  decide?: DecideProvider;
 };
 
 type ImportFn = (specifier: string) => Promise<Record<string, unknown>>;

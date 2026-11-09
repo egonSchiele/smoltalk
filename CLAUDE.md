@@ -160,7 +160,9 @@ and the cost after it. A provider only sends the request and returns a
 `SYSTEMONE_SERVERS` (path plus missing-key message; look rows up with
 `Object.hasOwn`), and all share `systemoneDecide`. A row with no
 `missingKeyMessage` is a server that takes no key. Today the rows are
-`typesafe` and `openrouter`; a Laya server is reached with `baseUrl.typesafe`.
+`typesafe`, `openrouter`, and `laya` (Laya's own server: no key,
+`baseUrl.laya` / `LAYA_BASE_URL` / `http://127.0.0.1:8000`). Reaching a Laya
+server through `typesafe` with `baseUrl.typesafe` still works.
 OpenRouter uses `apiKey.openRouter` or `OPENROUTER_API_KEY` and appends
 `/systemone` to its normal `/api/v1` base URL. TypeSafe and Laya append
 `/v1/systemone` to their base URL.
@@ -175,6 +177,17 @@ formats share `postDecisionRequest` and `shapeFailure` in
 `lib/decide/http.ts`. `gpt-6-luna` is in the catalog twice under `openai`
 (text and decision); `decide()` reads its entry with
 `getDecisionModelForProvider`, which sees only decision entries.
+
+`llama-cpp` is the other entry in `OTHER_BUILT_INS`: `llamaCppDecide` follows
+`embed()`'s llama-cpp case (a hand registration under `llama-cpp` wins, the
+one exception to built-ins winning; otherwise `loadLlamaCpp()` and the
+plugin's optional `decide`). The plugin
+(`packages/smoltalk-llama-cpp/lib/decide.ts`) runs a local `.gguf` through
+node-llama-cpp's decision context (default 4,096-token context, one per file
+in `nativeRegistry.ts`, never shared with chat). `createDecisionEntry` refuses
+a dedicated decision GGUF (one with `{architecture}.decision.type` in its
+metadata, such as Julia-1 or Laya): node-llama-cpp loads it but answers
+uniformly.
 
 Cost is priced by the requested model's registry entry (`decisionModels` in
 `lib/models.ts`), so an unknown model has no cost. `PromptResult.rawData` exists so a caller can carry the full answers

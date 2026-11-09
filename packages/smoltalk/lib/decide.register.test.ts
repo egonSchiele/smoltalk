@@ -166,7 +166,7 @@ describe("decide with a built-in provider name", () => {
     expect(r.success).toBe(false);
     if (!r.success) {
       expect(r.error).toBe(
-        'Provider "acme" does not answer decisions. Use one of: typesafe, openrouter, openai, or register one with registerDecisionProvider(name, fn).',
+        'Provider "acme" does not answer decisions. Use one of: typesafe, openrouter, laya, openai, llama-cpp, or register one with registerDecisionProvider(name, fn).',
       );
     }
   });
