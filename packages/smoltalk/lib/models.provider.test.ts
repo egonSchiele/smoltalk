@@ -1,9 +1,15 @@
 import { describe, it, expect } from "vitest";
+import { afterEach } from "vitest";
+import { resolveProvider } from "./util/provider.js";
 import {
+  clearModelData,
+  getAllModels,
+  getDecisionModelForProvider,
   getModel,
   getModelForProvider,
   modelAcceptsTemperature,
   modelSupportsInputModality,
+  registerModelData,
 } from "./models.js";
 
 // Rule: provider "openai-responses" is reserved for models that are ONLY
@@ -80,6 +86,17 @@ describe("decision model providers", () => {
     expect(getModelForProvider("typesafe", "jev-1.13")?.type).toBe("decision");
   });
 
+  it("finds only decision entries with getDecisionModelForProvider", () => {
+    expect(getDecisionModelForProvider("openrouter", "jev-1.13")).toMatchObject({
+      type: "decision",
+      provider: "openrouter",
+      maxQuestions: 64,
+    });
+    // gpt-4o-mini is a text model under openai, never a decision entry.
+    expect(getModelForProvider("openai", "gpt-4o-mini")?.type).toBe("text");
+    expect(getDecisionModelForProvider("openai", "gpt-4o-mini")).toBeUndefined();
+  });
+
   it("knows the other decision models OpenRouter serves, by their full slug", () => {
     expect(getModel("cloudflare/clef-flash")).toMatchObject({
       type: "decision",
@@ -105,5 +122,42 @@ describe("modelAcceptsTemperature", () => {
 
   it("is true for a model the registry doesn't know", () => {
     expect(modelAcceptsTemperature("anthropic", "claude-future-model")).toBe(true);
+  });
+});
+
+describe("a text model and a decision model under one name (gpt-6-luna)", () => {
+  afterEach(() => {
+    clearModelData();
+  });
+
+  it("keeps the text entry first for the text lookups", () => {
+    expect(getModel("gpt-6-luna")?.type).toBe("text");
+    expect(getModelForProvider("openai", "gpt-6-luna")?.type).toBe("text");
+  });
+
+  it("resolves the provider to openai, which decide() relies on", () => {
+    expect(resolveProvider("gpt-6-luna")).toBe("openai");
+  });
+
+  it("finds the decision entry with getDecisionModelForProvider", () => {
+    expect(getDecisionModelForProvider("openai", "gpt-6-luna")).toMatchObject({
+      type: "decision",
+      provider: "openai",
+      inputTokenCost: 0.1,
+      maxQuestions: 400,
+    });
+  });
+
+  it("merges refreshed text pricing into the text entry only", () => {
+    registerModelData({
+      schemaVersion: 1,
+      generatedAt: "2026-11-09T00:00:00Z",
+      models: [{ type: "text", provider: "openai", modelName: "gpt-6-luna", inputTokenCost: 9 }],
+      hostedTools: [],
+    } as Parameters<typeof registerModelData>[0]);
+    const luna = getAllModels().filter((m) => m.provider === "openai" && m.modelName === "gpt-6-luna");
+    expect(luna.map((m) => m.type)).toEqual(["text", "decision"]);
+    expect(luna[0].inputTokenCost).toBe(9);
+    expect(luna[1].inputTokenCost).toBe(0.1);
   });
 });

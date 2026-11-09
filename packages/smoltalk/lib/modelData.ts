@@ -194,8 +194,30 @@ function mergeByKey<T>(base: T[], overlay: T[], keyOf: (item: T) => string): T[]
   return order.map((key) => map.get(key) as T);
 }
 
+/** Entries merge by type, provider, and name. The type is part of the key
+ *  because one provider can serve a text model and a decision model under
+ *  the same name (OpenAI's gpt-6-luna).
+ *
+ *  An overlay entry with no `type` (a partial, hand-edited entry; the
+ *  schema requires a type but callers may merge without it) takes the type
+ *  of the first base entry with its provider and name, the same entry the
+ *  lookups return first. With no such base entry it is added as is. */
 export function mergeModelData(base: ModelType[], overlay: ModelType[]): ModelType[] {
-  return mergeByKey(base, overlay, (m) => `${m.provider}:${m.modelName}`);
+  const firstTypeFor: Record<string, string> = {};
+  for (const m of base) {
+    const name = `${m.provider}:${m.modelName}`;
+    if (!Object.hasOwn(firstTypeFor, name)) {
+      firstTypeFor[name] = m.type;
+    }
+  }
+  return mergeByKey(base, overlay, (m) => {
+    const name = `${m.provider}:${m.modelName}`;
+    let type: string | undefined = m.type;
+    if (type === undefined && Object.hasOwn(firstTypeFor, name)) {
+      type = firstTypeFor[name];
+    }
+    return `${type}:${name}`;
+  });
 }
 
 export function mergeHostedTools(base: HostedTool[], overlay: HostedTool[]): HostedTool[] {

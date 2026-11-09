@@ -2561,6 +2561,15 @@ export const decisionModels: DecisionModel[] = [
     inputTokenCost: 0.042,
     maxQuestions: 64,
   },
+  {
+    type: "decision",
+    modelName: "gpt-6-luna",
+    provider: "openai",
+    description:
+      "GPT-6 Luna through OpenAI's Decisions API. Answers yes/no, choice, and score questions with probabilities. Does not generate text. The cost shown is an upper bound: OpenAI discounts cached input tokens, which this price does not.",
+    inputTokenCost: 0.1,
+    maxQuestions: 400,
+  },
   // Other vendors' decision models on OpenRouter's System One route.
   //
   // Hand-maintained: a snapshot of OpenRouter's list taken 2026-11-09. The
@@ -2997,7 +3006,7 @@ export function getModel(
 /**
  * Like `getModel`, but also matches on `provider`. Use this whenever a
  * modelName may collide across providers (the merge key everywhere else in
- * this module is `provider:modelName`) — plain `getModel` returns whichever
+ * this module is `type:provider:modelName`) — plain `getModel` returns whichever
  * matching entry comes first and can silently pick the wrong provider.
  */
 export function getModelForProvider(
@@ -3008,6 +3017,19 @@ export function getModelForProvider(
   return getAllModels(requestData).find(
     (model) => model.modelName === modelName && model.provider === provider,
   );
+}
+
+/** The decision-model entry for this provider and name, if there is one.
+ *  A text model may share the name, so this looks only at decision
+ *  entries. */
+export function getDecisionModelForProvider(
+  provider: string,
+  modelName: ModelName,
+  requestData?: ModelDataBlob,
+): DecisionModel | undefined {
+  return getAllModels(requestData)
+    .filter(isDecisionModel)
+    .find((model) => model.modelName === modelName && model.provider === provider);
 }
 
 /**

@@ -44,6 +44,8 @@ type NestedKeyConfig = {
     [provider: string]: string | undefined;
   };
   baseUrl?: {
+    /** Only decide() reads this; see the "openai" case of resolveBaseUrl. */
+    openAi?: string;
     ollama?: string;
     openRouter?: string;
     deepInfra?: string;
@@ -116,6 +118,11 @@ export function resolveBaseUrl(
       return b?.openAiCompat || env("OPENAI_COMPAT_BASE_URL");
     case "mlx":
       return b?.mlx || env("MLX_BASE_URL") || "http://127.0.0.1:8080/v1";
+    case "openai":
+      // Only decide() uses this case. openaiEmbed treats any base URL as a
+      // sign of a non-OpenAI server, so passing "openai" here from the
+      // embedding path would change its behavior.
+      return b?.openAi || "https://api.openai.com/v1";
     case "typesafe":
       // A Laya server (`laya-serve`) speaks the same protocol; point this at it.
       return b?.typesafe || env("TYPESAFE_BASE_URL") || "https://api.typesafe.ai";

@@ -443,12 +443,16 @@ const messages = [userMessage("hello")];
 await textSync({ model: "my-model", provider: "openai-compat", messages, modelData });
 ```
 
-**The provider must match.** The registry is keyed by `provider:modelName`, so
-the `provider` you register (or put in the blob) has to equal the `provider` you
-pass at call time. Registering `my-model` under `"openai-compat"` but calling it
-with `provider: "openrouter"` looks up a different key, finds no price, and
-silently drops the `cost` field. When in doubt, register under the same provider
-string you call with.
+**The provider must match.** The registry is keyed by `type:provider:modelName`,
+so the `provider` you register (or put in the blob) has to equal the `provider`
+you pass at call time, and an entry in a blob must carry the same `type` as the
+model it updates (`"text"` for a chat model, `"decision"` for a decision model).
+An entry with another type is added as a separate model instead of updating the
+existing one. An entry with no `type` updates the first model with its provider
+and name, which is the one lookups return. Registering `my-model` under
+`"openai-compat"` but calling it with `provider: "openrouter"` looks up a
+different key, finds no price, and silently drops the `cost` field. When in
+doubt, register under the same provider string you call with.
 
 Overriding an entry that *is* in the catalog works the same way — merges are
 field-by-field (see "Refreshing model data" above), so registering just
@@ -745,6 +749,45 @@ The key comes from `config.apiKey.openRouter` or `OPENROUTER_API_KEY`. Each
 entry is priced from OpenRouter's list; see `decisionModels` in
 `lib/models.ts` for the full set.
 
+### OpenAI
+
+OpenAI's Decisions API serves `gpt-6-luna`. Make the same call with that
+model; the key comes from `config.apiKey.openAi` or `OPENAI_API_KEY`:
+
+```typescript
+import { decide } from "smoltalk";
+
+const r = await decide(
+  { subject: "Refund not received", body: "I cancelled two weeks ago..." },
+  {
+    department: {
+      type: "choice",
+      instructions: "Which team should handle this?",
+      criteria: { billing: "payments, refunds", support: "help, bugs" },
+    },
+    churn: { type: "noul", instructions: "Likely to cancel?" },
+  },
+  { model: "gpt-6-luna" },
+);
+```
+
+OpenAI's request and reply are shaped differently from Jev's. `decide()`
+translates the questions on the way out and the answers on the way back, so
+the result has the same shape either way. Each score answer's `legend` is
+built from your own `criteria`, since OpenAI does not send one.
+
+OpenAI can refuse to answer a question. A refusal of any question fails the
+whole call, and the error names every refused question. The request may
+still be billed.
+
+The cost shown is priced at the uncached input rate. OpenAI discounts cached
+input tokens, so the real cost can be lower, and `usage` does not split out
+cached tokens.
+
+OpenAI enforces some limits that `decide()` does not check: 2 to 10 score
+levels, 2 to 255 choices, and unique choice keys. A request that breaks one
+fails with OpenAI's 400, carried as `status`.
+
 ### Adding a provider
 
 A decision provider is a function. It sends the request and returns the
@@ -766,8 +809,8 @@ registerDecisionProvider("my-decider", async (state, questions, config) => {
 const r = await decide(state, questions, { provider: "my-decider", model: "v1" });
 ```
 
-Built-in providers always take precedence: a registration under `typesafe`
-or `openrouter` is ignored. `hasDecisionProvider` and
+Built-in providers always take precedence: a registration under `typesafe`,
+`openrouter`, or `openai` is ignored. `hasDecisionProvider` and
 `unregisterDecisionProvider` work like their embedding twins.
 
 ## Audio (STT/TTS)

@@ -15,7 +15,7 @@ import type {
 } from "../decide.js";
 import { Result, success, failure } from "../types/result.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
-import { errorMessage } from "../util/errorMessage.js";
+import { postDecisionRequest, shapeFailure } from "./http.js";
 
 /** One server that speaks the System One format. */
 export type SystemoneServer = {
@@ -116,48 +116,18 @@ export async function systemoneDecide(
   }
   const endpoint = `${resolvedBaseUrl.replace(/\/+$/, "")}${server.path}`;
 
-  if (config.abortSignal?.aborted) {
-    return failure("Request was aborted");
+  const body = await postDecisionRequest({
+    endpoint,
+    apiKey,
+    body: { model: config.model, state, questions },
+    signal: config.abortSignal,
+  });
+  if (!body.success) {
+    return body;
   }
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (apiKey) {
-    headers.Authorization = `Bearer ${apiKey}`;
-  }
-
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ model: config.model, state, questions }),
-      signal: config.abortSignal,
-    });
-  } catch (err) {
-    if (config.abortSignal?.aborted) {
-      return failure("Request was aborted");
-    }
-    return failure(`Decision request failed: ${errorMessage(err)}`);
-  }
-
-  const text = await response.text();
-  if (!response.ok) {
-    return failure(`Decision request failed with status ${response.status}: ${text}`, {
-      status: response.status,
-    });
-  }
-
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return failure(`Decision response is not JSON: ${text.slice(0, 200)}`);
-  }
-  const parsed = ResponseSchema.safeParse(body);
+  const parsed = ResponseSchema.safeParse(body.value);
   if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where = issue.path.length > 0 ? ` at ${issue.path.join(".")}` : "";
-    return failure(`Decision response has an unexpected shape${where}: ${issue.message}`);
+    return shapeFailure(parsed.error);
   }
 
   // Output is free, so only input tokens are priced. The server's output
