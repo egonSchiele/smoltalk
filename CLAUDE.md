@@ -174,9 +174,10 @@ whole call. Built-ins with their own format sit in `OTHER_BUILT_INS` in
 formats share `postDecisionRequest` and `shapeFailure` in
 `lib/decide/http.ts`. `gpt-6-luna` is in the catalog twice under `openai`
 (text and decision); `decide()` reads its entry with
-`getDecisionModelForProvider`, which sees only decision entries. Cost is priced by the requested model's
-registry entry (`decisionModels` in `lib/models.ts`), so an unknown model has
-no cost. `PromptResult.rawData` exists so a caller can carry the full answers
+`getDecisionModelForProvider`, which sees only decision entries.
+
+Cost is priced by the requested model's registry entry (`decisionModels` in
+`lib/models.ts`), so an unknown model has no cost. `PromptResult.rawData` exists so a caller can carry the full answers
 onto an assistant message.
 
 ## Files API
@@ -221,8 +222,8 @@ baseline, deep-merged field-by-field. **The merge key is
 `type:provider:modelName`**, so the registered `provider` (and `type`) must
 match the entry used at call time or the lookup misses and cost is silently
 dropped. The type is in the key because one provider can serve a text model
-and a decision model under the same name (`gpt-6-luna`). See the "Custom models & pricing"
-section in `packages/smoltalk/README.md` for examples, and `mergeModelData` /
+and a decision model under the same name (`gpt-6-luna`). See the "Custom
+models & pricing" section in `packages/smoltalk/README.md` for examples, and `mergeModelData` /
 `getModel` in `lib/models.ts` + `lib/modelData.ts`.
 
 ## Adding a New Provider
