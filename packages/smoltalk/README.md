@@ -448,7 +448,8 @@ so the `provider` you register (or put in the blob) has to equal the `provider`
 you pass at call time, and an entry in a blob must carry the same `type` as the
 model it updates (`"text"` for a chat model, `"decision"` for a decision model).
 An entry with another type is added as a separate model instead of updating the
-existing one. Registering `my-model` under `"openai-compat"` but calling it
+existing one. An entry with no `type` updates the first model with its provider
+and name, which is the one lookups return. Registering `my-model` under `"openai-compat"` but calling it
 with `provider: "openrouter"` looks up a different key, finds no price, and
 silently drops the `cost` field. When in doubt, register under the same provider
 string you call with.

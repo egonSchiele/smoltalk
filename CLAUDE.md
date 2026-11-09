@@ -222,7 +222,8 @@ baseline, deep-merged field-by-field. **The merge key is
 `type:provider:modelName`**, so the registered `provider` (and `type`) must
 match the entry used at call time or the lookup misses and cost is silently
 dropped. The type is in the key because one provider can serve a text model
-and a decision model under the same name (`gpt-6-luna`). See the "Custom
+and a decision model under the same name (`gpt-6-luna`). An overlay entry with
+no `type` takes the type of the first base entry with its provider and name. See the "Custom
 models & pricing" section in `packages/smoltalk/README.md` for examples, and `mergeModelData` /
 `getModel` in `lib/models.ts` + `lib/modelData.ts`.
 
