@@ -8,9 +8,15 @@
  * `score` on an ordered rubric. Every answer carries probabilities.
  *
  * `decide()` follows the shape of `embed()`: payload first, config last,
- * provider and key and base URL resolved through the shared helpers. There
- * are two providers: `typesafe` and `openrouter`. A Laya server speaks the
- * TypeSafe protocol, so it is reached by setting `baseUrl.typesafe`.
+ * provider and key and base URL resolved through the shared helpers. It picks
+ * a provider function: a built-in one first, then one added with
+ * registerDecisionProvider. Every built-in provider that speaks the System
+ * One format (`typesafe`, `openrouter`) is a row of SYSTEMONE_SERVERS in
+ * `lib/decide/systemone.ts` and shares systemoneDecide. A Laya server speaks
+ * the same format, so it is reached by setting `baseUrl.typesafe`.
+ *
+ * The question check, the answer check, and the cost live here, so every
+ * provider, built in or registered, gets them.
  */
 import type { ModelDataBlob } from "./modelData.js";
 import { Result, success, failure } from "./types/result.js";
