@@ -235,11 +235,11 @@ function checkAnswers(
       return `Question "${name}" has a confidence of ${a.confidence}, which is not between 0 and 1.`;
     }
     if (q.type === "choice" && a.type === "choice") {
-      if (!(a.choice in q.criteria)) {
+      if (!Object.hasOwn(q.criteria, a.choice)) {
         return `Question "${name}" answered "${a.choice}", which is not one of its options.`;
       }
       if (a.probabilities !== undefined) {
-        const unknown = Object.keys(a.probabilities).find((k) => !(k in q.criteria));
+        const unknown = Object.keys(a.probabilities).find((k) => !Object.hasOwn(q.criteria, k));
         if (unknown !== undefined) {
           return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
         }
@@ -317,9 +317,19 @@ export async function decide(
     return failure(questionProblem);
   }
 
-  const reply = await providerFn(state, questions, { ...config, provider });
+  // A registered provider is someone else's code: a throw, or a success with
+  // no answers object, comes back as a failure like every other problem here.
+  let reply: Result<DecideProviderReply>;
+  try {
+    reply = await providerFn(state, questions, { ...config, provider });
+  } catch (err) {
+    return failure(errorMessage(err));
+  }
   if (!reply.success) {
     return reply;
+  }
+  if (typeof reply.value.answers !== "object" || reply.value.answers === null) {
+    return failure(`Provider "${provider}" returned no answers object.`);
   }
 
   const answers = reply.value.answers;
