@@ -19,6 +19,14 @@ export async function postDecisionRequest(request: DecisionRequest): Promise<Res
     return failure("Request was aborted");
   }
 
+  let body: string;
+  try {
+    body = JSON.stringify(request.body);
+  } catch (err) {
+    // A circular object or a BigInt in the state.
+    return failure(`Decision request body could not be turned into JSON: ${errorMessage(err)}`);
+  }
+
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (request.apiKey) {
     headers.Authorization = `Bearer ${request.apiKey}`;
@@ -29,7 +37,7 @@ export async function postDecisionRequest(request: DecisionRequest): Promise<Res
     response = await fetch(request.endpoint, {
       method: "POST",
       headers,
-      body: JSON.stringify(request.body),
+      body,
       signal: request.signal,
     });
   } catch (err) {

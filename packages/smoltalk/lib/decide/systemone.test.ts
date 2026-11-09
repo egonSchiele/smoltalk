@@ -122,6 +122,21 @@ describe("systemoneDecide", () => {
     expect(r.error).toMatch(/^Decision response has an unexpected shape at answers\.churn\.noul/);
   });
 
+  it("fails, not throws, for a row whose provider has no base URL", async () => {
+    SYSTEMONE_SERVERS["no-base-url"] = { path: "/v1/systemone" };
+    try {
+      const r = await systemoneDecide("hi", questions, { model: "m", provider: "no-base-url" });
+      expect(r).toEqual({
+        success: false,
+        error:
+          'No base URL for provider "no-base-url": its row in SYSTEMONE_SERVERS needs a case in resolveBaseUrl (lib/util/provider.ts).',
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      delete SYSTEMONE_SERVERS["no-base-url"];
+    }
+  });
+
   it("sends no Authorization header to a keyless server without a key, and the key when given", async () => {
     // No built-in row is keyless yet, so the typesafe row stands in for one:
     // a row's base URL comes from resolveBaseUrl, which has no case for a

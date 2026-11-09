@@ -24,6 +24,7 @@ import type {
 import { Result, success, failure } from "../types/result.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 import { postDecisionRequest, shapeFailure } from "./http.js";
+import { errorMessage } from "../util/errorMessage.js";
 
 export type OpenAiJsonPart = { type: "input_json"; data: object };
 
@@ -336,10 +337,18 @@ export async function openaiDecide(
     );
   }
   const baseUrl = resolveBaseUrl("openai", config)!.replace(/\/+$/, "");
+  let request: OpenAiDecisionRequest;
+  try {
+    request = toOpenAiRequest(config.model, state, questions);
+  } catch (err) {
+    // A state sent as JSON text is stringified here, and a circular object
+    // or a BigInt makes that throw.
+    return failure(`The state could not be turned into JSON: ${errorMessage(err)}`);
+  }
   const body = await postDecisionRequest({
     endpoint: `${baseUrl}/decisions`,
     apiKey,
-    body: toOpenAiRequest(config.model, state, questions),
+    body: request,
     signal: config.abortSignal,
   });
   if (!body.success) {

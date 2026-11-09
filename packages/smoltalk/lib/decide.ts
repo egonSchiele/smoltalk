@@ -23,11 +23,7 @@ import { Result, success, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
 import { resolveProvider } from "./util/provider.js";
-import {
-  getDecisionModelForProvider,
-  resolveModelForProvider,
-  type DecisionModel,
-} from "./models.js";
+import { getDecisionModelForProvider, type DecisionModel } from "./models.js";
 import { round } from "./util/util.js";
 import { errorMessage } from "./util/errorMessage.js";
 import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
@@ -292,11 +288,11 @@ function checkAnswers(
       return `Question "${name}" has a confidence of ${a.confidence}, which is not between 0 and 1.`;
     }
     if (q.type === "choice" && a.type === "choice") {
-      if (!(a.choice in q.criteria)) {
+      if (!Object.hasOwn(q.criteria, a.choice)) {
         return `Question "${name}" answered "${a.choice}", which is not one of its options.`;
       }
       if (a.probabilities !== undefined) {
-        const unknown = Object.keys(a.probabilities).find((k) => !(k in q.criteria));
+        const unknown = Object.keys(a.probabilities).find((k) => !Object.hasOwn(q.criteria, k));
         if (unknown !== undefined) {
           return `Question "${name}" has a probability for "${unknown}", which is not one of its options.`;
         }
@@ -368,25 +364,24 @@ export async function decide(
   // The registry entry for the requested name, when there is one. It sets
   // the question cap and the price. A Laya model has no entry and no price.
   const registryModel = getDecisionModelForProvider(provider, config.model, config.modelData);
-  if (registryModel === undefined) {
-    // A name the catalog knows only as another kind of model, such as a text
-    // model under openai, is a mistake: fail here instead of sending it.
-    // Names the catalog does not know at all (a Laya checkpoint) still go.
-    const other = resolveModelForProvider(provider, config.model, config.modelData);
-    if (other !== undefined) {
-      return failure(
-        `Model "${config.model}" is a ${other.type} model under provider "${provider}", not a decision model.`,
-      );
-    }
-  }
   const questionProblem = checkQuestions(questions, registryModel?.maxQuestions);
   if (questionProblem) {
     return failure(questionProblem);
   }
 
-  const reply = await providerFn(state, questions, { ...config, provider });
+  // A registered provider is someone else's code: a throw, or a success with
+  // no answers object, comes back as a failure like every other problem here.
+  let reply: Result<DecideProviderReply>;
+  try {
+    reply = await providerFn(state, questions, { ...config, provider });
+  } catch (err) {
+    return failure(errorMessage(err));
+  }
   if (!reply.success) {
     return reply;
+  }
+  if (typeof reply.value.answers !== "object" || reply.value.answers === null) {
+    return failure(`Provider "${provider}" returned no answers object.`);
   }
 
   const answers = reply.value.answers;

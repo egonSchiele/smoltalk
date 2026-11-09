@@ -2570,9 +2570,24 @@ export const decisionModels: DecisionModel[] = [
     inputTokenCost: 0.1,
     maxQuestions: 400,
   },
-  // Other vendors' decision models on OpenRouter's System One route, from
-  // https://openrouter.ai/api/v1/models?output_modalities=decisions
-  // (2026-11-09). Prices are the list's per-token prompt price times 1M.
+  // Other vendors' decision models on OpenRouter's System One route.
+  //
+  // Hand-maintained: a snapshot of OpenRouter's list taken 2026-11-09. The
+  // list changes often, and nothing refreshes these entries
+  // (scripts/refresh-from-modelsdev.ts writes only text models). To redo
+  // them, fetch the list (no key needed):
+  //
+  //   curl -s "https://openrouter.ai/api/v1/models?output_modalities=decisions"
+  //
+  // modelName is the entry's `id`. inputTokenCost is `pricing.prompt`
+  // (dollars per token) times 1,000,000; Jev must come out at 0.042. Every
+  // `pricing.completion` was "0". Left out: "~" alias ids, the typesafe/jev-*
+  // ids (Jev is listed above by its bare names), and any model whose
+  // `endpoints` is not /api/alpha/decisions (cloudflare/clairic is an
+  // extraction model). The two Span-01 Lite ids list a prompt price of "0";
+  // OpenRouter describes Span-01 Lite as "the free, lighter tier of Span-01".
+  // No entry has maxQuestions: neither the list nor OpenRouter's decisions
+  // reference states a question cap for these models or for the route.
   {
     type: "decision",
     modelName: "parallel/decisions-fast:free",

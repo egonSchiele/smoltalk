@@ -139,17 +139,14 @@ describe("decide", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("fails before any request for a text model, even under a decision provider", async () => {
-    // gpt-4o-mini resolves to openai, which answers decisions, but the
-    // catalog lists it only as a text model.
+  it("sends a model the catalog lists only as text, since decide() was asked for a decision", async () => {
+    // The catalog can lag behind a provider (a new model is often listed as
+    // text first), and llama-cpp's decision models are chat models. The
+    // server is the judge of whether a model answers decisions.
     vi.stubEnv("OPENAI_API_KEY", "sk-test");
-    const r = await decide("hello", questions, { model: "gpt-4o-mini" });
-    expect(r.success).toBe(false);
-    if (r.success) return;
-    expect(r.error).toBe(
-      'Model "gpt-4o-mini" is a text model under provider "openai", not a decision model.',
-    );
-    expect(fetchMock).not.toHaveBeenCalled();
+    await decide("hello", questions, { model: "gpt-4o-mini" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe("https://api.openai.com/v1/decisions");
   });
 
   it("reads the key from config, then the environment", async () => {
@@ -435,6 +432,27 @@ describe("decide", () => {
     if (!legend.success) expect(legend.error).toMatch(/answer's legend has 1/);
   });
 
+  it("treats a prototype name as an option that was not offered", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ answers: { ...answers, department: { type: "choice", choice: "toString" } } }),
+    );
+    const choice = await decide("hello", questions, config);
+    expect(choice.success).toBe(false);
+    if (!choice.success) expect(choice.error).toMatch(/answered "toString", which is not one of its options/);
+
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        answers: {
+          ...answers,
+          department: { type: "choice", choice: "billing", probabilities: { constructor: 0.1 } },
+        },
+      }),
+    );
+    const probs = await decide("hello", questions, config);
+    expect(probs.success).toBe(false);
+    if (!probs.success) expect(probs.error).toMatch(/probability for "constructor"/);
+  });
+
   it("fails when a choice has a probability for an option that was not offered", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({
@@ -623,6 +641,18 @@ describe("decide through OpenAI's Decisions API", () => {
     const r = await decide("hello", many, config);
     expect(r.success).toBe(false);
     if (!r.success) expect(r.error).toMatch(/401 given, the model accepts at most 400/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns a state that cannot be turned into JSON as a failure", async () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const asPart = await decide(circular, questions, config);
+    expect(asPart.success).toBe(false);
+    // An array holding a non-object is sent as JSON text, built before the request.
+    const asText = await decide(["a", circular], questions, config);
+    expect(asText.success).toBe(false);
+    if (!asText.success) expect(asText.error).toMatch(/could not be turned into JSON/);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
