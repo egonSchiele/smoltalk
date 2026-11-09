@@ -23,11 +23,7 @@ import { Result, success, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
 import { resolveProvider } from "./util/provider.js";
-import {
-  getDecisionModelForProvider,
-  resolveModelForProvider,
-  type DecisionModel,
-} from "./models.js";
+import { getDecisionModelForProvider, type DecisionModel } from "./models.js";
 import { round } from "./util/util.js";
 import { errorMessage } from "./util/errorMessage.js";
 import { SYSTEMONE_SERVERS, systemoneDecide } from "./decide/systemone.js";
@@ -335,17 +331,6 @@ export async function decide(
   // The registry entry for the requested name, when there is one. It sets
   // the question cap and the price. A Laya model has no entry and no price.
   const registryModel = getDecisionModelForProvider(provider, config.model, config.modelData);
-  if (registryModel === undefined) {
-    // A name the catalog knows only as another kind of model, such as a text
-    // model under openai, is a mistake: fail here instead of sending it.
-    // Names the catalog does not know at all (a Laya checkpoint) still go.
-    const other = resolveModelForProvider(provider, config.model, config.modelData);
-    if (other !== undefined) {
-      return failure(
-        `Model "${config.model}" is a ${other.type} model under provider "${provider}", not a decision model.`,
-      );
-    }
-  }
   const questionProblem = checkQuestions(questions, registryModel?.maxQuestions);
   if (questionProblem) {
     return failure(questionProblem);
