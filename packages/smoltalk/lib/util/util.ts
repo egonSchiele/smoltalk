@@ -1,5 +1,13 @@
 export * from "./openai.js";
 
+/** The text of a caught value: an Error's message, or the value as a string. */
+export function errorMessage(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  return String(err);
+}
+
 export function round(num: number, places: number): number {
   const factor = Math.pow(10, places);
   return Math.round(num * factor) / factor;

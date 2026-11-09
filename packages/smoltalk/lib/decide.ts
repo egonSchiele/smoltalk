@@ -12,14 +12,14 @@
  * are two providers: `typesafe` and `openrouter`. A Laya server speaks the
  * TypeSafe protocol, so it is reached by setting `baseUrl.typesafe`.
  */
-import { z } from "zod";
 import type { ModelDataBlob } from "./modelData.js";
 import { Result, success, failure } from "./types/result.js";
 import { TokenUsage } from "./types/tokenUsage.js";
 import { CostEstimate } from "./types/costEstimate.js";
-import { resolveProvider, resolveApiKey, resolveBaseUrl } from "./util/provider.js";
+import { resolveProvider } from "./util/provider.js";
 import { isDecisionModel, resolveModelForProvider, type DecisionModel } from "./models.js";
-import { round } from "./util/util.js";
+import { errorMessage, round } from "./util/util.js";
+import { systemoneDecide } from "./decide/systemone.js";
 
 export const DECISION_PROVIDER = "typesafe";
 
@@ -102,6 +102,16 @@ export type DecideConfig = {
   abortSignal?: AbortSignal;
 };
 
+/** What a provider function returns: the parsed answers, the token counts,
+ *  and the model name the server reported. `decide()` checks the answers
+ *  and prices the call, so a provider does neither. */
+export type DecideProviderReply = {
+  answers: Record<string, DecisionAnswer>;
+  usage: TokenUsage;
+  /** The model name the server reported, if it sent one. */
+  model?: string;
+};
+
 export type DecideResult = {
   answers: Record<string, DecisionAnswer>;
   usage: TokenUsage;
@@ -109,50 +119,6 @@ export type DecideResult = {
   /** The versioned model the server reports, e.g. `jev-1.13`. */
   model: string;
 };
-
-const NoulAnswerSchema = z.object({
-  type: z.literal("noul"),
-  noul: z.number(),
-});
-
-const ChoiceAnswerSchema = z.object({
-  type: z.literal("choice"),
-  choice: z.string(),
-  confidence: z.number(),
-  probabilities: z.record(z.string(), z.number()),
-});
-
-const ScoreAnswerSchema = z.object({
-  type: z.literal("score"),
-  score: z.number(),
-  confidence: z.number(),
-  legend: z.record(z.string(), z.string()),
-  probabilities: z.record(z.string(), z.number()),
-});
-
-const DecisionAnswerSchema = z.discriminatedUnion("type", [
-  NoulAnswerSchema,
-  ChoiceAnswerSchema,
-  ScoreAnswerSchema,
-]);
-
-const ResponseSchema = z.object({
-  model: z.string().optional(),
-  answers: z.record(z.string(), DecisionAnswerSchema),
-  usage: z
-    .object({
-      input_tokens: z.number(),
-      output_tokens: z.number().optional(),
-    })
-    .optional(),
-});
-
-function errorMessage(err: unknown): string {
-  if (err instanceof Error) {
-    return err.message;
-  }
-  return String(err);
-}
 
 /** A problem with the questions that no server would accept. Checked before
  *  any request so a bad question map never costs a round trip. */
@@ -280,73 +246,21 @@ export async function decide(
     return failure(questionProblem);
   }
 
-  const apiKey = resolveApiKey(provider, config);
-  if (!apiKey) {
-    return failure(
-      provider === "openrouter"
-        ? "No OpenRouter API key provided. Set config.apiKey.openRouter or the OPENROUTER_API_KEY environment variable."
-        : "No TypeSafe API key provided. Set config.apiKey.typesafe or the TYPESAFE_API_KEY environment variable.",
-    );
-  }
-  const baseUrl = resolveBaseUrl(provider, config)!.replace(/\/+$/, "");
-  const endpoint = provider === "openrouter" ? `${baseUrl}/systemone` : `${baseUrl}/v1/systemone`;
-
-  if (config.abortSignal?.aborted) {
-    return failure("Request was aborted");
+  const reply = await systemoneDecide(state, questions, { ...config, provider });
+  if (!reply.success) {
+    return reply;
   }
 
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model: config.model, state, questions }),
-      signal: config.abortSignal,
-    });
-  } catch (err) {
-    if (config.abortSignal?.aborted) {
-      return failure("Request was aborted");
-    }
-    return failure(`Decision request failed: ${errorMessage(err)}`);
-  }
-
-  const text = await response.text();
-  if (!response.ok) {
-    return failure(`Decision request failed with status ${response.status}: ${text}`, {
-      status: response.status,
-    });
-  }
-
-  let body: unknown;
-  try {
-    body = JSON.parse(text);
-  } catch {
-    return failure(`Decision response is not JSON: ${text.slice(0, 200)}`);
-  }
-  const parsed = ResponseSchema.safeParse(body);
-  if (!parsed.success) {
-    const issue = parsed.error.issues[0];
-    const where = issue.path.length > 0 ? ` at ${issue.path.join(".")}` : "";
-    return failure(`Decision response has an unexpected shape${where}: ${issue.message}`);
-  }
-
-  const answers = parsed.data.answers as Record<string, DecisionAnswer>;
+  const answers = reply.value.answers;
   const answerProblem = checkAnswers(questions, answers);
   if (answerProblem) {
     return failure(answerProblem);
   }
 
-  // Output is free, so only input tokens are priced. The server's output
-  // count is still reported: Jev sends 0, but a gateway may count its own.
-  const inputTokens = parsed.data.usage?.input_tokens ?? 0;
-  const outputTokens = parsed.data.usage?.output_tokens ?? 0;
   return success({
     answers,
-    usage: { inputTokens, outputTokens },
-    cost: calculateDecisionCost(registryModel, inputTokens),
-    model: parsed.data.model ?? config.model,
+    usage: reply.value.usage,
+    cost: calculateDecisionCost(registryModel, reply.value.usage.inputTokens),
+    model: reply.value.model ?? config.model,
   });
 }
