@@ -18,6 +18,7 @@ import {
 import { ToolCall } from "../classes/ToolCall.js";
 import { isFunctionToolCall, sanitizeAttributes } from "../util/util.js";
 import { getLogger } from "../util/logger.js";
+import { reasoningFromParts, type ReasoningPart } from "../util/reasoning.js";
 import { redactAttachments } from "../util/redact.js";
 import { BaseClient, type ClientAttachmentCapabilities } from "./baseClient.js";
 import {
@@ -129,10 +130,22 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     return undefined;
   }
 
-  /** Unsigned reasoning text, read from a completion's message or one
-   *  chunk's delta. Providers that send it override this. */
-  protected readReasoning(_part: any): string | undefined {
+  /** Unsigned reasoning, read from a completion's message or one chunk's
+   *  delta. Providers that send it override this. */
+  protected readReasoning(_part: any): ReasoningPart | undefined {
     return undefined;
+  }
+
+  /** Put a reply's reasoning on its result: the text for logs, and the
+   *  record that goes back to this model on the next request. */
+  private addReasoning(result: PromptResult, parts: ReasoningPart[], config: SmolConfig): void {
+    const { text, record } = reasoningFromParts(parts, this.replayTarget(config));
+    if (text !== undefined) {
+      result.reasoning = text;
+    }
+    if (record !== undefined) {
+      result.reasoningRecord = record;
+    }
   }
 
   /**
@@ -362,9 +375,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       result.servedBy = servedBy;
     }
     const reasoning = this.readReasoning(message);
-    if (reasoning !== undefined) {
-      result.reasoning = reasoning;
-    }
+    this.addReasoning(result, reasoning === undefined ? [] : [reasoning], config);
     return success(result);
   }
 
@@ -402,7 +413,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     let rawStopReason: string | undefined;
     const logprobEntries: OpenAILogprob[] = [];
     let servedBy: string | undefined;
-    let reasoning = "";
+    const reasoningParts: ReasoningPart[] = [];
     // Hosted-tool results arrive spread over the stream: annotations one
     // per delta, the search count in the final usage. They are gathered
     // into a completion's shape for parseHostedToolResults.
@@ -437,7 +448,10 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
       const delta = chunk.choices[0]?.delta;
       if (!delta) continue;
 
-      reasoning += this.readReasoning(delta) ?? "";
+      const reasoningPart = this.readReasoning(delta);
+      if (reasoningPart !== undefined) {
+        reasoningParts.push(reasoningPart);
+      }
       const deltaAnnotations = (delta as any).annotations;
       if (Array.isArray(deltaAnnotations)) {
         annotations.push(...deltaAnnotations);
@@ -501,9 +515,7 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
     if (servedBy !== undefined) {
       result.servedBy = servedBy;
     }
-    if (reasoning !== "") {
-      result.reasoning = reasoning;
-    }
+    this.addReasoning(result, reasoningParts, config);
     if (hostedToolResults.length > 0) {
       result.hostedToolResults = hostedToolResults;
     }

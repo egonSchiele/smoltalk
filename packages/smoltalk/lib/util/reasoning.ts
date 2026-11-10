@@ -84,3 +84,34 @@ export function mergeReasoningDetails(pieces: unknown[]): unknown[] {
     .sort((a, b) => a.index - b.index || a.position - b.position)
     .map((item) => item.entry);
 }
+
+/** The reasoning a chat client read from one completion message or one
+ *  stream delta. */
+export type ReasoningPart = {
+  text: string;
+  field: "reasoning" | "reasoning_content";
+  /** OpenRouter's `reasoning_details`, or pieces of them while streaming. */
+  details?: unknown[];
+};
+
+/** The reasoning text for logs and the record for sending back, from the
+ *  parts of one reply. The record keeps the text only when no details came,
+ *  so the reasoning is stored once. No record without a target, which is a
+ *  client that does not know its provider. */
+export function reasoningFromParts(
+  parts: ReasoningPart[],
+  target: ReplayTarget | undefined,
+): { text?: string; record?: ReasoningRecord } {
+  const text = parts.map((part) => part.text).join("");
+  const pieces = parts.flatMap((part) => part.details ?? []);
+  if (text === "" && pieces.length === 0) return {};
+  const field = parts.find((part) => part.text !== "")?.field ?? parts[0].field;
+  const result: { text?: string; record?: ReasoningRecord } = {};
+  if (text !== "") result.text = text;
+  if (target === undefined) return result;
+  result.record =
+    pieces.length > 0
+      ? { provider: target.provider, model: target.model, text: "", format: field, details: mergeReasoningDetails(pieces) }
+      : { provider: target.provider, model: target.model, text, format: field };
+  return result;
+}
