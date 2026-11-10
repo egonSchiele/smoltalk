@@ -1,6 +1,6 @@
 {
   "name": "smoltalk-llama-cpp",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "node-llama-cpp provider for smoltalk",
   "type": "module",
   "scripts": {
