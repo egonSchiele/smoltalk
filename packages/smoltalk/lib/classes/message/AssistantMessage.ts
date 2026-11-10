@@ -25,7 +25,12 @@ import { ToolCall, ToolCallJSON, ToolCallJSONSchema } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 import { getLogger } from "../../util/logger.js";
-import { canReplay, chatReasoningFields, type ReplayTarget } from "../../util/reasoning.js";
+import {
+  canReplay,
+  chatReasoningFields,
+  replayableThinkingBlocks,
+  type ReplayTarget,
+} from "../../util/reasoning.js";
 
 export const AssistantMessageJSONSchema = z.object({
   role: z.literal("assistant"),
@@ -260,11 +265,19 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return items;
   }
 
-  toGoogleMessage(): Content {
+  /** The thinking blocks to send to `target`. With no target, every block,
+   *  as before blocks recorded their provider. */
+  private thinkingBlocksFor(target?: ReplayTarget): ThinkingBlock[] | undefined {
+    if (target === undefined || this._thinkingBlocks === undefined) return this._thinkingBlocks;
+    return replayableThinkingBlocks(this._thinkingBlocks, target);
+  }
+
+  toGoogleMessage(target?: ReplayTarget): Content {
     const parts: Part[] = [];
     // Prepend thought parts with their signatures so Gemini can resume reasoning
-    if (this._thinkingBlocks) {
-      for (const block of this._thinkingBlocks) {
+    const thinkingBlocks = this.thinkingBlocksFor(target);
+    if (thinkingBlocks) {
+      for (const block of thinkingBlocks) {
         parts.push({ thought: true, text: block.text, thoughtSignature: block.signature } as any);
       }
     }
@@ -287,7 +300,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     };
   }
 
-  toAnthropicMessage(): {
+  toAnthropicMessage(target?: ReplayTarget): {
     role: "assistant";
     content:
       | string
@@ -304,7 +317,8 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
         ? this._content.length > 0
         : this._content.length > 0);
     const hasToolCalls = this._toolCalls && this._toolCalls.length > 0;
-    const hasThinking = this._thinkingBlocks && this._thinkingBlocks.length > 0;
+    const thinkingBlocks = this.thinkingBlocksFor(target);
+    const hasThinking = thinkingBlocks && thinkingBlocks.length > 0;
 
     // If only text and no thinking/tool calls, use string shorthand
     if (!hasToolCalls && !hasThinking) {
@@ -319,7 +333,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
 
     // Thinking blocks must come first (Anthropic requires this ordering)
     if (hasThinking) {
-      for (const block of this._thinkingBlocks ?? []) {
+      for (const block of thinkingBlocks ?? []) {
         blocks.push({ type: "thinking", thinking: block.text, signature: block.signature });
       }
     }

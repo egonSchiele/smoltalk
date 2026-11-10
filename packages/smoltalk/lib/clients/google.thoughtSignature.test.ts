@@ -134,6 +134,7 @@ describe("Google: thought_signature round-trip on functionCall parts (error 2)",
     expect(res.value.thinkingBlocks).toHaveLength(1);
     expect(res.value.thinkingBlocks[0].text).toBe("Let me reason.");
     expect(res.value.thinkingBlocks[0].signature).toBe("THINK_SIG");
+    expect(res.value.thinkingBlocks[0].provider).toBe("google");
   });
 
   it("ToolCall.toGoogle() re-emits the thoughtSignature on the part", () => {
@@ -314,5 +315,22 @@ describe("Google: thought_signature on the streaming path (error 2)", () => {
     expect(toolCalls[0].toolCall.name).toBe("foo");
     expect(toolCalls[0].toolCall.arguments).toEqual({ x: 1 });
     expect(toolCalls[0].toolCall.thoughtSignature).toBe("LATE");
+  });
+});
+
+describe("Google: thinking blocks and their provider", () => {
+  const google = { provider: "google", model: "gemini-3-pro-preview", replayRecords: true };
+  const thoughtsIn = (content: any) => content.parts.filter((part: any) => part.thought);
+
+  it("an Anthropic thinking block is not sent to Google", () => {
+    const message = new AssistantMessage("x", {
+      thinkingBlocks: [{ text: "a", signature: "s", provider: "anthropic" }],
+    });
+    expect(thoughtsIn(message.toGoogleMessage(google))).toEqual([]);
+  });
+
+  it("an untagged thinking block is still sent to Google", () => {
+    const message = new AssistantMessage("x", { thinkingBlocks: [{ text: "old", signature: "s" }] });
+    expect(thoughtsIn(message.toGoogleMessage(google))).toHaveLength(1);
   });
 });

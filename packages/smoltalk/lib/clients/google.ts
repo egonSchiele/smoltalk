@@ -335,7 +335,8 @@ export class SmolGoogle extends BaseClient implements SmolClient {
     // on the Gemini 3 family), so results must leave in call order regardless of
     // the order the caller supplied them. See reorderToolResultsForGemini.
     const orderedMessages = reorderToolResultsForGemini(contentMessages);
-    const messages = orderedMessages.map((msg) => msg.toGoogleMessage());
+    const target = this.replayTarget(config);
+    const messages = orderedMessages.map((msg) => msg.toGoogleMessage(target));
 
     const tools = (config.tools || []).map((tool) => {
       return zodToGoogleTool(tool.name, tool.schema, {
@@ -632,6 +633,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
             thinkingBlocks.push({
               text: part.text || "",
               signature: part.thoughtSignature || "",
+              provider: "google",
             });
           } else if (typeof part.text === "string") {
             textContent += part.text;
@@ -773,6 +775,7 @@ export class SmolGoogle extends BaseClient implements SmolClient {
             const block: ThinkingBlock = {
               text: p.text || "",
               signature: p.thoughtSignature || "",
+              provider: "google",
             };
             thinkingBlocks.push(block);
             yield {

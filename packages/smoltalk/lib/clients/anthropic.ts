@@ -352,13 +352,14 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     const system = systemParts.length > 0 ? systemParts.join("\n") : undefined;
 
     // Convert remaining messages into Anthropic message params.
+    const target = this.replayTarget(config);
     const converted: MessageParam[] = [];
     for (const msg of config.messages) {
       if (msg instanceof SystemMessage || msg instanceof DeveloperMessage) {
         continue;
       }
 
-      const c = msg.toAnthropicMessage();
+      const c = msg.toAnthropicMessage(target);
       if (c === null) continue;
       converted.push(c as MessageParam);
     }
@@ -543,7 +544,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         );
       } else if ((block as any).type === "thinking") {
         const b = block as any;
-        thinkingBlocks.push({ text: b.thinking, signature: b.signature });
+        thinkingBlocks.push({ text: b.thinking, signature: b.signature, provider: "anthropic" });
       }
     }
 
@@ -787,7 +788,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
 
     const thinkingBlocks: ThinkingBlock[] = Array.from(
       thinkingBlockMap.values(),
-    );
+    ).map((block) => ({ ...block, provider: "anthropic" }));
 
     const usage: TokenUsage = {
       inputTokens,
