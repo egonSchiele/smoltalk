@@ -206,7 +206,8 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   }
 
   private buildRequest(config: SmolConfig) {
-    const messages = config.messages.map((msg) => msg.toOpenAIMessage());
+    const target = this.replayTarget(config);
+    const messages = config.messages.map((msg) => msg.toOpenAIMessage(target));
     const functionTools = config.tools?.map((tool) => {
       return zodToOpenAITool(tool.name, tool.schema, {
         description: tool.description,

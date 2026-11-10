@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { SmolOpenRouter } from "./openrouter.js";
-import { userMessage } from "../classes/message/index.js";
+import { assistantMessage, userMessage } from "../classes/message/index.js";
+import { ToolCall } from "../classes/ToolCall.js";
 import type { SmolConfig } from "../types.js";
 
 const baseModel = "z-ai/glm-5.2";
@@ -421,5 +422,34 @@ describe("streamed web_search results", () => {
       "https://example.com/a",
       "https://example.com/b",
     ]);
+  });
+});
+
+describe("SmolOpenRouter replay target", () => {
+  const record = { provider: "openrouter", model: baseModel, text: "think", format: "reasoning" as const };
+  const history = () => [
+    userMessage("hi"),
+    assistantMessage(null, { reasoning: record, toolCalls: [new ToolCall("c1", "ls", {})] }),
+  ];
+  function build(clientProvider: string | undefined, extra: Partial<SmolConfig> = {}) {
+    const c = new SmolOpenRouter({
+      model: baseModel,
+      provider: clientProvider,
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    return (c as any).buildRequest({ model: baseModel, messages: history(), ...extra });
+  }
+
+  it("sends a record back to the provider and model that produced it", () => {
+    expect(build("openrouter").messages[1].reasoning).toBe("think");
+  });
+
+  it("sends no record when replayReasoning is false", () => {
+    expect(build("openrouter", { replayReasoning: false }).messages[1].reasoning).toBeUndefined();
+  });
+
+  it("sends no record from a client that does not know its provider", () => {
+    expect(build(undefined).messages[1].reasoning).toBeUndefined();
   });
 });
