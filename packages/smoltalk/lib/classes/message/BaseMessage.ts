@@ -3,6 +3,7 @@ import { Message } from "ollama";
 import { ChatCompletionMessageParam } from "openai/resources";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 import { z } from "zod";
+import type { ReplayTarget } from "../../util/reasoning.js";
 
 /** Opaque data a caller keeps on a message. smoltalk never reads it and never
  *  sends it to a provider. */
@@ -32,9 +33,11 @@ export interface MessageClass {
   get metadata(): MessageMetadata | undefined;
   set metadata(value: MessageMetadata | undefined);
 
-  toOpenAIMessage(): ChatCompletionMessageParam;
-  toOpenAIResponseInputItem(): ResponseInputItem | ResponseInputItem[];
-  toGoogleMessage(): Content;
+  /** `target` names the model the request goes to. Only an assistant
+   *  message reads it, to decide which reasoning to send back. */
+  toOpenAIMessage(target?: ReplayTarget): ChatCompletionMessageParam;
+  toOpenAIResponseInputItem(target?: ReplayTarget): ResponseInputItem | ResponseInputItem[];
+  toGoogleMessage(target?: ReplayTarget): Content;
   toOllamaMessage(): Message;
   toJSON(): Record<string, any>;
 }

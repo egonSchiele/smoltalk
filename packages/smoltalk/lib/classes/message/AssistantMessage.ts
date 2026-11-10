@@ -8,6 +8,8 @@ import {
 import {
   CostEstimate,
   CostEstimateSchema,
+  ReasoningRecord,
+  ReasoningRecordSchema,
   TextPart,
   TextPartSchema,
   ThinkingBlock,
@@ -23,6 +25,7 @@ import { ToolCall, ToolCallJSON, ToolCallJSONSchema } from "../ToolCall.js";
 import { Message } from "ollama";
 import type { ResponseInputItem } from "openai/resources/responses/responses.js";
 import { getLogger } from "../../util/logger.js";
+import { canReplay, chatReasoningFields, type ReplayTarget } from "../../util/reasoning.js";
 
 export const AssistantMessageJSONSchema = z.object({
   role: z.literal("assistant"),
@@ -32,6 +35,7 @@ export const AssistantMessageJSONSchema = z.object({
   refusal: z.string().nullable().optional(),
   toolCalls: z.array(ToolCallJSONSchema).optional(),
   thinkingBlocks: z.array(ThinkingBlockSchema).optional(),
+  reasoning: ReasoningRecordSchema.optional(),
   logprobs: z.array(TokenLogprobSchema).optional(),
   rawData: z.any().optional(),
   metadata: MessageMetadataSchema.optional(),
@@ -49,6 +53,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
   public _refusal?: string | null;
   public _toolCalls?: ToolCall[];
   public _thinkingBlocks?: ThinkingBlock[];
+  public _reasoning?: ReasoningRecord;
   public _logprobs?: TokenLogprob[];
   public _rawData?: any;
   public _metadata?: MessageMetadata;
@@ -63,6 +68,9 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal?: string | null;
       toolCalls?: ToolCall[];
       thinkingBlocks?: ThinkingBlock[];
+      /** The reasoning this reply carried, sent back only to the model
+       *  that produced it. */
+      reasoning?: ReasoningRecord;
       logprobs?: TokenLogprob[];
       rawData?: any;
       metadata?: MessageMetadata;
@@ -77,6 +85,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     this._refusal = options.refusal;
     this._toolCalls = options.toolCalls;
     this._thinkingBlocks = options.thinkingBlocks;
+    this._reasoning = options.reasoning;
     this._logprobs = options.logprobs;
     this._rawData = options.rawData;
     this._metadata = options.metadata;
@@ -130,6 +139,10 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     return this._thinkingBlocks;
   }
 
+  get reasoning(): ReasoningRecord | undefined {
+    return this._reasoning;
+  }
+
   get logprobs(): TokenLogprob[] | undefined {
     return this._logprobs;
   }
@@ -151,6 +164,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal: this.refusal,
       toolCalls: this.toolCalls?.map((tc) => tc.toJSON()),
       thinkingBlocks: this._thinkingBlocks,
+      reasoning: this._reasoning,
       logprobs: this._logprobs,
       usage: this._usage,
       cost: this._cost,
@@ -174,6 +188,7 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
       refusal: result.data.refusal,
       toolCalls: result.data.toolCalls?.map((tc) => ToolCall.fromJSON(tc)),
       thinkingBlocks: result.data.thinkingBlocks,
+      reasoning: result.data.reasoning,
       logprobs: result.data.logprobs,
       rawData: result.data.rawData,
       metadata: result.data.metadata,
@@ -182,16 +197,48 @@ export class AssistantMessage extends BaseMessage implements MessageClass {
     });
   }
 
-  toOpenAIMessage(): ChatCompletionMessageParam {
-    return {
+  /** The reasoning record to send to `target`, or undefined. */
+  private replayableReasoning(target?: ReplayTarget): ReasoningRecord | undefined {
+    if (target === undefined || this._reasoning === undefined) return undefined;
+    return canReplay(this._reasoning, target) ? this._reasoning : undefined;
+  }
+
+  toOpenAIMessage(target?: ReplayTarget): ChatCompletionMessageParam {
+    const message: ChatCompletionMessageParam = {
       role: this.role,
       content: this.content,
       name: this.name,
       tool_calls: this.toolCalls?.map((tc) => tc.toOpenAI()),
     };
+    const reasoning = this.replayableReasoning(target);
+    if (reasoning !== undefined) {
+      Object.assign(message, chatReasoningFields(reasoning));
+    }
+    return message;
   }
 
-  toOpenAIResponseInputItem(): ResponseInputItem | ResponseInputItem[] {
+  toOpenAIResponseInputItem(target?: ReplayTarget): ResponseInputItem | ResponseInputItem[] {
+    const items = this.responseInputItemsWithoutReasoning();
+    const reasoning = this.replayableReasoning(target);
+    if (reasoning?.format !== "responsesItems" || reasoning.responsesItems === undefined) {
+      return items;
+    }
+    // Each reasoning item goes directly before the item it led to. One whose
+    // item is gone, such as a handoff call removed from the message, is
+    // dropped: the API refuses a reasoning item with nothing after it.
+    const entries = reasoning.responsesItems;
+    const placed: ResponseInputItem[] = [];
+    for (const item of items) {
+      const follows = item.type === "function_call" ? item.call_id : "message";
+      for (const entry of entries) {
+        if (entry.followedBy === follows) placed.push(entry.item as ResponseInputItem);
+      }
+      placed.push(item);
+    }
+    return placed;
+  }
+
+  private responseInputItemsWithoutReasoning(): ResponseInputItem[] {
     const items: ResponseInputItem[] = [];
 
     // If there's text content, add it as a message
