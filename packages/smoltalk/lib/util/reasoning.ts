@@ -1,4 +1,4 @@
-import type { ReasoningRecord, ThinkingBlock } from "../types.js";
+import type { ReasoningRecord, ResponsesReasoningEntry, ThinkingBlock } from "../types.js";
 
 /** The client a request is being built for. */
 export type ReplayTarget = {
@@ -114,4 +114,34 @@ export function reasoningFromParts(
       ? { provider: target.provider, model: target.model, text: "", format: field, details: mergeReasoningDetails(pieces) }
       : { provider: target.provider, model: target.model, text, format: field };
   return result;
+}
+
+/** The reasoning items of a Responses reply, each with the item that came
+ *  after it: a function call's `call_id`, or "message" for the reply's
+ *  text. A reasoning item with nothing after it is dropped, because the API
+ *  refuses a reasoning item sent without the item it led to. */
+export function responsesReasoningEntries(output: any[]): ResponsesReasoningEntry[] {
+  const entries: ResponsesReasoningEntry[] = [];
+  let waiting: unknown[] = [];
+  for (const item of output) {
+    if (item?.type === "reasoning") {
+      waiting.push(item);
+      continue;
+    }
+    const followedBy =
+      item?.type === "function_call" ? item.call_id : item?.type === "message" ? "message" : null;
+    if (followedBy === null) continue;
+    for (const reasoning of waiting) entries.push({ item: reasoning, followedBy });
+    waiting = [];
+  }
+  return entries;
+}
+
+/** The summary text of Responses reasoning items, for logs. */
+export function responsesReasoningText(entries: ResponsesReasoningEntry[]): string {
+  return entries
+    .flatMap((entry) => ((entry.item as any)?.summary ?? []) as { text?: string }[])
+    .map((part) => part.text ?? "")
+    .filter((text) => text !== "")
+    .join("\n\n");
 }
