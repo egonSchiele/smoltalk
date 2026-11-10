@@ -12,15 +12,16 @@ describe.runIf(Boolean(process.env.OPENAI_API_KEY))(
   () => {
     it("text-to-image", { timeout: TIMEOUT }, async () => {
       const r = await image("a small red cube on a white background", {
-        model: "gpt-image-1",
+        model: "gpt-image-2.6-flare",
         size: "1024x1024",
       });
-      expect(r.success).toBe(true);
-      if (r.success) {
-        expect(r.value.images).toHaveLength(1);
-        expect(r.value.images[0].data.byteLength).toBeGreaterThan(1000);
-        expect(r.value.images[0].mimeType).toMatch(/^image\//);
+      if (!r.success) {
+        // Surface the API error in the test output for easier debugging.
+        throw new Error(`openaiImage failed: ${r.error}`);
       }
+      expect(r.value.images).toHaveLength(1);
+      expect(r.value.images[0].data.byteLength).toBeGreaterThan(1000);
+      expect(r.value.images[0].mimeType).toMatch(/^image\//);
     });
   },
 );
