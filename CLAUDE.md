@@ -75,26 +75,69 @@ lib/
 - **ES Modules**: Package uses `"type": "module"` — all internal imports use `.js` extensions
 - **Strict TypeScript**: `strict: true`, target ESNext, module nodenext
 
-## Thought Signatures / Extended Thinking
+## Reasoning sent back to the model
 
-Two providers support returning encrypted reasoning state alongside responses:
+Providers return a model's reasoning in two shapes, and smoltalk keeps both on
+the assistant message so the next request can send them back.
 
-- **Anthropic** (`claude-opus-4-5`, `claude-sonnet-*`, etc.): Enable via `thinking: { enabled: true, budgetTokens: 5000 }` in `SmolConfig`. Returns `ThinkingBlock[]` in `PromptResult.thinkingBlocks`. Each block has `text` (the visible reasoning) and `signature` (encrypted verification token).
-- **Google Gemini** (Gemini 3+ models): Thought signatures are returned automatically on thinking models. Parts with `thought: true` are captured into `PromptResult.thinkingBlocks`.
-- **OpenAI**: No equivalent — o1/o3 reasoning is fully hidden.
+1. **Signed thinking.** Anthropic returns thinking blocks with a `signature`
+   (enable with `thinking: { enabled: true, budgetTokens: 5000 }`). Gemini 3
+   returns parts with `thought: true` and a `thoughtSignature`. Both become
+   `ThinkingBlock[]` on `PromptResult.thinkingBlocks` and on the
+   `AssistantMessage`. Each block records the provider that made it,
+   `"anthropic"` or `"google"`. Both providers require the blocks back during
+   tool use.
+2. **Reasoning records.** Every other reasoning becomes one
+   `ReasoningRecord` on `PromptResult.reasoningRecord` and on the message's
+   `reasoning`. It records the provider (the name `getClient` resolved) and
+   the model, and how it goes back. `PromptResult.reasoning` holds the text
+   for logs.
 
-**Round-tripping**: `AssistantMessage` stores `thinkingBlocks` and passes them back per provider:
-- `toAnthropicMessage()` prepends `{ type: "thinking", thinking, signature }` blocks (required by Anthropic during tool use)
-- `toGoogleMessage()` prepends `{ thought: true, text, thoughtSignature }` parts (required by Gemini 3+ during tool use)
+A record goes back in the field it came in:
 
-**Usage**:
-```typescript
-const result = await textSync("Solve this step by step", {
-  model: "claude-opus-4-5",
-  thinking: { enabled: true, budgetTokens: 8000 },
-});
-// result.thinkingBlocks → [{ text: "Let me think...", signature: "WaUj..." }]
-```
+| Where it came from | `format` | What goes back |
+|---|---|---|
+| OpenRouter `reasoning_details` | `reasoning` | `reasoning_details`, unchanged |
+| OpenRouter `reasoning` with no details | `reasoning` | `reasoning: text` |
+| A compatible server's `reasoning_content` (vLLM, DeepSeek, Kimi) | `reasoning_content` | `reasoning_content: text` |
+| Responses API `reasoning` output items | `responsesItems` | each item, just before the item it led to |
+
+The record keeps the text only when no details or items came, so the
+reasoning is stored once. OpenRouter streams `reasoning_details` in pieces
+that share an `index`; `mergeReasoningDetails` joins them into one entry per
+index, so a signature stays with the text it signs.
+
+**The rule.** A client builds a `ReplayTarget` (its provider, the request's
+model, and whether records are on) in `BaseClient.replayTarget()` and passes
+it to each message's conversion method. A record goes back only when its
+provider and model both match the target. Thinking blocks match by provider
+only, because Anthropic asks for blocks to be passed back after a model
+switch and drops the ones the new model cannot read. A block with no
+provider was saved before blocks recorded one, and it is always sent. A
+message converted with no target behaves as before.
+
+**Never as text.** Reasoning from another model is dropped, not turned into
+visible text. In the Pi coding agent, Kimi began writing its own thinking
+into its replies after it was sent GLM's reasoning as text.
+
+**Turning it off.** `replayReasoning: false` on `SmolConfig` stops records
+from going back. It never removes Anthropic or Google thinking blocks,
+because those providers require them during tool use.
+
+**The Responses API.** smoltalk resends the whole conversation on every call
+and never sets `previous_response_id`, so OpenAI keeps no reasoning between
+calls. For a model the registry marks as a reasoning model, the request adds
+`"reasoning.encrypted_content"` to `include` (merged with the logprobs
+entry), and the encrypted items come back on the reply. Each item records
+the `call_id` of the function call after it, or `"message"`, and goes back
+just before that item. An item whose function call is gone from the message
+is dropped, because the API refuses a reasoning item sent on its own.
+`store` is left at OpenAI's default; a live test
+(`openai-responses.live.test.ts`) checks that the items are accepted.
+
+Not covered: Ollama and llama-cpp, whose clients do not extend `SmolOpenAi`,
+and DeepSeek's rule that every earlier assistant message carry a
+`reasoning_content`.
 
 ## Tools plus a response format
 
