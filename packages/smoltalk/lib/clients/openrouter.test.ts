@@ -541,19 +541,33 @@ describe("SmolOpenRouter reasoning records", () => {
     expect(next.messages[1].reasoning_details).toBeUndefined();
   });
 
+  function clientFor(model: string): SmolOpenRouter {
+    return new SmolOpenRouter({ model, provider: "openrouter", apiKey: { openRouter: "k" }, messages: [] });
+  }
+
   it("reasoning from another model is not sent", () => {
     const record = { provider: "openrouter", model: "model-a", text: "a", format: "reasoning" as const };
-    const request = (client() as any).buildRequest({
+    const request = (clientFor("model-b") as any).buildRequest({
       model: "model-b",
       messages: [userMessage("hi"), assistantMessage("x", { reasoning: record })],
     });
     expect(request.messages[1].reasoning).toBeUndefined();
   });
 
+  it("the target names the model the request goes to, not a model named only in the call", () => {
+    const fromB = { provider: "openrouter", model: "model-b", text: "b", format: "reasoning" as const };
+    const request = (clientFor("model-a") as any).buildRequest({
+      model: "model-b",
+      messages: [userMessage("hi"), assistantMessage("x", { reasoning: fromB })],
+    });
+    expect(request.model).toBe("model-a");
+    expect(request.messages[1].reasoning).toBeUndefined();
+  });
+
   it("reasoning from the same model is sent again after a switch back", () => {
     const fromA = { provider: "openrouter", model: "model-a", text: "a", format: "reasoning" as const };
     const fromB = { provider: "openrouter", model: "model-b", text: "b", format: "reasoning" as const };
-    const request = (client() as any).buildRequest({
+    const request = (clientFor("model-a") as any).buildRequest({
       model: "model-a",
       messages: [
         userMessage("hi"),

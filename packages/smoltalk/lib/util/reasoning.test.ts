@@ -87,6 +87,13 @@ describe("mergeReasoningDetails", () => {
       { type: "reasoning.summary", summary: "ab", index: 1 },
     ]);
   });
+  it("keeps entries of different types apart even when they share an index", () => {
+    const pieces = [
+      { type: "reasoning.summary", summary: "plan", index: 0 },
+      { type: "reasoning.encrypted", data: "xyz", index: 0 },
+    ];
+    expect(mergeReasoningDetails(pieces)).toEqual(pieces);
+  });
   it("keeps a piece with no index as its own entry", () => {
     const pieces = [{ type: "reasoning.text", text: "solo" }];
     expect(mergeReasoningDetails(pieces)).toEqual([{ type: "reasoning.text", text: "solo" }]);

@@ -23,7 +23,7 @@ import {
   type OpenAILogprob,
 } from "./logprobs.js";
 import { sanitizeAttributes } from "../util/util.js";
-import { getModel, isTextModel, ModelName } from "../models.js";
+import { isTextModel, ModelName, resolveModelForProvider } from "../models.js";
 import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type {
@@ -226,31 +226,38 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
    *  being sent back. Any other model gets the request it got before. */
   private asksForEncryptedReasoning(config: SmolConfig): boolean {
     const target = this.replayTarget(config);
-    if (target === undefined || !target.replayRecords) return false;
-    const entry = getModel(this.getModel(), this.config.modelData);
+    if (target === undefined || !target.replayRecords) {
+      return false;
+    }
+    const entry = resolveModelForProvider(
+      target.provider,
+      target.model,
+      config.modelData ?? this.config.modelData,
+    );
     return entry !== undefined && isTextModel(entry) && entry.reasoning !== undefined;
   }
 
   /** Put a reply's reasoning items on its result: the summary text for
    *  logs, and the record that goes back to this model. */
   private addReasoning(result: PromptResult, output: any[], config: SmolConfig): void {
-    const entries = responsesReasoningEntries(output);
-    if (entries.length === 0) return;
-    const text = responsesReasoningText(entries);
+    const text = responsesReasoningText(output);
     if (text !== "") {
       result.reasoning = text;
     }
+    const entries = responsesReasoningEntries(output);
     const target = this.replayTarget(config);
-    if (target !== undefined) {
-      result.reasoningRecord = {
-        provider: target.provider,
-        model: target.model,
-        text: "",
-        format: "responsesItems",
-        responsesItems: entries,
-      };
+    if (entries.length === 0 || target === undefined) {
+      return;
     }
+    result.reasoningRecord = {
+      provider: target.provider,
+      model: target.model,
+      text: "",
+      format: "responsesItems",
+      responsesItems: entries,
+    };
   }
+
 
   private calculateUsageAndCost(usageData: any): {
     usage?: TokenUsage;

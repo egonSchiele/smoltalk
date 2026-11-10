@@ -52,6 +52,40 @@ describe("SmolOpenAiResponses encrypted reasoning", () => {
     expect(build(REASONING_MODEL, { replayReasoning: false }).include).toBeUndefined();
   });
 
+  it("finds a reasoning model in per-call model data", () => {
+    const modelData = {
+      schemaVersion: 1,
+      generatedAt: "2026-11-10T00:00:00Z",
+      models: [
+        {
+          type: "text",
+          modelName: "my-reasoner",
+          provider: "openai-responses",
+          maxInputTokens: 1000,
+          maxOutputTokens: 1000,
+          reasoning: { levels: ["low", "high"] },
+        },
+      ],
+      hostedTools: [],
+    } as any;
+    expect(build("my-reasoner", { modelData }).include).toEqual(["reasoning.encrypted_content"]);
+  });
+
+  it("keeps the summary text for logs when replay is off and nothing is encrypted", async () => {
+    const client = provider(REASONING_MODEL);
+    const { encrypted_content: _dropped, ...plain } = item;
+    (client as any).client.responses.create = async () => ({
+      output: [plain, call],
+      output_text: "",
+      status: "completed",
+      usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+    });
+    const result = await client._textSync(config(REASONING_MODEL, { replayReasoning: false }));
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.reasoning).toBe("plan");
+    expect(result.value.reasoningRecord).toBeUndefined();
+  });
+
   it("reads reasoning items into a record", async () => {
     const client = provider(REASONING_MODEL);
     (client as any).client.responses.create = async () => ({

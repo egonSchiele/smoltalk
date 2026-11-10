@@ -68,19 +68,24 @@ export class BaseClient implements SmolClient {
     }
   }
   /** The model a request is being built for, which decides what reasoning
-   *  goes back. Undefined when the provider is not known, as for a client
-   *  built directly without one: then nothing is sent back and no record is
-   *  made. The provider is the name `getClient` resolved, so a provider
-   *  added with `registerProvider` is named as registered. */
+   *  goes back. It is the provider and model this client was built for,
+   *  which are what the request is sent to, even when a call's config
+   *  names another model. Undefined when the provider is not known, as for
+   *  a client built directly without one: then nothing is sent back and no
+   *  record is made. The provider is the name `getClient` resolved, so a
+   *  provider added with `registerProvider` is named as registered. */
   protected replayTarget(config: SmolConfig): ReplayTarget | undefined {
-    const provider = config.provider ?? this.config.provider;
-    if (provider === undefined) return undefined;
+    const provider = this.config.provider;
+    if (provider === undefined) {
+      return undefined;
+    }
     return {
       provider,
-      model: config.model ?? this.config.model,
+      model: this.config.model,
       replayRecords: (config.replayReasoning ?? this.config.replayReasoning) !== false,
     };
   }
+
 
 
   /**

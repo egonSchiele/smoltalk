@@ -50,7 +50,7 @@ export function replayableThinkingBlocks(
 const JOINED_FIELDS = ["text", "summary", "data"];
 
 /** Merge OpenRouter's streamed `reasoning_details` pieces into whole
- *  entries. Pieces that share an `index` are one entry: their `text`,
+ *  entries. Pieces that share an `index` and a `type` are one entry: their `text`,
  *  `summary` and `data` are joined, and their other fields, such as
  *  `type`, `signature`, `format` and `id`, are kept from whichever piece
  *  has them. Entries come back in `index` order. A piece with no `index`
@@ -63,7 +63,7 @@ export function mergeReasoningDetails(pieces: unknown[]): unknown[] {
     if (piece === null || typeof piece !== "object") continue;
     const fields = piece as Record<string, unknown>;
     const index = typeof fields.index === "number" ? fields.index : null;
-    const key = index === null ? null : String(index);
+    const key = index === null ? null : `${index}:${String(fields.type)}`;
     if (key === null || byIndex[key] === undefined) {
       const entry = { ...fields };
       if (key !== null) byIndex[key] = entry;
@@ -140,10 +140,12 @@ export function responsesReasoningEntries(output: any[]): ResponsesReasoningEntr
   return entries;
 }
 
-/** The summary text of Responses reasoning items, for logs. */
-export function responsesReasoningText(entries: ResponsesReasoningEntry[]): string {
-  return entries
-    .flatMap((entry) => ((entry.item as any)?.summary ?? []) as { text?: string }[])
+/** The summary text of every reasoning item in a Responses reply, for
+ *  logs, whether or not the item can go back. */
+export function responsesReasoningText(output: any[]): string {
+  return output
+    .filter((item) => item?.type === "reasoning")
+    .flatMap((item) => (item.summary ?? []) as { text?: string }[])
     .map((part) => part.text ?? "")
     .filter((text) => text !== "")
     .join("\n\n");

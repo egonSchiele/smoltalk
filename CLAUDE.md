@@ -106,10 +106,12 @@ A record goes back in the field it came in:
 The record keeps the text only when no details or items came, so the
 reasoning is stored once. OpenRouter streams `reasoning_details` in pieces
 that share an `index`; `mergeReasoningDetails` joins them into one entry per
-index, so a signature stays with the text it signs.
+index and type, so a signature stays with the text it signs, and a summary
+and an encrypted entry at the same index stay apart.
 
-**The rule.** A client builds a `ReplayTarget` (its provider, the request's
-model, and whether records are on) in `BaseClient.replayTarget()` and passes
+**The rule.** A client builds a `ReplayTarget` (the provider and model it
+was built for, which are what the request is sent to, and whether records
+are on) in `BaseClient.replayTarget()` and passes
 it to each message's conversion method. A record goes back only when its
 provider and model both match the target. Thinking blocks match by provider
 only, because Anthropic asks for blocks to be passed back after a model
@@ -127,7 +129,8 @@ because those providers require them during tool use.
 
 **The Responses API.** smoltalk resends the whole conversation on every call
 and never sets `previous_response_id`, so OpenAI keeps no reasoning between
-calls. For a model the registry marks as a reasoning model, the request adds
+calls. For a model the registry marks as a reasoning model (looked up under
+the client's provider, in the call's `modelData` first), the request adds
 `"reasoning.encrypted_content"` to `include` (merged with the logprobs
 entry), and the encrypted items come back on the reply. Each item records
 the `call_id` of the function call directly after it, or `"message"`, and
@@ -136,7 +139,11 @@ kept, because an item sent back by id alone fails when the conversation is
 not stored. An item followed by anything else, such as a hosted web search,
 is not kept either. An item whose function call is gone from the message
 is dropped, because the API refuses a reasoning item sent on its own.
-`store` is left at OpenAI's default. Two live tests in
+A reasoning model missing from the registry, or whose entry has no
+`reasoning` field, never asks for the encrypted items, so its reasoning
+never goes back and nothing reports it. Add the model to the registry, or
+pass it in `modelData`, to turn replay on for it. `store` is left at
+OpenAI's default. Two live tests in
 `openai-responses.live.test.ts` check that the items are accepted before a
 function call and before a text reply.
 
