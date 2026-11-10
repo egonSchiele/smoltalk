@@ -85,8 +85,9 @@ the assistant message so the next request can send them back.
    returns parts with `thought: true` and a `thoughtSignature`. Both become
    `ThinkingBlock[]` on `PromptResult.thinkingBlocks` and on the
    `AssistantMessage`. Each block records the provider that made it,
-   `"anthropic"` or `"google"`. Both providers require the blocks back during
-   tool use.
+   as the name the client was resolved under (`"anthropic"` or `"google"`,
+   unless it was registered under another name). Both providers require the
+   blocks back during tool use.
 2. **Reasoning records.** Every other reasoning becomes one
    `ReasoningRecord` on `PromptResult.reasoningRecord` and on the message's
    `reasoning`. It records the provider (the name `getClient` resolved) and
@@ -129,11 +130,15 @@ and never sets `previous_response_id`, so OpenAI keeps no reasoning between
 calls. For a model the registry marks as a reasoning model, the request adds
 `"reasoning.encrypted_content"` to `include` (merged with the logprobs
 entry), and the encrypted items come back on the reply. Each item records
-the `call_id` of the function call after it, or `"message"`, and goes back
-just before that item. An item whose function call is gone from the message
+the `call_id` of the function call directly after it, or `"message"`, and
+goes back just before that item. An item with no `encrypted_content` is not
+kept, because an item sent back by id alone fails when the conversation is
+not stored. An item followed by anything else, such as a hosted web search,
+is not kept either. An item whose function call is gone from the message
 is dropped, because the API refuses a reasoning item sent on its own.
-`store` is left at OpenAI's default; a live test
-(`openai-responses.live.test.ts`) checks that the items are accepted.
+`store` is left at OpenAI's default. Two live tests in
+`openai-responses.live.test.ts` check that the items are accepted before a
+function call and before a text reply.
 
 Not covered: Ollama and llama-cpp, whose clients do not extend `SmolOpenAi`,
 and DeepSeek's rule that every earlier assistant message carry a

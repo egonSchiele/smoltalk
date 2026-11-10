@@ -461,4 +461,23 @@ describe("thinking blocks and their provider", () => {
     });
     expect(res.value.thinkingBlocks).toEqual([{ text: "t", signature: "sig", provider: "anthropic" }]);
   });
+
+  it("a provider registered under another name tags blocks with that name", async () => {
+    const client = new SmolAnthropic({
+      model: "claude-sonnet-4-6",
+      provider: "anthropic-vertex",
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    } as any);
+    (client as any).client = {
+      messages: {
+        create: async () => ({
+          content: [{ type: "thinking", thinking: "t", signature: "sig" }],
+          usage: { input_tokens: 1, output_tokens: 1 },
+        }),
+      },
+    };
+    const res = await (client as any)._textSync({ model: "claude-sonnet-4-6", messages: [userMessage("hi")] });
+    expect(res.value.thinkingBlocks[0].provider).toBe("anthropic-vertex");
+  });
 });

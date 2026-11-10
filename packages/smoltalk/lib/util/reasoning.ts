@@ -116,24 +116,27 @@ export function reasoningFromParts(
   return result;
 }
 
-/** The reasoning items of a Responses reply, each with the item that came
- *  after it: a function call's `call_id`, or "message" for the reply's
- *  text. A reasoning item with nothing after it is dropped, because the API
- *  refuses a reasoning item sent without the item it led to. */
+/** The reasoning items of a Responses reply that can go back, each with the
+ *  item directly after it: a function call's `call_id`, or "message" for the
+ *  reply's text. An item is kept only when it carries `encrypted_content`:
+ *  an item sent back by id alone fails when the conversation is not stored
+ *  (`store: false`, or an organization with zero data retention). An item
+ *  followed by anything else, such as a hosted web search, or by nothing, is
+ *  dropped, because the API refuses a reasoning item sent without the item
+ *  it led to. */
 export function responsesReasoningEntries(output: any[]): ResponsesReasoningEntry[] {
   const entries: ResponsesReasoningEntry[] = [];
-  let waiting: unknown[] = [];
-  for (const item of output) {
-    if (item?.type === "reasoning") {
-      waiting.push(item);
-      continue;
+  output.forEach((item, position) => {
+    if (item?.type !== "reasoning" || typeof item.encrypted_content !== "string") {
+      return;
     }
-    const followedBy =
-      item?.type === "function_call" ? item.call_id : item?.type === "message" ? "message" : null;
-    if (followedBy === null) continue;
-    for (const reasoning of waiting) entries.push({ item: reasoning, followedBy });
-    waiting = [];
-  }
+    const next = output[position + 1];
+    if (next?.type === "function_call") {
+      entries.push({ item, followedBy: next.call_id });
+    } else if (next?.type === "message") {
+      entries.push({ item, followedBy: "message" });
+    }
+  });
   return entries;
 }
 

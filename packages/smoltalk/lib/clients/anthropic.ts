@@ -303,6 +303,13 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
     this.model = new Model(config.model, config.provider, config.modelData);
   }
 
+  /** The provider a thinking block records: the name this client was
+   *  resolved under, so a provider registered under another name matches
+   *  its own replay target. */
+  private blockProvider(): string {
+    return this.config.provider ?? "anthropic";
+  }
+
   getModel(): ModelName {
     return this.model.getModel();
   }
@@ -544,7 +551,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
         );
       } else if ((block as any).type === "thinking") {
         const b = block as any;
-        thinkingBlocks.push({ text: b.thinking, signature: b.signature, provider: "anthropic" });
+        thinkingBlocks.push({ text: b.thinking, signature: b.signature, provider: this.blockProvider() });
       }
     }
 
@@ -788,7 +795,7 @@ export class SmolAnthropic extends BaseClient implements SmolClient {
 
     const thinkingBlocks: ThinkingBlock[] = Array.from(
       thinkingBlockMap.values(),
-    ).map((block) => ({ ...block, provider: "anthropic" }));
+    ).map((block) => ({ ...block, provider: this.blockProvider() }));
 
     const usage: TokenUsage = {
       inputTokens,

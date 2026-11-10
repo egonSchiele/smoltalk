@@ -53,4 +53,22 @@ describe.runIf(haveKey)("OpenAI Responses - reasoning sent back", () => {
     });
     expect(second.success).toBe(true);
   });
+
+  it("accepts a reasoning item sent back before a text reply, on the next user turn", { timeout: 120_000 }, async () => {
+    const base = { model: "gpt-5-mini", provider: "openai-responses", maxTokens: 4000 };
+    const question = userMessage("In one short sentence, why is the sky blue?");
+    const first = await text({ ...base, messages: [question] });
+    expect(first.success).toBe(true);
+    if (!first.success) return;
+    expect(first.value.reasoningRecord?.responsesItems?.[0]?.followedBy).toBe("message");
+    const second = await text({
+      ...base,
+      messages: [
+        question,
+        assistantMessage(first.value.output, { reasoning: first.value.reasoningRecord }),
+        userMessage("Now say it in five words."),
+      ],
+    });
+    expect(second.success).toBe(true);
+  });
 });

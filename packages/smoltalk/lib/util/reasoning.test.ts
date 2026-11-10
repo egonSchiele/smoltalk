@@ -4,6 +4,7 @@ import {
   chatReasoningFields,
   mergeReasoningDetails,
   replayableThinkingBlocks,
+  responsesReasoningEntries,
 } from "./reasoning.js";
 import { ReasoningRecordSchema, type ReasoningRecord } from "../types.js";
 
@@ -89,5 +90,20 @@ describe("mergeReasoningDetails", () => {
   it("keeps a piece with no index as its own entry", () => {
     const pieces = [{ type: "reasoning.text", text: "solo" }];
     expect(mergeReasoningDetails(pieces)).toEqual([{ type: "reasoning.text", text: "solo" }]);
+  });
+});
+
+describe("responsesReasoningEntries", () => {
+  const encrypted = (id: string) => ({ type: "reasoning", id, encrypted_content: "e", summary: [] });
+  const call = (callId: string) => ({ type: "function_call", call_id: callId });
+
+  it("keeps only items that carry encrypted content", () => {
+    const bare = { type: "reasoning", id: "rs_bare", summary: [] };
+    expect(responsesReasoningEntries([bare, call("c1")])).toEqual([]);
+  });
+
+  it("pairs a reasoning item only with the item directly after it", () => {
+    const output = [encrypted("rs_1"), { type: "web_search_call", id: "ws_1" }, encrypted("rs_2"), { type: "message" }];
+    expect(responsesReasoningEntries(output)).toEqual([{ item: encrypted("rs_2"), followedBy: "message" }]);
   });
 });
