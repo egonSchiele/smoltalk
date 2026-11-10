@@ -1,5 +1,18 @@
 # Changelog
 
+## smoltalk 0.21.1 (2026-11-10)
+
+### Added
+
+- A model's reasoning is now sent back to it on the next request. Each reply's reasoning comes back as `PromptResult.reasoningRecord`.
+- Covers OpenRouter (`reasoning_details` or `reasoning`), compatible servers that return `reasoning_content` (vLLM, DeepSeek, Kimi), and the OpenAI Responses API, which now asks for encrypted reasoning items on reasoning models. Ollama and llama-cpp are not covered yet.
+- `replayReasoning: false` on `SmolConfig` turns this off. It never removes Anthropic or Google thinking blocks, which those providers require during tool use.
+
+### Changed
+
+- Anthropic and Google thinking blocks now record the provider that made them, and a block from a different provider is not sent. Blocks saved before this change have no provider and are always sent.
+- `PromptResult.reasoning` is now just the reasoning text for logs; `reasoningRecord` is the form that goes back to the model.
+
 ## smoltalk 0.21.0 (2026-11-09)
 
 ### Added
