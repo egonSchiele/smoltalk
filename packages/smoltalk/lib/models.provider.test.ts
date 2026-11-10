@@ -79,7 +79,6 @@ describe("decision model providers", () => {
     expect(getModelForProvider("openrouter", "jev-1.13")).toMatchObject({
       type: "decision",
       provider: "openrouter",
-      maxQuestions: 64,
       inputTokenCost: 0.042,
     });
     expect(getModel("jev-1.13")?.provider).toBe("typesafe");
@@ -90,7 +89,7 @@ describe("decision model providers", () => {
     expect(getDecisionModelForProvider("openrouter", "jev-1.13")).toMatchObject({
       type: "decision",
       provider: "openrouter",
-      maxQuestions: 64,
+      inputTokenCost: 0.042,
     });
     // gpt-4o-mini is a text model under openai, never a decision entry.
     expect(getModelForProvider("openai", "gpt-4o-mini")?.type).toBe("text");

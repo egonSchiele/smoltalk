@@ -1,5 +1,22 @@
 # Changelog
 
+## smoltalk 0.21.0 (2026-11-09)
+
+### Added
+
+- `decide()` providers: `openai` (OpenAI's Decisions API, `gpt-6-luna`), `laya` (a local Laya server, no key needed), and `llama-cpp` (a local `.gguf` chat model run in process, with smoltalk-llama-cpp 0.9.0 or later). All APIs are normalized to Jev's API.
+- `registerDecisionProvider()` adds a custom decision provider, with `hasDecisionProvider` and `unregisterDecisionProvider` alongside. `decide()` still checks the questions, checks the answers, and prices the call around it.
+- Adds info on 27 decision models that OpenRouter serves (Clef Flash and others), keyed by their OpenRouter slug. `DecideConfig` also gains `metadata` for provider settings.
+
+### Changed
+
+- `confidence`, `probabilities`, and `legend` are now optional on choice and score answers, since some models leave them out. When they are sent, they are still checked.
+- The model registry is keyed by `type:provider:modelName`, so one provider can list a text and a decision model under the same name. A `modelData` entry with no `type` updates the first model with its provider and name.
+
+### Fixed
+
+- when a registered provider throws or returns no answers, or when the state cannot be serialized, `decide()` returns a failure instead of rejecting.
+
 ## smoltalk 0.20.2 (2026-10-30)
 
 - Messages can contain arbitrary metadata.

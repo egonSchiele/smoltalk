@@ -1,5 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { decide, type DecisionQuestion } from "./decide.js";
+import type { ModelDataBlob } from "./modelData.js";
+
+// Model data that gives one decision model a question cap, for the tests
+// that check decide() refuses too many questions before sending a request.
+function questionCap(provider: string, modelName: string, maxQuestions: number): ModelDataBlob {
+  return {
+    schemaVersion: 1,
+    generatedAt: "2026-11-09T00:00:00Z",
+    models: [{ type: "decision", provider, modelName, maxQuestions }],
+    hostedTools: [],
+  };
+}
 
 const questions: Record<string, DecisionQuestion> = {
   department: {
@@ -247,6 +259,7 @@ describe("decide", () => {
       model: "jev-1.13",
       provider: "openrouter",
       apiKey: { openRouter: "or-key" },
+      modelData: questionCap("openrouter", "jev-1.13", 64),
     });
     expect(r.success).toBe(false);
     if (r.success) return;
@@ -267,8 +280,12 @@ describe("decide", () => {
     for (let i = 0; i < 65; i++) {
       many[`q${i}`] = { type: "noul", instructions: `Question ${i}?` };
     }
-    // jev-latest has no question limit; jev-1.13 still carries one.
-    const r = await decide("hello", many, { ...config, model: "jev-1.13" });
+    // No Jev model has a question limit today, so the test sets one.
+    const r = await decide("hello", many, {
+      ...config,
+      model: "jev-1.13",
+      modelData: questionCap("typesafe", "jev-1.13", 64),
+    });
     expect(r.success).toBe(false);
     if (r.success) return;
     expect(r.error).toMatch(/at most 64/);
