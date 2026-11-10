@@ -58,9 +58,15 @@ the result. Once it answers instead, a second request sends the same
 conversation with no tools, and asks for that answer in the schema. Set
 `responseFormatOptions.separateFromTools` to `false` to send one request and
 leave the schema unenforced; a streamed call is always one request. A model told not to think
-(below) is held to the schema from its first token. A schema's `anyOf`, which
-is what zod writes for a union, is rewritten as `oneOf` or `enum` on the way
-to node-llama-cpp's grammar builder, which does not read `anyOf`.
+(below) is held to the schema from its first token.
+
+node-llama-cpp reads a narrower JSON Schema than zod writes, so the reply
+schema and every tool's parameters are rewritten on the way to it. A union
+(`anyOf`, which zod writes for every optional parameter) becomes `oneOf`, or
+`enum` for a union of string literals. A schema for any value (`{}`, which
+zod writes for `z.any()`) becomes a `oneOf` of every JSON type. Without the
+rewrite, node-llama-cpp makes the model write `null` for those parts and then
+rejects the tool call.
 
 `thinking` and `reasoningEffort` work here the way they do on the hosted
 providers:

@@ -671,7 +671,9 @@ export class LlamaCPP extends BaseClient {
       {};
 
     for (const tool of tools) {
-      const jsonSchema = tool.schema.toJSONSchema();
+      // In node-llama-cpp's dialect: as zod writes it, any tool with an
+      // optional parameter fails node-llama-cpp's check of its arguments.
+      const jsonSchema = grammarSchema(tool.schema.toJSONSchema());
       functions[tool.name] = {
         description: tool.description,
         params: jsonSchema as any,
