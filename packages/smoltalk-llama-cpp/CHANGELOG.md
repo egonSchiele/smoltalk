@@ -1,3 +1,6 @@
+## version 0.9.2 (11/10/2026)
+Make tool calls work with optional and any-typed parameters.
+
 ## version 0.9.1 (11/10/2026)
 
 - Tool calls work for tools with an optional parameter or a parameter of any type. A tool's parameters used to go to node-llama-cpp exactly as zod writes them, with `anyOf` for every optional parameter and `{}` for `any`. node-llama-cpp reads neither: its grammar made the model write `null` for those parameters, and its check of the call's arguments then threw `Unknown immutable type undefined`, so the call failed. Tool parameters now go through the same rewrite as a typed reply's schema (`grammarSchema`), which also gained a rule for `{}`: it becomes a `oneOf` of every JSON type.
