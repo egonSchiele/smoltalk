@@ -6,6 +6,7 @@ import type {
   OpenRouterProviderPreferences,
 } from "../types.js";
 import { webSearchResult } from "../util/hostedTools.js";
+import type { ReasoningPart } from "../util/reasoning.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
 
 const OPENROUTER_PROVIDER_FIELDS: Record<
@@ -80,8 +81,11 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
     return nonEmptyString(body?.provider);
   }
 
-  protected readReasoning(part: any): string | undefined {
-    return nonEmptyString(part?.reasoning);
+  protected readReasoning(part: any): ReasoningPart | undefined {
+    const text = nonEmptyString(part?.reasoning) ?? "";
+    const details = Array.isArray(part?.reasoning_details) ? part.reasoning_details : undefined;
+    if (text === "" && (details === undefined || details.length === 0)) return undefined;
+    return { text, field: "reasoning", details };
   }
 
   /**

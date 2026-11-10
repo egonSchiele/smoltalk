@@ -417,3 +417,67 @@ describe("SmolAnthropic.calculateUsageAndCost", () => {
     expect(result.usage.totalTokens).toBe(150);
   });
 });
+
+describe("thinking blocks and their provider", () => {
+  const anthropic = { provider: "anthropic", model: "claude-opus-5-5", replayRecords: true };
+  const thinkingIn = (converted: any) =>
+    Array.isArray(converted.content)
+      ? converted.content.filter((block: any) => block.type === "thinking")
+      : [];
+
+  it("a Google thinking block is not sent to Anthropic", () => {
+    const message = assistantMessage("x", {
+      thinkingBlocks: [{ text: "g", signature: "s", provider: "google" }],
+    });
+    expect(thinkingIn(message.toAnthropicMessage(anthropic))).toEqual([]);
+  });
+
+  it("an untagged thinking block is still sent", () => {
+    const message = assistantMessage("x", { thinkingBlocks: [{ text: "old", signature: "s" }] });
+    expect(thinkingIn(message.toAnthropicMessage(anthropic))).toHaveLength(1);
+    expect(thinkingIn(message.toAnthropicMessage({ ...anthropic, replayRecords: false }))).toHaveLength(1);
+  });
+
+  it("the Anthropic client tags its thinking blocks", async () => {
+    const client = new SmolAnthropic({
+      model: "claude-sonnet-4-6",
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    } as any);
+    (client as any).client = {
+      messages: {
+        create: async () => ({
+          content: [
+            { type: "thinking", thinking: "t", signature: "sig" },
+            { type: "text", text: "x" },
+          ],
+          usage: { input_tokens: 1, output_tokens: 1 },
+        }),
+      },
+    };
+    const res = await (client as any)._textSync({
+      model: "claude-sonnet-4-6",
+      messages: [userMessage("hi")],
+    });
+    expect(res.value.thinkingBlocks).toEqual([{ text: "t", signature: "sig", provider: "anthropic" }]);
+  });
+
+  it("a provider registered under another name tags blocks with that name", async () => {
+    const client = new SmolAnthropic({
+      model: "claude-sonnet-4-6",
+      provider: "anthropic-vertex",
+      apiKey: { anthropic: "test-key" },
+      messages: [],
+    } as any);
+    (client as any).client = {
+      messages: {
+        create: async () => ({
+          content: [{ type: "thinking", thinking: "t", signature: "sig" }],
+          usage: { input_tokens: 1, output_tokens: 1 },
+        }),
+      },
+    };
+    const res = await (client as any)._textSync({ model: "claude-sonnet-4-6", messages: [userMessage("hi")] });
+    expect(res.value.thinkingBlocks[0].provider).toBe("anthropic-vertex");
+  });
+});

@@ -2,6 +2,7 @@ import { SmolOpenAi } from "./openai.js";
 import type { ClientAttachmentCapabilities } from "./baseClient.js";
 import type { SmolConfig } from "../types.js";
 import { resolveApiKey, resolveBaseUrl } from "../util/provider.js";
+import type { ReasoningPart } from "../util/reasoning.js";
 
 /**
  * Generic OpenAI-compatible client. Use when pointing smoltalk at any
@@ -21,6 +22,19 @@ export class SmolOpenAiCompat extends SmolOpenAi {
   // OpenAI's input_audio handling — declare no audio support.
   protected override attachmentCapabilities(): ClientAttachmentCapabilities {
     return { inputModalities: ["image", "pdf"], audioFormats: [] };
+  }
+
+  /** Compatible servers such as vLLM, DeepSeek and Kimi return reasoning in
+   *  `reasoning_content`; some return it in `reasoning`. It goes back in
+   *  the field it came in. */
+  protected override readReasoning(part: any): ReasoningPart | undefined {
+    if (typeof part?.reasoning_content === "string" && part.reasoning_content !== "") {
+      return { text: part.reasoning_content, field: "reasoning_content" };
+    }
+    if (typeof part?.reasoning === "string" && part.reasoning !== "") {
+      return { text: part.reasoning, field: "reasoning" };
+    }
+    return undefined;
   }
 
   protected resolveClientOptions(config: SmolConfig): {

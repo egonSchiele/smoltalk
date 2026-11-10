@@ -155,6 +155,11 @@ export type SmolConfig = {
   /** Provider-agnostic reasoning effort level. */
   reasoningEffort?: "low" | "medium" | "high";
 
+  /** Send each assistant message's reasoning record back to the model that
+   *  produced it. Defaults to true. False never removes Anthropic or Google
+   *  thinking blocks, which those providers require during tool use. */
+  replayReasoning?: boolean;
+
   /** Ask for the probability of each generated token. `top` is how many
    *  alternatives to return per token, 0 or absent for none. Honoured by
    *  OpenAI (both APIs); other providers ignore it. */
@@ -256,10 +261,12 @@ export type PromptResult = {
   /** The company that ran the model, when the call went through a router
    *  such as OpenRouter, e.g. "OpenInference". Absent otherwise. */
   servedBy?: string;
-  /** Reasoning text the provider returned with no signature. It cannot be
-   *  sent back to a model, so smoltalk never puts it on a message; compare
-   *  `thinkingBlocks`, which can be. Absent when the provider sent none. */
+  /** The reasoning text, for logs. `reasoningRecord` is the form that can be
+   *  sent back. Absent when the provider sent none. */
   reasoning?: string;
+  /** The reasoning in the form that goes back to the model that produced
+   *  it. Absent when the provider sent none. */
+  reasoningRecord?: ReasoningRecord;
 };
 
 export function promptResult({
@@ -276,6 +283,7 @@ export function promptResult({
   rawData,
   servedBy,
   reasoning,
+  reasoningRecord,
 }: Partial<PromptResult>): PromptResult {
   return {
     output: output || null,
@@ -291,6 +299,7 @@ export function promptResult({
     rawData,
     ...(servedBy !== undefined && { servedBy }),
     ...(reasoning !== undefined && { reasoning }),
+    ...(reasoningRecord !== undefined && { reasoningRecord }),
   };
 }
 
@@ -327,12 +336,56 @@ export type ModelLike = ModelName | Model;
 export type ThinkingBlock = {
   text: string;
   signature: string;
+  /** The provider that made the block, "anthropic" or "google". Absent on a
+   *  block saved before the field existed; such a block is always sent. */
+  provider?: string;
 };
 
 export const ThinkingBlockSchema = z.object({
   text: z.string(),
   signature: z.string(),
+  provider: z.string().optional(),
 });
+
+/** How a reasoning record goes back: in the chat field it arrived in, or as
+ *  Responses input items. */
+export type ReasoningFormat = "reasoning" | "reasoning_content" | "responsesItems";
+
+/** One Responses `reasoning` item, and the `call_id` of the function call
+ *  that followed it, or "message" when the reply's text followed it. */
+export type ResponsesReasoningEntry = {
+  item: unknown;
+  followedBy: string;
+};
+
+/** Reasoning a model returned, kept so it can go back to the same model. */
+export type ReasoningRecord = {
+  /** The smoltalk provider that produced it, as `getClient` names it:
+   *  "openrouter", "openai-compat", ... */
+  provider: string;
+  /** The model the request named. */
+  model: string;
+  /** The reasoning text, when the text is what goes back. Empty when
+   *  `details` or `responsesItems` hold the reasoning, so it is stored once. */
+  text: string;
+  format: ReasoningFormat;
+  /** OpenRouter's `reasoning_details`, one merged entry per `index`, sent
+   *  back unchanged. */
+  details?: unknown[];
+  /** The Responses `reasoning` items, each with the item that followed it. */
+  responsesItems?: ResponsesReasoningEntry[];
+};
+
+export const ReasoningRecordSchema: z.ZodType<ReasoningRecord> = z.object({
+  provider: z.string(),
+  model: z.string(),
+  text: z.string(),
+  format: z.enum(["reasoning", "reasoning_content", "responsesItems"]),
+  details: z.array(z.unknown()).optional(),
+  responsesItems: z
+    .array(z.object({ item: z.unknown(), followedBy: z.string() }))
+    .optional(),
+}) as z.ZodType<ReasoningRecord>;
 
 /** A token the model could have produced at a position, and the log of
  *  its probability. */

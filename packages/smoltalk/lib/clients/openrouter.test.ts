@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { SmolOpenRouter } from "./openrouter.js";
-import { userMessage } from "../classes/message/index.js";
+import { assistantMessage, userMessage } from "../classes/message/index.js";
+import { ToolCall } from "../classes/ToolCall.js";
 import type { SmolConfig } from "../types.js";
 
 const baseModel = "z-ai/glm-5.2";
@@ -421,5 +422,161 @@ describe("streamed web_search results", () => {
       "https://example.com/a",
       "https://example.com/b",
     ]);
+  });
+});
+
+describe("SmolOpenRouter replay target", () => {
+  const record = { provider: "openrouter", model: baseModel, text: "think", format: "reasoning" as const };
+  const history = () => [
+    userMessage("hi"),
+    assistantMessage(null, { reasoning: record, toolCalls: [new ToolCall("c1", "ls", {})] }),
+  ];
+  function build(clientProvider: string | undefined, extra: Partial<SmolConfig> = {}) {
+    const c = new SmolOpenRouter({
+      model: baseModel,
+      provider: clientProvider,
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    return (c as any).buildRequest({ model: baseModel, messages: history(), ...extra });
+  }
+
+  it("sends a record back to the provider and model that produced it", () => {
+    expect(build("openrouter").messages[1].reasoning).toBe("think");
+  });
+
+  it("sends no record when replayReasoning is false", () => {
+    expect(build("openrouter", { replayReasoning: false }).messages[1].reasoning).toBeUndefined();
+  });
+
+  it("sends no record from a client that does not know its provider", () => {
+    expect(build(undefined).messages[1].reasoning).toBeUndefined();
+  });
+});
+
+describe("SmolOpenRouter reasoning records", () => {
+  function client(): SmolOpenRouter {
+    return new SmolOpenRouter({
+      model: baseModel,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+  }
+  const config = { model: baseModel, provider: "openrouter", messages: [] } as SmolConfig;
+
+  async function syncWith(message: any) {
+    const c = client();
+    (c as any).client.chat.completions.create = () => ({
+      withResponse: async () => ({
+        data: { choices: [{ message, finish_reason: "stop" }], usage: { prompt_tokens: 1, completion_tokens: 1 } },
+        response: undefined,
+      }),
+    });
+    const result = await c._textSync(config);
+    if (!result.success) throw new Error(result.error);
+    return result.value;
+  }
+
+  async function streamWith(deltas: any[]) {
+    const c = client();
+    (c as any).client.chat.completions.create = async () => {
+      async function* gen() {
+        for (const delta of deltas) yield { choices: [{ delta }] };
+        yield { choices: [{ delta: {}, finish_reason: "stop" }] };
+      }
+      return gen();
+    };
+    let done: any;
+    for await (const chunk of c._textStream(config)) {
+      if (chunk.type === "done") done = chunk;
+    }
+    return done.result;
+  }
+
+  const entry = { type: "reasoning.text", text: "think", signature: "sig", index: 0 };
+
+  it("reads reasoning and reasoning_details into one record", async () => {
+    const result = await syncWith({ content: "", reasoning: "think", reasoning_details: [entry] });
+    expect(result.reasoning).toBe("think");
+    expect(result.reasoningRecord).toEqual({
+      provider: "openrouter",
+      model: baseModel,
+      text: "",
+      format: "reasoning",
+      details: [entry],
+    });
+  });
+
+  it("keeps the text in the record when no reasoning_details came", async () => {
+    const result = await syncWith({ content: "", reasoning: "think" });
+    expect(result.reasoningRecord).toEqual({
+      provider: "openrouter",
+      model: baseModel,
+      text: "think",
+      format: "reasoning",
+    });
+  });
+
+  it("a streamed reply builds the same record as a whole one", async () => {
+    const whole = await syncWith({ content: "", reasoning: "think", reasoning_details: [entry] });
+    const streamed = await streamWith([
+      { reasoning: "th", reasoning_details: [{ type: "reasoning.text", text: "th", index: 0 }] },
+      { reasoning: "ink", reasoning_details: [{ type: "reasoning.text", text: "ink", index: 0 }] },
+      { reasoning_details: [{ type: "reasoning.text", signature: "sig", index: 0 }] },
+    ]);
+    expect(streamed.reasoningRecord.details).toEqual([entry]);
+    expect(streamed.reasoningRecord).toEqual(whole.reasoningRecord);
+    expect(streamed.reasoning).toBe("think");
+  });
+
+  it("a reply with no reasoning adds no record and no fields", async () => {
+    const result = await syncWith({ content: "Hi" });
+    expect("reasoningRecord" in result).toBe(false);
+    const next = (client() as any).buildRequest({
+      model: baseModel,
+      messages: [userMessage("hi"), assistantMessage("Hi", { reasoning: result.reasoningRecord })],
+    });
+    expect(next.messages[1].reasoning).toBeUndefined();
+    expect(next.messages[1].reasoning_details).toBeUndefined();
+  });
+
+  function clientFor(model: string): SmolOpenRouter {
+    return new SmolOpenRouter({ model, provider: "openrouter", apiKey: { openRouter: "k" }, messages: [] });
+  }
+
+  it("reasoning from another model is not sent", () => {
+    const record = { provider: "openrouter", model: "model-a", text: "a", format: "reasoning" as const };
+    const request = (clientFor("model-b") as any).buildRequest({
+      model: "model-b",
+      messages: [userMessage("hi"), assistantMessage("x", { reasoning: record })],
+    });
+    expect(request.messages[1].reasoning).toBeUndefined();
+  });
+
+  it("the target names the model the request goes to, not a model named only in the call", () => {
+    const fromB = { provider: "openrouter", model: "model-b", text: "b", format: "reasoning" as const };
+    const request = (clientFor("model-a") as any).buildRequest({
+      model: "model-b",
+      messages: [userMessage("hi"), assistantMessage("x", { reasoning: fromB })],
+    });
+    expect(request.model).toBe("model-a");
+    expect(request.messages[1].reasoning).toBeUndefined();
+  });
+
+  it("reasoning from the same model is sent again after a switch back", () => {
+    const fromA = { provider: "openrouter", model: "model-a", text: "a", format: "reasoning" as const };
+    const fromB = { provider: "openrouter", model: "model-b", text: "b", format: "reasoning" as const };
+    const request = (clientFor("model-a") as any).buildRequest({
+      model: "model-a",
+      messages: [
+        userMessage("hi"),
+        assistantMessage("one", { reasoning: fromA }),
+        userMessage("again"),
+        assistantMessage("two", { reasoning: fromB }),
+      ],
+    });
+    expect(request.messages[1].reasoning).toBe("a");
+    expect(request.messages[3].reasoning).toBeUndefined();
   });
 });

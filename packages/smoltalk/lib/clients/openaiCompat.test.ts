@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { SmolOpenAiCompat } from "./openaiCompat.js";
+import { assistantMessage, userMessage } from "../classes/message/index.js";
 
 const base = {
   model: "some/model",
@@ -104,5 +105,39 @@ describe("SmolOpenAiCompat", () => {
       openRouter: { provider: { order: ["z-ai"] } },
     });
     expect(req.provider).toBeUndefined();
+  });
+});
+
+describe("SmolOpenAiCompat reasoning", () => {
+  it("reads reasoning_content and sends it back in reasoning_content", async () => {
+    const c = new SmolOpenAiCompat({
+      ...base,
+      apiKey: { openAiCompat: "k" },
+      baseUrl: { openAiCompat: "https://host.test/v1" },
+    });
+    (c as any).client.chat.completions.create = () => ({
+      withResponse: async () => ({
+        data: {
+          choices: [{ message: { content: "", reasoning_content: "think" }, finish_reason: "stop" }],
+          usage: { prompt_tokens: 1, completion_tokens: 1 },
+        },
+        response: undefined,
+      }),
+    });
+    const result = await c._textSync({ ...base });
+    if (!result.success) throw new Error(result.error);
+    expect(result.value.reasoning).toBe("think");
+    expect(result.value.reasoningRecord).toEqual({
+      provider: "openai-compat",
+      model: "some/model",
+      text: "think",
+      format: "reasoning_content",
+    });
+    const request = (c as any).buildRequest({
+      ...base,
+      messages: [userMessage("hi"), assistantMessage("x", { reasoning: result.value.reasoningRecord })],
+    });
+    expect(request.messages[1].reasoning_content).toBe("think");
+    expect(request.messages[1].reasoning).toBeUndefined();
   });
 });

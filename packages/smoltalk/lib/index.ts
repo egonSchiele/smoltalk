@@ -1,5 +1,6 @@
 export * from "./client.js";
 export * from "./types.js";
+export type { ReplayTarget } from "./util/reasoning.js";
 export * from "./models.js";
 export * from "./modelData.js";
 export * from "./modelRefresh.js";

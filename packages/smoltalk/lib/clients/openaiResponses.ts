@@ -23,7 +23,7 @@ import {
   type OpenAILogprob,
 } from "./logprobs.js";
 import { sanitizeAttributes } from "../util/util.js";
-import { ModelName } from "../models.js";
+import { isTextModel, ModelName, resolveModelForProvider } from "../models.js";
 import { CostEstimate, TokenUsage, HostedToolResult, WebSearchSource, WebSearchCitation } from "../types.js";
 import { WEB_SEARCH, webSearchResult, applyHostedToolCost } from "../util/hostedTools.js";
 import type {
@@ -31,6 +31,7 @@ import type {
   ResponseStreamEvent,
 } from "openai/resources/responses/responses.js";
 import { Model } from "../model.js";
+import { responsesReasoningEntries, responsesReasoningText } from "../util/reasoning.js";
 import {
   SmolContentPolicyError,
   SmolContextWindowExceededError,
@@ -114,6 +115,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
   } {
     const systemParts: string[] = [];
     const input: ResponseInputItem[] = [];
+    const target = this.replayTarget(config);
 
     config.messages.forEach((msg) => {
       if (msg.role === "system" || msg.role === "developer") {
@@ -123,7 +125,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       }
 
       // Use the message's toOpenAIResponseInputItem method
-      const items = msg.toOpenAIResponseInputItem();
+      const items = msg.toOpenAIResponseInputItem(target);
       if (Array.isArray(items)) {
         input.push(...items);
       } else {
@@ -208,10 +210,54 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
       }
     }
 
+    if (this.asksForEncryptedReasoning(config)) {
+      // smoltalk resends the whole conversation and never sets
+      // previous_response_id, so OpenAI keeps no reasoning between calls.
+      // The encrypted items come back on the reply and go back with it.
+      request.include = [...(request.include ?? []), "reasoning.encrypted_content"];
+    }
+
     Object.assign(request, sanitizeAttributes(config.rawAttributes));
 
     return request;
   }
+
+  /** True for a model the registry marks as reasoning, when records are
+   *  being sent back. Any other model gets the request it got before. */
+  private asksForEncryptedReasoning(config: SmolConfig): boolean {
+    const target = this.replayTarget(config);
+    if (target === undefined || !target.replayRecords) {
+      return false;
+    }
+    const entry = resolveModelForProvider(
+      target.provider,
+      target.model,
+      config.modelData ?? this.config.modelData,
+    );
+    return entry !== undefined && isTextModel(entry) && entry.reasoning !== undefined;
+  }
+
+  /** Put a reply's reasoning items on its result: the summary text for
+   *  logs, and the record that goes back to this model. */
+  private addReasoning(result: PromptResult, output: any[], config: SmolConfig): void {
+    const text = responsesReasoningText(output);
+    if (text !== "") {
+      result.reasoning = text;
+    }
+    const entries = responsesReasoningEntries(output);
+    const target = this.replayTarget(config);
+    if (entries.length === 0 || target === undefined) {
+      return;
+    }
+    result.reasoningRecord = {
+      provider: target.provider,
+      model: target.model,
+      text: "",
+      format: "responsesItems",
+      responsesItems: entries,
+    };
+  }
+
 
   private calculateUsageAndCost(usageData: any): {
     usage?: TokenUsage;
@@ -327,6 +373,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     if (logprobs !== undefined) {
       result.logprobs = logprobs;
     }
+    this.addReasoning(result, response.output, config);
     return success(result);
   }
 
@@ -358,6 +405,9 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     let cost: CostEstimate | undefined;
     let finalResponse: any;
     const logprobEntries: OpenAILogprob[] = [];
+    // Every finished output item, in order, so a reasoning item can be
+    // matched to the item that followed it.
+    const outputItems: any[] = [];
 
     for await (const event of stream as AsyncIterable<ResponseStreamEvent>) {
       if (
@@ -408,6 +458,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
         }
 
         case "response.output_item.done": {
+          outputItems.push(event.item);
           if (event.item.type === "function_call") {
             const entry = functionCalls.get(event.item.id!);
             if (entry) {
@@ -466,6 +517,7 @@ export class SmolOpenAiResponses extends BaseClient implements SmolClient {
     if (logprobs !== undefined) {
       result.logprobs = logprobs;
     }
+    this.addReasoning(result, outputItems, config);
 
     yield { type: "done", result };
   }

@@ -13,6 +13,8 @@ import {
   CostEstimate,
   TextPart,
   TokenLogprob,
+  ThinkingBlock,
+  ReasoningRecord,
   TokenUsage,
   UserContentInput,
   ImagePart,
@@ -82,7 +84,8 @@ export function assistantMessage(
     audio?: any | null;
     refusal?: string | null;
     toolCalls?: Array<any>;
-    thinkingBlocks?: Array<{ text: string; signature: string }>;
+    thinkingBlocks?: ThinkingBlock[];
+    reasoning?: ReasoningRecord;
     logprobs?: TokenLogprob[];
     rawData?: any;
     metadata?: MessageMetadata;

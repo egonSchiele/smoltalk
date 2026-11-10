@@ -29,6 +29,7 @@ import { modelAcceptsTemperature, modelSupportsInputModality } from "../models.j
 import { resolveProvider } from "../util/provider.js";
 import { isUnconstrainedSchema } from "../util/jsonSchema.js";
 import { z } from "zod";
+import type { ReplayTarget } from "../util/reasoning.js";
 
 const DEFAULT_NUM_RETRIES = 2;
 
@@ -66,6 +67,26 @@ export class BaseClient implements SmolClient {
       this.statelogClient = getStatelogClient(this.config.statelog as any);
     }
   }
+  /** The model a request is being built for, which decides what reasoning
+   *  goes back. It is the provider and model this client was built for,
+   *  which are what the request is sent to, even when a call's config
+   *  names another model. Undefined when the provider is not known, as for
+   *  a client built directly without one: then nothing is sent back and no
+   *  record is made. The provider is the name `getClient` resolved, so a
+   *  provider added with `registerProvider` is named as registered. */
+  protected replayTarget(config: SmolConfig): ReplayTarget | undefined {
+    const provider = this.config.provider;
+    if (provider === undefined) {
+      return undefined;
+    }
+    return {
+      provider,
+      model: this.config.model,
+      replayRecords: (config.replayReasoning ?? this.config.replayReasoning) !== false,
+    };
+  }
+
+
 
   /**
    * The temperature to send. A model the registry marks
