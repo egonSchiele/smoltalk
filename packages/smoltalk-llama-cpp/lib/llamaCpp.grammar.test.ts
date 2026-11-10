@@ -388,4 +388,25 @@ describe("the grammar for a typed reply", () => {
     expect(h.record.generateOptions[0].grammar).toBeUndefined();
     expect(Object.keys(h.record.generateOptions[0].functions)).toEqual(["t"]);
   });
+
+  it("gives node-llama-cpp each tool's parameters in its own dialect", async () => {
+    // What zod writes for `{ path: string | null, headers: Record<string, any> }`.
+    const zodStyleTool = {
+      name: "fetch",
+      description: "fetch a page",
+      schema: {
+        toJSONSchema: () => ({
+          type: "object",
+          properties: {
+            path: { anyOf: [{ type: "string" }, { type: "null" }] },
+            headers: { type: "object", additionalProperties: {} },
+          },
+        }),
+      },
+    };
+    await call({ tools: [zodStyleTool], responseFormatOptions: { separateFromTools: false } });
+    const params = h.record.generateOptions[0].functions.fetch.params;
+    expect(params.properties.path).toEqual({ oneOf: [{ type: "string" }, { type: "null" }] });
+    expect(params.properties.headers.additionalProperties.oneOf).toHaveLength(3);
+  });
 });

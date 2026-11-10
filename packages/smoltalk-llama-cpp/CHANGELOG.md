@@ -1,3 +1,8 @@
+## version 0.9.1 (11/10/2026)
+
+- Tool calls work for tools with an optional parameter or a parameter of any type. A tool's parameters used to go to node-llama-cpp exactly as zod writes them, with `anyOf` for every optional parameter and `{}` for `any`. node-llama-cpp reads neither: its grammar made the model write `null` for those parameters, and its check of the call's arguments then threw `Unknown immutable type undefined`, so the call failed. Tool parameters now go through the same rewrite as a typed reply's schema (`grammarSchema`), which also gained a rule for `{}`: it becomes a `oneOf` of every JSON type.
+- `grammarSchema` rewrites only the parts of a schema that are schemas, so `properties: {}` and `default: {}` are left as they are.
+
 ## version 0.9.0 (11/09/2026)
 
 - New `decide` export: smoltalk's `decide()` with `provider: "llama-cpp"` runs a local `.gguf` chat model in process through node-llama-cpp's decision context, with no wiring. The state and questions must fit in 4,096 tokens.
