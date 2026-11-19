@@ -100,7 +100,7 @@ describe("decision model providers", () => {
     expect(getModel("cloudflare/clef-flash")).toMatchObject({
       type: "decision",
       provider: "openrouter",
-      inputTokenCost: 0.038,
+      inputTokenCost: 0.019,
     });
     expect(getModel("liquid/d1")?.provider).toBe("openrouter");
   });
