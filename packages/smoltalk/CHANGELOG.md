@@ -1,5 +1,9 @@
 # Changelog
 
+## smoltalk 0.21.2 (2026-11-19)
+
+Updated models.
+
 ## smoltalk 0.21.1 (2026-11-10)
 
 ### Added
