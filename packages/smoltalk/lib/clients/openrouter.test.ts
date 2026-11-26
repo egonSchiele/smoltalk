@@ -1,7 +1,15 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import { SmolOpenRouter } from "./openrouter.js";
-import { assistantMessage, userMessage } from "../classes/message/index.js";
+import {
+  assistantMessage,
+  developerMessage,
+  imagePart,
+  systemMessage,
+  textPart,
+  toolMessage,
+  userMessage,
+} from "../classes/message/index.js";
 import { ToolCall } from "../classes/ToolCall.js";
 import type { SmolConfig } from "../types.js";
 
@@ -578,5 +586,233 @@ describe("SmolOpenRouter reasoning records", () => {
     });
     expect(request.messages[1].reasoning).toBe("a");
     expect(request.messages[3].reasoning).toBeUndefined();
+  });
+});
+
+describe("SmolOpenRouter prompt caching for Anthropic models", () => {
+  const anthropicModel = "anthropic/claude-haiku-5.5";
+  const cc = { type: "ephemeral" };
+  const lookupTool = {
+    name: "lookup",
+    description: "Look something up",
+    schema: z.object({ query: z.string() }),
+  };
+  const readTool = {
+    name: "read",
+    description: "Read a file",
+    schema: z.object({ path: z.string() }),
+  };
+
+  function build(model: string, config: Partial<SmolConfig>) {
+    const c = new SmolOpenRouter({
+      model,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    return (c as any).buildRequest({ model, messages: [], ...config });
+  }
+
+  function countBreakpoints(request: unknown): number {
+    return (JSON.stringify(request).match(/"cache_control"/g) ?? []).length;
+  }
+
+  it("marks the last tool, the system prompt and the last user message", () => {
+    const request = build(anthropicModel, {
+      messages: [systemMessage("You are terse."), userMessage("hi")],
+      tools: [lookupTool, readTool],
+    });
+    expect(request.tools[0].cache_control).toBeUndefined();
+    expect(request.tools[1].cache_control).toEqual(cc);
+    expect(request.messages[0]).toEqual({
+      role: "system",
+      content: [{ type: "text", text: "You are terse.", cache_control: cc }],
+    });
+    expect(request.messages[1]).toEqual({
+      role: "user",
+      content: [{ type: "text", text: "hi", cache_control: cc }],
+    });
+    expect(countBreakpoints(request)).toBe(3);
+  });
+
+  it("in a tool loop, marks the latest tool result rather than the first user message", () => {
+    const request = build(anthropicModel, {
+      messages: [
+        systemMessage("sys"),
+        userMessage("find it"),
+        assistantMessage(null, { toolCalls: [new ToolCall("c1", "lookup", { query: "x" })] }),
+        toolMessage("result one", { tool_call_id: "c1", name: "lookup" }),
+        assistantMessage(null, { toolCalls: [new ToolCall("c2", "lookup", { query: "y" })] }),
+        toolMessage("result two", { tool_call_id: "c2", name: "lookup" }),
+      ],
+      tools: [lookupTool],
+    });
+    expect(request.messages[1].content).toBe("find it");
+    expect(request.messages[3].content).toBe("result one");
+    expect(request.messages[5]).toEqual({
+      role: "tool",
+      tool_call_id: "c2",
+      content: [{ type: "text", text: "result two", cache_control: cc }],
+    });
+    expect(countBreakpoints(request)).toBe(3);
+  });
+
+  it("marks only the last of several system and developer messages", () => {
+    const request = build(anthropicModel, {
+      messages: [systemMessage("one"), developerMessage("two"), userMessage("hi")],
+    });
+    expect(request.messages[0].content).toBe("one");
+    expect(request.messages[1].content).toEqual([
+      { type: "text", text: "two", cache_control: cc },
+    ]);
+  });
+
+  it("marks the last text part of a user message that has parts", () => {
+    const request = build(anthropicModel, {
+      messages: [
+        userMessage([
+          textPart("Describe this:"),
+          imagePart({ kind: "url", url: "https://example.com/a.png" }),
+        ]),
+      ],
+    });
+    expect(request.messages[0].content).toEqual([
+      { type: "text", text: "Describe this:", cache_control: cc },
+      { type: "image_url", image_url: { url: "https://example.com/a.png" } },
+    ]);
+  });
+
+  it("puts no breakpoint on an empty text block", () => {
+    const request = build(anthropicModel, {
+      messages: [systemMessage(""), userMessage("hi")],
+    });
+    expect(request.messages[0].content).toBe("");
+    expect(countBreakpoints(request)).toBe(1);
+  });
+
+  it("marks the last function tool, not the web_search server tool after it", () => {
+    const request = build(anthropicModel, {
+      messages: [userMessage("hi")],
+      tools: [lookupTool],
+      hostedTools: ["web_search"],
+    });
+    expect(request.tools[0].cache_control).toEqual(cc);
+    expect(request.tools[1]).toEqual({
+      type: "openrouter:web_search",
+      parameters: { max_results: 5 },
+    });
+  });
+
+  it("leaves requests to other models unchanged", () => {
+    for (const model of ["openai/gpt-5.5", "google/gemini-3-pro", baseModel]) {
+      const request = build(model, {
+        messages: [
+          systemMessage("sys"),
+          userMessage("hi"),
+          assistantMessage(null, { toolCalls: [new ToolCall("c1", "lookup", { query: "x" })] }),
+          toolMessage("result", { tool_call_id: "c1", name: "lookup" }),
+        ],
+        tools: [lookupTool],
+      });
+      expect(countBreakpoints(request)).toBe(0);
+      expect(request.messages[0].content).toBe("sys");
+      expect(request.messages[1].content).toBe("hi");
+      expect(request.messages[3].content).toBe("result");
+    }
+  });
+
+  it("sends the breakpoints on the wire", async () => {
+    const c = new SmolOpenRouter({
+      model: anthropicModel,
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+    let sent: any;
+    (c as any).client.chat.completions.create = (body: any) => {
+      sent = body;
+      return {
+        withResponse: async () => ({
+          data: {
+            choices: [{ message: { content: "ok" }, finish_reason: "stop" }],
+            usage: { prompt_tokens: 1, completion_tokens: 1 },
+          },
+          response: undefined,
+        }),
+      };
+    };
+    const result = await c._textSync({
+      model: anthropicModel,
+      provider: "openrouter",
+      messages: [systemMessage("sys"), userMessage("hi")],
+    } as SmolConfig);
+    expect(result.success).toBe(true);
+    expect(sent.messages[0].content[0].cache_control).toEqual(cc);
+    expect(sent.messages[1].content[0].cache_control).toEqual(cc);
+  });
+});
+
+describe("SmolOpenRouter cache token accounting", () => {
+  function client(): SmolOpenRouter {
+    return new SmolOpenRouter({
+      model: "anthropic/claude-haiku-5.5",
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+    });
+  }
+
+  it("splits prompt tokens into uncached, cache reads and cache writes", () => {
+    const { usage, cost } = (client() as any).calculateUsageAndCost({
+      prompt_tokens: 1000,
+      completion_tokens: 50,
+      total_tokens: 1050,
+      prompt_tokens_details: { cached_tokens: 600, cache_write_tokens: 300 },
+      cost: 0.0042,
+    });
+    expect(usage).toEqual({
+      inputTokens: 100,
+      outputTokens: 50,
+      totalTokens: 1050,
+      cachedInputTokens: 600,
+      cacheCreationInputTokens: 300,
+    });
+    // OpenRouter's usage.cost already prices reads and writes at their rates.
+    expect(cost.totalCost).toBe(0.0042);
+  });
+
+  it("prices cache writes at the write rate when falling back to the registry", () => {
+    const c = new SmolOpenRouter({
+      model: "anthropic/claude-haiku-5.5",
+      provider: "openrouter",
+      apiKey: { openRouter: "k" },
+      messages: [],
+      modelData: {
+        schemaVersion: 1,
+        generatedAt: "2026-11-25",
+        hostedTools: [],
+        models: [
+          {
+            type: "text",
+            modelName: "anthropic/claude-haiku-5.5",
+            provider: "openrouter",
+            maxInputTokens: 200000,
+            maxOutputTokens: 8192,
+            inputTokenCost: 1,
+            outputTokenCost: 5,
+            cachedInputTokenCost: 0.1,
+            cacheCreationInputTokenCost: 1.25,
+          },
+        ],
+      } as SmolConfig["modelData"],
+    });
+    const { cost } = (c as any).calculateUsageAndCost({
+      prompt_tokens: 1_000_000,
+      completion_tokens: 0,
+      prompt_tokens_details: { cached_tokens: 0, cache_write_tokens: 1_000_000 },
+    });
+    expect(cost.cacheCreationInputCost).toBe(1.25);
+    expect(cost.inputCost).toBe(0);
+    expect(cost.totalCost).toBe(1.25);
   });
 });

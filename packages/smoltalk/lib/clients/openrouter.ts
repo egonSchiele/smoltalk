@@ -1,4 +1,5 @@
 import type OpenAI from "openai";
+import type { ChatCompletionMessageParam } from "openai/resources";
 import { SmolOpenAiCompat } from "./openaiCompat.js";
 import type {
   SmolConfig,
@@ -40,6 +41,89 @@ export function toOpenRouterProvider(
   return out;
 }
 
+const EPHEMERAL = { type: "ephemeral" } as const;
+
+function isAnthropicModel(model: string): boolean {
+  return model.startsWith("anthropic/");
+}
+
+/** The content as parts with its last non-empty text part marked, or
+ *  undefined when it has none (Anthropic refuses a breakpoint on an empty
+ *  text block). */
+function markLastTextPart(content: unknown): Record<string, unknown>[] | undefined {
+  let parts: Record<string, unknown>[];
+  if (typeof content === "string") {
+    parts = [{ type: "text", text: content }];
+  } else if (Array.isArray(content)) {
+    parts = [...content];
+  } else {
+    return undefined;
+  }
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const part = parts[i];
+    if (part?.type === "text" && typeof part.text === "string" && part.text !== "") {
+      parts[i] = { ...part, cache_control: EPHEMERAL };
+      return parts;
+    }
+  }
+  return undefined;
+}
+
+/** Mark the last message with one of these roles. A copy; the input is not
+ *  changed. */
+function markLastMessageWithRole(
+  messages: ChatCompletionMessageParam[],
+  roles: string[],
+): ChatCompletionMessageParam[] {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (!roles.includes(message.role)) continue;
+    const content = markLastTextPart(message.content);
+    if (content === undefined) return messages;
+    const marked = [...messages];
+    marked[i] = { ...message, content } as unknown as ChatCompletionMessageParam;
+    return marked;
+  }
+  return messages;
+}
+
+/**
+ * Anthropic caches only up to `cache_control` breakpoints the request marks;
+ * OpenAI and Gemini cache without them. This marks the same three places as
+ * the native client's `applyCacheBreakpoints`, in the shape OpenRouter
+ * documents (https://openrouter.ai/docs/features/prompt-caching):
+ *   1. the last function tool (`cache_control` on the `tools[]` item)
+ *   2. the last system or developer message
+ *   3. the last user or tool message, which in a tool loop is the latest
+ *      tool result (Anthropic's user turn)
+ * Messages carry it on their last non-empty text part, with string content
+ * turned into a one-part array. Three is under OpenRouter's limit of four.
+ */
+export function markAnthropicCacheBreakpoints(
+  messages: ChatCompletionMessageParam[],
+  tools: OpenAI.Chat.ChatCompletionTool[] | undefined,
+): {
+  messages: ChatCompletionMessageParam[];
+  tools: OpenAI.Chat.ChatCompletionTool[] | undefined;
+} {
+  let markedTools = tools;
+  if (tools) {
+    for (let i = tools.length - 1; i >= 0; i--) {
+      if (tools[i].type !== "function") continue;
+      markedTools = [...tools];
+      // Not in the SDK's tool type, which only knows OpenAI's fields.
+      markedTools[i] = {
+        ...tools[i],
+        cache_control: EPHEMERAL,
+      } as unknown as OpenAI.Chat.ChatCompletionTool;
+      break;
+    }
+  }
+  let markedMessages = markLastMessageWithRole(messages, ["system", "developer"]);
+  markedMessages = markLastMessageWithRole(markedMessages, ["user", "tool"]);
+  return { messages: markedMessages, tools: markedTools };
+}
+
 /**
  * OpenRouter client (https://openrouter.ai). OpenAI-compatible chat completions.
  *
@@ -56,6 +140,9 @@ export function toOpenRouterProvider(
  *   server tool, so the model decides when to search. A request with no
  *   function tools gets the `web` plugin instead (see usesSearchTool).
  *   Either way message.annotations becomes a HostedToolResult.
+ * - Prompt caching: a request to an `anthropic/` model gets `cache_control`
+ *   breakpoints (see markAnthropicCacheBreakpoints). Other models cache
+ *   without them, and their requests are left as they are.
  */
 export class SmolOpenRouter extends SmolOpenAiCompat {
   protected resolveClientOptions(config: SmolConfig): {
@@ -114,6 +201,18 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
       extras.provider = toOpenRouterProvider(config.openRouter.provider);
     }
     return extras;
+  }
+
+  protected finalizeMessagesAndTools(
+    messages: ChatCompletionMessageParam[],
+    tools: OpenAI.Chat.ChatCompletionTool[] | undefined,
+    _config: SmolConfig,
+  ): {
+    messages: ChatCompletionMessageParam[];
+    tools: OpenAI.Chat.ChatCompletionTool[] | undefined;
+  } {
+    if (!isAnthropicModel(this.getModel())) return { messages, tools };
+    return markAnthropicCacheBreakpoints(messages, tools);
   }
 
   protected hostedToolDefinitions(
