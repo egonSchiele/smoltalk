@@ -69,8 +69,10 @@ function markLastTextPart(content: unknown): Record<string, unknown>[] | undefin
   return undefined;
 }
 
-/** Mark the last message with one of these roles. A copy; the input is not
- *  changed. */
+/** Mark the last message with one of these roles that has a non-empty text
+ *  part. One with none (an empty tool result, an image-only user turn) is
+ *  passed over, because the prefix up to an earlier message is still worth
+ *  caching. A copy; the input is not changed. */
 function markLastMessageWithRole(
   messages: ChatCompletionMessageParam[],
   roles: string[],
@@ -79,7 +81,7 @@ function markLastMessageWithRole(
     const message = messages[i];
     if (!roles.includes(message.role)) continue;
     const content = markLastTextPart(message.content);
-    if (content === undefined) return messages;
+    if (content === undefined) continue;
     const marked = [...messages];
     marked[i] = { ...message, content } as unknown as ChatCompletionMessageParam;
     return marked;
@@ -141,8 +143,9 @@ export function markAnthropicCacheBreakpoints(
  *   function tools gets the `web` plugin instead (see usesSearchTool).
  *   Either way message.annotations becomes a HostedToolResult.
  * - Prompt caching: a request to an `anthropic/` model gets `cache_control`
- *   breakpoints (see markAnthropicCacheBreakpoints). Other models cache
- *   without them, and their requests are left as they are.
+ *   breakpoints (see markAnthropicCacheBreakpoints), unless
+ *   `config.caching.enabled` is false. Other models cache without them, and
+ *   their requests are left as they are.
  */
 export class SmolOpenRouter extends SmolOpenAiCompat {
   protected resolveClientOptions(config: SmolConfig): {
@@ -206,12 +209,14 @@ export class SmolOpenRouter extends SmolOpenAiCompat {
   protected finalizeMessagesAndTools(
     messages: ChatCompletionMessageParam[],
     tools: OpenAI.Chat.ChatCompletionTool[] | undefined,
-    _config: SmolConfig,
+    config: SmolConfig,
   ): {
     messages: ChatCompletionMessageParam[];
     tools: OpenAI.Chat.ChatCompletionTool[] | undefined;
   } {
     if (!isAnthropicModel(this.getModel())) return { messages, tools };
+    // The same opt-out as the native Anthropic client.
+    if (config.caching?.enabled === false) return { messages, tools };
     return markAnthropicCacheBreakpoints(messages, tools);
   }
 

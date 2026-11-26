@@ -721,6 +721,53 @@ describe("SmolOpenRouter prompt caching for Anthropic models", () => {
     }
   });
 
+  it("marks nothing when caching is turned off, as the native client does", () => {
+    const request = build(anthropicModel, {
+      messages: [
+        systemMessage("sys"),
+        userMessage("hi"),
+        assistantMessage(null, { toolCalls: [new ToolCall("c1", "lookup", { query: "x" })] }),
+        toolMessage("result", { tool_call_id: "c1", name: "lookup" }),
+      ],
+      tools: [lookupTool],
+      caching: { enabled: false },
+    });
+    expect(countBreakpoints(request)).toBe(0);
+    expect(request.messages[0].content).toBe("sys");
+    expect(request.messages[3].content).toBe("result");
+  });
+
+  it("marks an earlier tool result when the latest one has no text", () => {
+    const request = build(anthropicModel, {
+      messages: [
+        userMessage("find it"),
+        assistantMessage(null, { toolCalls: [new ToolCall("c1", "lookup", { query: "x" })] }),
+        toolMessage("result one", { tool_call_id: "c1", name: "lookup" }),
+        assistantMessage(null, { toolCalls: [new ToolCall("c2", "lookup", { query: "y" })] }),
+        toolMessage("", { tool_call_id: "c2", name: "lookup" }),
+      ],
+    });
+    expect(request.messages[2].content).toEqual([
+      { type: "text", text: "result one", cache_control: cc },
+    ]);
+    expect(request.messages[4].content).toBe("");
+    expect(countBreakpoints(request)).toBe(1);
+  });
+
+  it("marks an earlier user message when the latest one is image-only", () => {
+    const request = build(anthropicModel, {
+      messages: [
+        userMessage("first"),
+        assistantMessage("ok"),
+        userMessage([imagePart({ kind: "url", url: "https://example.com/a.png" })]),
+      ],
+    });
+    expect(request.messages[0].content).toEqual([
+      { type: "text", text: "first", cache_control: cc },
+    ]);
+    expect(countBreakpoints(request)).toBe(1);
+  });
+
   it("sends the breakpoints on the wire", async () => {
     const c = new SmolOpenRouter({
       model: anthropicModel,
