@@ -147,7 +147,7 @@ export type SmolConfig = {
     budgetTokens?: number;
   };
 
-  /** Prompt caching. Currently used by Anthropic; OpenAI/Google cache automatically. Defaults to enabled. */
+  /** Prompt caching. Currently used by Anthropic and by `anthropic/` models through OpenRouter; OpenAI/Google cache automatically. Defaults to enabled. */
   caching?: {
     enabled?: boolean;
   };

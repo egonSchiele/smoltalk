@@ -112,6 +112,23 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
   }
 
   /**
+   * Last change to the request's messages and tools (function and hosted)
+   * before they are sent. Subclasses override to add provider-specific
+   * markup, e.g. OpenRouter's cache breakpoints for Anthropic models.
+   * Default returns both unchanged.
+   */
+  protected finalizeMessagesAndTools(
+    messages: ChatCompletionMessageParam[],
+    tools: OpenAI.Chat.ChatCompletionTool[] | undefined,
+    _config: SmolConfig,
+  ): {
+    messages: ChatCompletionMessageParam[];
+    tools: OpenAI.Chat.ChatCompletionTool[] | undefined;
+  } {
+    return { messages, tools };
+  }
+
+  /**
    * The request field carrying `config.maxTokens`. OpenAI deprecated
    * `max_tokens` in favor of `max_completion_tokens`, and its reasoning models
    * reject `max_tokens` outright. Compat servers override this to send
@@ -179,15 +196,24 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
     if (usageData) {
       const cached = usageData.prompt_tokens_details?.cached_tokens ?? 0;
+      // OpenRouter reports tokens written to an explicit cache (Anthropic)
+      // here. They are part of prompt_tokens and billed at the write rate.
+      const cacheWrite = usageData.prompt_tokens_details?.cache_write_tokens ?? 0;
       const audioIn = usageData.prompt_tokens_details?.audio_tokens ?? 0;
       const audioOut = usageData.completion_tokens_details?.audio_tokens ?? 0;
       usage = {
-        inputTokens: Math.max(0, (usageData.prompt_tokens || 0) - cached - audioIn),
+        inputTokens: Math.max(
+          0,
+          (usageData.prompt_tokens || 0) - cached - cacheWrite - audioIn,
+        ),
         outputTokens: Math.max(0, (usageData.completion_tokens || 0) - audioOut),
         totalTokens: usageData.total_tokens,
       };
       if (cached > 0) {
         usage.cachedInputTokens = cached;
+      }
+      if (cacheWrite > 0) {
+        usage.cacheCreationInputTokens = cacheWrite;
       }
       if (audioIn > 0) {
         usage.inputAudioTokens = audioIn;
@@ -220,17 +246,22 @@ export class SmolOpenAi extends BaseClient implements SmolClient {
 
   private buildRequest(config: SmolConfig) {
     const target = this.replayTarget(config);
-    const messages = config.messages.map((msg) => msg.toOpenAIMessage(target));
+    const builtMessages = config.messages.map((msg) => msg.toOpenAIMessage(target));
     const functionTools = config.tools?.map((tool) => {
       return zodToOpenAITool(tool.name, tool.schema, {
         description: tool.description,
       });
     });
-    let tools: OpenAI.Chat.ChatCompletionTool[] | undefined = functionTools;
+    let builtTools: OpenAI.Chat.ChatCompletionTool[] | undefined = functionTools;
     const hostedTools = this.hostedToolDefinitions(config);
     if (hostedTools.length > 0) {
-      tools = [...(functionTools ?? []), ...hostedTools];
+      builtTools = [...(functionTools ?? []), ...hostedTools];
     }
+    const { messages, tools } = this.finalizeMessagesAndTools(
+      builtMessages,
+      builtTools,
+      config,
+    );
     const request = {
       model: this.getModel(),
       messages,

@@ -5,7 +5,12 @@
 import { describe, it, expect } from "vitest";
 import { z } from "zod";
 import { text, textStream } from "../functions.js";
-import { userMessage } from "../classes/message/index.js";
+import {
+  assistantMessage,
+  systemMessage,
+  toolMessage,
+  userMessage,
+} from "../classes/message/index.js";
 import { liveProviderSuite } from "./liveTestHelpers.js";
 
 // Reuse the shared smoke suite for hello-world/tools/structured/streaming/cost.
@@ -47,6 +52,70 @@ d("OpenRouter - hosted web_search", () => {
           0,
         );
       }
+    },
+  );
+});
+
+d("OpenRouter - prompt caching for Anthropic models", () => {
+  // Over the 512-token minimum for Haiku 5.5, and unique per run so the
+  // first call is a cache write rather than a read of an earlier run's cache.
+  const longSystem =
+    `Run ${Date.now()}. You answer questions about a parts catalog.\n` +
+    Array.from({ length: 200 }, (_, i) => `Part ${i}: a widget of size ${i} mm.`).join("\n");
+  const lookup = {
+    name: "lookup",
+    description: "Look up a part by number",
+    schema: z.object({ part: z.number() }),
+  };
+
+  it(
+    "writes the cache on a tool loop's first call and reads it on the next",
+    { timeout: 120_000 },
+    async () => {
+      const base = {
+        model: "anthropic/claude-haiku-5.5",
+        provider: "openrouter",
+        apiKey: { openRouter: KEY! },
+        tools: [lookup],
+        maxTokens: 300,
+      } as const;
+      const first = await text({
+        ...base,
+        messages: [
+          systemMessage(longSystem),
+          userMessage("Use the lookup tool to look up part 7."),
+        ],
+      });
+      expect(first.success).toBe(true);
+      if (!first.success) return;
+      const call = first.value.toolCalls[0];
+      expect(call).toBeDefined();
+      const firstUsage = first.value.usage;
+      expect(firstUsage?.cacheCreationInputTokens ?? 0).toBeGreaterThan(0);
+      // smoltalk takes cache writes out of prompt_tokens. That is right only
+      // if OpenRouter counts them inside prompt_tokens, in which case the
+      // total covers the writes plus the output.
+      expect(firstUsage?.totalTokens ?? 0).toBeGreaterThanOrEqual(
+        (firstUsage?.cacheCreationInputTokens ?? 0) + (firstUsage?.outputTokens ?? 0),
+      );
+
+      // The second call ends in a tool result, so its breakpoint is on a
+      // role: "tool" message.
+      const second = await text({
+        ...base,
+        messages: [
+          systemMessage(longSystem),
+          userMessage("Use the lookup tool to look up part 7."),
+          assistantMessage(null, { toolCalls: [call] }),
+          toolMessage("Part 7: a widget of size 7 mm.", {
+            tool_call_id: call.id,
+            name: call.name,
+          }),
+        ],
+      });
+      expect(second.success).toBe(true);
+      if (!second.success) return;
+      expect(second.value.usage?.cachedInputTokens ?? 0).toBeGreaterThan(0);
     },
   );
 });
